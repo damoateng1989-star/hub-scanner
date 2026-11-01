@@ -129,6 +129,36 @@
   .pos:last-child { border-bottom: 0; }
   .pos .r { text-align: right; font: 500 14px var(--mono); }
   .pos small { color: var(--muted); font-size: 12px; }
+  .sum { margin: 12px 0 4px; font-size: 14px; line-height: 1.55; color: var(--ink); }
+  .sum b { font-weight: 600; }
+  .u-up { color: var(--up); } .u-down { color: var(--down); }
+  .muted { color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--muted); margin: -2px 0 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 10px; height: 6px; border-radius: 2px; background: var(--c); opacity: .7; }
+  .ladder { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .lr { display: grid; grid-template-columns: 14px 1fr auto 56px; align-items: center; gap: 8px; padding: 8px 12px;
+        border-bottom: 1px solid var(--line); font-size: 13px; }
+  .lr:last-child { border-bottom: 0; }
+  .lr span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lr b { font: 500 13px var(--mono); color: var(--c); white-space: nowrap; }
+  .lr em { font: 12px var(--mono); font-style: normal; color: var(--c); text-align: right; opacity: .85; }
+  .lr .mk { width: 10px; height: 3px; border-radius: 2px; background: var(--c); }
+  .lr .mk.band { height: 10px; opacity: .45; }
+  .lr .mk.dotm { width: 8px; height: 8px; border-radius: 50%; }
+  .lr.now { background: var(--sunk); }
+  .lr.now span { color: var(--ink); font-weight: 500; }
+  .lr.none span { color: var(--faint); }
+  .lr.none .mk { background: var(--line-2); }
+  button.ghost { border-color: transparent; color: var(--muted); }
+  details.guide { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; margin: 0 0 14px; font-size: 14px; }
+  details.guide summary { cursor: pointer; font-weight: 500; list-style: none; display: flex; justify-content: space-between; }
+  details.guide summary::-webkit-details-marker { display: none; }
+  details.guide summary::after { content: "Show"; color: var(--muted); font-weight: 400; font-size: 13px; }
+  details.guide[open] summary::after { content: "Hide"; }
+  .guide ol { margin: 10px 0 2px; padding-left: 20px; color: var(--muted); }
+  .guide li { margin: 6px 0; }
+  .guide li b { color: var(--ink); font-weight: 500; }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 </style>
@@ -177,6 +207,16 @@
       <button class="chip" id="scanBtn">Scan now</button>
     </div>
   </div>
+  <details class="guide" id="guide">
+    <summary>How to read a card</summary>
+    <ol>
+      <li><b>Hub</b> <span style="color:var(--hub)">(blue)</span>: a tight price range that has held for 4+ sessions. The stock is coiling.</li>
+      <li><b>Breakout</b>: the first 4H candle that <i>closes</i> outside the hub. Above the hub is bullish (↑), below is bearish (↓).</li>
+      <li><b>Shelves</b>: earlier hubs that price tends to travel to next, <span style="color:var(--up)">green above</span> and <span style="color:var(--down)">red below</span>. The next shelf is the target.</li>
+      <li><b>Failed breakout</b>: if a 4H candle closes back inside the hub, the setup is off.</li>
+      <li>The <b>price ladder</b> lists every level from highest to lowest, with the distance from today's price.</li>
+    </ol>
+  </details>
   <div class="grid" id="list"><div class="empty">Loading…</div></div>
 
   <div class="sec">
@@ -197,11 +237,12 @@
 
 <script>
 const STATES = {
-  forming: ["Inside hub", "--hub"], watching: ["Watching", "--idle"],
-  breakout_up: ["Breakout up", "--up"], breakdown: ["Breakdown", "--down"],
-  "follow-through": ["Follow-through", "--ft"], "snap-back": ["Snap-back", "--snap"],
-  stalled: ["Stalled", "--stall"], none: ["No setup", "--idle"], error: ["Error", "--down"],
+  forming: ["Inside hub", "--hub"], watching: ["Hub just ended", "--idle"],
+  breakout_up: ["Breakout ↑", "--up"], breakdown: ["Breakdown ↓", "--down"],
+  "follow-through": ["Hit shelf", "--ft"], "snap-back": ["Failed breakout", "--snap"],
+  stalled: ["Timed out", "--stall"], none: ["Waiting for a hub", "--idle"], error: ["Error", "--down"],
 };
+const PRIORITY = { breakout_up: 0, breakdown: 0, forming: 1, watching: 2, "follow-through": 3, "snap-back": 3, stalled: 3, none: 4, error: 5 };
 const ALERT_COLORS = { preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
   "follow-through": "--ft", "snap-back": "--snap", stalled: "--stall" };
 const $ = (id) => document.getElementById(id);
@@ -271,28 +312,71 @@ function spark(st, color) {
     <circle cx="${x(last)}" cy="${y(v[last])}" r="3.5" fill="var(${color})"/></svg>`;
 }
 
-function shelfCell(st, d, live, color) {
-  const sh = d === 1 ? st.shelf_up : st.shelf_down;
-  const isTarget = live && st.direction === (d === 1 ? "up" : "down");
-  const label = `${isTarget ? "Target" : "Shelf"} ${d === 1 ? "▲" : "▼"}`;
-  const val = sh ? money(sh.level) : isTarget ? money(st.target) + "*" : "none";
-  const c = d === 1 ? "--up" : "--down";
-  return `<div><small style="color:var(${c})">${label}</small><b style="color:var(${sh || isTarget ? c : "--faint"})">${val}</b></div>`;
+const pctFrom = (lvl, p) => { const v = (lvl / p - 1) * 100; return (v > 0 ? "+" : "") + v.toFixed(1) + "%"; };
+
+function summary(sym, st, key) {
+  const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down;
+  const lvl = (sh, word) => sh ? `the next shelf is <b class="u-${word}">${money(sh.level)}</b> (${pctFrom(sh.level, p)})` : `there's no shelf ${word === "up" ? "above" : "below"} yet`;
+  switch (key) {
+    case "forming":
+      return `${sym} has held a tight range for <b>${h.sessions} sessions</b>. ` +
+        `If a 4H candle closes <b class="u-up">above ${money(h.high)}</b>, ${lvl(up, "up")}. ` +
+        `If it closes <b class="u-down">below ${money(h.low)}</b>, ${lvl(dn, "down")}.`;
+    case "watching":
+      return `The range just ended without a breakout. A 4H close <b class="u-up">above ${money(h.high)}</b> or ` +
+        `<b class="u-down">below ${money(h.low)}</b> in the next few candles would still count.`;
+    case "breakout_up": case "breakdown": {
+      const isUp = key === "breakout_up", edge = isUp ? h.high : h.low;
+      return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. ` +
+        `Target: ${st.target_kind === "shelf" ? "next shelf" : "ATR target (no shelf in range)"} at <b class="u-${isUp ? "up" : "down"}">${money(st.target)}</b> ` +
+        `(${pctFrom(st.target, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}. ` +
+        `<span class="muted">${esc(st.label.split(", ")[1] || "")} used.</span>`;
+    }
+    case "follow-through": return `The last breakout reached its target shelf. Now waiting for a new hub to form.`;
+    case "snap-back": return `The last breakout failed and closed back inside its hub. Waiting for a new hub.`;
+    case "stalled": return `The last breakout ran out of time without reaching its shelf. Waiting for a new hub.`;
+    default:
+      return `No tight range right now. ` + (up || dn ? `Nearest shelves: ` +
+        [up && `<b class="u-up">${money(up.level)}</b> above (${pctFrom(up.level, p)})`, dn && `<b class="u-down">${money(dn.level)}</b> below (${pctFrom(dn.level, p)})`].filter(Boolean).join(" and ") + "." : "");
+  }
+}
+
+function ladder(st, key) {
+  const p = st.last_close, rows = [];
+  const live = key === "breakout_up" || key === "breakdown";
+  const showHub = st.hub && ["forming", "watching", "breakout_up", "breakdown"].includes(key);
+  const shelfRow = (sh, d) => {
+    const isT = live && st.direction === (d === 1 ? "up" : "down");
+    rows.push({ v: sh.level, html: `<div class="lr" style="--c:var(${d === 1 ? "--up" : "--down"})">
+      <i class="mk"></i><span>${isT ? "Target · " : ""}Shelf ${d === 1 ? "above" : "below"}</span>
+      <b>${money(sh.level)}</b><em>${pctFrom(sh.level, p)}</em></div>` });
+  };
+  if (st.shelf_up) shelfRow(st.shelf_up, 1);
+  if (st.shelf_down) shelfRow(st.shelf_down, -1);
+  if (live && st.target_kind === "atr") rows.push({ v: st.target, html: `<div class="lr" style="--c:var(${st.direction === "up" ? "--up" : "--down"})">
+      <i class="mk"></i><span>Target (ATR)</span><b>${money(st.target)}</b><em>${pctFrom(st.target, p)}</em></div>` });
+  if (showHub) rows.push({ v: (st.hub.low + st.hub.high) / 2, html: `<div class="lr" style="--c:var(--hub)">
+      <i class="mk band"></i><span>Hub</span><b>${money(st.hub.low)}–${money(st.hub.high).slice(1)}</b><em></em></div>` });
+  rows.push({ v: p + 1e-9, html: `<div class="lr now" style="--c:var(--ink)"><i class="mk dotm"></i><span>Price now</span><b>${money(p)}</b><em></em></div>` });
+  if (!st.shelf_up && !live) rows.push({ v: Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf above yet</span><b></b><em></em></div>` });
+  if (!st.shelf_down && !live) rows.push({ v: -Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf below yet</span><b></b><em></em></div>` });
+  return `<div class="ladder">${rows.sort((a, b) => b.v - a.v).map(r => r.html).join("")}</div>`;
 }
 
 function card(t) {
   const st = t.status || {};
   const key = st.error ? "error" : (st.state || "none");
   const [label, color] = STATES[key] || [key, "--idle"];
-  const live = key === "breakout_up" || key === "breakdown";
+  const showHub = ["forming", "watching", "breakout_up", "breakdown"].includes(key);
+  const chartSt = showHub ? st : {...st, hub: null};
   const body = st.error ? `<div class="note">${esc(st.error)}</div>` : `
-    ${spark(st, color)}
-    <div class="kv">
-      <div><small>${key === "none" ? "Last hub" : "Hub"} · ${st.hub ? st.hub.sessions + " sess." : ""}</small><b>${st.hub ? `${money(st.hub.low)}–${money(st.hub.high).slice(1)}` : "–"}</b></div>
-      ${shelfCell(st, 1, live, color)}
-      ${shelfCell(st, -1, live, color)}
-    </div>
-    ${live ? `<div class="note">${esc(st.label)}${st.target_kind === "atr" ? ` · no shelf in range, target is ${money(st.target)} (ATR)` : " · target is the next shelf"}</div>` : ""}`;
+    <p class="sum">${summary(esc(t.symbol), st, key)}</p>
+    ${spark(chartSt, color)}
+    <div class="legend">${showHub ? `<span style="--c:var(--hub)"><i></i>Hub</span>` : ""}
+      ${st.shelf_up ? `<span style="--c:var(--up)"><i></i>Shelf above</span>` : ""}
+      ${st.shelf_down ? `<span style="--c:var(--down)"><i></i>Shelf below</span>` : ""}
+      <span class="muted">last ${(st.spark || []).length} 4H closes</span></div>
+    ${ladder(st, key)}`;
   return `<div class="card" id="c-${esc(t.symbol)}">
     <div class="top">
       <div><span class="sym">${esc(t.symbol)}</span><span class="px">${money(st.last_close)}</span></div>
@@ -300,9 +384,9 @@ function card(t) {
     </div>
     ${body}
     <div class="foot">
-      <span class="when">${st.last_candle ? "Last close " + new Date(st.last_candle_close || st.last_candle).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"}) : ""}</span>
-      <span><button onclick="runBacktest('${esc(t.symbol)}', this)">Backtest</button>
-      <button onclick="removeTicker('${esc(t.symbol)}', this)">Remove</button></span>
+      <span class="when">${st.last_candle ? "Updated " + new Date(st.last_candle_close || st.last_candle).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"}) : ""}</span>
+      <span><button onclick="runBacktest('${esc(t.symbol)}', this)">Past results</button>
+      <button class="ghost" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">Remove</button></span>
     </div>
     <div class="bt" id="bt-${esc(t.symbol)}" hidden></div>
   </div>`;
@@ -313,7 +397,8 @@ function render() {
   $("sWatch").textContent = TICKERS.length;
   $("sHub").textContent = TICKERS.filter(t => st(t) === "forming").length;
   $("sLive").textContent = TICKERS.filter(t => ["breakout_up", "breakdown"].includes(st(t))).length;
-  const shown = TICKERS.filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
+  const pr = (t) => PRIORITY[st(t)] ?? 4;
+  const shown = [...TICKERS].sort((a, b) => pr(a) - pr(b) || a.symbol.localeCompare(b.symbol)).filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
   $("list").innerHTML = shown.length ? shown.map(card).join("") :
     `<div class="empty" style="grid-column:1/-1">${TICKERS.length ? "Nothing matches this filter right now." : "No tickers yet. Add one above, for example NVDA."}</div>`;
 }
@@ -374,7 +459,7 @@ async function removeTicker(sym, btn) {
 
 async function runBacktest(sym, btn) {
   const box = $(`bt-${sym}`), cardEl = $(`c-${sym}`);
-  if (!box.hidden) { box.hidden = true; cardEl.classList.remove("open"); btn.textContent = "Backtest"; return; }
+  if (!box.hidden) { box.hidden = true; cardEl.classList.remove("open"); btn.textContent = "Past results"; return; }
   box.hidden = false; cardEl.classList.add("open"); btn.disabled = true;
   box.innerHTML = `<span class="note">Running backtest on ~2 years of 4H candles…</span>`;
   try {
@@ -447,6 +532,10 @@ $("pSwitch").addEventListener("click", async () => {
   try { await api("/api/paper/toggle", {method: "POST", body: JSON.stringify({on})}); } catch (e) {}
   loadPaper();
 });
+
+try {
+  if (!localStorage.getItem("hs_seen_guide")) { $("guide").open = true; localStorage.setItem("hs_seen_guide", "1"); }
+} catch (e) { $("guide").open = true; }
 
 loadInfo(); loadTickers(); loadAlerts(); loadPaper();
 setInterval(() => { loadTickers(); loadAlerts(); loadPaper(); }, 120000);
