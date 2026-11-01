@@ -240,7 +240,7 @@ function spark(st, color) {
   const span = Math.max(...base) - Math.min(...base);
   // show a shelf on the chart only if it isn't so far away that it flattens the price line
   const near = (sh) => sh && Math.abs(sh.level - v[v.length - 1]) <= span * 1.2;
-  const shelves = [st.shelf_up, st.shelf_down].filter(near);
+  const shelves = [st.shelf_up && {...st.shelf_up, c: "--up"}, st.shelf_down && {...st.shelf_down, c: "--down"}].filter(near);
   const all = [...base, ...shelves.flatMap(sh => [sh.low, sh.high])];
   let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
   const x = (i) => P + i * (W - 2 * P) / (v.length - 1);
@@ -256,10 +256,10 @@ function spark(st, color) {
     }
   }
   const shelfSvg = shelves.map(sh => {
-    const c = sh.target ? color : "--faint";
+    const c = sh.c;
     const a = Math.max(0, Math.min(v.length - 1, sh.spark_from ?? 0));
     return `<rect x="${x(a)}" y="${y(sh.high)}" width="${Math.max(2, W - P - x(a))}" height="${Math.max(2, y(sh.low) - y(sh.high))}"
-      fill="var(${c})" opacity="${sh.target ? .14 : .10}"/>
+      fill="var(${c})" opacity="${sh.target ? .18 : .10}"/>
       <line x1="${x(a)}" x2="${W - P}" y1="${y(sh.level)}" y2="${y(sh.level)}" stroke="var(${c})" stroke-width="1" stroke-dasharray="2 3"/>`;
   }).join("");
   const tline = tgt ? `<line x1="${P}" x2="${W - P}" y1="${y(tgt)}" y2="${y(tgt)}" stroke="var(${color})" stroke-width="1" stroke-dasharray="3 4" opacity=".8"/>` : "";
@@ -276,7 +276,8 @@ function shelfCell(st, d, live, color) {
   const isTarget = live && st.direction === (d === 1 ? "up" : "down");
   const label = `${isTarget ? "Target" : "Shelf"} ${d === 1 ? "▲" : "▼"}`;
   const val = sh ? money(sh.level) : isTarget ? money(st.target) + "*" : "none";
-  return `<div><small>${label}</small><b style="${isTarget ? `color:var(${color})` : sh ? "" : "color:var(--faint)"}">${val}</b></div>`;
+  const c = d === 1 ? "--up" : "--down";
+  return `<div><small style="color:var(${c})">${label}</small><b style="color:var(${sh || isTarget ? c : "--faint"})">${val}</b></div>`;
 }
 
 function card(t) {
@@ -422,7 +423,7 @@ async function loadPaper() {
   const usd = (v) => v == null ? "–" : (v < 0 ? "-" : "+") + money(Math.abs(v));
   const pc = (v) => v == null ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
   const row = (t, open) => `<div class="pos">
-      <div><b class="mono">${esc(t.symbol)}</b> <small>${t.direction === 1 ? "LONG" : "SHORT"} ${t.qty} @ ${money(t.entry_price)}</small></div>
+      <div><b class="mono">${esc(t.symbol)}</b> <small><span style="color:var(${t.direction === 1 ? "--up" : "--down"});font-weight:500">${t.direction === 1 ? "LONG" : "SHORT"}</span> ${t.qty} @ ${money(t.entry_price)}</small></div>
       <div class="r" style="${pc(open ? t.unreal_pct : t.pnl_pct)}">${open ? sign(t.unreal_pct) : sign(t.pnl_pct)}</div>
       <small>${open ? `Target ${t.target_kind === "shelf" ? "shelf" : "(ATR)"} ${money(t.target)} · exit if back ${t.direction === 1 ? "≤" : "≥"} ${money(t.edge)}`
         : `${esc(t.exit_reason)} · ${money(t.entry_price)} → ${money(t.exit_price)} · ${day(t.closed_at)}`}</small>
