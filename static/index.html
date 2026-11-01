@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<title>Hub Scanner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F6F3; --surface: #FFFFFF; --sunk: #EFEEE9; --ink: #111110; --muted: #6F6E69; --faint: #A3A29C;
+    --line: #E6E5DF; --line-2: #D6D5CE; --accent: #2F54EB; --accent-ink: #FFFFFF;
+    --up: #12805C; --down: #D1352B; --ft: #0E8A7E; --snap: #D9480F; --stall: #B7791F; --hub: #2F54EB; --idle: #8A8983;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0E0E0D; --surface: #171715; --sunk: #1E1E1B; --ink: #F2F1EC; --muted: #9C9B95; --faint: #6A6964;
+      --line: #2A2A27; --line-2: #3A3A36; --accent: #7C93FF; --accent-ink: #0E0E0D;
+      --up: #3DD68C; --down: #FF6B5E; --ft: #2FD4C0; --snap: #FF8A4C; --stall: #F2C14E; --hub: #7C93FF; --idle: #8A8983; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans);
+         -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+        border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .dots { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+  .dot { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .dot i { width: 7px; height: 7px; border-radius: 50%; background: var(--c, var(--idle)); }
+
+  .hero { padding: 48px 0 28px; }
+  .eyebrow { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h1 { font: 500 clamp(34px, 7vw, 60px)/1.04 var(--sans); letter-spacing: -0.035em; margin: 14px 0 14px; }
+  h1 em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; color: var(--muted); }
+  .lede { color: var(--muted); max-width: 560px; font-size: 16px; margin: 0; }
+  .demo { display: inline-block; margin-top: 14px; font: 500 12px var(--mono); color: var(--snap);
+          border: 1px solid currentColor; border-radius: 6px; padding: 3px 8px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 14px;
+           background: var(--surface); margin-top: 30px; overflow: hidden; }
+  .stats div { padding: 14px 16px; border-right: 1px solid var(--line); }
+  .stats div:last-child { border-right: 0; }
+  .stats b { display: block; font: 500 24px/1.2 var(--mono); letter-spacing: -0.02em; }
+  .stats span { font-size: 12px; color: var(--muted); }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, 1fr); }
+    .stats div:nth-child(2) { border-right: 0; } .stats div:nth-child(-n+2) { border-bottom: 1px solid var(--line); } }
+
+  .cmd { display: flex; align-items: center; gap: 8px; margin-top: 14px; background: var(--surface);
+         border: 1px solid var(--line-2); border-radius: 14px; padding: 6px 6px 6px 16px; }
+  .cmd:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  .cmd .pre { font: 500 16px var(--mono); color: var(--faint); }
+  .cmd input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink);
+               font: 500 16px var(--mono); text-transform: uppercase; padding: 8px 0; }
+  .cmd input::placeholder { text-transform: none; color: var(--faint); font-family: var(--sans); font-weight: 400; }
+  button { font: 500 14px var(--sans); border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface);
+           color: var(--ink); padding: 9px 14px; cursor: pointer; white-space: nowrap; }
+  button:hover { border-color: var(--faint); }
+  button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  button:disabled { opacity: .5; cursor: default; }
+  .err { color: var(--down); font-size: 13px; min-height: 20px; margin-top: 6px; }
+
+  .sec { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 26px 0 14px; flex-wrap: wrap; }
+  h2 { font: 500 26px/1.1 var(--sans); letter-spacing: -0.025em; margin: 0; }
+  h2 em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--muted); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font-size: 13px; padding: 6px 11px; border-radius: 99px; }
+  .chip.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+  .grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 720px) { .grid { grid-template-columns: 1fr 1fr; } }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px; min-width: 0; }
+  .card.open { grid-column: 1 / -1; }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sym { font: 600 18px var(--mono); letter-spacing: -0.01em; }
+  .px { font: 400 15px var(--mono); color: var(--muted); margin-left: 8px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--sans); padding: 4px 10px;
+           border-radius: 99px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); white-space: nowrap; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .spark { display: block; width: 100%; height: 84px; margin: 12px 0 6px; }
+  .kv { display: grid; grid-template-columns: 1.5fr .8fr 1fr; gap: 1px; background: var(--line); border: 1px solid var(--line);
+        border-radius: 10px; overflow: hidden; }
+  .kv div { background: var(--surface); padding: 8px 10px; min-width: 0; }
+  .kv small { display: block; font-size: 11px; color: var(--muted); }
+  .kv b { font: 500 13px var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+  .foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; }
+  .foot .when { font-size: 12px; color: var(--muted); min-width: 0; }
+  .foot > span:last-child { display: flex; gap: 6px; flex-shrink: 0; }
+  .foot button { padding: 6px 11px; font-size: 13px; }
+  .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+  .bt { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line-2); font-size: 13px; }
+  .bar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--sunk); margin: 10px 0; }
+  .bar span { height: 100%; }
+  .bt .kv { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 480px) { .bt .kv { grid-template-columns: repeat(2, 1fr); } }
+  .tbl { width: 100%; overflow-x: auto; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; font: 12px var(--mono); }
+  th { font: 500 11px var(--sans); color: var(--muted); text-align: left; }
+  td, th { padding: 7px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+
+  .feed { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .item { display: grid; grid-template-columns: 10px 1fr; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: 0; }
+  .item i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-top: 7px; }
+  .item b { font-weight: 500; }
+  .item p { margin: 2px 0 0; color: var(--muted); font-size: 13px; white-space: pre-line; }
+  .item .t { font: 11px var(--mono); color: var(--faint); margin-top: 4px; }
+  .empty { color: var(--muted); font-size: 14px; padding: 26px; text-align: center; border: 1px dashed var(--line-2); border-radius: 16px; }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; }
+  .switch { width: 40px; height: 24px; border-radius: 99px; background: var(--line-2); position: relative; border: 0; padding: 0; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
+                   background: var(--surface); transition: transform .15s; }
+  .switch.on { background: var(--up); }
+  .switch.on::after { transform: translateX(16px); }
+  .pos { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .pos:last-child { border-bottom: 0; }
+  .pos .r { text-align: right; font: 500 14px var(--mono); }
+  .pos small { color: var(--muted); font-size: 12px; }
+  footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
+           display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <div class="brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/>
+      <rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="var(--accent)" opacity=".9"/>
+      <path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    Hub Scanner
+  </div>
+  <div class="dots" id="dots"></div>
+</div></nav>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow">4H closes · 4+ sessions · shelf to shelf</div>
+    <h1>Find the hub. <em>Catch the break.</em></h1>
+    <p class="lede">Every 4H close on your watchlist is checked for tight ranges that hold 4+ sessions. You get a warning before the candle closes outside one, a plan with the next shelf as the target, and the result.</p>
+    <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
+
+    <div class="stats">
+      <div><b id="sWatch">–</b><span>Watching</span></div>
+      <div><b id="sHub">–</b><span>Inside a hub</span></div>
+      <div><b id="sLive">–</b><span>Live breakouts</span></div>
+      <div><b id="sAlerts">–</b><span>Recent alerts</span></div>
+    </div>
+
+    <form class="cmd" id="add" autocomplete="off">
+      <span class="pre">$</span>
+      <input id="sym" placeholder="Add a ticker, e.g. NVDA" autocapitalize="characters" maxlength="10" aria-label="Ticker">
+      <button class="primary" id="addBtn">Add</button>
+    </form>
+    <div class="err" id="err"></div>
+  </section>
+
+  <div class="sec">
+    <h2>Watchlist <em>live</em></h2>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="all">All</button>
+      <button class="chip" data-f="hub">Inside hub</button>
+      <button class="chip" data-f="live">Breakouts</button>
+      <button class="chip" id="scanBtn">Scan now</button>
+    </div>
+  </div>
+  <div class="grid" id="list"><div class="empty">Loading…</div></div>
+
+  <div class="sec">
+    <h2>Paper <em>trades</em></h2>
+    <span class="toggle"><span class="note" id="pBroker" style="margin:0"></span>
+      <button class="switch" id="pSwitch" aria-label="Auto paper trading"></button></span>
+  </div>
+  <div id="paper"><div class="empty">Loading…</div></div>
+
+  <div class="sec"><h2>Recent <em>alerts</em></h2></div>
+  <div id="alerts"></div>
+
+  <footer>
+    <span>Signals describe past price behaviour. Not financial advice. Backtest before trading.</span>
+    <span id="sched"></span>
+  </footer>
+</main>
+
+<script>
+const STATES = {
+  forming: ["Inside hub", "--hub"], watching: ["Watching", "--idle"],
+  breakout_up: ["Breakout up", "--up"], breakdown: ["Breakdown", "--down"],
+  "follow-through": ["Follow-through", "--ft"], "snap-back": ["Snap-back", "--snap"],
+  stalled: ["Stalled", "--stall"], none: ["No setup", "--idle"], error: ["Error", "--down"],
+};
+const ALERT_COLORS = { preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
+  "follow-through": "--ft", "snap-back": "--snap", stalled: "--stall" };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : "";
+const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"}) : "";
+let TICKERS = [], FILTER = "all";
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || r.statusText);
+  return body;
+}
+
+async function loadInfo() {
+  try {
+    const i = await api("/api/info");
+    const tg = !i.telegram ? ["--idle", "Telegram off"] : i.telegram_linked ? ["--up", "Telegram"] : ["--snap", "Send /start to bot"];
+    $("dots").innerHTML =
+      `<span class="dot" style="--c:var(${i.provider === "demo" ? "--snap" : "--up"})"><i></i>${esc(i.provider)}</span>` +
+      `<span class="dot" style="--c:var(${tg[0]})"><i></i>${tg[1]}</span>`;
+    $("demo").hidden = i.provider !== "demo";
+    $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "Pre-close checks " + i.preclose_times.join(" & ") + " · " : ""}Scans ${i.scan_times.join(" & ")} ET on weekdays · ${i.settings.horizon}-candle limit`;
+  } catch (e) { $("dots").innerHTML = `<span class="dot" style="--c:var(--down)"><i></i>${esc(e.message)}</span>`; }
+}
+
+function spark(st, color) {
+  const v = st.spark || [];
+  if (v.length < 2) return "";
+  const W = 320, H = 84, P = 6;
+  const hub = st.hub, tgt = st.target && ["breakout_up", "breakdown"].includes(st.state) ? st.target : null;
+  const base = [...v, ...(hub ? [hub.low, hub.high] : []), ...(tgt ? [tgt] : [])];
+  const span = Math.max(...base) - Math.min(...base);
+  // show a shelf on the chart only if it isn't so far away that it flattens the price line
+  const near = (sh) => sh && Math.abs(sh.level - v[v.length - 1]) <= span * 1.2;
+  const shelves = [st.shelf_up, st.shelf_down].filter(near);
+  const all = [...base, ...shelves.flatMap(sh => [sh.low, sh.high])];
+  let lo = Math.min(...all), hi = Math.max(...all); const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const x = (i) => P + i * (W - 2 * P) / (v.length - 1);
+  const y = (p) => H - P - (p - lo) / (hi - lo) * (H - 2 * P);
+  let band = "";
+  if (hub) {
+    const a = Math.max(0, hub.spark_from ?? 0), b = Math.min(v.length - 1, hub.spark_to ?? v.length - 1);
+    if (b >= 0 && a <= v.length - 1) {
+      band = `<rect x="${x(a)}" y="${y(hub.high)}" width="${Math.max(2, x(b) - x(a))}" height="${Math.max(2, y(hub.low) - y(hub.high))}"
+        rx="3" fill="var(--hub)" opacity=".12"/>
+        <line x1="${x(a)}" x2="${x(b)}" y1="${y(hub.high)}" y2="${y(hub.high)}" stroke="var(--hub)" stroke-width="1" opacity=".55"/>
+        <line x1="${x(a)}" x2="${x(b)}" y1="${y(hub.low)}" y2="${y(hub.low)}" stroke="var(--hub)" stroke-width="1" opacity=".55"/>`;
+    }
+  }
+  const shelfSvg = shelves.map(sh => {
+    const c = sh.target ? color : "--faint";
+    const a = Math.max(0, Math.min(v.length - 1, sh.spark_from ?? 0));
+    return `<rect x="${x(a)}" y="${y(sh.high)}" width="${Math.max(2, W - P - x(a))}" height="${Math.max(2, y(sh.low) - y(sh.high))}"
+      fill="var(${c})" opacity="${sh.target ? .14 : .10}"/>
+      <line x1="${x(a)}" x2="${W - P}" y1="${y(sh.level)}" y2="${y(sh.level)}" stroke="var(${c})" stroke-width="1" stroke-dasharray="2 3"/>`;
+  }).join("");
+  const tline = tgt ? `<line x1="${P}" x2="${W - P}" y1="${y(tgt)}" y2="${y(tgt)}" stroke="var(${color})" stroke-width="1" stroke-dasharray="3 4" opacity=".8"/>` : "";
+  const d = v.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p).toFixed(1)}`).join("");
+  const last = v.length - 1;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Last ${v.length} 4H closes">
+    ${shelfSvg}${band}${tline}
+    <path d="${d}" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    <circle cx="${x(last)}" cy="${y(v[last])}" r="3.5" fill="var(${color})"/></svg>`;
+}
+
+function shelfCell(st, d, live, color) {
+  const sh = d === 1 ? st.shelf_up : st.shelf_down;
+  const isTarget = live && st.direction === (d === 1 ? "up" : "down");
+  const label = `${isTarget ? "Target" : "Shelf"} ${d === 1 ? "▲" : "▼"}`;
+  const val = sh ? money(sh.level) : isTarget ? money(st.target) + "*" : "none";
+  return `<div><small>${label}</small><b style="${isTarget ? `color:var(${color})` : sh ? "" : "color:var(--faint)"}">${val}</b></div>`;
+}
+
+function card(t) {
+  const st = t.status || {};
+  const key = st.error ? "error" : (st.state || "none");
+  const [label, color] = STATES[key] || [key, "--idle"];
+  const live = key === "breakout_up" || key === "breakdown";
+  const body = st.error ? `<div class="note">${esc(st.error)}</div>` : `
+    ${spark(st, color)}
+    <div class="kv">
+      <div><small>${key === "none" ? "Last hub" : "Hub"} · ${st.hub ? st.hub.sessions + " sess." : ""}</small><b>${st.hub ? `${money(st.hub.low)}–${money(st.hub.high).slice(1)}` : "–"}</b></div>
+      ${shelfCell(st, 1, live, color)}
+      ${shelfCell(st, -1, live, color)}
+    </div>
+    ${live ? `<div class="note">${esc(st.label)}${st.target_kind === "atr" ? ` · no shelf in range, target is ${money(st.target)} (ATR)` : " · target is the next shelf"}</div>` : ""}`;
+  return `<div class="card" id="c-${esc(t.symbol)}">
+    <div class="top">
+      <div><span class="sym">${esc(t.symbol)}</span><span class="px">${money(st.last_close)}</span></div>
+      <span class="badge" style="--c: var(${color})">${label}</span>
+    </div>
+    ${body}
+    <div class="foot">
+      <span class="when">${st.last_candle ? "Last close " + new Date(st.last_candle_close || st.last_candle).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"}) : ""}</span>
+      <span><button onclick="runBacktest('${esc(t.symbol)}', this)">Backtest</button>
+      <button onclick="removeTicker('${esc(t.symbol)}', this)">Remove</button></span>
+    </div>
+    <div class="bt" id="bt-${esc(t.symbol)}" hidden></div>
+  </div>`;
+}
+
+function render() {
+  const st = (t) => t.status?.error ? "error" : t.status?.state;
+  $("sWatch").textContent = TICKERS.length;
+  $("sHub").textContent = TICKERS.filter(t => st(t) === "forming").length;
+  $("sLive").textContent = TICKERS.filter(t => ["breakout_up", "breakdown"].includes(st(t))).length;
+  const shown = TICKERS.filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
+  $("list").innerHTML = shown.length ? shown.map(card).join("") :
+    `<div class="empty" style="grid-column:1/-1">${TICKERS.length ? "Nothing matches this filter right now." : "No tickers yet. Add one above, for example NVDA."}</div>`;
+}
+
+async function loadTickers() { TICKERS = await api("/api/tickers"); render(); }
+
+async function loadAlerts() {
+  const a = await api("/api/alerts?limit=15");
+  $("sAlerts").textContent = a.length >= 15 ? "15+" : a.length;
+  $("alerts").innerHTML = a.length ? `<div class="feed">${a.map(x => {
+    const lines = String(x.message).split("\n");
+    const title = lines[0].replace(/^[^\p{L}\p{N}$]+/u, "");
+    const rest = lines.slice(1).filter(l => !l.startsWith("Candle closed")).join("\n");
+    const t = (lines.find(l => l.startsWith("Candle closed")) || "").replace("Candle closed: ", "");
+    return `<div class="item" style="--c:var(${ALERT_COLORS[x.type] || "--idle"})"><i></i><div>
+      <b>${esc(title)}</b><p>${esc(rest)}</p><div class="t">${esc(t)}</div></div></div>`;
+  }).join("")}</div>` : `<div class="empty">No alerts yet. New hubs, breakouts and outcomes will appear here and in Telegram.</div>`;
+}
+
+$("add").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const sym = $("sym").value.trim();
+  $("err").textContent = "";
+  if (!sym) { $("err").textContent = "Enter a ticker first"; return; }
+  $("addBtn").disabled = true; $("addBtn").textContent = "Adding…";
+  try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})}); $("sym").value = ""; await loadTickers(); }
+  catch (err) { $("err").textContent = err.message; }
+  $("addBtn").disabled = false; $("addBtn").textContent = "Add";
+});
+$("sym").addEventListener("input", () => { $("err").textContent = ""; });
+
+$("chips").addEventListener("click", async (e) => {
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.id === "scanBtn") {
+    b.disabled = true; b.textContent = "Scanning…";
+    try { const r = await api("/api/scan", {method: "POST"}); b.textContent = r.alerts ? `${r.alerts} new` : "Up to date"; }
+    catch { b.textContent = "Scan failed"; }
+    await Promise.all([loadTickers(), loadAlerts()]);
+    setTimeout(() => { b.disabled = false; b.textContent = "Scan now"; }, 2500);
+    return;
+  }
+  FILTER = b.dataset.f;
+  document.querySelectorAll(".chip[data-f]").forEach(c => c.classList.toggle("on", c === b));
+  render();
+});
+
+const armed = new Set();
+async function removeTicker(sym, btn) {
+  if (!armed.has(sym)) {
+    armed.add(sym); btn.textContent = "Tap to confirm";
+    setTimeout(() => { if (armed.delete(sym)) btn.textContent = "Remove"; }, 3000);
+    return;
+  }
+  armed.delete(sym);
+  await api(`/api/tickers/${encodeURIComponent(sym)}`, {method: "DELETE"});
+  loadTickers();
+}
+
+async function runBacktest(sym, btn) {
+  const box = $(`bt-${sym}`), cardEl = $(`c-${sym}`);
+  if (!box.hidden) { box.hidden = true; cardEl.classList.remove("open"); btn.textContent = "Backtest"; return; }
+  box.hidden = false; cardEl.classList.add("open"); btn.disabled = true;
+  box.innerHTML = `<span class="note">Running backtest on ~2 years of 4H candles…</span>`;
+  try {
+    const r = await api(`/api/backtest/${encodeURIComponent(sym)}`);
+    const s = r.stats;
+    const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+    box.innerHTML = !s.n ? `<span class="note">No completed breakouts in ${esc(r.period)}.</span>` : `
+      <div class="eyebrow">${esc(r.period)} · ${s.n} breakouts</div>
+      <div class="bar">
+        <span style="width:${s["follow-through"]}%;background:var(--ft)"></span>
+        <span style="width:${s["snap-back"]}%;background:var(--snap)"></span>
+        <span style="width:${s.stalled}%;background:var(--stall)"></span>
+      </div>
+      <div class="kv">
+        <div><small>Follow-through</small><b style="color:var(--ft)">${s["follow-through"]}%</b></div>
+        <div><small>Snap-back</small><b style="color:var(--snap)">${s["snap-back"]}%</b></div>
+        <div><small>Stalled</small><b style="color:var(--stall)">${s.stalled}%</b></div>
+        <div><small>Breakouts</small><b>${s.n}</b></div>
+      </div>
+      ${s.trades ? `<div class="eyebrow" style="margin-top:14px">If you entered at each breakout close</div>
+      <div class="kv" style="margin-top:8px">
+        <div><small>Win rate</small><b>${s.win_rate}%</b></div>
+        <div><small>Avg win</small><b style="color:var(--up)">${sign(s.avg_win_pct)}</b></div>
+        <div><small>Avg loss</small><b style="color:var(--down)">${sign(s.avg_loss_pct)}</b></div>
+        <div><small>Per trade</small><b style="color:var(${s.expectancy_pct > 0 ? "--up" : "--down"})">${sign(s.expectancy_pct)}</b></div>
+      </div>` : ""}
+      <div class="note">Upside ${s.up.n} breakouts, ${s.up.follow_through}% follow-through · Downside ${s.down.n}, ${s.down.follow_through}% follow-through</div>
+      <div class="tbl"><table><tr><th>Breakout</th><th></th><th>Hub</th><th>Result</th><th>Trade</th></tr>
+      ${r.trades.slice(0, 12).map(t => `<tr><td>${day(t.time)}</td>
+        <td style="color:var(${t.direction === "up" ? "--up" : "--down"})">${t.direction === "up" ? "▲" : "▼"}</td>
+        <td>${money(t.hub_low)}–${money(t.hub_high).slice(1)}</td>
+        <td style="color:var(${STATES[t.outcome]?.[1] || "--muted"})">${{"follow-through": "follow", "snap-back": "snap", stalled: "stall", pending: "open"}[t.outcome] || esc(t.outcome)}</td>
+        <td style="color:var(${t.ret_pct == null ? "--muted" : t.ret_pct > 0 ? "--up" : "--down"})">${t.chase ? "chase" : sign(t.ret_pct)}</td></tr>`).join("")}
+      </table></div>`;
+    btn.textContent = "Hide";
+  } catch (e) { box.innerHTML = `<span style="color:var(--down)">${esc(e.message)}</span>`; }
+  btn.disabled = false;
+}
+
+async function loadPaper() {
+  let p;
+  try { p = await api("/api/paper"); } catch (e) { $("paper").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("pSwitch").classList.toggle("on", p.enabled);
+  $("pBroker").textContent = `${p.enabled ? "Auto-trading on" : "Off"} · ${p.broker}`;
+  const st = p.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const usd = (v) => v == null ? "–" : (v < 0 ? "-" : "+") + money(Math.abs(v));
+  const pc = (v) => v == null ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
+  const row = (t, open) => `<div class="pos">
+      <div><b class="mono">${esc(t.symbol)}</b> <small>${t.direction === 1 ? "LONG" : "SHORT"} ${t.qty} @ ${money(t.entry_price)}</small></div>
+      <div class="r" style="${pc(open ? t.unreal_pct : t.pnl_pct)}">${open ? sign(t.unreal_pct) : sign(t.pnl_pct)}</div>
+      <small>${open ? `Target ${t.target_kind === "shelf" ? "shelf" : "(ATR)"} ${money(t.target)} · exit if back ${t.direction === 1 ? "≤" : "≥"} ${money(t.edge)}`
+        : `${esc(t.exit_reason)} · ${money(t.entry_price)} → ${money(t.exit_price)} · ${day(t.closed_at)}`}</small>
+      <small class="r" style="font-size:12px;${pc(open ? t.unreal : t.pnl)}">${open ? (t.unreal == null ? "" : usd(t.unreal)) : usd(t.pnl)}</small>
+    </div>`;
+  $("paper").innerHTML = `
+    <div class="stats" style="margin-top:0">
+      <div><b>${st.closed}</b><span>Closed trades</span></div>
+      <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
+      <div><b style="${pc(st.total_pnl)}">${st.closed ? usd(st.total_pnl) : "–"}</b><span>Total P&amp;L</span></div>
+      <div><b style="${pc(st.avg_pct)}">${sign(st.avg_pct)}</b><span>Avg per trade</span></div>
+    </div>
+    <div class="note">${p.account ? `Paper account equity ${money(p.account.equity)} · ` : ""}${money(p.trade_usd)} per trade${p.allow_short ? " · longs and shorts" : " · longs only"} · entries and exits ~2 min before each 4H close</div>
+    ${p.open.length ? `<div class="eyebrow" style="margin:16px 0 8px">Open</div><div class="feed">${p.open.map(t => row(t, true)).join("")}</div>` : ""}
+    ${p.closed.length ? `<div class="eyebrow" style="margin:16px 0 8px">Closed</div><div class="feed">${p.closed.map(t => row(t, false)).join("")}</div>`
+      : `<div class="empty" style="margin-top:12px">${p.enabled ? "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub." : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
+}
+
+$("pSwitch").addEventListener("click", async () => {
+  const on = !$("pSwitch").classList.contains("on");
+  try { await api("/api/paper/toggle", {method: "POST", body: JSON.stringify({on})}); } catch (e) {}
+  loadPaper();
+});
+
+loadInfo(); loadTickers(); loadAlerts(); loadPaper();
+setInterval(() => { loadTickers(); loadAlerts(); loadPaper(); }, 120000);
+</script>
+</body>
+</html>

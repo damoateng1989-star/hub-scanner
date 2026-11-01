@@ -1,0 +1,8 @@
+fastapi>=0.110
+uvicorn>=0.29
+apscheduler>=3.10,<4
+requests>=2.31
+pandas>=2.1
+numpy>=1.26
+python-dotenv>=1.0
+yfinance>=0.2.40
