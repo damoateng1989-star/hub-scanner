@@ -16,7 +16,9 @@ def _cfg():
 
 
 def enabled() -> bool:
-    return all(_cfg())
+    """Twilio is configured (each Pro user adds their own number in Account)."""
+    sid, token, from_, _ = _cfg()
+    return all((sid, token, from_))
 
 
 def call_on() -> set[str]:
@@ -34,11 +36,23 @@ def spell(sym: str) -> str:
     return " ".join(f"{c}." if c.isalpha() else c for c in sym)
 
 
-def call(speech: str) -> str:
+def clean_number(n: str) -> str:
+    digits = "".join(c for c in (n or "") if c.isdigit() or c == "+")
+    if not digits.startswith("+"):
+        digits = "+1" + digits if len(digits) == 10 else "+" + digits
+    if not 11 <= len(digits) <= 16:
+        raise ValueError("Enter a full phone number, e.g. +1 617 555 0123")
+    return digits
+
+
+def call(speech: str, to: str | None = None) -> str:
     """Place the call. Returns the Twilio call id. The message is read twice."""
-    sid, token, from_, to = _cfg()
-    if not all((sid, token, from_, to)):
-        raise RuntimeError("Twilio isn't set up (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM, CALL_TO)")
+    sid, token, from_, default_to = _cfg()
+    to = to or default_to
+    if not all((sid, token, from_)):
+        raise RuntimeError("Phone calls aren't set up on this site yet (Twilio)")
+    if not to:
+        raise RuntimeError("Add your phone number first")
     twiml = (f'<Response><Pause length="1"/><Say voice="Polly.Joanna" loop="2">{escape(speech)}</Say>'
              f'<Say voice="Polly.Joanna">Details are in Telegram. Goodbye.</Say></Response>')
     r = requests.post(f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Calls.json", auth=(sid, token),
@@ -48,10 +62,10 @@ def call(speech: str) -> str:
     return r.json().get("sid", "")
 
 
-def safe_call(speech: str):
+def safe_call(speech: str, to: str | None = None):
     """Call, but never let a phone problem break scanning."""
     try:
-        cid = call(speech)
+        cid = call(speech, to)
         log.info("call placed %s", cid)
     except Exception as e:
         log.warning("call failed: %s", e)

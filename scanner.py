@@ -12,8 +12,8 @@ import pandas as pd
 import data
 import db
 import engine
+import notify
 import phone
-import telegram_bot
 
 log = logging.getLogger("scanner")
 SETTINGS = engine.Settings.from_env()
@@ -195,12 +195,11 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 msg = format_event(sym, e)
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
                                 e["time"].isoformat(), msg):
-                    telegram_bot.send(msg)
                     # ring only for the newest candle (no burst of calls after downtime), and not for chases
                     chase = e["type"] in ("breakout", "breakdown") and \
                         (e["close"] - e["target"]) * (1 if e["type"] == "breakout" else -1) >= 0
-                    if phone.wants(e["type"]) and e["time"] == c4.index[-1] and not chase:
-                        phone.safe_call(speak_event(sym, e))
+                    speech = speak_event(sym, e) if e["time"] == c4.index[-1] and not chase else None
+                    notify.symbol_alert(sym, e["type"], msg, speech)
                     sent.append(msg)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
@@ -239,9 +238,8 @@ def preclose_all() -> list[str]:
                     continue
                 msg = format_preclose(sym, sig, minutes_left)
                 if db.add_alert(f"{sym}|preclose|{start.isoformat()}", sym, "preclose", start.isoformat(), msg):
-                    telegram_bot.send(msg)
-                    if phone.wants("preclose") and not sig["reached"]:
-                        phone.safe_call(speak_preclose(sym, sig, minutes_left))
+                    notify.symbol_alert(sym, "preclose", msg,
+                                        None if sig["reached"] else speak_preclose(sym, sig, minutes_left))
                     sent.append(msg)
             except Exception as e:
                 log.warning("pre-close check failed for %s: %s", sym, e)
@@ -249,16 +247,25 @@ def preclose_all() -> list[str]:
     return sent
 
 
-def add_symbol(raw: str) -> dict:
+def add_symbol(raw: str, uid: int | None = None) -> dict:
+    """Add to the shared scan set (and to a user's watchlist when uid is given)."""
     sym = clean_symbol(raw)
+    if uid is not None and sym in db.user_symbols(uid):
+        row = db.get_ticker(sym)
+        return dict(symbol=sym, status=json.loads(row["status"] or "{}") if row else {}, created=False)
     created = db.add_ticker(sym)
-    try:
-        status, _ = scan_symbol(sym)
-    except Exception:
-        if created:
-            db.remove_ticker(sym)
-        raise
-    return dict(symbol=sym, status=status, created=created)
+    if created or not (db.get_ticker(sym) or {}).get("last_candle"):
+        try:
+            status, _ = scan_symbol(sym)
+        except Exception:
+            if created:
+                db.remove_ticker(sym)
+            raise
+    else:
+        status = json.loads(db.get_ticker(sym)["status"] or "{}")
+    if uid is not None:
+        db.watch(uid, sym)
+    return dict(symbol=sym, status=status, created=True)
 
 
 def backtest(raw: str) -> dict:

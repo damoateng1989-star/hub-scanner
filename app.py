@@ -12,22 +12,22 @@ load_dotenv()
 import json  # noqa: E402
 import logging  # noqa: E402
 import os  # noqa: E402
-import secrets  # noqa: E402
 import threading  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 from apscheduler.schedulers.background import BackgroundScheduler  # noqa: E402
 from apscheduler.triggers.cron import CronTrigger  # noqa: E402
-from fastapi import Depends, FastAPI, HTTPException  # noqa: E402
+from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.concurrency import run_in_threadpool  # noqa: E402
-from fastapi.responses import FileResponse  # noqa: E402
-from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: E402
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+import auth  # noqa: E402
 import board  # noqa: E402
 import data  # noqa: E402
 import db  # noqa: E402
+import notify  # noqa: E402
 import paper  # noqa: E402
 import phone  # noqa: E402
 import scanner  # noqa: E402
@@ -47,18 +47,62 @@ BOARD_TIMES = [t.strip() for t in os.getenv("BOARD_TIMES", "13:52,16:22").split(
 ENTRY_TIMES = [t.strip() for t in os.getenv("ENTRY_TIMES", "13:28,15:58").split(",") if t.strip()]
 
 
-def handle_command(cmd: str, args: list[str]) -> str:
-    if cmd == "/paper":
+def add_for_user(u: dict, raw: str) -> dict:
+    sym = scanner.clean_symbol(raw)
+    mine = db.user_symbols(u["id"])
+    if sym not in mine and not auth.is_pro(u) and len(mine) >= auth.FREE_TICKER_LIMIT:
+        raise HTTPException(402, f"Free accounts can watch {auth.FREE_TICKER_LIMIT} tickers. Upgrade to Pro for unlimited.")
+    return scanner.add_symbol(sym, u["id"])
+
+
+def handle_command(cmd: str, args: list[str], u: dict) -> str:
+    pro, admin = auth.is_pro(u), bool(u["is_admin"])
+    if cmd in ("/start", "/help"):
+        text = ("Hub Scanner commands:\n/add NVDA TSLA: watch tickers\n/remove NVDA: stop watching\n"
+                "/list: your watchlist\n/status NVDA: one ticker")
+        if pro:
+            text += "\n/backtest NVDA: past breakout results\n/testcall: test phone-call alerts"
+        if admin:
+            text += "\n\nAdmin:\n/scan, /precheck: run now\n/paper, /paper on, /paper off"
+        return text + ("" if pro else "\n\nUpgrade to Pro for pre-close warnings, calls and backtests.") + "\nNot financial advice."
+    if cmd == "/add":
+        if not args:
+            return "Usage: /add NVDA TSLA"
+        out = []
+        for a in args:
+            try:
+                r = add_for_user(u, a)
+                out.append("Watching " + scanner.describe(r["symbol"], r["status"]))
+            except Exception as e:
+                out.append(f"{a.upper()}: {getattr(e, 'detail', e)}")
+        return "\n".join(out)
+    if cmd == "/remove":
+        return "\n".join(f"{a.upper()}: {'removed' if db.unwatch(u['id'], a.upper()) else 'not on your list'}"
+                         for a in args) or "Usage: /remove NVDA"
+    if cmd == "/list":
+        syms = db.user_symbols(u["id"])
+        if not syms:
+            return "Your watchlist is empty. Add one with /add NVDA"
+        return "\n".join(scanner.describe(s_, json.loads((db.get_ticker(s_) or {}).get("status") or "{}")
+                                           or {"error": "not scanned yet"}) for s_ in syms)
+    if cmd == "/status":
+        if not args or args[0].upper() not in db.user_symbols(u["id"]):
+            return "Usage: /status NVDA (for a ticker on your watchlist)"
+        return scanner.handle_command(cmd, args)
+    if cmd == "/backtest":
+        return scanner.handle_command(cmd, args) if pro else "Backtests are a Pro feature."
+    if cmd == "/testcall":
+        if not pro:
+            return "Phone alerts are a Pro feature."
+        phone.call("Hub scanner test call. Phone alerts are working.", u["phone"])
+        return "Calling you now."
+    if cmd in ("/scan", "/precheck") and admin:
+        return scanner.handle_command(cmd, args)
+    if cmd == "/paper" and admin:
         if args and args[0].lower() in ("on", "off"):
             paper.set_enabled(args[0].lower() == "on")
         return paper.summary_text()
-    if cmd == "/testcall":
-        phone.call("Hub scanner test call. Phone alerts are working.")
-        return "Calling you now."
-    if cmd in ("/start", "/help"):
-        return (scanner.HELP + "\n\n/paper: paper-trading journal\n/paper on | /paper off: turn auto paper trading on or off"
-                "\n/testcall: test the phone-call alert")
-    return scanner.handle_command(cmd, args)
+    return "Unknown command. /help for the list."
 
 
 @asynccontextmanager
@@ -98,27 +142,54 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Hub Scanner", lifespan=lifespan)
-_basic = HTTPBasic(auto_error=False)
-
-
-def auth(creds: HTTPBasicCredentials | None = Depends(_basic)):
-    pw = os.getenv("APP_PASSWORD", "")
-    if not pw:
-        return
-    if not creds or not secrets.compare_digest(creds.password.encode(), pw.encode()):
-        raise HTTPException(401, "Password required", headers={"WWW-Authenticate": "Basic"})
+User = Depends(auth.require_user)
+Pro = Depends(auth.require_pro)
+Admin = Depends(auth.require_admin)
 
 
 class AddBody(BaseModel):
     symbol: str
 
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+class SignupBody(BaseModel):
+    email: str
+    password: str
+    name: str = ""
+
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+
+class EmailBody(BaseModel):
+    email: str
+
+
+class ResetBody(BaseModel):
+    token: str
+    password: str
+
+
+class PhoneBody(BaseModel):
+    phone: str = ""
+
+
+class PlanBody(BaseModel):
+    plan: str
+
+
+class ToggleBody(BaseModel):
+    on: bool
 
 
 STATIC = Path(__file__).parent / "static"
+
+
+# ---------------------------------------------------------------- public files
+@app.get("/health")
+def health():
+    return {"ok": True}
 
 
 @app.get("/favicon.svg")
@@ -141,113 +212,255 @@ def lwc():
     return FileResponse(STATIC / "vendor" / "lightweight-charts.js", media_type="application/javascript")
 
 
-@app.get("/t/{symbol}", dependencies=[Depends(auth)])
-def ticker_page(symbol: str):
+# ---------------------------------------------------------------- pages (sign-in required)
+@app.get("/login")
+def login_page(request: Request):
+    if auth.current_user(request):
+        return RedirectResponse("/", 302)
+    return FileResponse(STATIC / "login.html")
+
+
+@app.get("/")
+def index(request: Request):
+    if not auth.current_user(request):
+        return RedirectResponse("/login", 302)
+    return FileResponse(STATIC / "index.html")
+
+
+@app.get("/t/{symbol}")
+def ticker_page(symbol: str, request: Request):
+    if not auth.current_user(request):
+        return RedirectResponse("/login", 302)
     return FileResponse(STATIC / "ticker.html")
 
 
-@app.get("/api/chart/{symbol}", dependencies=[Depends(auth)])
-async def chart_data(symbol: str):
+# ---------------------------------------------------------------- auth
+@app.get("/auth/config")
+def auth_config():
+    return {"google": auth.google_enabled(), "free_limit": auth.FREE_TICKER_LIMIT}
+
+
+@app.post("/auth/signup")
+def signup(body: SignupBody, request: Request):
+    auth.throttle("signup:" + (request.client.host if request.client else ""), limit=10)
+    uid = auth.signup(body.email, body.password, body.name)
+    resp = JSONResponse({"ok": True})
+    auth.start_session(resp, request, uid)
+    return resp
+
+
+@app.post("/auth/login")
+def do_login(body: LoginBody, request: Request):
+    auth.throttle("login:" + body.email.strip().lower())
+    uid = auth.login(body.email, body.password)
+    resp = JSONResponse({"ok": True})
+    auth.start_session(resp, request, uid)
+    return resp
+
+
+@app.post("/auth/logout")
+def logout(request: Request):
+    resp = JSONResponse({"ok": True})
+    auth.end_session(resp, request)
+    return resp
+
+
+@app.post("/auth/forgot")
+def forgot(body: EmailBody, request: Request):
+    auth.throttle("forgot:" + body.email.strip().lower(), limit=3, window=3600)
+    auth.start_reset(body.email, auth.base_url(request))
+    return {"ok": True}
+
+
+@app.post("/auth/reset")
+def reset(body: ResetBody, request: Request):
+    uid = auth.finish_reset(body.token, body.password)
+    resp = JSONResponse({"ok": True})
+    auth.start_session(resp, request, uid)
+    return resp
+
+
+@app.get("/auth/google")
+def google_start(request: Request):
+    if not auth.google_enabled():
+        return RedirectResponse("/login#error=Google+sign-in+isn't+set+up+yet", 302)
+    resp = RedirectResponse("/", 302)
+    resp.headers["location"] = auth.google_redirect(request, resp)
+    return resp
+
+
+@app.get("/auth/google/callback")
+def google_callback(request: Request, code: str = "", state: str = "", error: str = ""):
+    if error or not code:
+        return RedirectResponse("/login#error=Google+sign-in+was+cancelled", 302)
     try:
-        return await run_in_threadpool(board.chart, symbol)
+        uid = auth.google_finish(request, code, state)
+    except HTTPException as e:
+        return RedirectResponse(f"/login#error={e.detail.replace(' ', '+')}", 302)
+    resp = RedirectResponse("/", 302)
+    resp.delete_cookie("hs_oauth_state", path="/")
+    auth.start_session(resp, request, uid)
+    return resp
+
+
+# ---------------------------------------------------------------- account
+@app.get("/api/me")
+def me(u: dict = User):
+    bot = telegram_bot.bot_username()
+    return dict(email=u["email"], name=u["name"], plan="pro" if auth.is_pro(u) else "free", is_admin=bool(u["is_admin"]),
+                ticker_limit=None if auth.is_pro(u) else auth.FREE_TICKER_LIMIT,
+                telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
+                              link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
+                phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
+                google=bool(u["google_sub"]))
+
+
+@app.post("/api/me/phone")
+def set_phone(body: PhoneBody, u: dict = Pro):
+    try:
+        num = phone.clean_number(body.phone) if body.phone.strip() else None
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    db.update_user(u["id"], phone=num)
+    return {"phone": num}
+
+
+@app.delete("/api/me/telegram")
+def unlink_telegram(u: dict = User):
+    import secrets as _s
+    db.update_user(u["id"], telegram_chat=None, link_code=_s.token_urlsafe(9))
+    return {"ok": True}
+
+
+@app.post("/api/testcall")
+def test_call(u: dict = Pro):
+    try:
+        return {"sid": phone.call("Hub scanner test call. Phone alerts are working.", u["phone"])}
     except Exception as e:
         raise HTTPException(400, str(e))
 
 
-@app.get("/api/board", dependencies=[Depends(auth)])
-def board_data():
-    return board.board()
+@app.get("/api/admin/users")
+def admin_users(u: dict = Admin):
+    return [dict(id=x["id"], email=x["email"], name=x["name"], plan=x["plan"], is_admin=bool(x["is_admin"]),
+                 created_at=x["created_at"], tickers=len(db.user_symbols(x["id"])), telegram=bool(x["telegram_chat"]))
+            for x in db.all_users()]
 
 
-@app.post("/api/board/scan", dependencies=[Depends(auth)])
-async def board_scan_now():
-    return {"scanned": await run_in_threadpool(board.scan_board)}
+@app.post("/api/admin/users/{uid}/plan")
+def admin_set_plan(uid: int, body: PlanBody, u: dict = Admin):
+    if body.plan not in ("free", "pro"):
+        raise HTTPException(400, "plan must be free or pro")
+    if not db.get_user(uid):
+        raise HTTPException(404, "no such user")
+    db.update_user(uid, plan=body.plan)
+    return {"ok": True}
 
 
-@app.get("/api/record", dependencies=[Depends(auth)])
-def record_data():
-    return board.track_record()
-
-
-@app.get("/", dependencies=[Depends(auth)])
-def index():
-    return FileResponse(Path(__file__).parent / "static" / "index.html")
-
-
-@app.get("/api/info", dependencies=[Depends(auth)])
-def info():
+# ---------------------------------------------------------------- data
+@app.get("/api/info")
+def info(u: dict = User):
     s = scanner.SETTINGS
-    return dict(provider=data.provider(), telegram=telegram_bot.enabled(),
-                telegram_linked=bool(telegram_bot.owner_chat()),
-                phone=phone.enabled(), call_on=sorted(phone.call_on()), scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES, entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
+    return dict(provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u["telegram_chat"]),
+                phone=bool(u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
+                scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],
+                entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
                 settings=dict(min_sessions=s.min_sessions, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
                               shelf_min_atr=s.shelf_min_atr))
 
 
-@app.get("/api/tickers", dependencies=[Depends(auth)])
-def tickers():
-    return [dict(symbol=r["symbol"], scanned_at=r["scanned_at"], status=json.loads(r["status"] or "{}"))
-            for r in db.list_tickers()]
+@app.get("/api/tickers")
+def tickers(u: dict = User):
+    out = []
+    for sym in db.user_symbols(u["id"]):
+        row = db.get_ticker(sym) or {}
+        out.append(dict(symbol=sym, scanned_at=row.get("scanned_at"), status=json.loads(row.get("status") or "{}")))
+    return out
 
 
-@app.post("/api/tickers", dependencies=[Depends(auth)])
-async def add_ticker(body: AddBody):
+@app.post("/api/tickers")
+async def add_ticker(body: AddBody, u: dict = User):
     try:
-        return await run_in_threadpool(scanner.add_symbol, body.symbol)
+        return await run_in_threadpool(add_for_user, u, body.symbol)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(400, str(e))
 
 
-@app.delete("/api/tickers/{symbol}", dependencies=[Depends(auth)])
-def remove_ticker(symbol: str):
-    if not db.remove_ticker(symbol.upper()):
-        raise HTTPException(404, "not on the watchlist")
+@app.delete("/api/tickers/{symbol}")
+def remove_ticker(symbol: str, u: dict = User):
+    if not db.unwatch(u["id"], symbol.upper()):
+        raise HTTPException(404, "not on your watchlist")
     return {"ok": True}
 
 
-@app.get("/api/alerts", dependencies=[Depends(auth)])
-def alerts(limit: int = 50):
-    return db.recent_alerts(min(limit, 200))
+@app.get("/api/alerts")
+def alerts(limit: int = 50, u: dict = User):
+    hide = () if auth.is_pro(u) else tuple(notify.PRO_ONLY_TYPES)
+    return db.alerts_for_symbols(db.user_symbols(u["id"]), min(limit, 200), hide)
 
 
-@app.post("/api/scan", dependencies=[Depends(auth)])
-async def scan_now():
+@app.post("/api/scan")
+async def scan_now(u: dict = Admin):
     sent = await run_in_threadpool(scanner.scan_all)
     return {"alerts": len(sent)}
 
 
-@app.post("/api/precheck", dependencies=[Depends(auth)])
-async def precheck_now():
+@app.post("/api/precheck")
+async def precheck_now(u: dict = Admin):
     sent = await run_in_threadpool(scanner.preclose_all)
     return {"alerts": len(sent)}
 
 
-@app.post("/api/testcall", dependencies=[Depends(auth)])
-def test_call():
+@app.get("/api/board")
+def board_data(u: dict = User):
+    b = board.board()
+    mine = set(db.user_symbols(u["id"]))
+    for group in ("live", "near", "forming", "recent"):
+        for r in b[group]:
+            r["watching"] = r["symbol"] in mine
+    if not auth.is_pro(u):                  # free: the timely groups are counts only
+        b["locked"] = True
+        b["live_count"], b["near_count"] = len(b["live"]), len(b["near"])
+        b["live"], b["near"] = [], []
+    return b
+
+
+@app.post("/api/board/scan")
+async def board_scan_now(u: dict = Admin):
+    return {"scanned": await run_in_threadpool(board.scan_board)}
+
+
+@app.get("/api/record")
+def record_data(u: dict = User):
+    return board.track_record()
+
+
+@app.get("/api/chart/{symbol}")
+async def chart_data(symbol: str, u: dict = User):
     try:
-        return {"sid": phone.call("Hub scanner test call. Phone alerts are working.")}
+        d = await run_in_threadpool(board.chart, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
+    d["watching"] = d["symbol"] in db.user_symbols(u["id"])
+    return d
 
 
-class ToggleBody(BaseModel):
-    on: bool
-
-
-@app.get("/api/paper", dependencies=[Depends(auth)])
-async def paper_summary():
-    return await run_in_threadpool(paper.summary)
-
-
-@app.post("/api/paper/toggle", dependencies=[Depends(auth)])
-def paper_toggle(body: ToggleBody):
-    paper.set_enabled(body.on)
-    return {"enabled": paper.enabled()}
-
-
-@app.get("/api/backtest/{symbol}", dependencies=[Depends(auth)])
-async def backtest(symbol: str):
+@app.get("/api/backtest/{symbol}")
+async def backtest(symbol: str, u: dict = Pro):
     try:
         return await run_in_threadpool(scanner.backtest, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+@app.get("/api/paper")
+async def paper_summary(u: dict = Admin):
+    return await run_in_threadpool(paper.summary)
+
+
+@app.post("/api/paper/toggle")
+def paper_toggle(body: ToggleBody, u: dict = Admin):
+    paper.set_enabled(body.on)
+    return {"enabled": paper.enabled()}

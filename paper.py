@@ -25,8 +25,8 @@ import requests
 import data
 import db
 import engine
+import notify
 import scanner
-import telegram_bot
 
 log = logging.getLogger("paper")
 PAPER_URL = "https://paper-api.alpaca.markets"   # paper only: never real money
@@ -247,7 +247,7 @@ def run_check(force: bool = False) -> list[str]:
                 log.warning("entry failed for %s: %s", row["symbol"], e)
                 msgs.append(f"🧪 {row['symbol']}: paper entry failed ({e})")
     for m in msgs:
-        telegram_bot.send(m)
+        notify.admins(m)
     return msgs
 
 
@@ -268,7 +268,7 @@ def sync() -> list[str]:
             except Exception as e:
                 log.warning("sync failed for %s: %s", t["symbol"], e)
     for m in msgs:
-        telegram_bot.send(m)
+        notify.admins(m)
     return msgs
 
 

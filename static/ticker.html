@@ -140,7 +140,8 @@ async function load() {
   if ($("watch")) $("watch").onclick = async (e) => {
     e.target.disabled = true; e.target.textContent = "Adding…";
     const r = await fetch("/api/tickers", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({symbol: d.symbol})});
-    e.target.textContent = r.ok ? "On your watchlist" : "Couldn't add";
+    const j = await r.json().catch(() => ({}));
+    e.target.textContent = r.ok ? "On your watchlist" : (r.status === 402 ? "Free plan limit reached. Upgrade in Account" : (j.detail || "Couldn't add"));
   };
 
   const el = $("chart");

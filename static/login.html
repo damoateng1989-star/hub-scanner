@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<title>Sign in · Hub Scanner</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F6F3; --surface: #FFFFFF; --ink: #111110; --muted: #6F6E69; --faint: #A3A29C; --line: #E6E5DF; --line-2: #D6D5CE;
+    --accent: #2F54EB; --up: #12805C; --down: #D1352B;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --serif: "Instrument Serif", Georgia, serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0E0E0D; --surface: #171715; --ink: #F2F1EC; --muted: #9C9B95; --faint: #6A6964; --line: #2A2A27;
+            --line-2: #3A3A36; --accent: #7C93FF; --up: #3DD68C; --down: #FF6B5E; }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans);
+         -webkit-font-smoothing: antialiased; display: grid; grid-template-columns: 1.1fr 1fr; }
+  @media (max-width: 860px) { body { grid-template-columns: 1fr; } .pitch { display: none; } }
+  .pitch { padding: 56px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+  .pitch h1 { font: 500 52px/1.04 var(--sans); letter-spacing: -0.035em; margin: 0 0 18px; }
+  .pitch h1 em { font-family: var(--serif); font-weight: 400; color: var(--muted); }
+  .pitch ul { list-style: none; padding: 0; margin: 0; color: var(--muted); }
+  .pitch li { padding: 10px 0; border-top: 1px solid var(--line); }
+  .pitch li b { color: var(--ink); font-weight: 500; }
+  .fine { font-size: 12px; color: var(--faint); }
+  .side { display: flex; align-items: center; justify-content: center; padding: 32px 20px; }
+  .box { width: 100%; max-width: 380px; }
+  .box .brand { margin-bottom: 28px; }
+  @media (min-width: 861px) { .box .brand { display: none; } }
+  h2 { font: 500 28px/1.1 var(--sans); letter-spacing: -0.02em; margin: 0 0 6px; }
+  h2 em { font-family: var(--serif); font-weight: 400; color: var(--muted); }
+  .sub { color: var(--muted); margin: 0 0 22px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  input { width: 100%; padding: 12px 14px; font: 16px var(--sans); border-radius: 12px; border: 1px solid var(--line-2);
+          background: var(--surface); color: var(--ink); outline: 0; }
+  input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent); }
+  button { width: 100%; padding: 12px; font: 500 15px var(--sans); border-radius: 12px; border: 1px solid var(--ink);
+           background: var(--ink); color: var(--bg); cursor: pointer; margin-top: 18px; }
+  button:disabled { opacity: .6; }
+  .google { background: var(--surface); color: var(--ink); border-color: var(--line-2); display: flex; align-items: center;
+            justify-content: center; gap: 10px; margin-top: 0; text-decoration: none; padding: 12px; border-radius: 12px;
+            border: 1px solid var(--line-2); font-weight: 500; }
+  .or { display: flex; align-items: center; gap: 12px; color: var(--faint); font-size: 12px; margin: 18px 0 4px; }
+  .or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+  .msg { font-size: 14px; min-height: 20px; margin-top: 12px; }
+  .msg.err { color: var(--down); } .msg.ok { color: var(--up); }
+  .links { display: flex; justify-content: space-between; margin-top: 18px; font-size: 14px; }
+  a { color: var(--ink); }
+  .links a { color: var(--muted); }
+</style>
+</head>
+<body>
+<section class="pitch">
+  <div class="brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/><rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="var(--accent)" opacity=".9"/><path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Hub Scanner
+  </div>
+  <div>
+    <h1>Find the hub. <em>Catch the break.</em></h1>
+    <ul>
+      <li><b>Hub Board:</b> every Nasdaq-100 stock scanned after each 4H close for tight ranges.</li>
+      <li><b>Shelf targets:</b> know where a breakout is likely headed before you enter.</li>
+      <li><b>Alerts:</b> Telegram, plus pre-close warnings and phone calls on Pro.</li>
+      <li><b>Honest track record:</b> every signal logged with its result.</li>
+    </ul>
+  </div>
+  <p class="fine">Educational tool. Signals describe past price behaviour and are not financial advice.</p>
+</section>
+
+<section class="side"><div class="box">
+  <div class="brand">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/><rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="var(--accent)" opacity=".9"/><path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Hub Scanner
+  </div>
+
+  <div id="v-signin">
+    <h2>Welcome <em>back</em></h2>
+    <p class="sub">Sign in to your watchlist and alerts.</p>
+    <a class="google" href="/auth/google" data-google hidden>
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      Continue with Google
+    </a>
+    <div class="or" data-google hidden>or</div>
+    <form id="f-signin">
+      <label for="si-email">Email</label><input id="si-email" type="email" autocomplete="email" required>
+      <label for="si-pw">Password</label><input id="si-pw" type="password" autocomplete="current-password" required>
+      <button>Sign in</button>
+    </form>
+    <div class="links"><a href="#signup">Create an account</a><a href="#forgot">Forgot password?</a></div>
+  </div>
+
+  <div id="v-signup" hidden>
+    <h2>Create your <em>account</em></h2>
+    <p class="sub">Free: watch up to <span id="limit">3</span> tickers with Telegram alerts. Upgrade anytime.</p>
+    <a class="google" href="/auth/google" data-google hidden>
+      <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
+      Sign up with Google
+    </a>
+    <div class="or" data-google hidden>or</div>
+    <form id="f-signup">
+      <label for="su-name">Name (optional)</label><input id="su-name" autocomplete="name">
+      <label for="su-email">Email</label><input id="su-email" type="email" autocomplete="email" required>
+      <label for="su-pw">Password (8+ characters)</label><input id="su-pw" type="password" autocomplete="new-password" minlength="8" required>
+      <button>Create account</button>
+    </form>
+    <p class="fine" style="margin-top:14px">By creating an account you agree that Hub Scanner is an educational tool and not financial advice.</p>
+    <div class="links"><a href="#signin">I already have an account</a></div>
+  </div>
+
+  <div id="v-forgot" hidden>
+    <h2>Reset your <em>password</em></h2>
+    <p class="sub">We'll email you a link to choose a new one.</p>
+    <form id="f-forgot">
+      <label for="fo-email">Email</label><input id="fo-email" type="email" autocomplete="email" required>
+      <button>Send reset link</button>
+    </form>
+    <div class="links"><a href="#signin">Back to sign in</a></div>
+  </div>
+
+  <div id="v-reset" hidden>
+    <h2>Choose a new <em>password</em></h2>
+    <form id="f-reset">
+      <label for="re-pw">New password (8+ characters)</label><input id="re-pw" type="password" autocomplete="new-password" minlength="8" required>
+      <button>Save and sign in</button>
+    </form>
+  </div>
+
+  <div class="msg" id="msg" role="status"></div>
+</div></section>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let resetToken = null;
+function show() {
+  const h = location.hash.slice(1);
+  let view = "signin";
+  if (h.startsWith("reset=")) { resetToken = decodeURIComponent(h.slice(6)); view = "reset"; }
+  else if (h.startsWith("error=")) { say(decodeURIComponent(h.slice(6)).replace(/\+/g, " "), true); }
+  else if (["signup", "forgot", "signin"].includes(h)) view = h;
+  ["signin", "signup", "forgot", "reset"].forEach(v => $("v-" + v).hidden = v !== view);
+  if (!h.startsWith("error=")) say("");
+}
+function say(t, err) { $("msg").textContent = t; $("msg").className = "msg " + (err ? "err" : "ok"); }
+async function post(url, body, btn) {
+  btn.disabled = true;
+  try {
+    const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Please check the form and try again");
+    return d;
+  } finally { btn.disabled = false; }
+}
+function form(id, fn) {
+  $(id).addEventListener("submit", async (e) => {
+    e.preventDefault(); say("");
+    try { await fn(e.target.querySelector("button")); } catch (err) { say(err.message, true); }
+  });
+}
+form("f-signin", async (b) => { await post("/auth/login", {email: $("si-email").value, password: $("si-pw").value}, b); location.href = "/"; });
+form("f-signup", async (b) => { await post("/auth/signup", {name: $("su-name").value, email: $("su-email").value, password: $("su-pw").value}, b); location.href = "/#watch"; });
+form("f-forgot", async (b) => { await post("/auth/forgot", {email: $("fo-email").value}, b); say("If that email has an account, a reset link is on its way. Check your inbox (and spam)."); });
+form("f-reset", async (b) => { await post("/auth/reset", {token: resetToken, password: $("re-pw").value}, b); location.href = "/"; });
+fetch("/auth/config").then(r => r.json()).then(c => {
+  document.querySelectorAll("[data-google]").forEach(el => el.hidden = !c.google);
+  $("limit").textContent = c.free_limit;
+}).catch(() => {});
+window.addEventListener("hashchange", show);
+show();
+</script>
+</body>
+</html>

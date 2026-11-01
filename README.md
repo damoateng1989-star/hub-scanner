@@ -23,6 +23,31 @@ Each event is alerted once. A newly added ticker starts quiet: you get alerts fo
 
 ---
 
+## Accounts and plans
+
+People sign up with **email and password** or **Google**. Each person has their own watchlist, Telegram chat and phone number.
+
+- **The first account created becomes the admin** (Pro, plus admin tools). It inherits the existing watchlist and Telegram chat. To make another email an admin, set `ADMIN_EMAIL`.
+- **Free:** up to 3 tickers (`FREE_TICKER_LIMIT`), Telegram breakout alerts, the Hub Board's "Inside a hub" and "Just finished" lists, the track record and charts.
+- **Pro:** unlimited tickers, pre-close warnings, the full Hub Board (live breakouts and stocks at the edge), phone calls and backtests.
+- **Admin:** Account → Members lists everyone and lets you switch a person between Free and Pro (until online payments are added). Paper trading and the "Scan now" buttons are admin-only.
+- **Telegram:** each person taps **Connect Telegram** under Account, which opens the bot with a private link code.
+
+### Google sign-in setup (about 10 minutes)
+1. Go to **console.cloud.google.com**, create a project (e.g. "Hub Scanner"), then open **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name and your email, and save.
+2. Go to **Credentials → Create credentials → OAuth client ID**, with **Application type: Web application**.
+3. Under **Authorized redirect URIs**, add `https://YOUR-SITE.onrender.com/auth/google/callback`.
+4. Copy the **Client ID** and **Client secret** into Render as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and set `APP_URL=https://YOUR-SITE.onrender.com`.
+5. While the consent screen is in "Testing", only test users you add can sign in. Click **Publish app** when you're ready for everyone.
+
+### Password-reset emails (Resend, free tier)
+1. Sign up at **resend.com**, add and verify your domain (or use their test sender while trying it out), and create an API key.
+2. Set `RESEND_API_KEY` and `EMAIL_FROM="Hub Scanner <noreply@yourdomain.com>"` in Render.
+
+Without Resend, reset links are written to the Render logs instead of being emailed, which is handy for testing.
+
+---
+
 ## Pages
 
 - **Watchlist** (`/`): your tickers, with a summary, mini chart and price ladder for each, plus recent alerts.
@@ -56,12 +81,11 @@ Each event is alerted once. A newly added ticker starts quiet: you get alerts fo
    ALPACA_SECRET_KEY=your-secret
    ALPACA_FEED=sip
    TELEGRAM_BOT_TOKEN=your-bot-token
-   APP_PASSWORD=pick-a-strong-password
-   DATA_DIR=/data
+      DATA_DIR=/data
    ```
 5. **Get a web address.** Open **Settings → Networking → Generate domain**.
-6. **Open the site.** Your browser will ask for a login: type anything as the username and your `APP_PASSWORD` as the password. Then add tickers such as NVDA, AAPL and TSLA.
-7. **Link Telegram.** Open your bot in Telegram and send `/start`. The first chat to do this becomes the owner, and everyone else is blocked.
+6. **Open the site and create your account.** The first account becomes the admin. Then add tickers such as NVDA, AAPL and TSLA.
+7. **Link Telegram.** On the site, open **Account → Connect Telegram** and press **Start** in the bot.
 
 Keep the app at **one instance** (Railway's default). Two copies would double-poll Telegram.
 
@@ -182,6 +206,9 @@ phone.py          phone-call alerts (Twilio)
 board.py          Hub Board, track record, chart data
 universe.py       the stocks the Hub Board scans (Nasdaq-100)
 static/ticker.html  ticker chart page (charts by TradingView Lightweight Charts, Apache-2.0)
+auth.py           accounts: email/password, Google sign-in, sessions, password reset
+notify.py         sends each alert to the users watching that ticker
+static/login.html sign-in / sign-up page
 paper.py          automatic paper trading (Alpaca paper account or simulator)
 db.py             SQLite storage (watchlist, alerts, paper trades)
 static/index.html the watchlist page

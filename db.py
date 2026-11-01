@@ -31,6 +31,23 @@ with _lock:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE, name TEXT, password_hash TEXT, google_sub TEXT UNIQUE,
+        plan TEXT DEFAULT 'free', is_admin INTEGER DEFAULT 0,
+        telegram_chat TEXT, link_code TEXT, phone TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS sessions (
+        token_hash TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+        token_hash TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT, used INTEGER DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS watchlist (
+        user_id INTEGER, symbol TEXT, added_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, symbol)
+    );
     CREATE TABLE IF NOT EXISTS board (
         symbol TEXT PRIMARY KEY, status TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -154,3 +171,100 @@ def get_signal(sid: str) -> dict | None:
 
 def all_signals(limit: int = 500) -> list[dict]:
     return [dict(r) for r in _run("SELECT * FROM signals ORDER BY breakout_time DESC LIMIT ?", (limit,)).fetchall()]
+
+
+# --- users
+USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone")
+
+
+def create_user(**f) -> int:
+    cols = ", ".join(f)
+    return _run(f"INSERT INTO users ({cols}) VALUES ({', '.join('?' * len(f))})", tuple(f.values())).lastrowid
+
+
+def update_user(uid: int, **f):
+    assert all(k in USER_FIELDS for k in f)
+    _run(f"UPDATE users SET {', '.join(f'{k}=?' for k in f)} WHERE id=?", (*f.values(), uid))
+
+
+def get_user(uid: int) -> dict | None:
+    r = _run("SELECT * FROM users WHERE id=?", (uid,)).fetchone()
+    return dict(r) if r else None
+
+
+def user_by(field: str, value) -> dict | None:
+    assert field in ("email", "google_sub", "telegram_chat", "link_code")
+    r = _run(f"SELECT * FROM users WHERE {field}=?", (value,)).fetchone()
+    return dict(r) if r else None
+
+
+def all_users() -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM users ORDER BY id").fetchall()]
+
+
+def user_count() -> int:
+    return _run("SELECT COUNT(*) AS n FROM users").fetchone()["n"]
+
+
+# --- sessions / reset tokens (only hashes are stored)
+def add_session(token_hash: str, uid: int, expires_at: str):
+    _run("INSERT INTO sessions VALUES (?,?,?)", (token_hash, uid, expires_at))
+
+
+def session_user(token_hash: str, now: str) -> dict | None:
+    r = _run("SELECT u.* FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=? AND s.expires_at>?",
+             (token_hash, now)).fetchone()
+    return dict(r) if r else None
+
+
+def delete_session(token_hash: str):
+    _run("DELETE FROM sessions WHERE token_hash=?", (token_hash,))
+
+
+def delete_user_sessions(uid: int):
+    _run("DELETE FROM sessions WHERE user_id=?", (uid,))
+
+
+def add_reset(token_hash: str, uid: int, expires_at: str):
+    _run("INSERT INTO reset_tokens(token_hash, user_id, expires_at) VALUES (?,?,?)", (token_hash, uid, expires_at))
+
+
+def use_reset(token_hash: str, now: str) -> int | None:
+    r = _run("SELECT user_id FROM reset_tokens WHERE token_hash=? AND used=0 AND expires_at>?", (token_hash, now)).fetchone()
+    if not r:
+        return None
+    _run("UPDATE reset_tokens SET used=1 WHERE token_hash=?", (token_hash,))
+    return r["user_id"]
+
+
+# --- per-user watchlists (the tickers table is the shared scan set)
+def user_symbols(uid: int) -> list[str]:
+    return [r["symbol"] for r in _run("SELECT symbol FROM watchlist WHERE user_id=? ORDER BY symbol", (uid,)).fetchall()]
+
+
+def watch(uid: int, symbol: str) -> bool:
+    return _run("INSERT OR IGNORE INTO watchlist(user_id, symbol) VALUES (?,?)", (uid, symbol)).rowcount == 1
+
+
+def unwatch(uid: int, symbol: str) -> bool:
+    ok = _run("DELETE FROM watchlist WHERE user_id=? AND symbol=?", (uid, symbol)).rowcount == 1
+    if ok and not _run("SELECT 1 FROM watchlist WHERE symbol=? LIMIT 1", (symbol,)).fetchone():
+        remove_ticker(symbol)       # nobody watches it any more: stop scanning it
+    return ok
+
+
+def watchers(symbol: str) -> list[dict]:
+    return [dict(r) for r in _run("SELECT u.* FROM watchlist w JOIN users u ON u.id=w.user_id WHERE w.symbol=?",
+                                  (symbol,)).fetchall()]
+
+
+def alerts_for_symbols(symbols: list[str], limit: int = 50, exclude_types: tuple = ()) -> list[dict]:
+    if not symbols:
+        return []
+    q = f"SELECT * FROM alerts WHERE symbol IN ({','.join('?' * len(symbols))})"
+    args = list(symbols)
+    if exclude_types:
+        q += f" AND type NOT IN ({','.join('?' * len(exclude_types))})"
+        args += list(exclude_types)
+    q += " ORDER BY candle_time DESC, rowid DESC LIMIT ?"
+    return [dict(r) for r in _run(q, (*args, limit)).fetchall()]

@@ -177,6 +177,25 @@
   .brow .px { margin: 0; font-size: 13px; }
   .brow button { padding: 5px 10px; font-size: 12px; }
   .more { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--muted); padding: 10px; }
+  .plan { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 99px;
+          border: 1px solid var(--line-2); color: var(--muted); text-decoration: none; }
+  .plan.pro { color: var(--accent); border-color: var(--accent); }
+  .lock { background: var(--surface); border: 1px dashed var(--line-2); border-radius: 16px; padding: 18px; text-align: center; }
+  .lock b { font: 500 22px var(--mono); display: block; }
+  .lock p { color: var(--muted); margin: 6px 0 0; font-size: 14px; }
+  .upsell { display: inline-block; margin-top: 10px; font-size: 13px; color: var(--accent); text-decoration: none; font-weight: 500; }
+  .acct { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; margin-bottom: 14px; }
+  .acct h3 { margin: 0 0 4px; font: 500 16px var(--sans); }
+  .acct p { margin: 4px 0 12px; color: var(--muted); font-size: 14px; }
+  .acct .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .acct input { flex: 1; min-width: 180px; padding: 10px 12px; font: 15px var(--sans); border-radius: 10px; border: 1px solid var(--line-2);
+                background: var(--bg); color: var(--ink); }
+  .tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  @media (max-width: 600px) { .tiers { grid-template-columns: 1fr; } }
+  .tier { border: 1px solid var(--line); border-radius: 12px; padding: 14px; font-size: 13px; color: var(--muted); }
+  .tier.pro { border-color: var(--accent); }
+  .tier b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 6px; }
+  .tier ul { margin: 0; padding-left: 18px; } .tier li { margin: 3px 0; }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 </style>
@@ -191,14 +210,15 @@
     </svg>
     Hub Scanner
   </div>
-  <div class="dots" id="dots"></div>
+  <div style="display:flex;align-items:center;gap:14px"><div class="dots" id="dots"></div><a href="#account" class="plan" id="planPill" hidden></a></div>
 </div></nav>
 
 <div class="tabs"><div class="wrap">
   <a href="#watch" data-tab="watch">Watchlist</a>
   <a href="#board" data-tab="board">Hub Board</a>
   <a href="#record" data-tab="record">Track record</a>
-  <a href="#paper" data-tab="paper">Paper trades</a>
+  <a href="#paper" data-tab="paper" id="tabPaper" hidden>Paper trades</a>
+  <a href="#account" data-tab="account">Account</a>
 </div></div>
 
 <main class="wrap">
@@ -265,6 +285,11 @@
   <div id="record"><div class="empty">Loading…</div></div>
 </section>
 
+<section data-view="account" hidden>
+  <div class="sec" style="margin-top:34px"><h2>Your <em>account</em></h2></div>
+  <div id="account"><div class="empty">Loading…</div></div>
+</section>
+
 <section data-view="paper" hidden>
   <div class="sec" style="margin-top:34px">
     <h2>Paper <em>trades</em></h2>
@@ -301,14 +326,15 @@ let TICKERS = [], FILTER = "all";
 async function api(path, opts = {}) {
   const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
   const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(body.detail || r.statusText);
+  if (r.status === 401) { location.href = "/login"; throw new Error("Please sign in"); }
+  if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : r.statusText);
   return body;
 }
 
 async function loadInfo() {
   try {
     const i = await api("/api/info");
-    const tg = !i.telegram ? ["--idle", "Telegram off"] : i.telegram_linked ? ["--up", "Telegram"] : ["--snap", "Send /start to bot"];
+    const tg = !i.telegram ? ["--idle", "Telegram off"] : i.telegram_linked ? ["--up", "Telegram"] : ["--snap", "Connect Telegram"];
     $("dots").innerHTML =
       `<span class="dot" style="--c:var(${i.provider === "demo" ? "--snap" : "--up"})"><i></i>${esc(i.provider)}</span>` +
       `<span class="dot" style="--c:var(${tg[0]})"><i></i>${tg[1]}</span>` +
@@ -431,7 +457,7 @@ function card(t) {
     ${body}
     <div class="foot">
       <span class="when">${st.last_candle ? "Updated " + new Date(st.last_candle_close || st.last_candle).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"}) : ""}</span>
-      <span><button onclick="runBacktest('${esc(t.symbol)}', this)">Past results</button>
+      <span>${isPro() ? `<button onclick="runBacktest('${esc(t.symbol)}', this)">Past results</button>` : `<a class="upsell" style="margin:0 6px 0 0" href="/t/${encodeURIComponent(t.symbol)}">Chart →</a>`}
       <button class="ghost" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">Remove</button></span>
     </div>
     <div class="bt" id="bt-${esc(t.symbol)}" hidden></div>
@@ -449,7 +475,11 @@ function render() {
     `<div class="empty" style="grid-column:1/-1">${TICKERS.length ? "Nothing matches this filter right now." : "No tickers yet. Add one above, for example NVDA."}</div>`;
 }
 
-async function loadTickers() { TICKERS = await api("/api/tickers"); render(); }
+async function loadTickers() {
+  TICKERS = await api("/api/tickers"); render();
+  if (ME && ME.ticker_limit) $("err").innerHTML = TICKERS.length >= ME.ticker_limit && !$("err").textContent
+    ? `Free plan: ${TICKERS.length}/${ME.ticker_limit} tickers. <a class="upsell" style="margin:0" href="#account">Upgrade for unlimited →</a>` : $("err").innerHTML;
+}
 
 async function loadAlerts() {
   const a = await api("/api/alerts?limit=15");
@@ -471,7 +501,7 @@ $("add").addEventListener("submit", async (e) => {
   if (!sym) { $("err").textContent = "Enter a ticker first"; return; }
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…";
   try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})}); $("sym").value = ""; await loadTickers(); }
-  catch (err) { $("err").textContent = err.message; }
+  catch (err) { $("err").innerHTML = esc(err.message) + (/Upgrade/.test(err.message) ? ` <a class="upsell" style="margin:0" href="#account">See Pro →</a>` : ""); }
   $("addBtn").disabled = false; $("addBtn").textContent = "Add";
 });
 $("sym").addEventListener("input", () => { $("err").textContent = ""; });
@@ -579,15 +609,86 @@ $("pSwitch").addEventListener("click", async () => {
   loadPaper();
 });
 
+// ---------------------------------------------------------------- account & plan
+let ME = null;
+const isPro = () => ME && ME.plan === "pro";
+async function loadMe() {
+  ME = await api("/api/me");
+  $("planPill").hidden = false;
+  $("planPill").textContent = isPro() ? "Pro" : "Free";
+  $("planPill").className = "plan" + (isPro() ? " pro" : "");
+  $("tabPaper").hidden = !ME.is_admin;
+  $("scanBtn").hidden = !ME.is_admin;
+  $("bScan").hidden = !ME.is_admin;
+  if (!ME.is_admin && location.hash === "#paper") location.hash = "#watch";
+}
+async function loadAccount() {
+  if (!ME) await loadMe();
+  const m = ME, tg = m.telegram;
+  let admin = "";
+  if (m.is_admin) {
+    const users = await api("/api/admin/users");
+    admin = `<div class="acct"><h3>Members · ${users.length}</h3><p>Set someone's plan by hand until payments are added.</p>
+      <div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>Tickers</th><th>Telegram</th><th>Plan</th></tr>
+      ${users.map(x => `<tr><td>${esc(x.email)}${x.is_admin ? " (admin)" : ""}</td><td>${day(x.created_at + "Z")}</td><td>${x.tickers}</td>
+        <td>${x.telegram ? "yes" : "–"}</td><td>${x.is_admin ? "Pro" : `<select onchange="setPlan(${x.id}, this.value)">
+          <option value="free"${x.plan === "free" ? " selected" : ""}>Free</option><option value="pro"${x.plan === "pro" ? " selected" : ""}>Pro</option></select>`}</td></tr>`).join("")}
+      </table></div></div>`;
+  }
+  $("account").innerHTML = `
+    <div class="acct"><h3>${esc(m.name || m.email)}</h3><p>${esc(m.email)} · ${m.google ? "Google sign-in" : "email and password"}</p>
+      <div class="row"><span class="plan${isPro() ? " pro" : ""}">${isPro() ? "Pro" : "Free"} plan</span>
+      <button onclick="signOut()">Sign out</button></div></div>
+
+    ${isPro() ? "" : `<div class="acct"><h3>Upgrade to Pro: $29/month</h3><p>Or $290/year (two months free). Online checkout is coming soon. Until then, contact the site owner to upgrade.</p>
+      <div class="tiers">
+        <div class="tier"><b>Free · your plan</b><ul><li>Watch up to ${m.ticker_limit} tickers</li><li>Telegram alerts after each breakout</li>
+          <li>Hub Board: stocks inside a hub</li><li>Track record and charts</li></ul></div>
+        <div class="tier pro"><b>Pro</b><ul><li>Unlimited watchlist</li><li><b style="display:inline;font-size:inherit">Pre-close warnings</b> 15 min before the candle closes</li>
+          <li>Full Hub Board: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Backtests on any ticker</li></ul></div>
+      </div></div>`}
+
+    <div class="acct"><h3>Telegram alerts</h3>
+      ${!tg.enabled ? `<p>Telegram isn't set up on this site yet.</p>` :
+        tg.linked ? `<p>Connected. Alerts for your watchlist go to your Telegram chat.</p><button onclick="unlinkTg()">Disconnect</button>` :
+        `<p>Get an alert the moment one of your tickers breaks out. Tap below, then press <b>Start</b> in Telegram.</p>
+         ${tg.link ? `<a class="upsell" style="font-size:15px" href="${esc(tg.link)}" target="_blank" rel="noopener">Connect Telegram →</a>` : ""}
+         <p style="margin-top:8px">Then come back and refresh this page.</p>`}
+    </div>
+
+    <div class="acct"><h3>Phone-call alerts ${isPro() ? "" : "· Pro"}</h3>
+      ${!isPro() ? `<p>Your phone rings and reads the alert aloud, for pre-close warnings and breakouts. Available on Pro.</p>` :
+        !m.calls_available ? `<p>Phone calls aren't set up on this site yet.</p>` :
+        `<p>We'll call this number for pre-close warnings and breakouts on your watchlist.</p>
+         <form class="row" id="phoneForm"><input id="phoneIn" type="tel" placeholder="+1 617 555 0123" value="${esc(m.phone || "")}">
+           <button>Save</button>${m.phone ? `<button type="button" onclick="testCall(this)">Test call</button>` : ""}</form>
+         <div class="err" id="phoneMsg"></div>`}
+    </div>
+    ${admin}`;
+  if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }
+    catch (err) { $("phoneMsg").textContent = err.message; }
+  });
+}
+async function signOut() { await fetch("/auth/logout", {method: "POST"}); location.href = "/login"; }
+async function unlinkTg() { await api("/api/me/telegram", {method: "DELETE"}); await loadMe(); loadAccount(); }
+async function setPlan(id, plan) { await api(`/api/admin/users/${id}/plan`, {method: "POST", body: JSON.stringify({plan})}); }
+async function testCall(btn) {
+  btn.disabled = true;
+  try { await api("/api/testcall", {method: "POST"}); btn.textContent = "Calling…"; } catch (e) { $("phoneMsg").textContent = e.message; }
+}
+
 // ---------------------------------------------------------------- tabs
 function showTab() {
   const tab = (location.hash || "#watch").slice(1);
-  const valid = ["watch", "board", "record", "paper"].includes(tab) ? tab : "watch";
+  const valid = ["watch", "board", "record", "paper", "account"].includes(tab) ? tab : "watch";
   document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== valid);
   document.querySelectorAll(".tabs a").forEach(a => a.classList.toggle("on", a.dataset.tab === valid));
   if (valid === "board") loadBoard();
   if (valid === "record") loadRecord();
   if (valid === "paper") loadPaper();
+  if (valid === "account") loadAccount();
 }
 window.addEventListener("hashchange", showTab);
 
@@ -626,8 +727,12 @@ async function loadBoard() {
   $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
   if (!b.universe) { $("board").innerHTML = `<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>`; return; }
   $("board").innerHTML =
+    (b.locked ? `<div class="group"><h3>Breaking out now & at the edge · Pro</h3><div class="lock">
+       <b>${b.live_count} breakouts · ${b.near_count} at the edge</b>
+       <p>See which stocks are breaking out right now, and which are pressing against a hub edge, with targets.</p>
+       <a class="upsell" href="#account">Upgrade to Pro →</a></div></div>` :
     bGroup("Breaking out now", b.live, "live", "No live breakouts right now.") +
-    bGroup("At the edge of a hub", b.near, "near", "Nothing pressing against a hub edge right now.") +
+    bGroup("At the edge of a hub", b.near, "near", "Nothing pressing against a hub edge right now.")) +
     bGroup("Inside a hub", b.forming, "forming", "No stocks are in a hub right now.") +
     bGroup("Just finished", b.recent, "recent", "No recent results.");
 }
@@ -673,7 +778,7 @@ try {
   if (!localStorage.getItem("hs_seen_guide")) { $("guide").open = true; localStorage.setItem("hs_seen_guide", "1"); }
 } catch (e) { $("guide").open = true; }
 
-loadInfo(); loadTickers(); loadAlerts(); showTab();
+loadMe().then(() => { loadInfo(); loadTickers(); loadAlerts(); showTab(); }).catch(() => {});
 setInterval(() => { loadTickers(); loadAlerts(); showTab(); }, 120000);
 </script>
 </body>

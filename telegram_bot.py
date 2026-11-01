@@ -20,17 +20,26 @@ def enabled() -> bool:
     return bool(TOKEN)
 
 
-def owner_chat() -> str | None:
-    return os.getenv("TELEGRAM_CHAT_ID", "").strip() or db.get_setting("owner_chat_id")
+_username = None
+
+
+def bot_username() -> str | None:
+    """The bot's @username, for 't.me/<bot>?start=CODE' account-link buttons."""
+    global _username
+    if _username is None and enabled():
+        try:
+            _username = requests.get(f"{API}/getMe", timeout=10).json()["result"]["username"]
+        except Exception:
+            return None
+    return _username
 
 
 def send(text: str, chat_id: str | None = None):
     if not enabled():
         log.info("Telegram disabled, alert not sent: %s", text.splitlines()[0])
         return
-    chat = chat_id or owner_chat()
+    chat = chat_id
     if not chat:
-        log.warning("No Telegram chat linked yet. Send /start to your bot.")
         return
     try:
         r = requests.post(f"{API}/sendMessage", timeout=15,
@@ -70,6 +79,7 @@ def _poll(handle):
 
 
 def _on_message(msg: dict, handle):
+    """Each chat is tied to one site account via '/start <code>' from the Account page."""
     text = (msg.get("text") or "").strip()
     chat = str((msg.get("chat") or {}).get("id", ""))
     if not text.startswith("/") or not chat:
@@ -77,18 +87,26 @@ def _on_message(msg: dict, handle):
     parts = text.split()
     cmd, args = parts[0].split("@")[0].lower(), parts[1:]
 
-    owner = owner_chat()
-    if owner is None and cmd == "/start":
-        db.set_setting("owner_chat_id", chat)
-        owner = chat
-        send("Linked. Alerts from your hub scanner will come to this chat.", chat)
-    if chat != owner:
-        send("This is a private bot.", chat)
+    if cmd == "/start" and args:
+        u = db.user_by("link_code", args[0])
+        if not u:
+            send("That link has expired. Open Account on the Hub Scanner site and tap 'Connect Telegram' again.", chat)
+            return
+        old = db.user_by("telegram_chat", chat)
+        if old and old["id"] != u["id"]:
+            db.update_user(old["id"], telegram_chat=None)
+        db.update_user(u["id"], telegram_chat=chat)
+        send(f"Connected to {u['email']}. Alerts for your watchlist will come here. /help for commands.", chat)
+        return
+    user = db.user_by("telegram_chat", chat)
+    if not user:
+        send("This chat isn't connected to a Hub Scanner account yet. Sign in on the site, open Account, "
+             "and tap 'Connect Telegram'.", chat)
         return
     try:
-        reply = handle(cmd, args)
+        reply = handle(cmd, args, user)
     except Exception as e:
         log.exception("command failed")
-        reply = f"Something went wrong: {e}"
+        reply = f"Something went wrong: {getattr(e, 'detail', e)}"
     if reply:
         send(reply, chat)
