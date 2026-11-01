@@ -204,32 +204,54 @@ def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
                      spark_from=h["start_i"] - (n - len(st["spark"])), spark_to=h["end_i"] - (n - len(st["spark"])))
     atr_now = float(res["atr"].iloc[-1])
     base = len(close) - len(st["spark"])
+    price = float(close.iloc[-1])
+
     def shelf_json(sh, is_target=False):
         if not sh:
             return None
         return dict(low=round(sh["low"], 2), high=round(sh["high"], 2), level=round(sh["level"], 2),
                     spark_from=sh["start_i"] - base, spark_to=sh["end_i"] - base, target=is_target)
-    st["shelf_up"] = shelf_json(find_shelf(res["hubs"], h, 1, h["high"], atr_now, s))
-    st["shelf_down"] = shelf_json(find_shelf(res["hubs"], h, -1, h["low"], atr_now, s))
+
+    def from_hub():
+        """Shelves measured from the current hub's edges (while a setup is in play)."""
+        st["shelf_up"] = shelf_json(find_shelf(res["hubs"], h, 1, h["high"], atr_now, s))
+        st["shelf_down"] = shelf_json(find_shelf(res["hubs"], h, -1, h["low"], atr_now, s))
+
+    def from_price():
+        """No setup in play: nearest hub zone fully above / fully below today's price."""
+        above = [x for x in res["hubs"] if x["low"] > price]
+        below = [x for x in res["hubs"] if x["high"] < price]
+        up = min(above, key=lambda x: x["low"], default=None)
+        dn = max(below, key=lambda x: x["high"], default=None)
+        st["shelf_up"] = shelf_json(dict(up, level=up["low"])) if up else None
+        st["shelf_down"] = shelf_json(dict(dn, level=dn["high"])) if dn else None
+
     if h["active"]:
+        from_hub()
         st.update(state="forming", label=f"Inside hub ({h['sessions']} sessions)")
         return st
     trade = next((t for t in res["trades"] if t["hub"] is h), None)
     if trade is None:
         if n - 1 - h["end_i"] < s.horizon:
+            from_hub()
             st.update(state="watching", label="Hub ended, watching for breakout")
+        else:
+            from_price()
         return st
-    st["target"] = round(trade["target"], 2)
-    st["direction"] = "up" if trade["direction"] == 1 else "down"
-    key = "shelf_up" if trade["direction"] == 1 else "shelf_down"
-    st[key] = shelf_json(trade["shelf"], True)   # the shelf used as this breakout's target
-    st["target_kind"] = "shelf" if trade["shelf"] else "atr"
     if trade["outcome"] == "pending":
+        from_hub()
+        st["target"] = round(trade["target"], 2)
+        st["direction"] = "up" if trade["direction"] == 1 else "down"
+        key = "shelf_up" if trade["direction"] == 1 else "shelf_down"
+        st[key] = shelf_json(trade["shelf"], True)   # the shelf used as this breakout's target
+        st["target_kind"] = "shelf" if trade["shelf"] else "atr"
         k = n - 1 - trade["i0"]
         word = "Breakout up" if trade["direction"] == 1 else "Breakdown"
         st.update(state="breakout_up" if trade["direction"] == 1 else "breakdown",
                   label=f"{word}, {k}/{s.horizon} candles")
-    elif n - 1 - trade["oi"] < s.horizon:
+        return st
+    from_price()
+    if n - 1 - trade["oi"] < s.horizon:
         st.update(state=trade["outcome"], label=trade["outcome"].capitalize())
     return st
 
