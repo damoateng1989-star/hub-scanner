@@ -81,6 +81,29 @@ Things to know:
 
 ---
 
+## Phone-call alerts (Twilio)
+
+Your phone rings and a voice reads the alert twice. For example: *"Hub scanner. N. V. D. A. is trading above its hub, about 15 minutes before the 4 hour close. Price $82.37. Hub edge $82.04. Next shelf $84.30."* Calls are for the alerts you act on: **pre-close warnings** and **breakouts/breakdowns**. Everything else stays in Telegram. You won't get a call for a chase (price already at the target), and after downtime the app only calls about the newest candle, so you don't get a burst of old calls.
+
+Setup (about 10 minutes):
+1. Sign up at **twilio.com** and verify your own phone number.
+2. In the Twilio console, **buy a phone number** with Voice capability. It costs a small monthly fee, and calls are billed per minute; check Twilio's current US pricing.
+3. From the console home page, copy your **Account SID** and **Auth Token**.
+4. Add these variables in Railway:
+   ```
+   TWILIO_ACCOUNT_SID=ACxxxxxxxx
+   TWILIO_AUTH_TOKEN=xxxxxxxx
+   TWILIO_FROM=+1XXXXXXXXXX     # your Twilio number
+   CALL_TO=+1XXXXXXXXXX         # your cell
+   ```
+5. Send `/testcall` to your Telegram bot. Your phone should ring.
+
+On a Twilio **trial** account, calls only reach numbers you've verified and start with a short trial message (press any key). Upgrading removes that. Save your Twilio number as a contact (e.g. "Hub Scanner") so the call isn't flagged as spam, and allow it through Do Not Disturb.
+
+`CALL_ON` controls which alerts ring: any of `preclose`, `breakout`, `follow-through`, `snap-back` (default `preclose,breakout`).
+
+---
+
 ## Telegram commands
 
 ```
@@ -92,6 +115,7 @@ Things to know:
 /precheck          run the pre-close check now
 /paper             paper-trading journal
 /paper on | off    turn automatic paper trading on or off
+/testcall          test the phone-call alert
 /backtest NVDA     ~2 years of breakout stats
 /help
 ```
@@ -144,6 +168,7 @@ scanner.py        scanning, alert wording, Telegram commands
 engine.py         4H candles, hub/breakout/outcome logic, backtest stats
 data.py           Alpaca / yfinance / demo price data
 telegram_bot.py   sending messages and reading commands
+phone.py          phone-call alerts (Twilio)
 paper.py          automatic paper trading (Alpaca paper account or simulator)
 db.py             SQLite storage (watchlist, alerts, paper trades)
 static/index.html the watchlist page

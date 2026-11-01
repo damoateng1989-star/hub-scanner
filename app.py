@@ -27,6 +27,7 @@ from pydantic import BaseModel  # noqa: E402
 import data  # noqa: E402
 import db  # noqa: E402
 import paper  # noqa: E402
+import phone  # noqa: E402
 import scanner  # noqa: E402
 import telegram_bot  # noqa: E402
 
@@ -47,8 +48,12 @@ def handle_command(cmd: str, args: list[str]) -> str:
         if args and args[0].lower() in ("on", "off"):
             paper.set_enabled(args[0].lower() == "on")
         return paper.summary_text()
+    if cmd == "/testcall":
+        phone.call("Hub scanner test call. Phone alerts are working.")
+        return "Calling you now."
     if cmd in ("/start", "/help"):
-        return scanner.HELP + "\n\n/paper: paper-trading journal\n/paper on | /paper off: turn auto paper trading on or off"
+        return (scanner.HELP + "\n\n/paper: paper-trading journal\n/paper on | /paper off: turn auto paper trading on or off"
+                "\n/testcall: test the phone-call alert")
     return scanner.handle_command(cmd, args)
 
 
@@ -111,7 +116,8 @@ def index():
 def info():
     s = scanner.SETTINGS
     return dict(provider=data.provider(), telegram=telegram_bot.enabled(),
-                telegram_linked=bool(telegram_bot.owner_chat()), scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES, entry_times=ENTRY_TIMES,
+                telegram_linked=bool(telegram_bot.owner_chat()),
+                phone=phone.enabled(), call_on=sorted(phone.call_on()), scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES, entry_times=ENTRY_TIMES,
                 settings=dict(min_sessions=s.min_sessions, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
                               shelf_min_atr=s.shelf_min_atr))
 
@@ -152,6 +158,14 @@ async def scan_now():
 async def precheck_now():
     sent = await run_in_threadpool(scanner.preclose_all)
     return {"alerts": len(sent)}
+
+
+@app.post("/api/testcall", dependencies=[Depends(auth)])
+def test_call():
+    try:
+        return {"sid": phone.call("Hub scanner test call. Phone alerts are working.")}
+    except Exception as e:
+        raise HTTPException(400, str(e))
 
 
 class ToggleBody(BaseModel):

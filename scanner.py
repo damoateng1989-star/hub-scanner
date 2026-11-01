@@ -12,6 +12,7 @@ import pandas as pd
 import data
 import db
 import engine
+import phone
 import telegram_bot
 
 log = logging.getLogger("scanner")
@@ -99,6 +100,38 @@ def format_preclose(sym: str, sig: dict, minutes_left: int) -> str:
             + (f"\n{hist}" if hist else ""))
 
 
+def _say_money(x: float) -> str:
+    return f"${x:,.2f}"
+
+
+def speak_preclose(sym: str, sig: dict, minutes_left: int) -> str:
+    up = sig["direction"] == 1
+    tgt = (f"Next shelf {_say_money(sig['target'])}." if sig["shelf"]
+           else f"No shelf in range. Target {_say_money(sig['target'])}.")
+    if sig["reached"]:
+        tgt = "Price is already at the target, so this would be a chase."
+    return (f"Hub scanner. {phone.spell(sym)} is trading {'above' if up else 'below'} its hub, "
+            f"about {minutes_left} minutes before the 4 hour close. "
+            f"Price {_say_money(sig['price'])}. Hub edge {_say_money(sig['edge'])}. {tgt}")
+
+
+def speak_event(sym: str, e: dict) -> str:
+    if e["type"] in ("breakout", "breakdown"):
+        up = e["type"] == "breakout"
+        d = 1 if up else -1
+        tgt = (f"Next shelf {_say_money(e['target'])}." if e.get("shelf")
+               else f"No shelf in range. Target {_say_money(e['target'])}.")
+        if (e["close"] - e["target"]) * d >= 0:
+            tgt = "It already closed at the target, so this would be a chase."
+        return (f"Hub scanner. {phone.spell(sym)} closed {'above' if up else 'below'} its hub. "
+                f"4 hour close {_say_money(e['close'])}. {tgt}")
+    if e["type"] == "follow-through":
+        return f"Hub scanner. {phone.spell(sym)} reached the next shelf at {_say_money(e['target'])}. Follow-through."
+    if e["type"] == "snap-back":
+        return f"Hub scanner. {phone.spell(sym)} closed back inside its hub. Snap-back."
+    return f"Hub scanner. {phone.spell(sym)}: {e['type'].replace('_', ' ')}."
+
+
 def format_event(sym: str, e: dict) -> str:
     t = candle_close(e["time"])
     zone = f"{_money(e['low'])}–{_money(e['high'])}"
@@ -163,6 +196,11 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
                                 e["time"].isoformat(), msg):
                     telegram_bot.send(msg)
+                    # ring only for the newest candle (no burst of calls after downtime), and not for chases
+                    chase = e["type"] in ("breakout", "breakdown") and \
+                        (e["close"] - e["target"]) * (1 if e["type"] == "breakout" else -1) >= 0
+                    if phone.wants(e["type"]) and e["time"] == c4.index[-1] and not chase:
+                        phone.safe_call(speak_event(sym, e))
                     sent.append(msg)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
@@ -202,6 +240,8 @@ def preclose_all() -> list[str]:
                 msg = format_preclose(sym, sig, minutes_left)
                 if db.add_alert(f"{sym}|preclose|{start.isoformat()}", sym, "preclose", start.isoformat(), msg):
                     telegram_bot.send(msg)
+                    if phone.wants("preclose") and not sig["reached"]:
+                        phone.safe_call(speak_preclose(sym, sig, minutes_left))
                     sent.append(msg)
             except Exception as e:
                 log.warning("pre-close check failed for %s: %s", sym, e)

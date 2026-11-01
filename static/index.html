@@ -221,7 +221,8 @@ async function loadInfo() {
     const tg = !i.telegram ? ["--idle", "Telegram off"] : i.telegram_linked ? ["--up", "Telegram"] : ["--snap", "Send /start to bot"];
     $("dots").innerHTML =
       `<span class="dot" style="--c:var(${i.provider === "demo" ? "--snap" : "--up"})"><i></i>${esc(i.provider)}</span>` +
-      `<span class="dot" style="--c:var(${tg[0]})"><i></i>${tg[1]}</span>`;
+      `<span class="dot" style="--c:var(${tg[0]})"><i></i>${tg[1]}</span>` +
+      (i.phone ? `<span class="dot" style="--c:var(--up)"><i></i>Calls</span>` : "");
     $("demo").hidden = i.provider !== "demo";
     $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "Pre-close checks " + i.preclose_times.join(" & ") + " · " : ""}Scans ${i.scan_times.join(" & ")} ET on weekdays · ${i.settings.horizon}-candle limit`;
   } catch (e) { $("dots").innerHTML = `<span class="dot" style="--c:var(--down)"><i></i>${esc(e.message)}</span>`; }
