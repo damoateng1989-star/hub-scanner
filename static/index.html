@@ -176,7 +176,7 @@
   .brow .d b { font-weight: 500; }
   .brow .px { margin: 0; font-size: 13px; }
   .brow button { padding: 5px 10px; font-size: 12px; }
-  @media (max-width: 600px) { .brow { grid-template-columns: 64px 1fr; } .brow button { grid-column: 2; justify-self: start; margin-top: 4px; } }
+  @media (max-width: 600px) { .brow { grid-template-columns: 64px 1fr; } }
   .more { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--muted); padding: 10px; }
   .plan { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 99px;
           border: 1px solid var(--line-2); color: var(--muted); text-decoration: none; }
@@ -202,6 +202,14 @@
            transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); }
   #toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
   #toast a { color: var(--bg); font-weight: 600; margin-left: 6px; }
+  .tv { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 3px 8px; border-radius: 8px; font: 500 11px var(--sans);
+        color: var(--muted); border: 1px solid var(--line-2); text-decoration: none; vertical-align: 2px; white-space: nowrap; }
+  .tv:hover { color: var(--ink); border-color: var(--faint); }
+  .tv-mini { margin-left: 4px; padding: 2px 4px; vertical-align: -2px; }
+  .symrow { display: flex; align-items: baseline; flex-wrap: wrap; row-gap: 4px; }
+  .bact { display: flex; align-items: center; gap: 6px; }
+  .bact .tv { margin-left: 0; padding: 5px 8px; }
+  @media (max-width: 600px) { .bact { grid-column: 2; justify-self: start; margin-top: 4px; } .brow button { margin-top: 0; } }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 </style>
@@ -327,6 +335,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":
 const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : "";
 const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"}) : "";
+const TV_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 4v16M6 8h-2v6h2M12 6v14M12 9h-2v7h2M18 3v15M18 6h-2v6h2"/><path d="M15 21h6v-6" opacity=".0"/></svg>`;
+const tvUrl = (s) => `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(s)}&interval=240`;
+const tvLink = (s) => `<a class="tv" href="${tvUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in TradingView (4H)" aria-label="Open ${esc(s)} in TradingView">${TV_ICON}<span>TradingView</span></a>`;
 let TICKERS = [], FILTER = "all";
 
 async function api(path, opts = {}) {
@@ -452,7 +463,7 @@ function card(t) {
     ${ladder(st, key)}`;
   return `<div class="card" id="c-${esc(t.symbol)}">
     <div class="top">
-      <div><a class="sym symlink" href="/t/${encodeURIComponent(t.symbol)}">${esc(t.symbol)}</a><span class="px">${money(st.last_close)}</span></div>
+      <div class="symrow"><a class="sym symlink" href="/t/${encodeURIComponent(t.symbol)}">${esc(t.symbol)}</a><span class="px">${money(st.last_close)}</span>${tvLink(t.symbol)}</div>
       <span class="badge" style="--c: var(${color})">${label}</span>
     </div>
     ${body}
@@ -752,7 +763,7 @@ function bRow(r, kind) {
   } else {
     d = `${{"follow-through": "Hit shelf", "snap-back": "Failed breakout", stalled: "Timed out"}[r.state]}`;
   }
-  return `<div class="brow">${sym(r.symbol)}<div class="d"><span class="px mono">${money(r.last_close)}</span> · ${d}</div>${watchBtn(r)}</div>`;
+  return `<div class="brow">${sym(r.symbol)}<div class="d"><span class="px mono">${money(r.last_close)}</span> · ${d}</div><div class="bact">${tvLink(r.symbol)}${watchBtn(r)}</div></div>`;
 }
 function bGroup(title, rows, kind, empty) {
   const id = "g-" + kind, more = rows.length > 8;
@@ -821,7 +832,7 @@ async function loadRecord() {
       <tr><th>Breakout</th><th>Stock</th><th></th><th>Entry</th><th>Target</th><th>Result</th><th>Return</th></tr>
       ${r.signals.map(x => { const [w, c] = x.chase ? ["skipped", "--faint"] : res[x.outcome] || [x.outcome, "--idle"];
         return `<tr><td>${new Date(x.breakout_time).toLocaleDateString(undefined, {month: "short", day: "numeric"})}</td>
-        <td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}"><b>${esc(x.symbol)}</b></a></td>
+        <td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}"><b>${esc(x.symbol)}</b></a> <a class="tv tv-mini" href="${tvUrl(x.symbol)}" target="_blank" rel="noopener" title="Open in TradingView">${TV_ICON}</a></td>
         <td style="color:var(${x.direction === 1 ? "--up" : "--down"})">${x.direction === 1 ? "▲" : "▼"}</td>
         <td>${money(x.entry)}</td><td>${money(x.target)}</td>
         <td style="color:var(${c})">${w}</td>

@@ -39,6 +39,9 @@
   .badge { display: inline-flex; align-items: center; gap: 6px; font: 500 13px var(--sans); padding: 5px 12px;
            border-radius: 99px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
   .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .tvbtn { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 99px; border: 1px solid var(--line-2);
+           color: var(--ink); text-decoration: none; font: 500 13px var(--sans); }
+  .tvbtn:hover { border-color: var(--faint); }
   .sum { font-size: 16px; max-width: 720px; margin: 10px 0 18px; }
   .sum b { font-weight: 600; } .u-up { color: var(--up); } .u-down { color: var(--down); }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
@@ -116,7 +119,11 @@ async function load() {
   $("main").innerHTML = `
     <header>
       <h1>${esc(d.symbol)}<small>${money(st.last_close)}</small></h1>
-      <span class="badge" style="--c:var(${color})">${label}</span>
+      <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <a class="tvbtn" href="https://www.tradingview.com/chart/?symbol=${encodeURIComponent(d.symbol)}&interval=240" target="_blank" rel="noopener" title="Open ${esc(d.symbol)} in TradingView (4H)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 4v16M6 8h-2v6h2M12 6v14M12 9h-2v7h2M18 3v15M18 6h-2v6h2"/></svg>
+          Open in TradingView</a>
+        <span class="badge" style="--c:var(${color})">${label}</span></span>
     </header>
     <p class="sum">${summary(st)}</p>
     <div class="card"><div id="chart"></div>
