@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0B0B0D">
 <title>Sign in · NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -59,6 +58,41 @@
   .links { display: flex; justify-content: space-between; margin-top: 18px; font-size: 14px; }
   a { color: var(--ink); }
   .links a { color: var(--muted); }
+
+  /* NextShelf dark-first visual system */
+  :root {
+    color-scheme: dark;
+    --bg: #0B0B0D;
+    --surface: #121215;
+    --sunk: #19191F;
+    --ink: #F4F4F6;
+    --muted: #A1A1AA;
+    --faint: #6B6B75;
+    --line: #24242A;
+    --line-2: #33333B;
+    --accent: #A99BFF;
+    --accent-ink: #0B0B0D;
+    --up: #3DD68C;
+    --down: #FF6B5E;
+    --ft: #2FD4C0;
+    --snap: #FF8A4C;
+    --stall: #F2C14E;
+    --hub: #8B9CFF;
+    --idle: #858594;
+  }
+
+  body { background: radial-gradient(ellipse at 16% 8%, rgba(124,147,255,.12), transparent 40%), var(--bg); }
+  .pitch { background: linear-gradient(145deg, rgba(18,18,21,.78), rgba(11,11,13,.42)); border-right-color: var(--line); }
+  .pitch h1 em { color: var(--accent); }
+  .box { background: rgba(18,18,21,.72); border: 1px solid var(--line); border-radius: 20px; padding: 28px; box-shadow: 0 24px 70px rgba(0,0,0,.24); }
+  input { background: #0D0D11; border-color: var(--line-2); }
+  input:focus { border-color: var(--accent); }
+  button { background: var(--accent); border-color: var(--accent); color: #100d20; }
+  button:hover { filter: brightness(1.08); }
+  .google { background: #17171D; color: var(--ink); border-color: var(--line-2); }
+  a { color: var(--ink); }
+  @media (max-width: 860px) { .box { padding: 24px; } }
+
 </style>
 </head>
 <body>
