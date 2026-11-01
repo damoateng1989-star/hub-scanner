@@ -501,7 +501,14 @@ def _welcome_html(unsub: str) -> str:
 closes, and targets the next shelf.</p>
 <p>We'll email you when new features launch and when the full version opens. No spam, and you can leave anytime.</p>
 <p style="color:#777;font-size:12px;margin-top:28px">NextShelf is an educational tool, not financial advice.<br>
-<a href="{unsub}" style="color:#777">Unsubscribe</a></p></div>"""
+{_mailing_address()}<a href="{unsub}" style="color:#777">Unsubscribe</a></p></div>"""
+
+
+def _mailing_address() -> str:
+    """Sender's postal address for the email footer (required by CAN-SPAM). Set MAILING_ADDRESS in the server settings."""
+    import html
+    addr = os.getenv("MAILING_ADDRESS", "").strip()
+    return f"NextShelf · {html.escape(addr)}<br>" if addr else ""
 
 
 @app.post("/api/subscribe")
