@@ -44,7 +44,27 @@ def latest_price(symbol: str) -> float | None:
     return float(bars["Close"].iloc[-1]) if not bars.empty else None
 
 
+def get_bars_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
+    """Bars for many symbols at once (Alpaca batches 40 per request; others loop)."""
+    if provider() != "alpaca":
+        out = {}
+        for s in symbols:
+            try:
+                out[s] = get_bars(s, days)
+            except Exception:
+                out[s] = pd.DataFrame(columns=COLS)
+        return out
+    out = {}
+    for i in range(0, len(symbols), 40):
+        out.update(_alpaca_many(symbols[i:i + 40], days))
+    return out
+
+
 def _alpaca(symbol: str, days: int) -> pd.DataFrame:
+    return _alpaca_many([symbol], days).get(symbol, pd.DataFrame(columns=COLS))
+
+
+def _alpaca_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
     key, secret = os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY")
     if not key or not secret:
         raise RuntimeError("ALPACA_API_KEY and ALPACA_SECRET_KEY are not set")
@@ -54,25 +74,30 @@ def _alpaca(symbol: str, days: int) -> pd.DataFrame:
         end -= pd.Timedelta(minutes=16)
     start = end - pd.Timedelta(days=days)
     fmt = "%Y-%m-%dT%H:%M:%SZ"
-    params = dict(symbols=symbol, timeframe="30Min", start=start.strftime(fmt), end=end.strftime(fmt),
+    params = dict(symbols=",".join(symbols), timeframe="30Min", start=start.strftime(fmt), end=end.strftime(fmt),
                   limit=10000, adjustment="all", feed=feed)
     headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
-    rows = []
+    rows: dict[str, list] = {s: [] for s in symbols}
     while True:
-        r = requests.get("https://data.alpaca.markets/v2/stocks/bars", headers=headers, params=params, timeout=30)
+        r = requests.get("https://data.alpaca.markets/v2/stocks/bars", headers=headers, params=params, timeout=60)
         if r.status_code != 200:
             raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
         js = r.json()
-        rows += (js.get("bars") or {}).get(symbol) or []
+        for sym, bars in (js.get("bars") or {}).items():
+            rows.setdefault(sym, []).extend(bars or [])
         token = js.get("next_page_token")
         if not token:
             break
         params["page_token"] = token
-    if not rows:
-        return pd.DataFrame(columns=COLS)
-    df = pd.DataFrame(rows)
-    df.index = pd.to_datetime(df["t"], utc=True)
-    return df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close"})[COLS]
+    out = {}
+    for sym, rs in rows.items():
+        if not rs:
+            out[sym] = pd.DataFrame(columns=COLS)
+            continue
+        df = pd.DataFrame(rs)
+        df.index = pd.to_datetime(df["t"], utc=True)
+        out[sym] = df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close"})[COLS].sort_index()
+    return out
 
 
 def _yfinance(symbol: str, days: int) -> pd.DataFrame:

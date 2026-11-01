@@ -23,6 +23,16 @@ Each event is alerted once. A newly added ticker starts quiet: you get alerts fo
 
 ---
 
+## Pages
+
+- **Watchlist** (`/`): your tickers, with a summary, mini chart and price ladder for each, plus recent alerts.
+- **Hub Board** (`/#board`): every Nasdaq-100 stock plus your watchlist, scanned a few minutes after each 4H close (1:52 and 4:22 PM ET). It's grouped into *Breaking out now*, *At the edge of a hub*, *Inside a hub* and *Just finished*, and you can tap **+ Watch** to add any stock to your list. To scan your own set of stocks instead, set `BOARD_UNIVERSE=AAPL,MSFT,...`.
+- **Track record** (`/#record`): every breakout the board detects from the day it first runs, with its result and return. It's logged automatically, and nothing is removed.
+- **Ticker page** (`/t/NVDA`): a full 4H candlestick chart with every hub drawn, the shelves above and below, and breakout markers labelled hit / failed / timed out, plus that stock's past results.
+- **Paper trades** (`/#paper`): the automatic paper-trading journal.
+
+---
+
 ## What you need (all free to start)
 
 | | What | Where |
@@ -169,6 +179,9 @@ engine.py         4H candles, hub/breakout/outcome logic, backtest stats
 data.py           Alpaca / yfinance / demo price data
 telegram_bot.py   sending messages and reading commands
 phone.py          phone-call alerts (Twilio)
+board.py          Hub Board, track record, chart data
+universe.py       the stocks the Hub Board scans (Nasdaq-100)
+static/ticker.html  ticker chart page (charts by TradingView Lightweight Charts, Apache-2.0)
 paper.py          automatic paper trading (Alpaca paper account or simulator)
 db.py             SQLite storage (watchlist, alerts, paper trades)
 static/index.html the watchlist page

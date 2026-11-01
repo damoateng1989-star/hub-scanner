@@ -13,6 +13,7 @@ import json  # noqa: E402
 import logging  # noqa: E402
 import os  # noqa: E402
 import secrets  # noqa: E402
+import threading  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -24,6 +25,7 @@ from fastapi.responses import FileResponse  # noqa: E402
 from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+import board  # noqa: E402
 import data  # noqa: E402
 import db  # noqa: E402
 import paper  # noqa: E402
@@ -39,6 +41,8 @@ log = logging.getLogger("app")
 SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:47,16:17").split(",") if t.strip()]
 # Pre-close warning ~15 minutes before each 4H close (uses Alpaca's free real-time IEX price). Empty = off.
 PRECLOSE_TIMES = [t.strip() for t in os.getenv("PRECLOSE_TIMES", "13:15,15:45").split(",") if t.strip()]
+# Hub Board: market-wide scan, a few minutes after the watchlist scan. Empty = off.
+BOARD_TIMES = [t.strip() for t in os.getenv("BOARD_TIMES", "13:52,16:22").split(",") if t.strip()]
 # Paper trading: entries/exits ~2 minutes before each 4H close.
 ENTRY_TIMES = [t.strip() for t in os.getenv("ENTRY_TIMES", "13:28,15:58").split(",") if t.strip()]
 
@@ -75,6 +79,13 @@ async def lifespan(_app: FastAPI):
         sched.add_job(paper.run_check, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                    timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1)
+    for t in BOARD_TIMES:
+        h, m = t.split(":")
+        sched.add_job(board.scan_board, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
+                                                    timezone="America/New_York"),
+                      misfire_grace_time=1800, coalesce=True, max_instances=1)
+    if BOARD_TIMES and not db.board_rows():      # first start: fill the board right away
+        threading.Thread(target=board.scan_board, daemon=True).start()
     sched.add_job(paper.sync, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5",
                                           timezone="America/New_York"),
                   misfire_grace_time=120, coalesce=True, max_instances=1)
@@ -125,6 +136,39 @@ def touch_icon():
     return FileResponse(STATIC / "apple-touch-icon.png", media_type="image/png")
 
 
+@app.get("/vendor/lightweight-charts.js")
+def lwc():
+    return FileResponse(STATIC / "vendor" / "lightweight-charts.js", media_type="application/javascript")
+
+
+@app.get("/t/{symbol}", dependencies=[Depends(auth)])
+def ticker_page(symbol: str):
+    return FileResponse(STATIC / "ticker.html")
+
+
+@app.get("/api/chart/{symbol}", dependencies=[Depends(auth)])
+async def chart_data(symbol: str):
+    try:
+        return await run_in_threadpool(board.chart, symbol)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/board", dependencies=[Depends(auth)])
+def board_data():
+    return board.board()
+
+
+@app.post("/api/board/scan", dependencies=[Depends(auth)])
+async def board_scan_now():
+    return {"scanned": await run_in_threadpool(board.scan_board)}
+
+
+@app.get("/api/record", dependencies=[Depends(auth)])
+def record_data():
+    return board.track_record()
+
+
 @app.get("/", dependencies=[Depends(auth)])
 def index():
     return FileResponse(Path(__file__).parent / "static" / "index.html")
@@ -135,7 +179,7 @@ def info():
     s = scanner.SETTINGS
     return dict(provider=data.provider(), telegram=telegram_bot.enabled(),
                 telegram_linked=bool(telegram_bot.owner_chat()),
-                phone=phone.enabled(), call_on=sorted(phone.call_on()), scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES, entry_times=ENTRY_TIMES,
+                phone=phone.enabled(), call_on=sorted(phone.call_on()), scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES, entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
                 settings=dict(min_sessions=s.min_sessions, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
                               shelf_min_atr=s.shelf_min_atr))
 

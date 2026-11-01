@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<title>Hub Scanner</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F6F6F3; --surface: #FFFFFF; --sunk: #EFEEE9; --ink: #111110; --muted: #6F6E69; --faint: #A3A29C;
+    --line: #E6E5DF; --line-2: #D6D5CE; --up: #12805C; --down: #D1352B; --ft: #0E8A7E; --snap: #D9480F;
+    --stall: #B7791F; --hub: #2F54EB; --idle: #8A8983;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --serif: "Instrument Serif", Georgia, serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0E0E0D; --surface: #171715; --sunk: #1E1E1B; --ink: #F2F1EC; --muted: #9C9B95; --faint: #6A6964;
+      --line: #2A2A27; --line-2: #3A3A36; --up: #3DD68C; --down: #FF6B5E; --ft: #2FD4C0; --snap: #FF8A4C;
+      --stall: #F2C14E; --hub: #7C93FF; --idle: #8A8983; }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans); -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px 60px; }
+  nav { border-bottom: 1px solid var(--line); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; padding-bottom: 0; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+  nav a:hover { color: var(--ink); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--ink) !important; }
+  header { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; margin: 28px 0 6px; }
+  h1 { font: 600 36px/1 var(--mono); letter-spacing: -0.02em; margin: 0; }
+  h1 small { font: 400 20px var(--mono); color: var(--muted); margin-left: 10px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font: 500 13px var(--sans); padding: 5px 12px;
+           border-radius: 99px; color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent); }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .sum { font-size: 16px; max-width: 720px; margin: 10px 0 18px; }
+  .sum b { font-weight: 600; } .u-up { color: var(--up); } .u-down { color: var(--down); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  #chart { height: 440px; }
+  @media (max-width: 600px) { #chart { height: 320px; } h1 { font-size: 28px; } }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin: 10px 4px 2px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+  .legend i.dash { background: repeating-linear-gradient(90deg, var(--c) 0 4px, transparent 4px 7px); }
+  h2 { font: 500 22px/1.1 var(--sans); letter-spacing: -0.02em; margin: 30px 0 12px; }
+  h2 em { font-family: var(--serif); font-weight: 400; color: var(--muted); }
+  .kv { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line);
+        border-radius: 12px; overflow: hidden; }
+  @media (max-width: 600px) { .kv { grid-template-columns: repeat(2, 1fr); } }
+  .kv div { background: var(--surface); padding: 12px 14px; }
+  .kv small { display: block; font-size: 12px; color: var(--muted); }
+  .kv b { font: 500 18px var(--mono); }
+  .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  button { font: 500 14px var(--sans); border-radius: 10px; border: 1px solid var(--line-2); background: var(--ink);
+           color: var(--bg); padding: 9px 14px; cursor: pointer; }
+  button.sec { background: var(--surface); color: var(--ink); }
+  button:disabled { opacity: .5; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="/">
+    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/><rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="var(--hub)" opacity=".9"/><path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Hub Scanner
+  </a>
+  <span><a href="/#board">Hub Board</a> &nbsp;·&nbsp; <a href="/">Watchlist</a></span>
+</div></nav>
+
+<main class="wrap" id="main"><div class="empty">Loading chart…</div></main>
+
+<script src="/vendor/lightweight-charts.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const pctFrom = (lvl, p) => { const v = (lvl / p - 1) * 100; return (v > 0 ? "+" : "") + v.toFixed(1) + "%"; };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const STATES = { forming: ["Inside hub", "--hub"], watching: ["Hub just ended", "--idle"], breakout_up: ["Breakout ↑", "--up"],
+  breakdown: ["Breakdown ↓", "--down"], "follow-through": ["Hit shelf", "--ft"], "snap-back": ["Failed breakout", "--snap"],
+  stalled: ["Timed out", "--stall"], none: ["Waiting for a hub", "--idle"] };
+const SYM = decodeURIComponent(location.pathname.split("/").pop()).toUpperCase();
+document.title = `${SYM} · Hub Scanner`;
+
+function summary(st) {
+  const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down;
+  const lvl = (sh, w) => sh ? `the next shelf is <b class="u-${w}">${money(sh.level)}</b> (${pctFrom(sh.level, p)})` : `there's no shelf ${w === "up" ? "above" : "below"} yet`;
+  switch (st.state) {
+    case "forming": return `${SYM} has held a tight range for <b>${h.sessions} sessions</b>. A 4H close <b class="u-up">above ${money(h.high)}</b>: ${lvl(up, "up")}. A 4H close <b class="u-down">below ${money(h.low)}</b>: ${lvl(dn, "down")}.`;
+    case "watching": return `The range just ended without a breakout. A 4H close above ${money(h.high)} or below ${money(h.low)} in the next few candles would still count.`;
+    case "breakout_up": case "breakdown": { const u = st.state === "breakout_up";
+      return `${SYM} closed <b class="u-${u ? "up" : "down"}">${u ? "above" : "below"} its hub</b>. Target ${money(st.target)} (${pctFrom(st.target, p)}). It fails on a 4H close back ${u ? "below" : "above"} ${money(u ? h.high : h.low)}.`; }
+    case "follow-through": return "The last breakout reached its shelf. Waiting for a new hub.";
+    case "snap-back": return "The last breakout failed. Waiting for a new hub.";
+    case "stalled": return "The last breakout ran out of time. Waiting for a new hub.";
+    default: return "No tight range right now." + (up || dn ? " Nearest shelves: " + [up && `<b class="u-up">${money(up.level)}</b> above`, dn && `<b class="u-down">${money(dn.level)}</b> below`].filter(Boolean).join(", ") + "." : "");
+  }
+}
+
+async function load() {
+  let d;
+  try {
+    const r = await fetch(`/api/chart/${encodeURIComponent(SYM)}`);
+    d = await r.json();
+    if (!r.ok) throw new Error(d.detail || r.statusText);
+  } catch (e) { $("main").innerHTML = `<div class="empty">Couldn't load ${esc(SYM)}: ${esc(e.message)}</div>`; return; }
+  const st = d.status, [label, color] = STATES[st.state] || ["", "--idle"], s = d.stats;
+  const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  $("main").innerHTML = `
+    <header>
+      <h1>${esc(d.symbol)}<small>${money(st.last_close)}</small></h1>
+      <span class="badge" style="--c:var(${color})">${label}</span>
+    </header>
+    <p class="sum">${summary(st)}</p>
+    <div class="card"><div id="chart"></div>
+      <div class="legend">
+        <span style="--c:var(--hub)"><i></i>Hubs</span>
+        <span style="--c:var(--up)"><i class="dash"></i>Shelf above</span>
+        <span style="--c:var(--down)"><i class="dash"></i>Shelf below</span>
+        <span>▲▼ breakouts, labelled hit / failed / timed out</span>
+        <span>4H candles, regular hours, New York time</span>
+      </div>
+    </div>
+    <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
+    <h2>Past <em>results</em></h2>
+    ${s.n ? `<div class="kv">
+      <div><small>Breakouts</small><b>${s.n}</b></div>
+      <div><small>Reached shelf</small><b style="color:var(--ft)">${s["follow-through"]}%</b></div>
+      <div><small>Win rate (entered at close)</small><b>${s.win_rate ?? "–"}%</b></div>
+      <div><small>Avg per trade</small><b style="color:var(${(s.expectancy_pct ?? 0) > 0 ? "--up" : "--down"})">${sign(s.expectancy_pct)}</b></div>
+    </div><p class="note">Based on the candles shown on this chart. Past results don't guarantee future ones.</p>`
+    : `<p class="note">No completed breakouts in this period yet.</p>`}`;
+
+  if ($("watch")) $("watch").onclick = async (e) => {
+    e.target.disabled = true; e.target.textContent = "Adding…";
+    const r = await fetch("/api/tickers", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({symbol: d.symbol})});
+    e.target.textContent = r.ok ? "On your watchlist" : "Couldn't add";
+  };
+
+  const el = $("chart");
+  const chart = LightweightCharts.createChart(el, {
+    autoSize: true,
+    layout: { background: { color: "transparent" }, textColor: css("--muted"), fontFamily: "JetBrains Mono, monospace", fontSize: 11 },
+    grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
+    rightPriceScale: { borderColor: css("--line") },
+    timeScale: { borderColor: css("--line"), timeVisible: true, secondsVisible: false },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+  });
+  const candles = chart.addCandlestickSeries({
+    upColor: css("--up"), downColor: css("--down"), borderVisible: false,
+    wickUpColor: css("--up"), wickDownColor: css("--down"), priceLineVisible: false,
+  });
+  candles.setData(d.candles);
+
+  // hubs: a top and bottom line for each hub (separate series so neighbouring hubs never join)
+  const times = d.candles.map(c => c.time);
+  d.hubs.forEach(h => {
+    const span = times.filter(t => t >= h.start && t <= h.end);
+    if (span.length < 2) return;
+    ["high", "low"].forEach(k => {
+      const ser = chart.addLineSeries({ color: css("--hub"), lineWidth: h.active ? 3 : 2, priceLineVisible: false,
+                                        lastValueVisible: false, crosshairMarkerVisible: false });
+      ser.setData(span.map(t => ({ time: t, value: h[k] })));
+    });
+  });
+
+  // shelves from here
+  if (st.shelf_up) candles.createPriceLine({ price: st.shelf_up.level, color: css("--up"), lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: "Shelf ▲" });
+  if (st.shelf_down) candles.createPriceLine({ price: st.shelf_down.level, color: css("--down"), lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: "Shelf ▼" });
+
+  // breakout markers
+  const word = { "follow-through": "hit", "snap-back": "failed", stalled: "timed out", pending: "live" };
+  candles.setMarkers(d.trades.map(t => ({
+    time: t.time, position: t.direction === 1 ? "belowBar" : "aboveBar",
+    shape: t.direction === 1 ? "arrowUp" : "arrowDown",
+    color: t.direction === 1 ? css("--up") : css("--down"),
+    text: t.chase ? "chase" : word[t.outcome] || "",
+  })).sort((a, b) => a.time - b.time));
+
+  // start zoomed to the last ~120 candles
+  const n = d.candles.length;
+  chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (el.clientWidth < 600 ? 60 : 120)), to: n + 3 });
+}
+load();
+</script>
+</body>
+</html>

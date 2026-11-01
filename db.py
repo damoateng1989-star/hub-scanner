@@ -31,6 +31,16 @@ with _lock:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE IF NOT EXISTS board (
+        symbol TEXT PRIMARY KEY, status TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS signals (
+        id TEXT PRIMARY KEY, symbol TEXT, direction INTEGER,
+        hub_low REAL, hub_high REAL, hub_sessions INTEGER,
+        breakout_time TEXT, entry REAL, target REAL, target_kind TEXT,
+        outcome TEXT, outcome_time TEXT, ret_pct REAL, chase INTEGER DEFAULT 0,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS paper_trades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT, direction INTEGER, qty INTEGER,
@@ -117,3 +127,30 @@ def all_trades(limit: int = 200) -> list[dict]:
 
 def hub_traded(hub_key: str) -> bool:
     return _run("SELECT 1 FROM paper_trades WHERE hub_key=? LIMIT 1", (hub_key,)).fetchone() is not None
+
+
+# --- hub board
+def set_board(symbol: str, status: str):
+    _run("INSERT INTO board(symbol, status, updated_at) VALUES (?,?,CURRENT_TIMESTAMP) "
+         "ON CONFLICT(symbol) DO UPDATE SET status=excluded.status, updated_at=CURRENT_TIMESTAMP", (symbol, status))
+
+
+def board_rows() -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM board ORDER BY symbol").fetchall()]
+
+
+# --- track record
+def upsert_signal(**f):
+    cols = ", ".join(f)
+    updates = ", ".join(f"{k}=excluded.{k}" for k in ("outcome", "outcome_time", "ret_pct", "chase", "target", "target_kind"))
+    _run(f"INSERT INTO signals ({cols}) VALUES ({', '.join('?' * len(f))}) ON CONFLICT(id) DO UPDATE SET {updates}",
+         tuple(f.values()))
+
+
+def get_signal(sid: str) -> dict | None:
+    r = _run("SELECT * FROM signals WHERE id=?", (sid,)).fetchone()
+    return dict(r) if r else None
+
+
+def all_signals(limit: int = 500) -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM signals ORDER BY breakout_time DESC LIMIT ?", (limit,)).fetchall()]
