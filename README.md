@@ -48,6 +48,17 @@ Without Resend, reset links are written to the Render logs instead of being emai
 
 ---
 
+## Email list (waitlist)
+
+The homepage has two **"Get early access"** sign-up forms: one under the headline and one in the final banner. Addresses are stored in your own database.
+
+- **Welcome email:** sent automatically through Resend (`RESEND_API_KEY`, `EMAIL_FROM`), with a one-click **unsubscribe** link. Without Resend, sign-ups are still saved; only the welcome email is skipped.
+- **Your list:** the admin page **Account → Email list** shows the total, the latest sign-ups and where each came from, plus **Download CSV** (`/api/admin/subscribers.csv`) for importing into Mailchimp, Resend Audiences, ConvertKit or similar.
+- **Spam protection:** a hidden "honeypot" field and a limit on sign-ups per visitor.
+- **Before sending marketing emails:** US law (CAN-SPAM) requires a physical mailing address and a working unsubscribe link in every marketing email. Add your address to `_welcome_html` in `app.py` and to any newsletter you send.
+
+---
+
 ## Pages
 
 - **Landing page** (`/`): the public homepage with the headline, product preview, how it works, features, pricing and FAQ. Signed-in members skip it and go straight to the app.

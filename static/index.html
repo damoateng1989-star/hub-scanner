@@ -926,7 +926,14 @@ async function loadAccount() {
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
       ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>
-    ${admin}`;
+    ${admin}${m.is_admin ? `<div class="acct" id="emailList"><h3>Email list</h3><p>Loading…</p></div>` : ""}`;
+  if (m.is_admin) api("/api/admin/subscribers").then(d => {
+    $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
+      <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
+      ${d.recent.length ? `<div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>From</th><th>Status</th></tr>
+        ${d.recent.slice(0, 15).map(x => `<tr><td>${esc(x.email)}</td><td>${day(x.created_at + "Z")}</td><td>${esc(x.source)}</td>
+          <td style="color:var(${x.status === "subscribed" ? "--up" : "--faint"})">${x.status}</td></tr>`).join("")}</table></div>` : `<p>No sign-ups yet.</p>`}`;
+  }).catch(() => {});
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }

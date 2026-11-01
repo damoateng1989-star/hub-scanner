@@ -12,6 +12,7 @@ load_dotenv()
 import json  # noqa: E402
 import logging  # noqa: E402
 import os  # noqa: E402
+import secrets  # noqa: E402
 import threading  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 from pathlib import Path  # noqa: E402
@@ -20,7 +21,7 @@ from apscheduler.schedulers.background import BackgroundScheduler  # noqa: E402
 from apscheduler.triggers.cron import CronTrigger  # noqa: E402
 from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.concurrency import run_in_threadpool  # noqa: E402
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse  # noqa: E402
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 import auth  # noqa: E402
@@ -484,3 +485,69 @@ async def paper_summary(u: dict = Admin):
 def paper_toggle(body: ToggleBody, u: dict = Admin):
     paper.set_enabled(body.on)
     return {"enabled": paper.enabled()}
+
+
+# ---------------------------------------------------------------- email list (waitlist)
+class SubscribeBody(BaseModel):
+    email: str
+    source: str = "landing"
+    website: str = ""          # honeypot: real people leave it empty
+
+
+def _welcome_html(unsub: str) -> str:
+    return f"""<div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:auto;color:#111">
+<h2 style="margin:0 0 12px">You're on the NextShelf list</h2>
+<p>Thanks for signing up. NextShelf finds stocks resting in tight ranges ("hubs"), warns you before a breakout candle
+closes, and targets the next shelf.</p>
+<p>We'll email you when new features launch and when the full version opens. No spam, and you can leave anytime.</p>
+<p style="color:#777;font-size:12px;margin-top:28px">NextShelf is an educational tool, not financial advice.<br>
+<a href="{unsub}" style="color:#777">Unsubscribe</a></p></div>"""
+
+
+@app.post("/api/subscribe")
+def subscribe(body: SubscribeBody, request: Request):
+    auth.throttle("sub:" + (request.client.host if request.client else ""), limit=6, window=3600)
+    if body.website:                       # bot filled the hidden field: pretend it worked
+        return {"ok": True, "status": "new"}
+    email = auth.clean_email(body.email)
+    token = secrets.token_urlsafe(18)
+    status = db.add_subscriber(email, body.source[:40] or "landing", token)
+    if status in ("new", "again"):
+        unsub = f"{auth.base_url(request)}/unsubscribe?t={db.subscriber_token(email)}"
+        try:
+            auth.send_email(email, "You're on the NextShelf list", _welcome_html(unsub))
+        except Exception as e:
+            log.warning("welcome email failed: %s", e)
+    return {"ok": True, "status": status}
+
+
+@app.get("/unsubscribe")
+def unsubscribe_page(t: str = ""):
+    email = db.unsubscribe(t) if t else None
+    msg = (f"<b>{email}</b> has been removed from the NextShelf email list." if email
+           else "That unsubscribe link isn't valid. It may have been used already.")
+    return HTMLResponse(f"""<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unsubscribed · NextShelf</title><link rel="icon" href="/favicon.svg"></head>
+<body style="font-family:Inter,-apple-system,sans-serif;background:#0B0B0D;color:#F4F4F6;display:grid;place-items:center;min-height:100vh;margin:0">
+<div style="max-width:440px;padding:24px;text-align:center"><h1 style="font-size:26px">You're unsubscribed</h1>
+<p style="color:#A1A1AA">{msg}</p><p><a href="/" style="color:#7AA2FF">Back to NextShelf</a></p></div></body></html>""")
+
+
+@app.get("/api/admin/subscribers")
+def admin_subscribers(u: dict = Admin):
+    subs = db.subscribers()
+    return dict(total=sum(s_["status"] == "subscribed" for s_ in subs), unsubscribed=sum(s_["status"] != "subscribed" for s_ in subs),
+                recent=subs[:50])
+
+
+@app.get("/api/admin/subscribers.csv")
+def admin_subscribers_csv(u: dict = Admin):
+    import csv
+    import io
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["email", "status", "source", "signed_up", "unsubscribed"])
+    for s_ in db.subscribers():
+        w.writerow([s_["email"], s_["status"], s_["source"], s_["created_at"], s_["unsubscribed_at"] or ""])
+    return Response(buf.getvalue(), media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="nextshelf-email-list.csv"'})

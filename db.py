@@ -48,6 +48,10 @@ with _lock:
         user_id INTEGER, symbol TEXT, added_at TEXT DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (user_id, symbol)
     );
+    CREATE TABLE IF NOT EXISTS subscribers (
+        email TEXT PRIMARY KEY, source TEXT, token TEXT, status TEXT DEFAULT 'subscribed',
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP, unsubscribed_at TEXT
+    );
     CREATE TABLE IF NOT EXISTS board (
         symbol TEXT PRIMARY KEY, status TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -278,3 +282,34 @@ def alerts_for_symbols(symbols: list[str], limit: int = 50, exclude_types: tuple
         args += list(exclude_types)
     q += " ORDER BY candle_time DESC, rowid DESC LIMIT ?"
     return [dict(r) for r in _run(q, (*args, limit)).fetchall()]
+
+
+# --- email list
+def add_subscriber(email: str, source: str, token: str) -> str:
+    """Returns 'new', 'again' (was unsubscribed, now back) or 'exists'."""
+    r = _run("SELECT status FROM subscribers WHERE email=?", (email,)).fetchone()
+    if not r:
+        _run("INSERT INTO subscribers(email, source, token) VALUES (?,?,?)", (email, source, token))
+        return "new"
+    if r["status"] != "subscribed":
+        _run("UPDATE subscribers SET status='subscribed', unsubscribed_at=NULL WHERE email=?", (email,))
+        return "again"
+    return "exists"
+
+
+def subscriber_token(email: str) -> str | None:
+    r = _run("SELECT token FROM subscribers WHERE email=?", (email,)).fetchone()
+    return r["token"] if r else None
+
+
+def unsubscribe(token: str) -> str | None:
+    r = _run("SELECT email FROM subscribers WHERE token=?", (token,)).fetchone()
+    if not r:
+        return None
+    _run("UPDATE subscribers SET status='unsubscribed', unsubscribed_at=CURRENT_TIMESTAMP WHERE token=?", (token,))
+    return r["email"]
+
+
+def subscribers() -> list[dict]:
+    return [dict(r) for r in _run("SELECT email, source, status, created_at, unsubscribed_at FROM subscribers "
+                                  "ORDER BY created_at DESC").fetchall()]

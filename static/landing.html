@@ -86,6 +86,17 @@
   .lctl { display: flex; gap: 6px; flex: none; }
   .lctl button { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: 13px; }
   @keyframes flash { 0%, 100% { opacity: .18; } 50% { opacity: .5; } }
+  /* email list */
+  .join { display: flex; gap: 10px; max-width: 520px; margin: 40px auto 0; flex-wrap: wrap; justify-content: center; }
+  .join input[type=email] { flex: 1 1 260px; min-width: 0; padding: 16px 18px; border-radius: 14px; border: 1px solid var(--line-2);
+                            background: rgba(255,255,255,.04); color: var(--ink); font: 16px var(--sans); outline: 0; }
+  .join input[type=email]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(122,162,255,.18); }
+  .join .btn { padding: 15px 22px; border-radius: 14px; font-size: 16px; cursor: pointer; }
+  .join .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+  .jmsg { flex-basis: 100%; margin: 4px 0 0; min-height: 22px; font-size: 15px; color: var(--muted); }
+  .jmsg.ok { color: var(--up); } .jmsg.err { color: var(--down); }
+  .alt { color: var(--faint); font-size: 14px; margin: 8px 0 0; }
+  .alt a { color: var(--muted); text-decoration: underline; text-underline-offset: 3px; }
   /* product windows */
   .stage { position: relative; height: 480px; margin: 70px 0 20px; }
   .win { position: absolute; background: linear-gradient(180deg, #16161A, #0F0F12); border: 1px solid var(--line-2); border-radius: 18px;
@@ -185,10 +196,13 @@
     <span class="eyebrow"><i></i>Scanning the Nasdaq-100 every 4H close</span>
     <h1><span class="l1">Find the hub.</span><span class="l2">Catch the break.</span></h1>
     <p class="lede">NextShelf finds stocks coiling in tight ranges, warns you before a breakout candle closes, and gives every setup a target: the next shelf. From the first scan to your own decision, it all happens in one place.</p>
-    <div class="ctas">
-      <a class="btn solid big" href="/login#signup">Start free <span aria-hidden="true">→</span></a>
-      <a class="btn ghost big" href="/app#board">Open the Hub Board <span aria-hidden="true">→</span></a>
-    </div>
+    <form class="join" data-source="hero" novalidate>
+      <input type="email" name="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+      <button class="btn solid">Get early access <span aria-hidden="true">→</span></button>
+      <p class="jmsg" role="status"></p>
+    </form>
+    <p class="alt">Join the list for launch news and early-member pricing. Or <a href="/login#signup">try the free beta</a> · <a href="/app#board">browse the Hub Board</a></p>
 
     <div class="lesson-wrap">
   <div class="lesson" id="lesson">
@@ -308,9 +322,15 @@
 
   <div class="final">
     <div class="dots"></div>
-    <h2 style="margin-top:0;position:relative">Ready to find <em>your next hub?</em></h2>
-    <p class="sub" style="margin:0 auto;position:relative">Create a free account in under a minute. No card needed.</p>
-    <div class="ctas" style="position:relative"><a class="btn solid big" href="/login#signup">Start free →</a><a class="btn ghost big" href="/app#board">Browse the board</a></div>
+    <h2 style="margin-top:0;position:relative">Be first in line for <em>NextShelf.</em></h2>
+    <p class="sub" style="margin:0 auto;position:relative">Get launch news, new features and early-member pricing. No spam, unsubscribe anytime.</p>
+    <form class="join" data-source="footer" novalidate style="position:relative">
+      <input type="email" name="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
+      <input type="text" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
+      <button class="btn solid">Get early access →</button>
+      <p class="jmsg" role="status"></p>
+    </form>
+    <p class="alt" style="position:relative">Or <a href="/login#signup">try the free beta</a> today.</p>
   </div>
 </div></section>
 
@@ -469,6 +489,27 @@ const LESSON = (() => {
 })();
 
 LESSON.init();
+
+// email list sign-up
+document.querySelectorAll("form.join").forEach(f => f.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const msg = f.querySelector(".jmsg"), btn = f.querySelector("button"), email = f.email.value.trim();
+  msg.className = "jmsg";
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { msg.textContent = "Enter a valid email address."; msg.className = "jmsg err"; return; }
+  btn.disabled = true;
+  try {
+    const r = await fetch("/api/subscribe", {method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({email, source: f.dataset.source, website: f.website.value})});
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(typeof d.detail === "string" ? d.detail : "Something went wrong. Please try again.");
+    msg.textContent = d.status === "exists" ? "You're already on the list. Thanks!" : "You're on the list! Check your inbox for a welcome email.";
+    msg.className = "jmsg ok"; f.email.value = "";
+  } catch (err) { msg.textContent = err.message; msg.className = "jmsg err"; }
+  btn.disabled = false;
+}));
+document.querySelectorAll("form.join input[type=email]").forEach(i => i.addEventListener("input", () => {
+  const m = i.form.querySelector(".jmsg"); if (m.classList.contains("err")) { m.textContent = ""; m.className = "jmsg"; }
+}));
 
 // live board preview (falls back quietly)
 fetch("/api/board").then(r => r.json()).then(b => {
