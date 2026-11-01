@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0B0B0D">
 <title>NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -65,6 +64,37 @@
   button.sec { background: var(--surface); color: var(--ink); }
   button:disabled { opacity: .5; }
   .empty { color: var(--muted); padding: 40px; text-align: center; }
+
+  /* NextShelf dark-first visual system */
+  :root {
+    color-scheme: dark;
+    --bg: #0B0B0D;
+    --surface: #121215;
+    --sunk: #19191F;
+    --ink: #F4F4F6;
+    --muted: #A1A1AA;
+    --faint: #6B6B75;
+    --line: #24242A;
+    --line-2: #33333B;
+    --accent: #A99BFF;
+    --accent-ink: #0B0B0D;
+    --up: #3DD68C;
+    --down: #FF6B5E;
+    --ft: #2FD4C0;
+    --snap: #FF8A4C;
+    --stall: #F2C14E;
+    --hub: #8B9CFF;
+    --idle: #858594;
+  }
+
+  body { background: radial-gradient(ellipse at 82% -18%, rgba(124,147,255,.10), transparent 38%), var(--bg); }
+  .wrap { max-width: 1160px; }
+  nav { background: rgba(11,11,13,.86); border-bottom-color: rgba(255,255,255,.08); }
+  .card { background: linear-gradient(155deg, rgba(25,25,31,.98), rgba(18,18,21,.98)); border-color: var(--line); box-shadow: 0 14px 38px rgba(0,0,0,.18); }
+  .tvbtn { background: var(--surface); }
+  button:not(.sec) { background: var(--accent); color: #100d20; border-color: var(--accent); }
+  button.sec { background: var(--surface); color: var(--ink); }
+
 </style>
 </head>
 <body>
