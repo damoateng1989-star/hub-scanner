@@ -26,7 +26,6 @@
   [hidden] { display: none !important; }
   body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans);
          -webkit-font-smoothing: antialiased; display: grid; grid-template-columns: 1.1fr 1fr; }
-  @media (max-width: 860px) { body { grid-template-columns: 1fr; } .pitch { display: none; } }
   .pitch { padding: 56px; border-right: 1px solid var(--line); display: flex; flex-direction: column; justify-content: space-between; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; }
   .pitch h1 { font: 500 52px/1.04 var(--sans); letter-spacing: -0.035em; margin: 0 0 18px; }
@@ -35,6 +34,7 @@
   .pitch li { padding: 10px 0; border-top: 1px solid var(--line); }
   .pitch li b { color: var(--ink); font-weight: 500; }
   .fine { font-size: 12px; color: var(--faint); }
+  @media (max-width: 860px) { body { grid-template-columns: 1fr; } .pitch { display: none; } }
   .side { display: flex; align-items: center; justify-content: center; padding: 32px 20px; }
   .box { width: 100%; max-width: 380px; }
   .box .brand { margin-bottom: 28px; }
@@ -85,6 +85,7 @@
     Hub Scanner
   </div>
 
+  <p class="sub" id="pendingMsg" hidden style="background:var(--surface);border:1px solid var(--line-2);border-radius:12px;padding:12px 14px"></p>
   <div id="v-signin">
     <h2>Welcome <em>back</em></h2>
     <p class="sub">Sign in to your watchlist and alerts.</p>
@@ -99,6 +100,7 @@
       <button>Sign in</button>
     </form>
     <div class="links"><a href="#signup">Create an account</a><a href="#forgot">Forgot password?</a></div>
+    <div class="links"><a href="/">Browse the Hub Board without an account →</a></div>
   </div>
 
   <div id="v-signup" hidden>
@@ -116,7 +118,7 @@
       <button>Create account</button>
     </form>
     <p class="fine" style="margin-top:14px">By creating an account you agree that Hub Scanner is an educational tool and not financial advice.</p>
-    <div class="links"><a href="#signin">I already have an account</a></div>
+    <div class="links"><a href="#signin">I already have an account</a><a href="/">Keep browsing</a></div>
   </div>
 
   <div id="v-forgot" hidden>
@@ -176,6 +178,10 @@ fetch("/auth/config").then(r => r.json()).then(c => {
   document.querySelectorAll("[data-google]").forEach(el => el.hidden = !c.google);
   $("limit").textContent = c.free_limit;
 }).catch(() => {});
+try {
+  const p = localStorage.getItem("hs_pending_add");
+  if (p) { $("pendingMsg").hidden = false; $("pendingMsg").innerHTML = `Create a free account (or sign in) and <b style="color:var(--ink)">${p.replace(/[^A-Z0-9.\-]/g, "")}</b> will be added to your watchlist.`; }
+} catch (e) {}
 window.addEventListener("hashchange", show);
 show();
 </script>

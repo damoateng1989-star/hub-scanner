@@ -332,7 +332,7 @@ let TICKERS = [], FILTER = "all";
 async function api(path, opts = {}) {
   const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
   const body = await r.json().catch(() => ({}));
-  if (r.status === 401) { location.href = "/login"; throw new Error("Please sign in"); }
+  if (r.status === 401) { const e = new Error("Please sign in"); e.status = 401; throw e; }
   if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : r.statusText);
   return body;
 }
@@ -473,7 +473,9 @@ function render() {
   const pr = (t) => PRIORITY[st(t)] ?? 4;
   const shown = [...TICKERS].sort((a, b) => pr(a) - pr(b) || a.symbol.localeCompare(b.symbol)).filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
   $("list").innerHTML = shown.length ? shown.map(card).join("") :
-    `<div class="empty" style="grid-column:1/-1">${TICKERS.length ? "Nothing matches this filter right now." : "No tickers yet. Add one above, for example NVDA."}</div>`;
+    `<div class="empty" style="grid-column:1/-1">${ME && ME.guest
+      ? `Add tickers above, or tap <b>+ Add to watchlist</b> on the <a href="#board">Hub Board</a>. You'll create a free account to save them.`
+      : TICKERS.length ? "Nothing matches this filter right now." : "No tickers yet. Add one above, for example NVDA."}</div>`;
 }
 
 async function loadTickers() {
@@ -501,8 +503,8 @@ $("add").addEventListener("submit", async (e) => {
   $("err").textContent = "";
   if (!sym) { $("err").textContent = "Enter a ticker first"; return; }
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…";
-  try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})}); $("sym").value = ""; await loadTickers();
-        toast(`${sym.toUpperCase()} added to your watchlist`); }
+  try { if (await addToWatchlist(sym.toUpperCase())) { $("sym").value = ""; await loadTickers();
+        toast(`${sym.toUpperCase()} added to your watchlist`); } }
   catch (err) { $("err").innerHTML = esc(err.message) + (/Upgrade/.test(err.message) ? ` <a class="upsell" style="margin:0" href="#account">See Pro →</a>` : ""); }
   $("addBtn").disabled = false; $("addBtn").textContent = "Add to watchlist";
 });
@@ -611,12 +613,41 @@ $("pSwitch").addEventListener("click", async () => {
   loadPaper();
 });
 
+// ---------------------------------------------------------------- visitors: add -> sign up -> added
+function pendingAdd(sym) {
+  try { if (sym === undefined) return localStorage.getItem("hs_pending_add"); 
+        if (sym) localStorage.setItem("hs_pending_add", sym); else localStorage.removeItem("hs_pending_add"); } catch (e) {}
+  return null;
+}
+function askToJoin(sym) {
+  pendingAdd(sym);
+  location.href = "/login#signup";
+}
+async function addToWatchlist(sym) {
+  if (!ME || ME.guest) { askToJoin(sym); return false; }
+  await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})});
+  return true;
+}
+async function finishPendingAdd() {
+  const sym = pendingAdd();
+  if (!sym || !ME || ME.guest) return;
+  pendingAdd("");
+  try { await addToWatchlist(sym); toast(`${sym} added to your watchlist`, "#watch", "View"); loadTickers(); }
+  catch (e) { toast(e.message, /Upgrade/.test(e.message) ? "#account" : null, "See Pro"); }
+}
+
 // ---------------------------------------------------------------- account & plan
 let ME = null;
 const isPro = () => ME && ME.plan === "pro";
 async function loadMe() {
   ME = await api("/api/me");
   $("planPill").hidden = false;
+  if (ME.guest) {
+    $("planPill").textContent = "Sign in"; $("planPill").href = "/login"; $("planPill").className = "plan pro";
+    $("tabPaper").hidden = true; $("scanBtn").hidden = true; $("bScan").hidden = true;
+    return;
+  }
+  $("planPill").href = "#account";
   $("planPill").textContent = isPro() ? "Pro" : "Free";
   $("planPill").className = "plan" + (isPro() ? " pro" : "");
   $("tabPaper").hidden = !ME.is_admin;
@@ -624,8 +655,15 @@ async function loadMe() {
   $("bScan").hidden = !ME.is_admin;
   if (!ME.is_admin && location.hash === "#paper") location.hash = "#watch";
 }
+const joinBox = (title, text) => `<div class="acct"><h3>${title}</h3><p>${text}</p>
+  <div class="row"><a class="upsell" style="margin:0;font-size:15px" href="/login#signup">Create a free account →</a>
+  <a class="upsell" style="margin:0 0 0 14px;font-size:15px;color:var(--muted)" href="/login">Sign in</a></div></div>`;
 async function loadAccount() {
   if (!ME) await loadMe();
+  if (ME.guest) {
+    $("account").innerHTML = joinBox("Join Hub Scanner", `Free: watch up to ${ME.ticker_limit} tickers with Telegram alerts, see the track record, and browse every chart. Pro adds pre-close warnings, the live board, phone calls and backtests.`);
+    return;
+  }
   const m = ME, tg = m.telegram;
   let admin = "";
   if (m.is_admin) {
@@ -741,7 +779,7 @@ async function loadBoard() {
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";
   try {
-    await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: s})});
+    if (!(await addToWatchlist(s))) return;
     btn.textContent = "✓ On watchlist";
     toast(`${s} added to your watchlist`, "#watch", "View");
     loadTickers();
@@ -766,6 +804,7 @@ $("bScan").addEventListener("click", async (e) => {
 // ---------------------------------------------------------------- track record
 async function loadRecord() {
   let r;
+  if (ME && ME.guest) { $("record").innerHTML = joinBox("Members only", "Every breakout the board finds is logged with its result. Create a free account to see the full track record."); return; }
   try { r = await api("/api/record"); } catch (e) { $("record").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
@@ -794,7 +833,7 @@ try {
   if (!localStorage.getItem("hs_seen_guide")) { $("guide").open = true; localStorage.setItem("hs_seen_guide", "1"); }
 } catch (e) { $("guide").open = true; }
 
-loadMe().then(() => { loadInfo(); loadTickers(); loadAlerts(); showTab(); }).catch(() => {});
+loadMe().then(() => { loadInfo(); loadTickers(); loadAlerts(); showTab(); finishPendingAdd(); }).catch(() => {});
 setInterval(() => { loadTickers(); loadAlerts(); showTab(); }, 120000);
 </script>
 </body>

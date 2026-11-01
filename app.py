@@ -143,6 +143,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Hub Scanner", lifespan=lifespan)
 User = Depends(auth.require_user)
+Maybe = Depends(auth.current_user)        # signed in or a visitor (None)
 Pro = Depends(auth.require_pro)
 Admin = Depends(auth.require_admin)
 
@@ -222,18 +223,16 @@ def login_page(request: Request):
 
 @app.get("/")
 def index(request: Request):
-    if not auth.current_user(request):
-        return RedirectResponse("/login", 302)
+    """Open to visitors (they can browse the Hub Board and charts); signed-in users get their cookie refreshed."""
     resp = FileResponse(STATIC / "index.html")
-    resp.set_cookie(auth.COOKIE, request.cookies[auth.COOKIE], max_age=auth.SESSION_DAYS * 86400, httponly=True,
-                    samesite="lax", secure=auth._secure(request), path="/")
+    if auth.current_user(request):
+        resp.set_cookie(auth.COOKIE, request.cookies[auth.COOKIE], max_age=auth.SESSION_DAYS * 86400, httponly=True,
+                        samesite="lax", secure=auth._secure(request), path="/")
     return resp
 
 
 @app.get("/t/{symbol}")
-def ticker_page(symbol: str, request: Request):
-    if not auth.current_user(request):
-        return RedirectResponse("/login", 302)
+def ticker_page(symbol: str):
     return FileResponse(STATIC / "ticker.html")
 
 
@@ -308,7 +307,9 @@ def google_callback(request: Request, code: str = "", state: str = "", error: st
 
 # ---------------------------------------------------------------- account
 @app.get("/api/me")
-def me(u: dict = User):
+def me(u: dict | None = Maybe):
+    if not u:
+        return dict(guest=True, plan="guest", is_admin=False, ticker_limit=auth.FREE_TICKER_LIMIT)
     bot = telegram_bot.bot_username()
     return dict(email=u["email"], name=u["name"], plan="pro" if auth.is_pro(u) else "free", is_admin=bool(u["is_admin"]),
                 ticker_limit=None if auth.is_pro(u) else auth.FREE_TICKER_LIMIT,
@@ -362,10 +363,10 @@ def admin_set_plan(uid: int, body: PlanBody, u: dict = Admin):
 
 # ---------------------------------------------------------------- data
 @app.get("/api/info")
-def info(u: dict = User):
+def info(u: dict | None = Maybe):
     s = scanner.SETTINGS
-    return dict(provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u["telegram_chat"]),
-                phone=bool(u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
+    return dict(provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u and u["telegram_chat"]),
+                phone=bool(u and u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
                 scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],
                 entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
                 settings=dict(min_sessions=s.min_sessions, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
@@ -373,7 +374,9 @@ def info(u: dict = User):
 
 
 @app.get("/api/tickers")
-def tickers(u: dict = User):
+def tickers(u: dict | None = Maybe):
+    if not u:
+        return []
     out = []
     for sym in db.user_symbols(u["id"]):
         row = db.get_ticker(sym) or {}
@@ -399,7 +402,9 @@ def remove_ticker(symbol: str, u: dict = User):
 
 
 @app.get("/api/alerts")
-def alerts(limit: int = 50, u: dict = User):
+def alerts(limit: int = 50, u: dict | None = Maybe):
+    if not u:
+        return []
     hide = () if auth.is_pro(u) else tuple(notify.PRO_ONLY_TYPES)
     return db.alerts_for_symbols(db.user_symbols(u["id"]), min(limit, 200), hide)
 
@@ -417,9 +422,9 @@ async def precheck_now(u: dict = Admin):
 
 
 @app.get("/api/board")
-def board_data(u: dict = User):
+def board_data(u: dict | None = Maybe):
     b = board.board()
-    mine = set(db.user_symbols(u["id"]))
+    mine = set(db.user_symbols(u["id"])) if u else set()
     for group in ("live", "near", "forming", "recent"):
         for r in b[group]:
             r["watching"] = r["symbol"] in mine
@@ -441,12 +446,13 @@ def record_data(u: dict = User):
 
 
 @app.get("/api/chart/{symbol}")
-async def chart_data(symbol: str, u: dict = User):
+async def chart_data(symbol: str, u: dict | None = Maybe):
     try:
         d = await run_in_threadpool(board.chart, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
-    d["watching"] = d["symbol"] in db.user_symbols(u["id"])
+    d["watching"] = bool(u) and d["symbol"] in db.user_symbols(u["id"])
+    d["guest"] = not u
     return d
 
 
