@@ -310,6 +310,40 @@
   .sheet-card h3 { margin: 0 0 6px; font: 600 19px var(--sans); }
   .sheet-card p { color: var(--muted); margin: 0; }
   .sheet-card .x { position: absolute; top: 12px; right: 12px; border: 0; background: var(--sunk); width: 32px; height: 32px; border-radius: 50%; font-size: 18px; padding: 0; }
+  /* ---------- Today: animated lesson + motion ---------- */
+  .lesson { background: radial-gradient(ellipse at 20% 0%, color-mix(in srgb, var(--hub) 12%, transparent), transparent 60%), var(--surface);
+            border: 1px solid var(--line); border-radius: 20px; padding: 18px 18px 14px; margin: 0 0 16px; overflow: hidden; }
+  .lh { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+  .kick { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--hub); }
+  .lh h2 { margin: 4px 0 0; font: 600 22px var(--sans); letter-spacing: -0.02em; transition: opacity .3s; }
+  .lacct { text-align: right; font-size: 11px; color: var(--muted); }
+  .lacct b { display: block; font: 600 20px var(--mono); color: var(--ink); transition: color .3s; }
+  .lacct.down b { color: var(--down); } .lacct.up b { color: var(--up); }
+  .lsteps { display: flex; gap: 6px; margin: 12px 0 6px; overflow-x: auto; scrollbar-width: none; }
+  .lsteps button { flex: none; font-size: 12px; padding: 5px 10px; border-radius: 99px; color: var(--muted); background: transparent; }
+  .lsteps button.on { color: var(--bg); background: var(--ink); border-color: var(--ink); }
+  #lsSvg { width: 100%; height: auto; display: block; }
+  .lfoot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .lfoot p { margin: 4px 0 0; font-size: 15px; color: var(--ink); min-height: 46px; transition: opacity .3s; }
+  .lctl { display: flex; gap: 6px; flex: none; }
+  .lctl button { width: 34px; height: 34px; padding: 0; border-radius: 50%; font-size: 13px; }
+  .kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 0 0 16px; }
+  .kpi { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; text-decoration: none; color: inherit; }
+  .kpi b { display: block; font: 600 28px var(--mono); letter-spacing: -0.02em; color: var(--c, var(--ink)); }
+  .kpi span { font-size: 12px; color: var(--muted); }
+  .kpi:hover { border-color: var(--line-2); }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--c) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+  @keyframes flash { 0%, 100% { opacity: .18; } 50% { opacity: .5; } }
+  @media (prefers-reduced-motion: no-preference) {
+    [data-view="today"] > * { animation: rise .5s both; }
+    [data-view="today"] > *:nth-child(2) { animation-delay: .05s; } [data-view="today"] > *:nth-child(3) { animation-delay: .1s; }
+    [data-view="today"] > *:nth-child(4) { animation-delay: .15s; } [data-view="today"] > *:nth-child(5) { animation-delay: .2s; }
+    [data-view="today"] > *:nth-child(6) { animation-delay: .25s; } [data-view="today"] > *:nth-child(7) { animation-delay: .3s; }
+    .mkt.open i { animation: pulse 1.6s infinite; }
+    .arow { animation: rise .4s both; }
+    .prog span { transition: width .8s ease; }
+  }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 </style>
@@ -340,6 +374,22 @@
     <div id="mkt"></div>
   </div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
+  <div class="lesson" id="lesson">
+    <div class="lh">
+      <div><span class="kick">The setup in 20 seconds</span><h2 id="lsTitle">A hub forms</h2></div>
+      <div class="lacct" id="lsAcct" title="Example account"><span>Example account</span><b id="lsBal">$10,000</b></div>
+    </div>
+    <div class="lsteps" id="lsSteps">
+      <button data-s="0" class="on">1 · Hub</button><button data-s="1">2 · The trap</button>
+      <button data-s="2">3 · The close</button><button data-s="3">4 · Next shelf</button>
+    </div>
+    <svg id="lsSvg" viewBox="0 0 440 250" role="img" aria-label="Animated example of a hub, the trap of trading inside it, and a breakout to the next shelf"></svg>
+    <div class="lfoot">
+      <p id="lsCap">Price slows down and starts closing inside a tight range. After 4 days of this, it's a hub.</p>
+      <div class="lctl"><button id="lsPlay" aria-label="Pause">❚❚</button><button id="lsReplay" aria-label="Replay">↻</button></div>
+    </div>
+  </div>
+  <div class="kpis" id="kpis"></div>
   <div id="setup"></div>
   <div class="panel">
     <div class="ph"><h2>Needs your attention</h2><a href="#list" class="more-link">My list →</a></div>
@@ -932,6 +982,162 @@ function renderGloss() {
 function guideRead() { try { localStorage.setItem("hs_guide_read", "1"); } catch (e) {} }
 const guideDone = () => { try { return !!localStorage.getItem("hs_guide_read"); } catch (e) { return false; } };
 
+// ---------------------------------------------------------------- animated lesson
+const LESSON = (() => {
+  const W = 440, H = 250, PADL = 8, PADR = 48;
+  const SCENES = [
+    {t: "A hub forms", c: "Price slows down and starts closing inside a tight range. After 4 days of this, it's a hub: the stock is coiling."},
+    {t: "The trap: trading inside the hub", c: "Beginners buy near the top and sell near the bottom. Inside a hub price just chops back and forth, so trade after trade loses a little."},
+    {t: "Wait for the close", c: "A wick poking out isn't enough, and this one gets pushed back. Only a 4-hour candle that closes outside the hub is the real breakout."},
+    {t: "Ride to the next shelf", c: "After the breakout close, price travels to the next shelf. One patient trade beats all the chop. Don't trade inside the hub. Wait for the close."},
+  ];
+  // deterministic candles: drift down → hub → fake-out → breakout → run to shelf
+  let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const C = []; let p = 121;
+  for (let i = 0; i < 58; i++) {
+    const o = p; let c;
+    if (i < 12) c = o - 1.55 + (rnd() - 0.5) * 1.8;                       // drift down
+    else if (i < 38) c = 101 + Math.sin(i * 1.25) * 2.4 + (rnd() - .5) * 1; // chop inside the hub
+    else if (i === 38) c = 103.4;                                         // fake-out (wick only)
+    else if (i === 39) c = 102.6;
+    else if (i === 40) c = 107.2;                                         // breakout close
+    else c = Math.min(o + 1.0 + rnd() * 0.9, 117.6);                      // run to the shelf
+    const h = Math.max(o, c) + (i === 38 ? 5.2 : .5 + rnd() * 1.1), l = Math.min(o, c) - (.5 + rnd() * 1.1);
+    C.push({o, c, h, l}); p = c;
+  }
+  const HUB = {lo: 98.2, hi: 104.1, from: 12, to: 39}, SHELF = {lo: 116, hi: 119.5};
+  const lo = 95, hi = 121;
+  const x = (i) => PADL + i * (W - PADL - PADR) / (C.length - 1);
+  const y = (v) => 10 + (hi - v) / (hi - lo) * (H - 20);
+  const TRAPS = [   // [candle, side, price, result]
+    {i: 17, side: "buy", at: 103.4, out: 22, px: 98.9},
+    {i: 22, side: "sell", at: 98.9, out: 26, px: 103.0},
+    {i: 27, side: "buy", at: 103.2, out: 31, px: 99.3},
+    {i: 31, side: "sell", at: 99.0, out: 35, px: 103.3},
+  ];
+  const BAL = [10000, 9640, 9310, 8990, 8720];
+  let scene = 0, t0 = 0, playing = true, raf = 0, lastK = -1, reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const DUR = [5200, 5200, 4200, 5200];
+  const el = (id) => document.getElementById(id);
+
+  function draw(k, trapN, scn) {
+    const css = (v) => `var(${v})`;
+    let s = "";
+    // shelf (always visible, faint until scene 4)
+    s += `<rect x="${x(HUB.from)}" y="${y(SHELF.hi)}" width="${W - PADR - x(HUB.from)}" height="${y(SHELF.lo) - y(SHELF.hi)}" fill="${css("--up")}" opacity="${scn === 3 && k >= C.length - 2 ? .32 : .1}" ${scn === 3 && k >= C.length - 2 ? 'style="animation:flash 1s 3"' : ""}/>`;
+    s += `<line x1="${x(HUB.from)}" x2="${W - PADR}" y1="${y(SHELF.lo)}" y2="${y(SHELF.lo)}" stroke="${css("--up")}" stroke-dasharray="4 5" opacity=".8"/>`;
+    s += `<text x="${W - PADR + 5}" y="${y(SHELF.lo) + 4}" font-size="12" fill="${css("--up")}" font-family="var(--mono)">shelf</text>`;
+    // hub box grows with the candles
+    if (k > HUB.from + 3) {
+      const end = Math.min(k, HUB.to);
+      const days = Math.min(4, Math.floor((end - HUB.from) / 2) / 1);
+      const hubOp = k >= HUB.from + 8 ? .2 : .1;
+      s += `<rect x="${x(HUB.from) - 4}" y="${y(HUB.hi)}" width="${x(end) - x(HUB.from) + 8}" height="${y(HUB.lo) - y(HUB.hi)}" rx="5" fill="${css("--hub")}" opacity="${hubOp}" stroke="${css("--hub")}" stroke-opacity=".7"/>`;
+      s += `<text x="${x(HUB.from)}" y="${y(HUB.hi) - 8}" font-size="12" font-weight="600" fill="${css("--hub")}" font-family="var(--mono)">${k >= HUB.from + 8 ? "HUB · " + Math.min(13, Math.floor((end - HUB.from) / 2)) + " days" : "day " + Math.max(1, Math.ceil(days))}</text>`;
+    }
+    // candles
+    for (let i = 0; i <= Math.min(k, C.length - 1); i++) {
+      const c = C[i], up = c.c >= c.o, col = css(up ? "--up" : "--down");
+      const top = y(Math.max(c.o, c.c)), bot = y(Math.min(c.o, c.c));
+      s += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(c.h)}" y2="${y(c.l)}" stroke="${col}" stroke-width="1.2"/>`;
+      s += `<rect x="${x(i) - 2.5}" y="${top}" width="5" height="${Math.max(1.6, bot - top)}" rx="1" fill="${col}"/>`;
+    }
+    // the trap trades
+    TRAPS.slice(0, trapN).forEach((tr, n) => {
+      const bx = x(tr.i), by = y(tr.at), ox = x(tr.out), oy = y(tr.px);
+      s += `<line x1="${bx}" y1="${by}" x2="${ox}" y2="${oy}" stroke="${css("--down")}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
+      s += `<circle cx="${bx}" cy="${by}" r="8" fill="${css("--surface")}" stroke="${css(tr.side === "buy" ? "--up" : "--down")}" stroke-width="2"/>`;
+      s += `<text x="${bx}" y="${by + 4}" font-size="10" font-weight="700" text-anchor="middle" fill="${css(tr.side === "buy" ? "--up" : "--down")}" font-family="var(--sans)">${tr.side === "buy" ? "B" : "S"}</text>`;
+      s += `<text x="${ox}" y="${oy + (tr.side === "buy" ? 20 : -11)}" font-size="15" text-anchor="middle" fill="${css("--down")}" font-weight="700">✕</text>`;
+    });
+    // fake-out + breakout labels
+    if (scn >= 2 && k >= 38) s += `<text x="${x(38) - 6}" y="${y(C[38].h) - 4}" font-size="12" text-anchor="end" fill="${css("--snap")}" font-family="var(--mono)">wick only</text>`;
+    if (scn >= 2 && k >= 40) {
+      s += `<circle cx="${x(40)}" cy="${y(C[40].c)}" r="9" fill="none" stroke="${css("--up")}" stroke-width="2"/>`;
+      s += `<text x="${x(40) + 6}" y="${y(C[40].c) + 26}" font-size="12" font-weight="600" fill="${css("--up")}" font-family="var(--mono)">breakout close</text>`;
+    }
+    if (scn === 3 && k >= C.length - 1) s += `<text x="${x(C.length - 1)}" y="${y(SHELF.hi) - 8}" font-size="12" text-anchor="end" fill="${css("--up")}" font-weight="700">✓ target</text>`;
+    el("lsSvg").innerHTML = s;
+  }
+  function setBal(v, mood) {
+    el("lsBal").textContent = "$" + Math.round(v).toLocaleString();
+    el("lsAcct").className = "lacct" + (mood ? " " + mood : "");
+  }
+  function frame(now) {
+    if (!t0) t0 = now;
+    const f = Math.min(1, (now - t0) / DUR[scene]);
+    const ease = 1 - Math.pow(1 - f, 2);
+    if (scene === 0) { draw(Math.floor(ease * 37), 0, 0); setBal(10000); }
+    if (scene === 1) {
+      const n = Math.min(4, Math.floor(f * 4.6));
+      draw(37, n, 1);
+      setBal(BAL[n], n ? "down" : "");
+    }
+    if (scene === 2) { draw(37 + Math.floor(ease * 3.99), 4, 2); setBal(BAL[4], "down"); }
+    if (scene === 3) {
+      const k = 40 + Math.floor(ease * (C.length - 41));
+      draw(k, 4, 3);
+      const gain = (C[k].c - C[40].c) / C[40].c;          // one patient trade, sized with the whole account
+      setBal(BAL[4] * (1 + gain * 2.2), gain > 0.001 ? "up" : "down");
+    }
+    if (f >= 1) { if (!playing) return; go((scene + 1) % 4, true); return; }
+    if (playing) raf = requestAnimationFrame(frame);
+  }
+  function go(n, auto) {
+    scene = n; t0 = 0;
+    el("lsTitle").textContent = SCENES[n].t; el("lsCap").textContent = SCENES[n].c;
+    document.querySelectorAll("#lsSteps button").forEach((b, i) => b.classList.toggle("on", i === n));
+    cancelAnimationFrame(raf);
+    if (reduce) {     // no motion: show the end state of the scene
+      const ends = [[37, 0], [37, 4], [40, 4], [C.length - 1, 4]];
+      draw(ends[n][0], ends[n][1], n);
+      setBal(n === 0 ? 10000 : n < 3 ? BAL[4] : BAL[4] * (1 + (C[C.length - 1].c - C[40].c) / C[40].c * 2.2), n === 0 ? "" : n < 3 ? "down" : "up");
+      return;
+    }
+    if (n === 0 && auto) setBal(10000);
+    raf = requestAnimationFrame(frame);
+  }
+  function init() {
+    if (!el("lsSvg")) return;
+    document.querySelectorAll("#lsSteps button").forEach(b => b.onclick = () => { playing = true; el("lsPlay").textContent = "❚❚"; go(+b.dataset.s); });
+    el("lsPlay").onclick = () => {
+      playing = !playing; el("lsPlay").textContent = playing ? "❚❚" : "▶"; el("lsPlay").setAttribute("aria-label", playing ? "Pause" : "Play");
+      if (playing) { t0 = 0; raf = requestAnimationFrame(frame); } else cancelAnimationFrame(raf);
+    };
+    el("lsReplay").onclick = () => { playing = true; el("lsPlay").textContent = "❚❚"; go(0); };
+    if (reduce) { playing = false; el("lsPlay").hidden = true; }
+    // play only while it's on screen
+    new IntersectionObserver(([e]) => {
+      if (e.isIntersecting && playing && !reduce) { t0 = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
+      else cancelAnimationFrame(raf);
+    }).observe(el("lsSvg"));
+    go(0);
+  }
+  return { init };
+})();
+
+// count-up numbers for the Today tiles
+function countUp(node, to) {
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || !to) { node.textContent = to; return; }
+  const t0 = performance.now(), d = 700;
+  const step = (now) => { const f = Math.min(1, (now - t0) / d); node.textContent = Math.round(to * (1 - Math.pow(1 - f, 3))); if (f < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+let KPI_SIG = "";
+function renderKpis() {
+  const st = (t) => t.status?.error ? "error" : (t.status?.state || "none");
+  const vals = [
+    [TICKERS.length, "On my list", "--ink", "#list"],
+    [TICKERS.filter(t => st(t) === "forming").length, "Resting in a hub", "--hub", "#list"],
+    [TICKERS.filter(t => ["breakout_up", "breakdown"].includes(st(t))).length, "Breaking out", "--up", "#list"],
+  ];
+  const sig = vals.map(v => v[0]).join(",");
+  if (sig === KPI_SIG) return; KPI_SIG = sig;
+  $("kpis").innerHTML = vals.map(([n, l, c, h], i) => `<a class="kpi" href="${h}" style="--c:var(${c})"><b id="kpi${i}">0</b><span>${l}</span></a>`).join("");
+  vals.forEach(([n], i) => countUp($("kpi" + i), n));
+}
+
 // ---------------------------------------------------------------- today
 let INFO = null, BOARD = null;
 function etNow() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"})); }
@@ -953,7 +1159,7 @@ function marketChip() {
     const dayName = new Date(n.getTime() + days * 864e5).toLocaleDateString("en-US", {weekday: "long"});
     label = `Next ${events[0][1]} <b>${dayName} ${fmtT(events[0][0])}</b>`;
   }
-  return `<span class="mkt" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
+  return `<span class="mkt${open ? " open" : ""}" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
 }
 async function loadToday() {
   renderToday();
@@ -967,6 +1173,7 @@ function renderToday() {
   $("hello").textContent = "";
   $("hello").innerHTML = `${greet}${name}`;
   $("mkt").innerHTML = marketChip();
+  renderKpis();
 
   // setup checklist
   const steps = [];
@@ -1117,6 +1324,7 @@ async function loadRecord() {
     </table></div>` : `<div class="empty" style="margin-top:14px">No signals yet. The first ones appear after the next breakout on the board.</div>`}`;
 }
 
+LESSON.init();
 loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); }).catch(() => {});
 setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
