@@ -210,7 +210,7 @@
     </svg>
     Hub Scanner
   </div>
-  <div style="display:flex;align-items:center;gap:14px"><div class="dots" id="dots"></div><a href="#account" class="plan" id="planPill" hidden></a></div>
+  <div style="display:flex;align-items:center;gap:14px"><a href="#account" class="plan" id="planPill" hidden></a></div>
 </div></nav>
 
 <div class="tabs"><div class="wrap">
@@ -334,14 +334,9 @@ async function api(path, opts = {}) {
 async function loadInfo() {
   try {
     const i = await api("/api/info");
-    const tg = !i.telegram ? ["--idle", "Telegram off"] : i.telegram_linked ? ["--up", "Telegram"] : ["--snap", "Connect Telegram"];
-    $("dots").innerHTML =
-      `<span class="dot" style="--c:var(${i.provider === "demo" ? "--snap" : "--up"})"><i></i>${esc(i.provider)}</span>` +
-      `<span class="dot" style="--c:var(${tg[0]})"><i></i>${tg[1]}</span>` +
-      (i.phone ? `<span class="dot" style="--c:var(--up)"><i></i>Calls</span>` : "");
     $("demo").hidden = i.provider !== "demo";
     $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "Pre-close checks " + i.preclose_times.join(" & ") + " · " : ""}Scans ${i.scan_times.join(" & ")} ET on weekdays · ${i.settings.horizon}-candle limit`;
-  } catch (e) { $("dots").innerHTML = `<span class="dot" style="--c:var(--down)"><i></i>${esc(e.message)}</span>`; }
+  } catch (e) {}
 }
 
 function spark(st, color) {
