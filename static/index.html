@@ -381,6 +381,39 @@
   input, select, textarea { color-scheme: dark; }
   .bottom { background: rgba(11,11,13,.94); backdrop-filter: blur(14px); border-top-color: var(--line); }
 
+/* NEXTSHELF — INSTITUTIONAL TERMINAL DESIGN SYSTEM */
+:root{color-scheme:dark;--bg:#080d14;--surface:#0e1621;--sunk:#121e2b;--ink:#e8eef5;--muted:#91a0b2;--faint:#657487;--line:#1e2b39;--line-2:#2b3b4d;--accent:#9bb2ca;--accent-ink:#08111b;--up:#39c98a;--down:#e46d70;--ft:#40b9b0;--snap:#d58b5b;--stall:#d6b46a;--hub:#7f9ec7;--idle:#8190a1;--sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+html,body{background:var(--bg)!important;color:var(--ink)!important;font-family:var(--sans)!important;letter-spacing:0!important}
+::selection{background:rgba(155,178,202,.28);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+input,select,textarea{background:#0a111a!important;color:var(--ink)!important;border:1px solid var(--line-2)!important;border-radius:5px!important}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(155,178,202,.12)!important}
+nav{background:rgba(8,13,20,.97)!important;border-bottom:1px solid var(--line)!important;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+nav .wrap{min-height:62px}
+.brand{font-weight:650!important;letter-spacing:.035em!important}
+.toptabs a,.navr a,.helpbtn{color:var(--muted)!important}
+.toptabs a:hover,.toptabs a.active,.toptabs a[aria-current=page]{color:var(--ink)!important}
+.wrap{max-width:1360px!important}
+.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 8px 26px rgba(0,0,0,.14)!important}
+.lesson{background:linear-gradient(120deg,#101b28,#0e1621)!important}
+.lesson .lh,.panel .ph{border-color:var(--line)!important}
+.kpis{gap:10px!important}.kpi{padding:15px!important}
+.panel,.card{padding:18px!important}
+.ph h2,.panel h2,.card h2{font-size:14px!important;font-weight:650!important;letter-spacing:.045em!important;text-transform:uppercase}
+.chip,.badge,.tag,.plan,.pro-badge{border-radius:4px!important}
+.chip,.sec,.tvbtn,.ghost,.helpbtn,.signout,.more-link{background:#101a26!important;border-color:var(--line-2)!important;color:var(--muted)!important}
+.chip.on,.chip.active,.tabs .on{background:#1a2b3d!important;border-color:#49617c!important;color:#d9e6f4!important}
+.primary,.btn.solid,.pro button{background:#c1d0df!important;border:1px solid #c1d0df!important;color:#0a1420!important;font-weight:650!important}
+.primary:hover,.btn.solid:hover{background:#d5e0eb!important}
+th{color:var(--faint)!important;font-size:10px!important;letter-spacing:.09em!important;text-transform:uppercase}
+td,th{border-bottom:1px solid var(--line)!important}
+tr:hover td{background:rgba(155,178,202,.035)!important}
+.bar{background:#1a2938!important}.bar>i,.bar span{background:var(--accent)!important}
+.up,.u-up{color:var(--up)!important}.down,.u-down{color:var(--down)!important}
+.bottom{background:rgba(8,13,20,.97)!important;border-top:1px solid var(--line)!important}
+.empty{color:var(--muted)!important}
+@media(max-width:760px){.wrap{padding-left:15px!important;padding-right:15px!important}.panel,.card{padding:14px!important}}
+
 </style>
 </head>
 <body>
