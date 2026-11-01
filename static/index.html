@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0B0B0D">
 <title>NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -346,6 +345,130 @@
   }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+  /* NextShelf dark-first visual system */
+  :root {
+    color-scheme: dark;
+    --bg: #0B0B0D;
+    --surface: #121215;
+    --sunk: #19191F;
+    --ink: #F4F4F6;
+    --muted: #A1A1AA;
+    --faint: #6B6B75;
+    --line: #24242A;
+    --line-2: #33333B;
+    --accent: #A99BFF;
+    --accent-ink: #0B0B0D;
+    --up: #3DD68C;
+    --down: #FF6B5E;
+    --ft: #2FD4C0;
+    --snap: #FF8A4C;
+    --stall: #F2C14E;
+    --hub: #8B9CFF;
+    --idle: #858594;
+  }
+
+  body { background: radial-gradient(ellipse at 82% -18%, rgba(124,147,255,.10), transparent 38%), var(--bg); }
+  .wrap { max-width: 1180px; }
+  nav { background: rgba(11,11,13,.86); border-bottom-color: rgba(255,255,255,.08); }
+  .card, .panel, .lesson, .stats, .kpis > div { box-shadow: 0 12px 34px rgba(0,0,0,.16); }
+  .card, .panel { background: linear-gradient(155deg, rgba(25,25,31,.98), rgba(18,18,21,.98)); border-color: var(--line); }
+  .lesson { background: radial-gradient(ellipse at 12% 0%, rgba(139,156,255,.12), transparent 58%), var(--surface); border-color: var(--line-2); }
+  .hero { padding-top: 58px; }
+  .toptabs a[aria-current="page"], .toptabs a.active { color: var(--ink); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #100d20; }
+  button.primary:hover { filter: brightness(1.08); box-shadow: 0 0 0 3px rgba(169,155,255,.14); }
+  input, select, textarea { color-scheme: dark; }
+  .bottom { background: rgba(11,11,13,.94); backdrop-filter: blur(14px); border-top-color: var(--line); }
+
+/* NEXTSHELF — INSTITUTIONAL TERMINAL DESIGN SYSTEM */
+:root{color-scheme:dark;--bg:#080d14;--surface:#0e1621;--sunk:#121e2b;--ink:#e8eef5;--muted:#91a0b2;--faint:#657487;--line:#1e2b39;--line-2:#2b3b4d;--accent:#9bb2ca;--accent-ink:#08111b;--up:#39c98a;--down:#e46d70;--ft:#40b9b0;--snap:#d58b5b;--stall:#d6b46a;--hub:#7f9ec7;--idle:#8190a1;--sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+html,body{background:var(--bg)!important;color:var(--ink)!important;font-family:var(--sans)!important;letter-spacing:0!important}
+::selection{background:rgba(155,178,202,.28);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+input,select,textarea{background:#0a111a!important;color:var(--ink)!important;border:1px solid var(--line-2)!important;border-radius:5px!important}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(155,178,202,.12)!important}
+nav{background:rgba(8,13,20,.97)!important;border-bottom:1px solid var(--line)!important;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+nav .wrap{min-height:62px}
+.brand{font-weight:650!important;letter-spacing:.035em!important}
+.toptabs a,.navr a,.helpbtn{color:var(--muted)!important}
+.toptabs a:hover,.toptabs a.active,.toptabs a[aria-current=page]{color:var(--ink)!important}
+.wrap{max-width:1360px!important}
+.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 8px 26px rgba(0,0,0,.14)!important}
+.lesson{background:linear-gradient(120deg,#101b28,#0e1621)!important}
+.lesson .lh,.panel .ph{border-color:var(--line)!important}
+.kpis{gap:10px!important}.kpi{padding:15px!important}
+.panel,.card{padding:18px!important}
+.ph h2,.panel h2,.card h2{font-size:14px!important;font-weight:650!important;letter-spacing:.045em!important;text-transform:uppercase}
+.chip,.badge,.tag,.plan,.pro-badge{border-radius:4px!important}
+.chip,.sec,.tvbtn,.ghost,.helpbtn,.signout,.more-link{background:#101a26!important;border-color:var(--line-2)!important;color:var(--muted)!important}
+.chip.on,.chip.active,.tabs .on{background:#1a2b3d!important;border-color:#49617c!important;color:#d9e6f4!important}
+.primary,.btn.solid,.pro button{background:#c1d0df!important;border:1px solid #c1d0df!important;color:#0a1420!important;font-weight:650!important}
+.primary:hover,.btn.solid:hover{background:#d5e0eb!important}
+th{color:var(--faint)!important;font-size:10px!important;letter-spacing:.09em!important;text-transform:uppercase}
+td,th{border-bottom:1px solid var(--line)!important}
+tr:hover td{background:rgba(155,178,202,.035)!important}
+.bar{background:#1a2938!important}.bar>i,.bar span{background:var(--accent)!important}
+.up,.u-up{color:var(--up)!important}.down,.u-down{color:var(--down)!important}
+.bottom{background:rgba(8,13,20,.97)!important;border-top:1px solid var(--line)!important}
+.empty{color:var(--muted)!important}
+@media(max-width:760px){.wrap{padding-left:15px!important;padding-right:15px!important}.panel,.card{padding:14px!important}}
+
+
+/* INSTITUTIONAL MARKET MONITOR */
+.board-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 12px}
+.board-search{min-width:230px;max-width:340px;flex:1}.board-search input{width:100%;padding:10px 12px!important}
+.board-filters{display:flex;gap:6px;flex-wrap:wrap}
+.board-filter{background:#0c1520;border:1px solid var(--line-2);color:var(--muted);padding:8px 11px;border-radius:5px;font-size:11px;font-weight:650}
+.board-filter.active{background:#1a2b3d;border-color:#58718d;color:#e8eef5}
+.board-frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0b131d}
+.board-caption{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px}
+.board-scroll{overflow-x:auto}.board-table{width:100%;min-width:980px;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.board-table th{padding:12px 13px;background:#101a26;color:#77899c!important;white-space:nowrap;text-align:right;font-size:9px!important;letter-spacing:.1em!important}
+.board-table th:first-child,.board-table td:first-child{text-align:left}
+.board-table td{padding:13px;border-bottom:1px solid #1b2937;text-align:right;white-space:nowrap;font-size:11px;color:#c8d3df}
+.board-table tr:last-child td{border-bottom:0}.board-table tbody tr:hover td{background:#111e2b}
+.board-sort{border:0!important;background:transparent!important;color:inherit!important;padding:0!important;font:inherit!important;letter-spacing:inherit!important;text-transform:inherit!important}
+.board-symbol a{font-weight:750;color:#edf3f9;text-decoration:none;font-size:12px}.board-symbol small{display:block;color:#718296;font-size:9px;margin-top:2px}
+.board-state{display:inline-flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;background:#172332;color:#c4d4e5;font-size:10px;font-weight:650}
+.board-state:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.board-state.up{color:var(--up);background:#10291f}.board-state.down{color:var(--down);background:#2b191d}
+.board-state.hub{color:#a8b9e8;background:#1b2540}.board-state.near{color:#d8b878;background:#2b2519}
+.board-state.neutral{color:#9eacbb;background:#1a2531}.board-distance{font-weight:700;color:#dce6ef}.board-shelf{font-weight:700;color:#b6c9dc}
+.board-actions{display:flex;justify-content:flex-end;gap:7px}.board-actions a{font-size:10px!important;padding:6px 8px!important;border-radius:4px!important}
+.board-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}
+.board-lock{display:flex;justify-content:space-between;gap:16px;align-items:center;background:#121e2b;border:1px solid #34465a;border-radius:7px;padding:15px;margin-bottom:12px}
+.board-lock p{margin:4px 0 0;color:var(--muted);font-size:11px}.board-lock strong{font-size:13px}
+@media(max-width:700px){.board-toolbar{align-items:stretch}.board-search{max-width:none}.board-lock{align-items:flex-start;flex-direction:column}.board-caption{align-items:flex-start;flex-direction:column}}
+
+
+/* MARKET MONITOR ALIGNMENT PASS */
+.board-table{table-layout:fixed;width:100%;min-width:1080px}
+.board-table th,.board-table td{box-sizing:border-box;vertical-align:middle}
+.board-table th{height:42px;padding:10px 12px;text-align:right}
+.board-table td{height:58px;padding:10px 12px;text-align:right;line-height:1.35}
+.board-table th:nth-child(1),.board-table td:nth-child(1){width:12%;text-align:left;padding-left:18px}
+.board-table th:nth-child(2),.board-table td:nth-child(2){width:13%;text-align:left}
+.board-table th:nth-child(3),.board-table td:nth-child(3){width:10%;text-align:right}
+.board-table th:nth-child(4),.board-table td:nth-child(4){width:10%;text-align:right}
+.board-table th:nth-child(5),.board-table td:nth-child(5){width:10%;text-align:right}
+.board-table th:nth-child(6),.board-table td:nth-child(6){width:13%;text-align:right}
+.board-table th:nth-child(7),.board-table td:nth-child(7){width:13%;text-align:right}
+.board-table th:nth-child(8),.board-table td:nth-child(8){width:10%;text-align:center}
+.board-table th:nth-child(9),.board-table td:nth-child(9){width:9%;text-align:right;padding-right:16px}
+.board-table th:nth-child(2) .board-sort{display:block;text-align:left}
+.board-table th:nth-child(3) .board-sort,.board-table th:nth-child(6) .board-sort{display:block;width:100%;text-align:right}
+.board-table th:first-child,.board-table td:first-child{text-align:left}
+.board-symbol{display:flex;align-items:center;min-height:34px}
+.board-symbol a{display:inline-block;line-height:1.2}
+.board-symbol small{line-height:1.2}
+.board-state{white-space:nowrap;line-height:1.2}
+.board-distance,.board-shelf{display:inline-block;min-width:54px;text-align:right;font-variant-numeric:tabular-nums}
+.board-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap}
+.board-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:27px;line-height:1}
+.board-table td:nth-child(3),.board-table td:nth-child(4),.board-table td:nth-child(5),.board-table td:nth-child(6),.board-table td:nth-child(7){font-variant-numeric:tabular-nums}
+@media(max-width:700px){.board-table{min-width:1080px}.board-table th,.board-table td{padding-left:10px;padding-right:10px}}
+
 </style>
 </head>
 <body>
@@ -1301,20 +1424,80 @@ function bGroup(title, rows, kind, empty) {
     ${more ? `<button class="more" onclick="this.parentNode.querySelectorAll('.brow[hidden]').forEach(e => e.hidden = false); this.remove()">Show all ${rows.length}</button>` : ""}
   </div>` : `<div class="empty">${empty}</div>`}</div>`;
 }
+
+let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
+function boardStatus(r,kind){
+  if(kind==="live") return r.state==="breakdown"?["Breakdown","down"]:["Breakout","up"];
+  if(kind==="near") return ["At the edge","near"];
+  if(kind==="forming") return ["Inside hub","hub"];
+  const map={"follow-through":["Hit shelf","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
+  return map[r.state]||[String(r.state||"No signal").replaceAll("_"," "),"neutral"];
+}
+function boardDistance(r,kind){
+  if(kind==="near"){const v=r.near_edge==="up"?r.to_high_pct:r.to_low_pct;return Number.isFinite(Number(v))?Math.abs(Number(v)):null;}
+  if(kind==="forming"&&r.hub&&Number(r.last_close)>0){const p=Number(r.last_close),a=Math.abs((Number(r.hub.high)/p-1)*100),b=Math.abs((p/Number(r.hub.low)-1)*100);return Math.min(a,b);}
+  return null;
+}
+function boardShelf(r,kind){
+  if(kind==="live")return r.target;
+  if(kind==="near"){const sh=r.near_edge==="up"?r.shelf_up:r.shelf_down;return sh?.level??null;}
+  if(kind==="forming"){const p=Number(r.last_close),a=r.shelf_up?.level,b=r.shelf_down?.level;if(a==null)return b;if(b==null)return a;return Math.abs(a-p)<=Math.abs(p-b)?a:b;}
+  return null;
+}
+function boardRows(){
+  const rows=[];
+  [["live","live"],["near","near"],["forming","forming"],["recent","recent"]].forEach(pair=>(BOARD_DATA[pair[1]]||[]).forEach(r=>rows.push({...r,_kind:pair[0]})));
+  return rows;
+}
+function renderInstitutionalBoard(){
+  const q=($("boardSearch")?.value||"").trim().toUpperCase();
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];return(BOARD_KIND==="all"||BOARD_KIND===r._kind)&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  rows.sort((a,b)=>{
+    let av,bv;
+    if(BOARD_SORT==="symbol"){av=a.symbol;bv=b.symbol;}
+    else if(BOARD_SORT==="price"){av=Number(a.last_close)||0;bv=Number(b.last_close)||0;}
+    else if(BOARD_SORT==="distance"){av=boardDistance(a,a._kind)??Infinity;bv=boardDistance(b,b._kind)??Infinity;}
+    else{av=boardStatus(a,a._kind)[0];bv=boardStatus(b,b._kind)[0];}
+    return(typeof av==="string"?av.localeCompare(bv):av-bv)*BOARD_SORT_DIR;
+  });
+  const html=rows.map(r=>{
+    const kind=r._kind,status=boardStatus(r,kind),h=r.hub||{},dist=boardDistance(r,kind),shelf=boardShelf(r,kind);
+    const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
+    const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions":kind==="recent"?"Completed setup":"—";
+    return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>NASDAQ · 4H</small></div></td>'+
+      '<td><span class="board-state '+status[1]+'">'+esc(status[0])+'</span></td><td>'+money(r.last_close)+'</td>'+
+      '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
+      '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
+      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
+  }).join("");
+  const tbody=$("boardRows");if(tbody)tbody.innerHTML=html||'<tr><td colspan="9"><div class="board-empty">No symbols match this view.</div></td></tr>';
+  const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
+  document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
+}
+function filterInstitutionalBoard(kind){if(kind)BOARD_KIND=kind;renderInstitutionalBoard();}
+function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else{BOARD_SORT=key;BOARD_SORT_DIR=1;}renderInstitutionalBoard();}
 async function loadBoard() {
   let b;
-  try { b = await api("/api/board"); } catch (e) { $("board").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
-  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
-  if (!b.universe) { $("board").innerHTML = `<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>`; return; }
+  try { b = await api("/api/board"); } catch (e) { $("board").innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; return; }
+  $("bMeta").textContent = b.universe ? b.universe+' stocks · updated '+when(b.updated+"Z") : "";
+  if (!b.universe) { $("board").innerHTML = '<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>'; return; }
+  BOARD_DATA=b;
   $("board").innerHTML =
-    (b.locked ? `<div class="group"><h3>Breaking out now & about to · Pro</h3><div class="lock">
-       <b>${b.live_count} breakouts · ${b.near_count} at the edge</b>
-       <p>See which stocks are breaking out right now, and which are pressing against a hub edge, with targets.</p>
-       <a class="upsell" href="#account">Upgrade to Pro →</a></div></div>` :
-    bGroup("Breaking out now " + tip("breakout"), b.live, "live", "No breakouts right now.") +
-    bGroup("About to break out", b.near, "near", "Nothing is pressing against the edge of its range right now.")) +
-    bGroup("Resting in a range " + tip("hub"), b.forming, "forming", "No stocks are in a range right now.") +
-    bGroup("Just finished", b.recent, "recent", "No recent results.");
+    (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
+    '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
+    '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
+    '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Breakouts</button>'+
+    '<button class="board-filter" data-kind="near" onclick="filterInstitutionalBoard(\'near\')">At edge</button>'+
+    '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">In hub</button>'+
+    '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')">Recent</button></div></div>'+
+    '<div class="board-frame"><div class="board-caption"><span>NASDAQ-100 · HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
+    '<th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
+    '<th>Next shelf / target</th><th>4H context</th><th>Analysis</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
+    '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels; unavailable values are shown as —.</div>';
+  BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard();
 }
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";

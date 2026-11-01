@@ -3,8 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#F6F6F3" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E0E0D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0B0B0D">
 <title>Sign in · NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -59,6 +58,81 @@
   .links { display: flex; justify-content: space-between; margin-top: 18px; font-size: 14px; }
   a { color: var(--ink); }
   .links a { color: var(--muted); }
+
+  /* NextShelf dark-first visual system */
+  :root {
+    color-scheme: dark;
+    --bg: #0B0B0D;
+    --surface: #121215;
+    --sunk: #19191F;
+    --ink: #F4F4F6;
+    --muted: #A1A1AA;
+    --faint: #6B6B75;
+    --line: #24242A;
+    --line-2: #33333B;
+    --accent: #A99BFF;
+    --accent-ink: #0B0B0D;
+    --up: #3DD68C;
+    --down: #FF6B5E;
+    --ft: #2FD4C0;
+    --snap: #FF8A4C;
+    --stall: #F2C14E;
+    --hub: #8B9CFF;
+    --idle: #858594;
+  }
+
+  body { background: radial-gradient(ellipse at 16% 8%, rgba(124,147,255,.12), transparent 40%), var(--bg); }
+  .pitch { background: linear-gradient(145deg, rgba(18,18,21,.78), rgba(11,11,13,.42)); border-right-color: var(--line); }
+  .pitch h1 em { color: var(--accent); }
+  .box { background: rgba(18,18,21,.72); border: 1px solid var(--line); border-radius: 20px; padding: 28px; box-shadow: 0 24px 70px rgba(0,0,0,.24); }
+  input { background: #0D0D11; border-color: var(--line-2); }
+  input:focus { border-color: var(--accent); }
+  button { background: var(--accent); border-color: var(--accent); color: #100d20; }
+  button:hover { filter: brightness(1.08); }
+  .google { background: #17171D; color: var(--ink); border-color: var(--line-2); }
+  a { color: var(--ink); }
+  @media (max-width: 860px) { .box { padding: 24px; } }
+
+/* NEXTSHELF — INSTITUTIONAL TERMINAL DESIGN SYSTEM */
+:root{color-scheme:dark;--bg:#080d14;--surface:#0e1621;--sunk:#121e2b;--ink:#e8eef5;--muted:#91a0b2;--faint:#657487;--line:#1e2b39;--line-2:#2b3b4d;--accent:#9bb2ca;--accent-ink:#08111b;--up:#39c98a;--down:#e46d70;--ft:#40b9b0;--snap:#d58b5b;--stall:#d6b46a;--hub:#7f9ec7;--idle:#8190a1;--sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+html,body{background:var(--bg)!important;color:var(--ink)!important;font-family:var(--sans)!important;letter-spacing:0!important}
+::selection{background:rgba(155,178,202,.28);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+input,select,textarea{background:#0a111a!important;color:var(--ink)!important;border:1px solid var(--line-2)!important;border-radius:5px!important}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)!important;box-shadow:0 0 0 2px rgba(155,178,202,.12)!important}
+nav{background:rgba(8,13,20,.97)!important;border-bottom:1px solid var(--line)!important;box-shadow:0 4px 18px rgba(0,0,0,.18)}
+nav .wrap{min-height:62px}
+.brand{font-weight:650!important;letter-spacing:.035em!important}
+.toptabs a,.navr a,.helpbtn{color:var(--muted)!important}
+.toptabs a:hover,.toptabs a.active,.toptabs a[aria-current=page]{color:var(--ink)!important}
+.wrap{max-width:1360px!important}
+.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box{background:var(--surface)!important;border:1px solid var(--line)!important;border-radius:8px!important;box-shadow:0 8px 26px rgba(0,0,0,.14)!important}
+.lesson{background:linear-gradient(120deg,#101b28,#0e1621)!important}
+.lesson .lh,.panel .ph{border-color:var(--line)!important}
+.kpis{gap:10px!important}.kpi{padding:15px!important}
+.panel,.card{padding:18px!important}
+.ph h2,.panel h2,.card h2{font-size:14px!important;font-weight:650!important;letter-spacing:.045em!important;text-transform:uppercase}
+.chip,.badge,.tag,.plan,.pro-badge{border-radius:4px!important}
+.chip,.sec,.tvbtn,.ghost,.helpbtn,.signout,.more-link{background:#101a26!important;border-color:var(--line-2)!important;color:var(--muted)!important}
+.chip.on,.chip.active,.tabs .on{background:#1a2b3d!important;border-color:#49617c!important;color:#d9e6f4!important}
+.primary,.btn.solid,.pro button{background:#c1d0df!important;border:1px solid #c1d0df!important;color:#0a1420!important;font-weight:650!important}
+.primary:hover,.btn.solid:hover{background:#d5e0eb!important}
+th{color:var(--faint)!important;font-size:10px!important;letter-spacing:.09em!important;text-transform:uppercase}
+td,th{border-bottom:1px solid var(--line)!important}
+tr:hover td{background:rgba(155,178,202,.035)!important}
+.bar{background:#1a2938!important}.bar>i,.bar span{background:var(--accent)!important}
+.up,.u-up{color:var(--up)!important}.down,.u-down{color:var(--down)!important}
+.bottom{background:rgba(8,13,20,.97)!important;border-top:1px solid var(--line)!important}
+.empty{color:var(--muted)!important}
+@media(max-width:760px){.wrap{padding-left:15px!important;padding-right:15px!important}.panel,.card{padding:14px!important}}
+/* INSTITUTIONAL AUTHENTICATION */
+.pitch{background:linear-gradient(155deg,#0d1825,#080d14)!important;border-right:1px solid var(--line)!important}
+.pitch h1 em{color:#afc2d8!important}.pitch li{border-color:var(--line)!important}
+.pitch li b{color:var(--ink)!important}.box{max-width:410px!important;padding:34px!important}
+button{background:#c1d0df!important;color:#0a1420!important;border:1px solid #c1d0df!important;border-radius:5px!important}
+.google{background:#111d2a!important;color:var(--ink)!important;border:1px solid var(--line-2)!important;border-radius:5px!important}
+label,.sub{color:var(--muted)!important}
+
 </style>
 </head>
 <body>
