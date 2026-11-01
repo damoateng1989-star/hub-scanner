@@ -176,6 +176,7 @@
   .brow .d b { font-weight: 500; }
   .brow .px { margin: 0; font-size: 13px; }
   .brow button { padding: 5px 10px; font-size: 12px; }
+  @media (max-width: 600px) { .brow { grid-template-columns: 64px 1fr; } .brow button { grid-column: 2; justify-self: start; margin-top: 4px; } }
   .more { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--muted); padding: 10px; }
   .plan { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 9px; border-radius: 99px;
           border: 1px solid var(--line-2); color: var(--muted); text-decoration: none; }
@@ -196,6 +197,11 @@
   .tier.pro { border-color: var(--accent); }
   .tier b { display: block; color: var(--ink); font-size: 15px; margin-bottom: 6px; }
   .tier ul { margin: 0; padding-left: 18px; } .tier li { margin: 3px 0; }
+  #toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+           background: var(--ink); color: var(--bg); padding: 12px 16px; border-radius: 12px; font-size: 14px; z-index: 20;
+           transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+  #toast a { color: var(--bg); font-weight: 600; margin-left: 6px; }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 </style>
@@ -239,7 +245,7 @@
     <form class="cmd" id="add" autocomplete="off">
       <span class="pre">$</span>
       <input id="sym" placeholder="Add a ticker, e.g. NVDA" autocapitalize="characters" maxlength="10" aria-label="Ticker">
-      <button class="primary" id="addBtn">Add</button>
+      <button class="primary" id="addBtn">Add to watchlist</button>
     </form>
     <div class="err" id="err"></div>
   </section>
@@ -495,9 +501,10 @@ $("add").addEventListener("submit", async (e) => {
   $("err").textContent = "";
   if (!sym) { $("err").textContent = "Enter a ticker first"; return; }
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…";
-  try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})}); $("sym").value = ""; await loadTickers(); }
+  try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})}); $("sym").value = ""; await loadTickers();
+        toast(`${sym.toUpperCase()} added to your watchlist`); }
   catch (err) { $("err").innerHTML = esc(err.message) + (/Upgrade/.test(err.message) ? ` <a class="upsell" style="margin:0" href="#account">See Pro →</a>` : ""); }
-  $("addBtn").disabled = false; $("addBtn").textContent = "Add";
+  $("addBtn").disabled = false; $("addBtn").textContent = "Add to watchlist";
 });
 $("sym").addEventListener("input", () => { $("err").textContent = ""; });
 
@@ -689,7 +696,7 @@ window.addEventListener("hashchange", showTab);
 
 // ---------------------------------------------------------------- hub board
 const sym = (s) => `<a class="s symlink" href="/t/${encodeURIComponent(s)}">${esc(s)}</a>`;
-const watchBtn = (r) => r.watching ? `<button disabled>Watching</button>` : `<button onclick="boardWatch('${esc(r.symbol)}', this)">+ Watch</button>`;
+const watchBtn = (r) => r.watching ? `<button disabled>✓ On watchlist</button>` : `<button onclick="boardWatch('${esc(r.symbol)}', this)">+ Add to watchlist</button>`;
 function bRow(r, kind) {
   let d = "";
   const h = r.hub;
@@ -733,8 +740,22 @@ async function loadBoard() {
 }
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";
-  try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: s})}); btn.textContent = "Watching"; loadTickers(); }
-  catch (e) { btn.textContent = "Failed"; }
+  try {
+    await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: s})});
+    btn.textContent = "✓ On watchlist";
+    toast(`${s} added to your watchlist`, "#watch", "View");
+    loadTickers();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = "+ Add to watchlist";
+    toast(e.message, /Upgrade/.test(e.message) ? "#account" : null, "See Pro");
+  }
+}
+function toast(text, href, linkText) {
+  let t = $("toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.innerHTML = esc(text) + (href ? ` <a href="${href}">${esc(linkText)} →</a>` : "");
+  t.className = "show";
+  clearTimeout(t._h); t._h = setTimeout(() => t.className = "", 4000);
 }
 $("bScan").addEventListener("click", async (e) => {
   const b = e.target; b.disabled = true; b.textContent = "Scanning…";

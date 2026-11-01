@@ -127,7 +127,7 @@ async function load() {
         <span>4H candles, regular hours, New York time</span>
       </div>
     </div>
-    <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
+    <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <h2>Past <em>results</em></h2>
     ${s.n ? `<div class="kv">
       <div><small>Breakouts</small><b>${s.n}</b></div>
@@ -141,7 +141,7 @@ async function load() {
     e.target.disabled = true; e.target.textContent = "Adding…";
     const r = await fetch("/api/tickers", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({symbol: d.symbol})});
     const j = await r.json().catch(() => ({}));
-    e.target.textContent = r.ok ? "On your watchlist" : (r.status === 402 ? "Free plan limit reached. Upgrade in Account" : (j.detail || "Couldn't add"));
+    e.target.textContent = r.ok ? "✓ Added to your watchlist" : (r.status === 402 ? "Free plan limit reached. Upgrade in Account" : (j.detail || "Couldn't add"));
   };
 
   const el = $("chart");
