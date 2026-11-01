@@ -414,6 +414,33 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .empty{color:var(--muted)!important}
 @media(max-width:760px){.wrap{padding-left:15px!important;padding-right:15px!important}.panel,.card{padding:14px!important}}
 
+
+/* INSTITUTIONAL MARKET MONITOR */
+.board-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0 12px}
+.board-search{min-width:230px;max-width:340px;flex:1}.board-search input{width:100%;padding:10px 12px!important}
+.board-filters{display:flex;gap:6px;flex-wrap:wrap}
+.board-filter{background:#0c1520;border:1px solid var(--line-2);color:var(--muted);padding:8px 11px;border-radius:5px;font-size:11px;font-weight:650}
+.board-filter.active{background:#1a2b3d;border-color:#58718d;color:#e8eef5}
+.board-frame{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0b131d}
+.board-caption{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 15px;border-bottom:1px solid var(--line);color:var(--muted);font-size:11px}
+.board-scroll{overflow-x:auto}.board-table{width:100%;min-width:980px;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.board-table th{padding:12px 13px;background:#101a26;color:#77899c!important;white-space:nowrap;text-align:right;font-size:9px!important;letter-spacing:.1em!important}
+.board-table th:first-child,.board-table td:first-child{text-align:left}
+.board-table td{padding:13px;border-bottom:1px solid #1b2937;text-align:right;white-space:nowrap;font-size:11px;color:#c8d3df}
+.board-table tr:last-child td{border-bottom:0}.board-table tbody tr:hover td{background:#111e2b}
+.board-sort{border:0!important;background:transparent!important;color:inherit!important;padding:0!important;font:inherit!important;letter-spacing:inherit!important;text-transform:inherit!important}
+.board-symbol a{font-weight:750;color:#edf3f9;text-decoration:none;font-size:12px}.board-symbol small{display:block;color:#718296;font-size:9px;margin-top:2px}
+.board-state{display:inline-flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;background:#172332;color:#c4d4e5;font-size:10px;font-weight:650}
+.board-state:before{content:"";width:5px;height:5px;border-radius:50%;background:currentColor}
+.board-state.up{color:var(--up);background:#10291f}.board-state.down{color:var(--down);background:#2b191d}
+.board-state.hub{color:#a8b9e8;background:#1b2540}.board-state.near{color:#d8b878;background:#2b2519}
+.board-state.neutral{color:#9eacbb;background:#1a2531}.board-distance{font-weight:700;color:#dce6ef}.board-shelf{font-weight:700;color:#b6c9dc}
+.board-actions{display:flex;justify-content:flex-end;gap:7px}.board-actions a{font-size:10px!important;padding:6px 8px!important;border-radius:4px!important}
+.board-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}
+.board-lock{display:flex;justify-content:space-between;gap:16px;align-items:center;background:#121e2b;border:1px solid #34465a;border-radius:7px;padding:15px;margin-bottom:12px}
+.board-lock p{margin:4px 0 0;color:var(--muted);font-size:11px}.board-lock strong{font-size:13px}
+@media(max-width:700px){.board-toolbar{align-items:stretch}.board-search{max-width:none}.board-lock{align-items:flex-start;flex-direction:column}.board-caption{align-items:flex-start;flex-direction:column}}
+
 </style>
 </head>
 <body>
@@ -1369,20 +1396,80 @@ function bGroup(title, rows, kind, empty) {
     ${more ? `<button class="more" onclick="this.parentNode.querySelectorAll('.brow[hidden]').forEach(e => e.hidden = false); this.remove()">Show all ${rows.length}</button>` : ""}
   </div>` : `<div class="empty">${empty}</div>`}</div>`;
 }
+
+let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
+function boardStatus(r,kind){
+  if(kind==="live") return r.state==="breakdown"?["Breakdown","down"]:["Breakout","up"];
+  if(kind==="near") return ["At the edge","near"];
+  if(kind==="forming") return ["Inside hub","hub"];
+  const map={"follow-through":["Hit shelf","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
+  return map[r.state]||[String(r.state||"No signal").replaceAll("_"," "),"neutral"];
+}
+function boardDistance(r,kind){
+  if(kind==="near"){const v=r.near_edge==="up"?r.to_high_pct:r.to_low_pct;return Number.isFinite(Number(v))?Math.abs(Number(v)):null;}
+  if(kind==="forming"&&r.hub&&Number(r.last_close)>0){const p=Number(r.last_close),a=Math.abs((Number(r.hub.high)/p-1)*100),b=Math.abs((p/Number(r.hub.low)-1)*100);return Math.min(a,b);}
+  return null;
+}
+function boardShelf(r,kind){
+  if(kind==="live")return r.target;
+  if(kind==="near"){const sh=r.near_edge==="up"?r.shelf_up:r.shelf_down;return sh?.level??null;}
+  if(kind==="forming"){const p=Number(r.last_close),a=r.shelf_up?.level,b=r.shelf_down?.level;if(a==null)return b;if(b==null)return a;return Math.abs(a-p)<=Math.abs(p-b)?a:b;}
+  return null;
+}
+function boardRows(){
+  const rows=[];
+  [["live","live"],["near","near"],["forming","forming"],["recent","recent"]].forEach(pair=>(BOARD_DATA[pair[1]]||[]).forEach(r=>rows.push({...r,_kind:pair[0]})));
+  return rows;
+}
+function renderInstitutionalBoard(){
+  const q=($("boardSearch")?.value||"").trim().toUpperCase();
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];return(BOARD_KIND==="all"||BOARD_KIND===r._kind)&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  rows.sort((a,b)=>{
+    let av,bv;
+    if(BOARD_SORT==="symbol"){av=a.symbol;bv=b.symbol;}
+    else if(BOARD_SORT==="price"){av=Number(a.last_close)||0;bv=Number(b.last_close)||0;}
+    else if(BOARD_SORT==="distance"){av=boardDistance(a,a._kind)??Infinity;bv=boardDistance(b,b._kind)??Infinity;}
+    else{av=boardStatus(a,a._kind)[0];bv=boardStatus(b,b._kind)[0];}
+    return(typeof av==="string"?av.localeCompare(bv):av-bv)*BOARD_SORT_DIR;
+  });
+  const html=rows.map(r=>{
+    const kind=r._kind,status=boardStatus(r,kind),h=r.hub||{},dist=boardDistance(r,kind),shelf=boardShelf(r,kind);
+    const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
+    const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions":kind==="recent"?"Completed setup":"—";
+    return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>NASDAQ · 4H</small></div></td>'+
+      '<td><span class="board-state '+status[1]+'">'+esc(status[0])+'</span></td><td>'+money(r.last_close)+'</td>'+
+      '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
+      '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
+      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
+  }).join("");
+  const tbody=$("boardRows");if(tbody)tbody.innerHTML=html||'<tr><td colspan="9"><div class="board-empty">No symbols match this view.</div></td></tr>';
+  const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
+  document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
+}
+function filterInstitutionalBoard(kind){if(kind)BOARD_KIND=kind;renderInstitutionalBoard();}
+function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else{BOARD_SORT=key;BOARD_SORT_DIR=1;}renderInstitutionalBoard();}
 async function loadBoard() {
   let b;
-  try { b = await api("/api/board"); } catch (e) { $("board").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
-  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
-  if (!b.universe) { $("board").innerHTML = `<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>`; return; }
+  try { b = await api("/api/board"); } catch (e) { $("board").innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; return; }
+  $("bMeta").textContent = b.universe ? b.universe+' stocks · updated '+when(b.updated+"Z") : "";
+  if (!b.universe) { $("board").innerHTML = '<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>'; return; }
+  BOARD_DATA=b;
   $("board").innerHTML =
-    (b.locked ? `<div class="group"><h3>Breaking out now & about to · Pro</h3><div class="lock">
-       <b>${b.live_count} breakouts · ${b.near_count} at the edge</b>
-       <p>See which stocks are breaking out right now, and which are pressing against a hub edge, with targets.</p>
-       <a class="upsell" href="#account">Upgrade to Pro →</a></div></div>` :
-    bGroup("Breaking out now " + tip("breakout"), b.live, "live", "No breakouts right now.") +
-    bGroup("About to break out", b.near, "near", "Nothing is pressing against the edge of its range right now.")) +
-    bGroup("Resting in a range " + tip("hub"), b.forming, "forming", "No stocks are in a range right now.") +
-    bGroup("Just finished", b.recent, "recent", "No recent results.");
+    (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
+    '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
+    '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
+    '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Breakouts</button>'+
+    '<button class="board-filter" data-kind="near" onclick="filterInstitutionalBoard(\'near\')">At edge</button>'+
+    '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">In hub</button>'+
+    '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')">Recent</button></div></div>'+
+    '<div class="board-frame"><div class="board-caption"><span>NASDAQ-100 · HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
+    '<th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
+    '<th>Next shelf / target</th><th>4H context</th><th>Analysis</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
+    '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels; unavailable values are shown as —.</div>';
+  BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard();
 }
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";
