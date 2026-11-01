@@ -50,11 +50,12 @@ Without Resend, reset links are written to the Render logs instead of being emai
 
 ## Pages
 
-- **Watchlist** (`/`): your tickers, with a summary, mini chart and price ladder for each, plus recent alerts.
-- **Hub Board** (`/#board`): every Nasdaq-100 stock plus your watchlist, scanned a few minutes after each 4H close (1:52 and 4:22 PM ET). It's grouped into *Breaking out now*, *At the edge of a hub*, *Inside a hub* and *Just finished*, and you can tap **+ Watch** to add any stock to your list. To scan your own set of stocks instead, set `BOARD_UNIVERSE=AAPL,MSFT,...`.
-- **Track record** (`/#record`): every breakout the board detects from the day it first runs, with its result and return. It's logged automatically, and nothing is removed.
+- **Landing page** (`/`): the public homepage with the headline, product preview, how it works, features, pricing and FAQ. Signed-in members skip it and go straight to the app.
+- **Watchlist** (`/app`): your tickers, with a summary, mini chart and price ladder for each, plus recent alerts.
+- **Hub Board** (`/app#board`): every Nasdaq-100 stock plus your watchlist, scanned a few minutes after each 4H close (1:52 and 4:22 PM ET). It's grouped into *Breaking out now*, *At the edge of a hub*, *Inside a hub* and *Just finished*, and you can tap **+ Watch** to add any stock to your list. To scan your own set of stocks instead, set `BOARD_UNIVERSE=AAPL,MSFT,...`.
+- **Track record** (`/app#record`): every breakout the board detects from the day it first runs, with its result and return. It's logged automatically, and nothing is removed.
 - **Ticker page** (`/t/NVDA`): a full 4H candlestick chart with every hub drawn, the shelves above and below, and breakout markers labelled hit / failed / timed out, plus that stock's past results.
-- **Paper trades** (`/#paper`): the automatic paper-trading journal.
+- **Paper trades** (`/app#paper`): the automatic paper-trading journal.
 
 ---
 
@@ -209,6 +210,7 @@ static/ticker.html  ticker chart page (charts by TradingView Lightweight Charts,
 auth.py           accounts: email/password, Google sign-in, sessions, password reset
 notify.py         sends each alert to the users watching that ticker
 static/login.html sign-in / sign-up page
+static/landing.html public homepage
 paper.py          automatic paper trading (Alpaca paper account or simulator)
 db.py             SQLite storage (watchlist, alerts, paper trades)
 static/index.html the watchlist page

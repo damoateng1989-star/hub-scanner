@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0B0B0D">
+<title>Hub Scanner · Find the hub. Catch the break.</title>
+<meta name="description" content="Hub Scanner checks every Nasdaq-100 stock after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0B0D; --panel: #121215; --panel-2: #17171B; --line: #24242A; --line-2: #33333B;
+    --ink: #F4F4F6; --muted: #A1A1AA; --faint: #6B6B75;
+    --blue: #7AA2FF; --violet: #A99BFF; --lav: #CDBEFF; --up: #3DD68C; --down: #FF6B5E; --hub: #7C93FF;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --serif: "Instrument Serif", Georgia, serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  a { color: inherit; text-decoration: none; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+  .dots { position: absolute; inset: 0; pointer-events: none;
+          background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 22px 22px;
+          mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 40%, transparent 100%);
+          -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 30%, #000 40%, transparent 100%); }
+  .glow { position: absolute; left: 50%; top: -220px; width: min(900px, 100vw); height: 600px; transform: translateX(-50%); pointer-events: none;
+          background: radial-gradient(closest-side, rgba(122,162,255,.16), rgba(169,155,255,.08) 55%, transparent); }
+
+  /* nav */
+  nav { position: sticky; top: 0; z-index: 10; background: rgba(11,11,13,.72); backdrop-filter: blur(14px) saturate(1.4);
+        -webkit-backdrop-filter: blur(14px) saturate(1.4); border-bottom: 1px solid rgba(255,255,255,.05); }
+  nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 72px; }
+  .brand { display: flex; align-items: center; gap: 12px; font: 600 17px var(--sans); letter-spacing: .12em; text-transform: uppercase; }
+  .links { display: flex; gap: 34px; color: var(--muted); font-size: 15px; }
+  .links a:hover { color: var(--ink); }
+  .auth { display: flex; align-items: center; gap: 22px; font-size: 15px; }
+  .btn { display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px; border-radius: 12px; font: 500 15px var(--sans);
+         border: 1px solid var(--line-2); transition: transform .15s, background .15s, border-color .15s; white-space: nowrap; }
+  .btn:hover { transform: translateY(-1px); border-color: #4a4a55; }
+  .btn.solid { background: #fff; color: #0B0B0D; border-color: #fff; box-shadow: 0 8px 30px rgba(122,162,255,.18); }
+  .btn.ghost { background: rgba(255,255,255,.02); }
+  .btn.big { padding: 17px 28px; font-size: 17px; border-radius: 14px; }
+  @media (max-width: 900px) { .links { display: none; } }
+  @media (max-width: 480px) { .auth .login { display: none; } .brand span { font-size: 15px; } }
+
+  /* hero */
+  .hero { position: relative; text-align: center; padding: 110px 0 40px; overflow: hidden; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase;
+             color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; background: rgba(255,255,255,.02); }
+  .eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: var(--up); box-shadow: 0 0 12px var(--up); }
+  h1 { margin: 26px auto 0; font: 700 clamp(44px, 8.4vw, 108px)/1.02 var(--sans); letter-spacing: -0.045em; max-width: 1100px; }
+  h1 .l1 { background: linear-gradient(180deg, #fff 30%, #9a9aa3); -webkit-background-clip: text; background-clip: text; color: transparent; display: block; }
+  h1 .l2 { background: linear-gradient(90deg, var(--blue), var(--violet) 55%, var(--lav)); -webkit-background-clip: text; background-clip: text;
+           color: transparent; display: block; padding-bottom: .08em; }
+  .lede { max-width: 760px; margin: 28px auto 0; color: var(--muted); font-size: clamp(17px, 2vw, 21px); line-height: 1.6; }
+  .ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 40px; }
+  .trust { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 30px; margin-top: 46px; color: var(--muted); font-size: 15px; }
+  .trust span { display: inline-flex; align-items: center; gap: 9px; }
+  .trust svg { color: var(--blue); flex: none; }
+
+  /* product windows */
+  .stage { position: relative; height: 480px; margin: 70px 0 20px; }
+  .win { position: absolute; background: linear-gradient(180deg, #16161A, #0F0F12); border: 1px solid var(--line-2); border-radius: 18px;
+         box-shadow: 0 40px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04); overflow: hidden; }
+  .win .bar { display: flex; align-items: center; height: 44px; padding: 0 16px; border-bottom: 1px solid var(--line); position: relative; }
+  .win .bar i { width: 11px; height: 11px; border-radius: 50%; background: #2c2c33; margin-right: 7px; }
+  .win .bar b { position: absolute; left: 0; right: 0; text-align: center; font: 500 12px var(--mono); letter-spacing: .2em; color: var(--faint); pointer-events: none; }
+  .w-left { left: 0; top: 0; width: 46%; height: 330px; transform: rotate(-1.2deg); opacity: .92; }
+  .w-right { right: 0; top: 10px; width: 42%; height: 320px; transform: rotate(1.2deg); opacity: .92; }
+  .w-mid { left: 50%; top: 90px; width: 64%; height: 380px; transform: translateX(-50%); z-index: 2; }
+  @media (max-width: 900px) {
+    .stage { height: auto; display: grid; gap: 16px; }
+    .win { position: relative; inset: auto; width: 100% !important; transform: none !important; height: auto; opacity: 1; }
+    .w-mid { order: -1; }
+  }
+  .rows { padding: 10px 14px; font-size: 13px; }
+  .r { display: grid; grid-template-columns: 62px 1fr auto; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid var(--line); }
+  .r:last-child { border-bottom: 0; }
+  .r .s { font: 600 13px var(--mono); }
+  .r .d { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tag { font: 500 11px var(--sans); padding: 3px 8px; border-radius: 99px; color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+  .msgs { padding: 14px; display: grid; gap: 10px; }
+  .msg { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 12.5px; color: var(--muted); }
+  .msg b { color: var(--ink); font-weight: 600; display: block; margin-bottom: 2px; }
+  .chartwrap { padding: 12px 16px 6px; }
+  .chartwrap svg { width: 100%; height: 280px; display: block; }
+  .legend { display: flex; gap: 16px; padding: 0 16px 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; } .legend em { width: 14px; height: 3px; border-radius: 2px; background: var(--c); }
+
+  /* sections */
+  section.block { padding: 120px 0 0; position: relative; }
+  .kicker { font: 500 12px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--blue); }
+  h2 { font: 600 clamp(32px, 5vw, 54px)/1.08 var(--sans); letter-spacing: -0.035em; margin: 14px 0 16px; }
+  h2 em { font-family: var(--serif); font-weight: 400; font-style: italic; color: var(--muted); letter-spacing: -0.01em; }
+  .sub { color: var(--muted); max-width: 640px; font-size: 18px; margin: 0; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 46px; }
+  .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 46px; }
+  @media (max-width: 900px) { .steps, .features { grid-template-columns: 1fr; } }
+  .card { background: linear-gradient(180deg, var(--panel), #0E0E11); border: 1px solid var(--line); border-radius: 18px; padding: 24px; }
+  .card h3 { margin: 16px 0 6px; font: 600 19px var(--sans); letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .num { font: 500 12px var(--mono); color: var(--faint); letter-spacing: .1em; }
+  .card svg.ill { width: 100%; height: 120px; display: block; margin-top: 14px; }
+  .icon { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; color: var(--blue);
+          background: rgba(122,162,255,.08); border: 1px solid rgba(122,162,255,.18); }
+  .pro-badge { font: 500 10px var(--mono); letter-spacing: .1em; color: var(--violet); border: 1px solid rgba(169,155,255,.35);
+               padding: 2px 7px; border-radius: 99px; margin-left: 8px; vertical-align: 3px; }
+
+  /* pricing */
+  .tiers { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 46px; max-width: 900px; }
+  @media (max-width: 760px) { .tiers { grid-template-columns: 1fr; } }
+  .tier { padding: 30px; }
+  .tier.pro { border-color: rgba(169,155,255,.45); box-shadow: 0 0 0 1px rgba(169,155,255,.15), 0 30px 80px rgba(122,162,255,.08); position: relative; }
+  .tier .price { font: 600 46px var(--sans); letter-spacing: -0.03em; margin: 10px 0 0; }
+  .tier .price small { font-size: 16px; color: var(--muted); font-weight: 400; }
+  .tier ul { list-style: none; padding: 0; margin: 22px 0 26px; display: grid; gap: 10px; color: var(--muted); font-size: 15px; }
+  .tier li { display: flex; gap: 10px; } .tier li::before { content: "✓"; color: var(--up); }
+  .tier .btn { width: 100%; justify-content: center; }
+  .ribbon { position: absolute; top: 18px; right: 18px; font: 500 11px var(--mono); letter-spacing: .08em; color: #0B0B0D;
+            background: linear-gradient(90deg, var(--blue), var(--violet)); padding: 4px 10px; border-radius: 99px; }
+
+  /* faq */
+  .faq { max-width: 820px; margin-top: 40px; }
+  details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+  summary { cursor: pointer; list-style: none; font: 500 18px var(--sans); display: flex; justify-content: space-between; gap: 20px; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: "+"; color: var(--muted); font-weight: 400; font-size: 22px; line-height: 1; }
+  details[open] summary::after { content: "–"; }
+  details p { color: var(--muted); margin: 12px 0 0; }
+
+  .final { margin: 130px 0 0; padding: 70px 30px; text-align: center; border: 1px solid var(--line); border-radius: 24px; position: relative; overflow: hidden;
+           background: radial-gradient(ellipse at 50% 0%, rgba(122,162,255,.14), transparent 60%), var(--panel); }
+  footer { margin-top: 80px; border-top: 1px solid var(--line); padding: 34px 0 50px; color: var(--faint); font-size: 13px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  footer a { color: var(--muted); margin-right: 18px; }
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="brand" href="/">
+    <svg width="34" height="34" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="#F4F4F6"/><rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="#2F54EB"/><path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="#0B0B0D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Hub Scanner</span>
+  </a>
+  <div class="links">
+    <a href="#how">How it works</a><a href="#features">Features</a><a href="/app#board">Hub Board</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
+  </div>
+  <div class="auth">
+    <a class="login" href="/login">Login</a>
+    <a class="btn solid" href="/login#signup">Sign Up</a>
+  </div>
+</div></nav>
+
+<header class="hero">
+  <div class="dots"></div><div class="glow"></div>
+  <div class="wrap" style="position:relative">
+    <span class="eyebrow"><i></i>Scanning the Nasdaq-100 every 4H close</span>
+    <h1><span class="l1">Find the hub.</span><span class="l2">Catch the break.</span></h1>
+    <p class="lede">Hub Scanner finds stocks coiling in tight ranges, warns you before a breakout candle closes, and gives every setup a target: the next shelf. From the first scan to your own decision, it all happens in one place.</p>
+    <div class="ctas">
+      <a class="btn solid big" href="/login#signup">Start free <span aria-hidden="true">→</span></a>
+      <a class="btn ghost big" href="/app#board">Open the Hub Board <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="trust">
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Every Nasdaq-100 stock, every 4H close</span>
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Warnings 15 minutes before the close</span>
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17h18M3 7h18M7 12h10"/></svg>A shelf target on every setup</span>
+      <span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg>Every signal logged, nothing removed</span>
+    </div>
+
+    <div class="stage" aria-label="Product preview">
+      <div class="win w-left">
+        <div class="bar"><i></i><i></i><i></i><b>HUB SCANNER / BOARD</b></div>
+        <div class="rows" id="boardRows">
+          <div class="r"><span class="s">·····</span><span class="d">Loading the board…</span><span></span></div>
+        </div>
+      </div>
+      <div class="win w-right">
+        <div class="bar"><i></i><i></i><i></i><b>HUB SCANNER / ALERTS</b></div>
+        <div class="msgs">
+          <div class="msg"><b>⚠️ Trading above hub, ~15 min to the 4H close</b>If the candle closes above the hub edge, that's the breakout. Plan: entry near the close, target the next shelf.</div>
+          <div class="msg"><b>🚀 4H close above hub</b>Close outside the range after 6 sessions. Next shelf +2.4% away. Snap-back if a close comes back inside.</div>
+          <div class="msg"><b>✅ Follow-through</b>Reached the next shelf 3 candles after the breakout.</div>
+        </div>
+      </div>
+      <div class="win w-mid">
+        <div class="bar"><i></i><i></i><i></i><b>HUB SCANNER / CHART</b></div>
+        <div class="chartwrap"><svg id="demoChart" viewBox="0 0 800 280" preserveAspectRatio="none" role="img" aria-label="Example: a hub, a breakout and the next shelf"></svg></div>
+        <div class="legend">
+          <span style="--c:var(--hub)"><em></em>Hub</span><span style="--c:var(--up)"><em></em>Next shelf above</span>
+          <span style="--c:var(--down)"><em></em>Shelf below</span><span>Illustration</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="block" id="how"><div class="wrap">
+  <div class="kicker">How it works</div>
+  <h2>Three steps. <em>One clear plan.</em></h2>
+  <p class="sub">A simple, repeatable setup on 4-hour candles, with every rule spelled out so you always know why an alert fired.</p>
+  <div class="steps">
+    <div class="card"><span class="num">01</span><h3>A hub forms</h3><p>4H closes hold inside a tight range for at least 4 sessions. The stock is coiling.</p>
+      <svg class="ill" viewBox="0 0 300 120"><rect x="40" y="45" width="220" height="30" rx="5" fill="var(--hub)" opacity=".14" stroke="var(--hub)" stroke-opacity=".5"/>
+        <path d="M20 90 L40 70 L60 58 L80 66 L100 52 L120 64 L140 55 L160 67 L180 57 L200 63 L220 54 L240 62 L260 58" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linejoin="round"/></svg></div>
+    <div class="card"><span class="num">02</span><h3>A candle closes outside</h3><p>The first 4H <i>close</i> above or below the hub is the breakout. You're warned 15 minutes before it prints.</p>
+      <svg class="ill" viewBox="0 0 300 120"><rect x="20" y="55" width="170" height="30" rx="5" fill="var(--hub)" opacity=".14" stroke="var(--hub)" stroke-opacity=".5"/>
+        <path d="M20 72 L50 64 L80 76 L110 66 L140 74 L170 68 L200 50 L230 38" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="200" cy="50" r="6" fill="var(--up)"/><path d="M200 34 l0 -14 M194 26 l6 -6 6 6" stroke="var(--up)" stroke-width="2" fill="none"/></svg></div>
+    <div class="card"><span class="num">03</span><h3>It travels to the next shelf</h3><p>Earlier hubs act as shelves. The nearest one is the target, and a close back inside the hub means it failed.</p>
+      <svg class="ill" viewBox="0 0 300 120"><rect x="20" y="16" width="260" height="16" fill="var(--up)" opacity=".12"/><line x1="20" y1="32" x2="280" y2="32" stroke="var(--up)" stroke-dasharray="4 5"/>
+        <rect x="20" y="78" width="120" height="24" rx="5" fill="var(--hub)" opacity=".14" stroke="var(--hub)" stroke-opacity=".5"/>
+        <path d="M20 92 L50 86 L80 96 L110 88 L140 74 L170 66 L200 54 L230 44 L260 31" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="260" cy="31" r="6" fill="var(--up)"/></svg></div>
+  </div>
+</div></section>
+
+<section class="block" id="features"><div class="wrap">
+  <div class="kicker">Features</div>
+  <h2>Everything for the setup. <em>Nothing extra.</em></h2>
+  <div class="features">
+    <div class="card"><div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
+      <h3>Hub Board</h3><p>The whole Nasdaq-100, sorted into breaking out, at the edge, inside a hub and just finished.</p></div>
+    <div class="card"><div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg></div>
+      <h3>Pre-close warnings<span class="pro-badge">PRO</span></h3><p>About 15 minutes before a 4H candle closes outside a hub, so you can act at the close, not after it.</p></div>
+    <div class="card"><div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></div>
+      <h3>Shelf targets</h3><p>Every setup shows the next shelf above and below, with the distance from today's price.</p></div>
+    <div class="card"><div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div>
+      <h3>Charts with context</h3><p>4H candles with every hub drawn, shelves marked, and each past breakout labelled hit, failed or timed out.</p></div>
+    <div class="card"><div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></div>
+      <h3>Telegram &amp; phone alerts</h3><p>Alerts land in Telegram. On Pro, your phone can ring and read the alert aloud.</p></div>
+    <div class="card"><div class="icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6l-8-3z"/><path d="m9 12 2 2 4-4"/></svg></div>
+      <h3>Honest track record</h3><p>Every breakout the board finds is logged with its result and return. Nothing is cherry-picked.</p></div>
+  </div>
+</div></section>
+
+<section class="block" id="pricing"><div class="wrap">
+  <div class="kicker">Pricing</div>
+  <h2>Start free. <em>Upgrade when it earns it.</em></h2>
+  <div class="tiers">
+    <div class="card tier"><div class="num">FREE</div><div class="price">$0</div>
+      <ul><li>Watch up to 3 tickers</li><li>Telegram alerts after each breakout</li><li>Hub Board: stocks inside a hub</li><li>Charts and the full track record</li></ul>
+      <a class="btn ghost" href="/login#signup">Create a free account</a></div>
+    <div class="card tier pro"><span class="ribbon">MOST USEFUL</span><div class="num" style="color:var(--violet)">PRO</div>
+      <div class="price">$29<small> / month</small></div><div style="color:var(--muted);font-size:14px">or $290 a year, two months free</div>
+      <ul><li>Unlimited watchlist</li><li>Pre-close warnings, 15 min before the close</li><li>Full Hub Board: live breakouts and stocks at the edge</li>
+        <li>Phone-call alerts</li><li>Backtests on any ticker</li></ul>
+      <a class="btn solid" href="/login#signup">Get started</a></div>
+  </div>
+</div></section>
+
+<section class="block" id="faq"><div class="wrap">
+  <div class="kicker">FAQ</div>
+  <h2>Questions, <em>answered.</em></h2>
+  <div class="faq">
+    <details><summary>What is a hub?</summary><p>A stretch of at least 4 sessions where every 4-hour candle closes inside a tight range, measured against the stock's own volatility (ATR). It's the stock coiling before a move.</p></details>
+    <details><summary>What is a shelf?</summary><p>An earlier hub. When price breaks out of the current hub, the nearest earlier hub in that direction is where it often heads next, so it becomes the target.</p></details>
+    <details><summary>When do alerts arrive?</summary><p>Pre-close warnings (Pro) come about 15 minutes before each 4H close, at 1:15 and 3:45 PM ET. Breakout alerts follow shortly after the candle closes. Regular trading hours only.</p></details>
+    <details><summary>Which stocks are covered?</summary><p>The Hub Board scans every Nasdaq-100 stock. You can also add any US-listed ticker to your own watchlist.</p></details>
+    <details><summary>Is this financial advice?</summary><p>No. Hub Scanner is an educational tool that describes past price behaviour. Signals can and do fail. Do your own research and never risk money you can't afford to lose.</p></details>
+  </div>
+
+  <div class="final">
+    <div class="dots"></div>
+    <h2 style="margin-top:0;position:relative">Ready to find <em>your next hub?</em></h2>
+    <p class="sub" style="margin:0 auto;position:relative">Create a free account in under a minute. No card needed.</p>
+    <div class="ctas" style="position:relative"><a class="btn solid big" href="/login#signup">Start free →</a><a class="btn ghost big" href="/app#board">Browse the board</a></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div><a href="/app#board">Hub Board</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="/login">Login</a></div>
+  <div>© <span id="yr"></span> Hub Scanner. Educational tool, not financial advice. Past results don't guarantee future ones.</div>
+</div></footer>
+
+<script>
+document.getElementById("yr").textContent = new Date().getFullYear();
+const money = (x) => "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// live board preview (falls back quietly)
+fetch("/api/board").then(r => r.json()).then(b => {
+  const rows = [...(b.forming || [])].slice(0, 6);
+  if (!rows.length) return;
+  document.getElementById("boardRows").innerHTML = rows.map(r =>
+    `<div class="r"><span class="s">${esc(r.symbol)}</span><span class="d">${money(r.hub.low)}–${money(r.hub.high).slice(1)} · ${r.hub.sessions} sessions</span>
+     <span class="tag" style="--c:var(--hub)">Inside hub</span></div>`).join("") +
+    (b.locked ? `<div class="r"><span class="s" style="color:var(--violet)">PRO</span><span class="d">${b.live_count} breaking out now · ${b.near_count} at the edge</span><span></span></div>` : "");
+}).catch(() => {
+  document.getElementById("boardRows").innerHTML = `<div class="r"><span class="s">—</span><span class="d">Open the Hub Board to see today's setups</span><span></span></div>`;
+});
+
+// illustrative chart: drift down, hub, breakout, run to the next shelf
+(function () {
+  const svg = document.getElementById("demoChart"), W = 800, H = 280;
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  const pts = []; let p = 120;
+  for (let i = 0; i < 70; i++) {
+    if (i < 18) p += (rnd() - 0.62) * 6;
+    else if (i < 46) p = 96 + (rnd() - 0.5) * 7;
+    else if (i < 50) p += 3.2;
+    else p += (rnd() - 0.25) * 3.2;
+    pts.push(p);
+  }
+  const lo = 80, hi = 140, y = v => H - 16 - (v - lo) / (hi - lo) * (H - 32), x = i => 10 + i * (W - 20) / (pts.length - 1);
+  let out = "";
+  out += `<rect x="${x(28)}" y="${y(126)}" width="${W - 10 - x(28)}" height="${y(121) - y(126)}" fill="var(--up)" opacity=".12"/>`;
+  out += `<line x1="${x(28)}" x2="${W - 10}" y1="${y(121)}" y2="${y(121)}" stroke="var(--up)" stroke-dasharray="5 6"/>`;
+  out += `<rect x="0" y="${y(86)}" width="${W}" height="${y(82) - y(86)}" fill="var(--down)" opacity=".10"/>`;
+  out += `<line x1="0" x2="${W}" y1="${y(86)}" y2="${y(86)}" stroke="var(--down)" stroke-dasharray="5 6"/>`;
+  out += `<rect x="${x(18)}" y="${y(100.2)}" width="${x(46) - x(18)}" height="${y(91.8) - y(100.2)}" rx="4" fill="var(--hub)" opacity=".16" stroke="var(--hub)" stroke-opacity=".6"/>`;
+  pts.forEach((v, i) => {   // candles
+    const o = i ? pts[i - 1] : v, c = v, up = c >= o, top = Math.max(o, c), bot = Math.min(o, c);
+    const col = up ? "var(--up)" : "var(--down)";
+    out += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(top + 1.6)}" y2="${y(bot - 1.6)}" stroke="${col}" stroke-width="1.2" opacity=".85"/>`;
+    out += `<rect x="${x(i) - 3.5}" y="${y(top)}" width="7" height="${Math.max(1.5, y(bot) - y(top))}" fill="${col}" rx="1"/>`;
+  });
+  out += `<circle cx="${x(47)}" cy="${y(pts[47])}" r="7" fill="none" stroke="var(--up)" stroke-width="2"/>`;
+  svg.innerHTML = out;
+})();
+</script>
+</body>
+</html>

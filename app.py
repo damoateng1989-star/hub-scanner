@@ -217,13 +217,21 @@ def lwc():
 @app.get("/login")
 def login_page(request: Request):
     if auth.current_user(request):
-        return RedirectResponse("/", 302)
+        return RedirectResponse("/app", 302)
     return FileResponse(STATIC / "login.html")
 
 
 @app.get("/")
+def landing(request: Request):
+    """Public landing page; signed-in members go straight to the app."""
+    if auth.current_user(request):
+        return RedirectResponse("/app", 302)
+    return FileResponse(STATIC / "landing.html")
+
+
+@app.get("/app")
 def index(request: Request):
-    """Open to visitors (they can browse the Hub Board and charts); signed-in users get their cookie refreshed."""
+    """The app. Open to visitors (they can browse the Hub Board and charts); members get their cookie refreshed."""
     resp = FileResponse(STATIC / "index.html")
     if auth.current_user(request):
         resp.set_cookie(auth.COOKIE, request.cookies[auth.COOKIE], max_age=auth.SESSION_DAYS * 86400, httponly=True,
@@ -299,7 +307,7 @@ def google_callback(request: Request, code: str = "", state: str = "", error: st
         uid = auth.google_finish(request, code, state)
     except HTTPException as e:
         return RedirectResponse(f"/login#error={e.detail.replace(' ', '+')}", 302)
-    resp = RedirectResponse("/", 302)
+    resp = RedirectResponse("/app", 302)
     resp.delete_cookie("hs_oauth_state", path="/")
     auth.start_session(resp, request, uid)
     return resp

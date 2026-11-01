@@ -63,10 +63,10 @@
 </head>
 <body>
 <section class="pitch">
-  <div class="brand">
+  <a class="brand" href="/" style="text-decoration:none;color:inherit">
     <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/><rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="var(--accent)" opacity=".9"/><path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Hub Scanner
-  </div>
+  </a>
   <div>
     <h1>Find the hub. <em>Catch the break.</em></h1>
     <ul>
@@ -100,7 +100,7 @@
       <button>Sign in</button>
     </form>
     <div class="links"><a href="#signup">Create an account</a><a href="#forgot">Forgot password?</a></div>
-    <div class="links"><a href="/">Browse the Hub Board without an account →</a></div>
+    <div class="links"><a href="/app#board">Browse the Hub Board without an account →</a></div>
   </div>
 
   <div id="v-signup" hidden>
@@ -118,7 +118,7 @@
       <button>Create account</button>
     </form>
     <p class="fine" style="margin-top:14px">By creating an account you agree that Hub Scanner is an educational tool and not financial advice.</p>
-    <div class="links"><a href="#signin">I already have an account</a><a href="/">Keep browsing</a></div>
+    <div class="links"><a href="#signin">I already have an account</a><a href="/app#board">Keep browsing</a></div>
   </div>
 
   <div id="v-forgot" hidden>
@@ -170,10 +170,10 @@ function form(id, fn) {
     try { await fn(e.target.querySelector("button")); } catch (err) { say(err.message, true); }
   });
 }
-form("f-signin", async (b) => { await post("/auth/login", {email: $("si-email").value, password: $("si-pw").value}, b); location.href = "/"; });
-form("f-signup", async (b) => { await post("/auth/signup", {name: $("su-name").value, email: $("su-email").value, password: $("su-pw").value}, b); location.href = "/#watch"; });
+form("f-signin", async (b) => { await post("/auth/login", {email: $("si-email").value, password: $("si-pw").value}, b); location.href = "/app"; });
+form("f-signup", async (b) => { await post("/auth/signup", {name: $("su-name").value, email: $("su-email").value, password: $("su-pw").value}, b); location.href = "/app#watch"; });
 form("f-forgot", async (b) => { await post("/auth/forgot", {email: $("fo-email").value}, b); say("If that email has an account, a reset link is on its way. Check your inbox (and spam)."); });
-form("f-reset", async (b) => { await post("/auth/reset", {token: resetToken, password: $("re-pw").value}, b); location.href = "/"; });
+form("f-reset", async (b) => { await post("/auth/reset", {token: resetToken, password: $("re-pw").value}, b); location.href = "/app"; });
 fetch("/auth/config").then(r => r.json()).then(c => {
   document.querySelectorAll("[data-google]").forEach(el => el.hidden = !c.google);
   $("limit").textContent = c.free_limit;

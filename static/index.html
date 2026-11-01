@@ -711,7 +711,7 @@ async function loadAccount() {
     catch (err) { $("phoneMsg").textContent = err.message; }
   });
 }
-async function signOut() { await fetch("/auth/logout", {method: "POST"}); location.href = "/login"; }
+async function signOut() { await fetch("/auth/logout", {method: "POST"}); location.href = "/"; }
 async function unlinkTg() { await api("/api/me/telegram", {method: "DELETE"}); await loadMe(); loadAccount(); }
 async function setPlan(id, plan) { await api(`/api/admin/users/${id}/plan`, {method: "POST", body: JSON.stringify({plan})}); }
 async function testCall(btn) {
