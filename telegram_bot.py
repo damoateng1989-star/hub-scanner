@@ -90,7 +90,7 @@ def _on_message(msg: dict, handle):
     if cmd == "/start" and args:
         u = db.user_by("link_code", args[0])
         if not u:
-            send("That link has expired. Open Account on the Hub Scanner site and tap 'Connect Telegram' again.", chat)
+            send("That link has expired. Open Account on the NextShelf site and tap 'Connect Telegram' again.", chat)
             return
         old = db.user_by("telegram_chat", chat)
         if old and old["id"] != u["id"]:
@@ -100,7 +100,7 @@ def _on_message(msg: dict, handle):
         return
     user = db.user_by("telegram_chat", chat)
     if not user:
-        send("This chat isn't connected to a Hub Scanner account yet. Sign in on the site, open Account, "
+        send("This chat isn't connected to a NextShelf account yet. Sign in on the site, open Account, "
              "and tap 'Connect Telegram'.", chat)
         return
     try:

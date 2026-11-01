@@ -164,7 +164,7 @@ def login(email: str, password: str) -> int:
 # ---------------------------------------------------------------- password reset (email via Resend)
 def send_email(to: str, subject: str, html: str) -> bool:
     key = os.getenv("RESEND_API_KEY", "").strip()
-    sender = os.getenv("EMAIL_FROM", "Hub Scanner <onboarding@resend.dev>")
+    sender = os.getenv("EMAIL_FROM", "NextShelf <onboarding@resend.dev>")
     if not key:
         log.warning("RESEND_API_KEY not set; email to %s not sent: %s", to, subject)
         return False
@@ -184,8 +184,8 @@ def start_reset(email: str, base_url: str):
     token = secrets.token_urlsafe(32)
     db.add_reset(_sha(token), u["id"], (_now() + pd.Timedelta(hours=1)).isoformat())
     link = f"{base_url}/login#reset={token}"
-    sent = send_email(u["email"], "Reset your Hub Scanner password",
-                      f"<p>Someone asked to reset the password for your Hub Scanner account.</p>"
+    sent = send_email(u["email"], "Reset your NextShelf password",
+                      f"<p>Someone asked to reset the password for your NextShelf account.</p>"
                       f"<p><a href=\"{link}\">Choose a new password</a> (link works for 1 hour).</p>"
                       f"<p>If this wasn't you, ignore this email.</p>")
     if not sent:

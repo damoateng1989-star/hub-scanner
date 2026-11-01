@@ -58,7 +58,7 @@ def add_for_user(u: dict, raw: str) -> dict:
 def handle_command(cmd: str, args: list[str], u: dict) -> str:
     pro, admin = auth.is_pro(u), bool(u["is_admin"])
     if cmd in ("/start", "/help"):
-        text = ("Hub Scanner commands:\n/add NVDA TSLA: watch tickers\n/remove NVDA: stop watching\n"
+        text = ("NextShelf commands:\n/add NVDA TSLA: watch tickers\n/remove NVDA: stop watching\n"
                 "/list: your watchlist\n/status NVDA: one ticker")
         if pro:
             text += "\n/backtest NVDA: past breakout results\n/testcall: test phone-call alerts"
@@ -94,7 +94,7 @@ def handle_command(cmd: str, args: list[str], u: dict) -> str:
     if cmd == "/testcall":
         if not pro:
             return "Phone alerts are a Pro feature."
-        phone.call("Hub scanner test call. Phone alerts are working.", u["phone"])
+        phone.call("Next Shelf test call. Phone alerts are working.", u["phone"])
         return "Calling you now."
     if cmd in ("/scan", "/precheck") and admin:
         return scanner.handle_command(cmd, args)
@@ -141,7 +141,7 @@ async def lifespan(_app: FastAPI):
     sched.shutdown(wait=False)
 
 
-app = FastAPI(title="Hub Scanner", lifespan=lifespan)
+app = FastAPI(title="NextShelf", lifespan=lifespan)
 User = Depends(auth.require_user)
 Maybe = Depends(auth.current_user)        # signed in or a visitor (None)
 Pro = Depends(auth.require_pro)
@@ -347,7 +347,7 @@ def unlink_telegram(u: dict = User):
 @app.post("/api/testcall")
 def test_call(u: dict = Pro):
     try:
-        return {"sid": phone.call("Hub scanner test call. Phone alerts are working.", u["phone"])}
+        return {"sid": phone.call("Next Shelf test call. Phone alerts are working.", u["phone"])}
     except Exception as e:
         raise HTTPException(400, str(e))
 

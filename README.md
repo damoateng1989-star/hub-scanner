@@ -1,4 +1,4 @@
-# Hub Scanner
+# NextShelf
 
 A place where trading set ups are found.
 
@@ -34,7 +34,7 @@ People sign up with **email and password** or **Google**. Each person has their 
 - **Telegram:** each person taps **Connect Telegram** under Account, which opens the bot with a private link code.
 
 ### Google sign-in setup (about 10 minutes)
-1. Go to **console.cloud.google.com**, create a project (e.g. "Hub Scanner"), then open **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name and your email, and save.
+1. Go to **console.cloud.google.com**, create a project (e.g. "NextShelf"), then open **APIs & Services → OAuth consent screen**. Choose **External**, fill in the app name and your email, and save.
 2. Go to **Credentials → Create credentials → OAuth client ID**, with **Application type: Web application**.
 3. Under **Authorized redirect URIs**, add `https://YOUR-SITE.onrender.com/auth/google/callback`.
 4. Copy the **Client ID** and **Client secret** into Render as `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, and set `APP_URL=https://YOUR-SITE.onrender.com`.
@@ -42,7 +42,7 @@ People sign up with **email and password** or **Google**. Each person has their 
 
 ### Password-reset emails (Resend, free tier)
 1. Sign up at **resend.com**, add and verify your domain (or use their test sender while trying it out), and create an API key.
-2. Set `RESEND_API_KEY` and `EMAIL_FROM="Hub Scanner <noreply@yourdomain.com>"` in Render.
+2. Set `RESEND_API_KEY` and `EMAIL_FROM="NextShelf <noreply@yourdomain.com>"` in Render.
 
 Without Resend, reset links are written to the Render logs instead of being emailed, which is handy for testing.
 
@@ -118,7 +118,7 @@ Things to know:
 
 ## Phone-call alerts (Twilio)
 
-Your phone rings and a voice reads the alert twice. For example: *"Hub scanner. N. V. D. A. is trading above its hub, about 15 minutes before the 4 hour close. Price $82.37. Hub edge $82.04. Next shelf $84.30."* Calls are for the alerts you act on: **pre-close warnings** and **breakouts/breakdowns**. Everything else stays in Telegram. You won't get a call for a chase (price already at the target), and after downtime the app only calls about the newest candle, so you don't get a burst of old calls.
+Your phone rings and a voice reads the alert twice. For example: *"Next Shelf. N. V. D. A. is trading above its hub, about 15 minutes before the 4 hour close. Price $82.37. Hub edge $82.04. Next shelf $84.30."* Calls are for the alerts you act on: **pre-close warnings** and **breakouts/breakdowns**. Everything else stays in Telegram. You won't get a call for a chase (price already at the target), and after downtime the app only calls about the newest candle, so you don't get a burst of old calls.
 
 Setup (about 10 minutes):
 1. Sign up at **twilio.com** and verify your own phone number.
@@ -133,7 +133,7 @@ Setup (about 10 minutes):
    ```
 5. Send `/testcall` to your Telegram bot. Your phone should ring.
 
-On a Twilio **trial** account, calls only reach numbers you've verified and start with a short trial message (press any key). Upgrading removes that. Save your Twilio number as a contact (e.g. "Hub Scanner") so the call isn't flagged as spam, and allow it through Do Not Disturb.
+On a Twilio **trial** account, calls only reach numbers you've verified and start with a short trial message (press any key). Upgrading removes that. Save your Twilio number as a contact (e.g. "NextShelf") so the call isn't flagged as spam, and allow it through Do Not Disturb.
 
 `CALL_ON` controls which alerts ring: any of `preclose`, `breakout`, `follow-through`, `snap-back` (default `preclose,breakout`).
 

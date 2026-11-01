@@ -110,7 +110,7 @@ def speak_preclose(sym: str, sig: dict, minutes_left: int) -> str:
            else f"No shelf in range. Target {_say_money(sig['target'])}.")
     if sig["reached"]:
         tgt = "Price is already at the target, so this would be a chase."
-    return (f"Hub scanner. {phone.spell(sym)} is trading {'above' if up else 'below'} its hub, "
+    return (f"Next Shelf. {phone.spell(sym)} is trading {'above' if up else 'below'} its hub, "
             f"about {minutes_left} minutes before the 4 hour close. "
             f"Price {_say_money(sig['price'])}. Hub edge {_say_money(sig['edge'])}. {tgt}")
 
@@ -123,13 +123,13 @@ def speak_event(sym: str, e: dict) -> str:
                else f"No shelf in range. Target {_say_money(e['target'])}.")
         if (e["close"] - e["target"]) * d >= 0:
             tgt = "It already closed at the target, so this would be a chase."
-        return (f"Hub scanner. {phone.spell(sym)} closed {'above' if up else 'below'} its hub. "
+        return (f"Next Shelf. {phone.spell(sym)} closed {'above' if up else 'below'} its hub. "
                 f"4 hour close {_say_money(e['close'])}. {tgt}")
     if e["type"] == "follow-through":
-        return f"Hub scanner. {phone.spell(sym)} reached the next shelf at {_say_money(e['target'])}. Follow-through."
+        return f"Next Shelf. {phone.spell(sym)} reached the next shelf at {_say_money(e['target'])}. Follow-through."
     if e["type"] == "snap-back":
-        return f"Hub scanner. {phone.spell(sym)} closed back inside its hub. Snap-back."
-    return f"Hub scanner. {phone.spell(sym)}: {e['type'].replace('_', ' ')}."
+        return f"Next Shelf. {phone.spell(sym)} closed back inside its hub. Snap-back."
+    return f"Next Shelf. {phone.spell(sym)}: {e['type'].replace('_', ' ')}."
 
 
 def format_event(sym: str, e: dict) -> str:
@@ -285,7 +285,7 @@ def backtest(raw: str) -> dict:
 
 
 HELP = (
-    "Hub scanner commands:\n"
+    "NextShelf commands:\n"
     "/add NVDA TSLA: watch tickers\n"
     "/remove NVDA: stop watching\n"
     "/list: watchlist with current status\n"
