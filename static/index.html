@@ -441,6 +441,34 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-lock p{margin:4px 0 0;color:var(--muted);font-size:11px}.board-lock strong{font-size:13px}
 @media(max-width:700px){.board-toolbar{align-items:stretch}.board-search{max-width:none}.board-lock{align-items:flex-start;flex-direction:column}.board-caption{align-items:flex-start;flex-direction:column}}
 
+
+/* MARKET MONITOR ALIGNMENT PASS */
+.board-table{table-layout:fixed;width:100%;min-width:1080px}
+.board-table th,.board-table td{box-sizing:border-box;vertical-align:middle}
+.board-table th{height:42px;padding:10px 12px;text-align:right}
+.board-table td{height:58px;padding:10px 12px;text-align:right;line-height:1.35}
+.board-table th:nth-child(1),.board-table td:nth-child(1){width:12%;text-align:left;padding-left:18px}
+.board-table th:nth-child(2),.board-table td:nth-child(2){width:13%;text-align:left}
+.board-table th:nth-child(3),.board-table td:nth-child(3){width:10%;text-align:right}
+.board-table th:nth-child(4),.board-table td:nth-child(4){width:10%;text-align:right}
+.board-table th:nth-child(5),.board-table td:nth-child(5){width:10%;text-align:right}
+.board-table th:nth-child(6),.board-table td:nth-child(6){width:13%;text-align:right}
+.board-table th:nth-child(7),.board-table td:nth-child(7){width:13%;text-align:right}
+.board-table th:nth-child(8),.board-table td:nth-child(8){width:10%;text-align:center}
+.board-table th:nth-child(9),.board-table td:nth-child(9){width:9%;text-align:right;padding-right:16px}
+.board-table th:nth-child(2) .board-sort{display:block;text-align:left}
+.board-table th:nth-child(3) .board-sort,.board-table th:nth-child(6) .board-sort{display:block;width:100%;text-align:right}
+.board-table th:first-child,.board-table td:first-child{text-align:left}
+.board-symbol{display:flex;align-items:center;min-height:34px}
+.board-symbol a{display:inline-block;line-height:1.2}
+.board-symbol small{line-height:1.2}
+.board-state{white-space:nowrap;line-height:1.2}
+.board-distance,.board-shelf{display:inline-block;min-width:54px;text-align:right;font-variant-numeric:tabular-nums}
+.board-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;white-space:nowrap}
+.board-actions a{display:inline-flex;align-items:center;justify-content:center;min-height:27px;line-height:1}
+.board-table td:nth-child(3),.board-table td:nth-child(4),.board-table td:nth-child(5),.board-table td:nth-child(6),.board-table td:nth-child(7){font-variant-numeric:tabular-nums}
+@media(max-width:700px){.board-table{min-width:1080px}.board-table th,.board-table td{padding-left:10px;padding-right:10px}}
+
 </style>
 </head>
 <body>
