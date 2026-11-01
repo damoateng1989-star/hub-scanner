@@ -222,10 +222,8 @@ def login_page(request: Request):
 
 
 @app.get("/")
-def landing(request: Request):
-    """Public landing page; signed-in members go straight to the app."""
-    if auth.current_user(request):
-        return RedirectResponse("/app", 302)
+def landing():
+    """Public homepage. Signed-in members see an "Open app" button instead of Login / Sign Up."""
     return FileResponse(STATIC / "landing.html")
 
 

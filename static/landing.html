@@ -150,7 +150,7 @@
   <div class="links">
     <a href="#how">How it works</a><a href="#features">Features</a><a href="/app#board">Hub Board</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
   </div>
-  <div class="auth">
+  <div class="auth" id="auth">
     <a class="login" href="/login">Login</a>
     <a class="btn solid" href="/login#signup">Sign Up</a>
   </div>
@@ -280,6 +280,17 @@
 
 <script>
 document.getElementById("yr").textContent = new Date().getFullYear();
+
+// signed-in members: swap Login / Sign Up for Open app / Sign out
+fetch("/api/me").then(r => r.json()).then(me => {
+  if (!me || me.guest) return;
+  document.getElementById("auth").innerHTML =
+    `<a class="login" href="#" id="so">Sign out</a><a class="btn solid" href="/app">Open app →</a>`;
+  document.getElementById("so").onclick = async (e) => {
+    e.preventDefault(); await fetch("/auth/logout", {method: "POST"}); location.reload();
+  };
+  document.querySelectorAll('a[href="/login#signup"]').forEach(a => { if (!a.closest("#auth")) { a.href = "/app"; a.firstChild.textContent = "Open the app "; } });
+}).catch(() => {});
 const money = (x) => "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
