@@ -459,6 +459,12 @@
   <a id="tabPaper" hidden></a>
 </section>
 
+<!-- LAB (admin) -->
+<section data-view="lab" hidden>
+  <div class="vh"><h1>Lab</h1><p>Testing <b>tightening hubs</b> (triangles) next to regular hubs. Only you can see this page; members get no alerts from it.</p></div>
+  <div id="lab"><div class="empty">Loading…</div></div>
+</section>
+
 <!-- GUIDE -->
 <section data-view="guide" hidden>
   <div class="vh"><h1>How it works</h1><p>The whole idea in one minute.</p></div>
@@ -919,7 +925,7 @@ async function loadAccount() {
     </div>
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
-      ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a>` : ""}</div></div>
+      ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>
     ${admin}`;
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -937,14 +943,14 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results" };
-const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide"];
-const NAV_FOR = { alerts: "today", paper: "account", guide: "" };
+const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide", "lab"];
+const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account" };
 let CUR = "today";
 function showTab() {
   let tab = (location.hash || "#today").slice(1);
   tab = ALIAS[tab] || tab;
   CUR = VIEWS.includes(tab) ? tab : "today";
-  if (CUR === "paper" && !(ME && ME.is_admin)) CUR = "today";
+  if ((CUR === "paper" || CUR === "lab") && !(ME && ME.is_admin)) CUR = "today";
   document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== CUR);
   const navKey = CUR in NAV_FOR ? NAV_FOR[CUR] : CUR;
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
@@ -954,6 +960,7 @@ function showTab() {
   if (CUR === "paper") loadPaper();
   if (CUR === "account") loadAccount();
   if (CUR === "guide") renderGloss();
+  if (CUR === "lab") loadLab();
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", showTab);
@@ -1136,6 +1143,37 @@ function renderKpis() {
   if (sig === KPI_SIG) return; KPI_SIG = sig;
   $("kpis").innerHTML = vals.map(([n, l, c, h], i) => `<a class="kpi" href="${h}" style="--c:var(${c})"><b id="kpi${i}">0</b><span>${l}</span></a>`).join("");
   vals.forEach(([n], i) => countUp($("kpi" + i), n));
+}
+
+// ---------------------------------------------------------------- lab (admin)
+async function loadLab() {
+  let L;
+  try { L = await api("/api/admin/lab"); } catch (e) { $("lab").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  const S = L.snapshot || {}, F = L.forward || {};
+  const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const pc = (v) => v == null ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
+  const row = (name, st) => st ? `<tr><td><b>${name}</b></td><td>${st.n ?? 0}</td><td>${st["follow-through"] ?? "–"}%</td>
+      <td>${st.win_rate ?? "–"}%</td><td style="${pc(st.expectancy_pct)}">${sign(st.expectancy_pct)}</td></tr>` : "";
+  const frow = (name, st) => st ? `<tr><td><b>${name}</b></td><td>${st.closed}</td><td>${st.reached ?? "–"}${st.reached == null ? "" : "%"}</td>
+      <td>${st.win_rate ?? "–"}${st.win_rate == null ? "" : "%"}</td><td style="${pc(st.avg_ret)}">${sign(st.avg_ret)}</td></tr>` : "";
+  const kindName = { symmetric: "Symmetric ◇", ascending: "Ascending ◢", descending: "Descending ◥" };
+  const live = (S.live || []);
+  $("lab").innerHTML = `
+    <div class="panel"><div class="ph"><h2>What's being tested</h2></div>
+      <p class="note" style="padding:0 18px 16px;margin:0">A <b>tightening hub</b> is a range that narrows: highs falling and/or lows rising, so the end of the range is at most 60% as wide as the start. The rules are the same as for hubs: breakout = a 4-hour close outside the lines, target = next shelf, failed = close back inside.</p></div>
+    <div class="panel"><div class="ph"><h2>Last ${S.days || 200} days, ${S.symbols || 0} stocks</h2><span class="note">${S.updated ? "updated " + when(S.updated) : "runs with each Discover scan"}</span></div>
+      <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Pattern</th><th>Breakouts</th><th>Reached shelf</th><th>Win rate</th><th>Avg per trade</th></tr>
+        ${row("Hub", S.hub)}${row("Tightening hub", S.tightening)}</table></div>
+      <p class="note" style="padding:0 18px 16px;margin:0">A historical test on recent data. Treat it as a first look, not proof.</p></div>
+    <div class="panel"><div class="ph"><h2>Live since ${new Date(L.since).toLocaleDateString(undefined, {month: "short", day: "numeric"})}</h2></div>
+      <div class="tbl" style="padding:0 18px 16px"><table><tr><th>Pattern</th><th>Completed</th><th>Reached shelf</th><th>Win rate</th><th>Avg per trade</th></tr>
+        ${frow("Hub", F.hub)}${frow("Tightening hub", F.tightening)}</table></div></div>
+    <div class="panel"><div class="ph"><h2>Tightening hubs right now</h2></div>
+      ${live.length ? live.map(x => `<a class="arow" href="/t/${encodeURIComponent(x.symbol)}" style="--c:var(${x.state === "forming" ? "--snap" : x.state === "breakdown" ? "--down" : "--up"})"><i></i>
+        <span class="t"><span class="tk">${esc(x.symbol)}</span><span>${kindName[x.kind] || x.kind} · ${x.state === "forming"
+          ? `tightening for ${x.sessions} days · lines ${money(x.lower)}–${money(x.upper).slice(1)}`
+          : `${x.state === "breakout_up" ? "broke out ↑" : "broke down ↓"} at ${money(x.edge)} · target ${money(x.target)} · ${x.outcome}`}</span></span><span class="go">›</span></a>`).join("")
+        : `<div class="empty">None right now.</div>`}</div>`;
 }
 
 // ---------------------------------------------------------------- today

@@ -55,6 +55,7 @@ Without Resend, reset links are written to the Render logs instead of being emai
 - **Hub Board** (`/app#board`): every Nasdaq-100 stock plus your watchlist, scanned a few minutes after each 4H close (1:52 and 4:22 PM ET). It's grouped into *Breaking out now*, *At the edge of a hub*, *Inside a hub* and *Just finished*, and you can tap **+ Watch** to add any stock to your list. To scan your own set of stocks instead, set `BOARD_UNIVERSE=AAPL,MSFT,...`.
 - **Track record** (`/app#record`): every breakout the board detects from the day it first runs, with its result and return. It's logged automatically, and nothing is removed.
 - **Ticker page** (`/t/NVDA`): a full 4H candlestick chart with every hub drawn, the shelves above and below, and breakout markers labelled hit / failed / timed out, plus that stock's past results.
+- **Lab** (`/app#lab`, admin only): test mode for **tightening hubs** (triangles: ranges whose highs fall and/or lows rise until the end is at most 60% as wide as the start). They're detected in every Discover scan and logged separately from regular hubs, with a side-by-side comparison (last 200 days, plus live since launch) and orange lines on chart pages. Members never see them or get alerts for them. Tune with `TRI_CONTRACT` (0.6) and `TRI_MAX_ATR` (4.0).
 - **Paper trades** (`/app#paper`): the automatic paper-trading journal.
 
 ---

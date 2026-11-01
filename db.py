@@ -71,6 +71,11 @@ with _lock:
     );
     """)
     _conn.commit()
+    try:   # added later: which pattern produced a signal ("hub" or "tightening")
+        _conn.execute("ALTER TABLE signals ADD COLUMN pattern TEXT DEFAULT 'hub'")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
 
 
 def _run(sql: str, args: tuple = ()):
@@ -169,8 +174,9 @@ def get_signal(sid: str) -> dict | None:
     return dict(r) if r else None
 
 
-def all_signals(limit: int = 500) -> list[dict]:
-    return [dict(r) for r in _run("SELECT * FROM signals ORDER BY breakout_time DESC LIMIT ?", (limit,)).fetchall()]
+def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM signals WHERE COALESCE(pattern,'hub')=? ORDER BY breakout_time DESC LIMIT ?",
+                                  (pattern, limit)).fetchall()]
 
 
 # --- users

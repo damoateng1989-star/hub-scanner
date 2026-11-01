@@ -454,12 +454,17 @@ def record_data(u: dict = User):
 @app.get("/api/chart/{symbol}")
 async def chart_data(symbol: str, u: dict | None = Maybe):
     try:
-        d = await run_in_threadpool(board.chart, symbol)
+        d = await run_in_threadpool(board.chart, symbol, bool(u and u["is_admin"]))
     except Exception as e:
         raise HTTPException(400, str(e))
     d["watching"] = bool(u) and d["symbol"] in db.user_symbols(u["id"])
     d["guest"] = not u
     return d
+
+
+@app.get("/api/admin/lab")
+def admin_lab(u: dict = Admin):
+    return board.lab()
 
 
 @app.get("/api/backtest/{symbol}")

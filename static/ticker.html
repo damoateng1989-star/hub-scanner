@@ -133,6 +133,7 @@ async function load() {
         <span style="--c:var(--down)"><i class="dash"></i>Shelf below</span>
         <span>▲▼ breakouts, labelled hit / failed / timed out</span>
         <span>4H candles, regular hours, New York time</span>
+        ${d.tightening ? `<span style="--c:var(--snap)"><i></i>Tightening hubs (Lab, only you see this)</span>` : ""}
       </div>
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
@@ -143,7 +144,13 @@ async function load() {
       <div><small>Win rate (entered at close)</small><b>${s.win_rate ?? "–"}%</b></div>
       <div><small>Avg per trade</small><b style="color:var(${(s.expectancy_pct ?? 0) > 0 ? "--up" : "--down"})">${sign(s.expectancy_pct)}</b></div>
     </div><p class="note">Based on the candles shown on this chart. Past results don't guarantee future ones.</p>`
-    : `<p class="note">No completed breakouts in this period yet.</p>`}`;
+    : `<p class="note">No completed breakouts in this period yet.</p>`}
+    ${d.tightening_stats ? `<h2>Lab · <em>tightening hubs</em></h2><div class="kv">
+      <div><small>Breakouts</small><b>${d.tightening_stats.n}</b></div>
+      <div><small>Reached shelf</small><b>${d.tightening_stats["follow-through"]}%</b></div>
+      <div><small>Win rate</small><b>${d.tightening_stats.win_rate ?? "–"}%</b></div>
+      <div><small>Avg per trade</small><b>${sign(d.tightening_stats.expectancy_pct)}</b></div></div>
+      <p class="note">Test mode, visible only to admins. Members don't see tightening hubs or get alerts for them.</p>` : ""}`;
 
   if ($("watch")) $("watch").onclick = async (e) => {
     if (d.guest) {
@@ -182,6 +189,17 @@ async function load() {
       ser.setData(span.map(t => ({ time: t, value: h[k] })));
     });
   });
+
+  // admin test mode: tightening hubs (triangles) in orange
+  if (d.tightening) {
+    d.tightening.forEach(tp => {
+      [["ua", "ub"], ["la", "lb"]].forEach(([a, b]) => {
+        const ser = chart.addLineSeries({ color: css("--snap"), lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Solid,
+                                          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        ser.setData([{ time: tp.start, value: tp[a] }, { time: tp.end, value: tp[b] }]);
+      });
+    });
+  }
 
   // shelves from here
   if (st.shelf_up) candles.createPriceLine({ price: st.shelf_up.level, color: css("--up"), lineWidth: 1,

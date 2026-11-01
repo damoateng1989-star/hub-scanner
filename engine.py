@@ -299,3 +299,130 @@ def current_candle_start(now: pd.Timestamp) -> pd.Timestamp:
     now = pd.Timestamp(now).tz_convert(NY)
     mins = now.hour * 60 + now.minute
     return now.normalize() + pd.Timedelta(minutes=MID_MIN if mins >= MID_MIN else OPEN_MIN)
+
+
+# ============================================================ tightening hubs (triangles), test mode
+TRI_MIN, TRI_MAX = 8, 24          # window length in 4H candles (4 to 12 sessions)
+TRI_CONTRACT = float(os.getenv("TRI_CONTRACT", 0.6))   # end width must be <= 60% of start width
+TRI_MAX_ATR = float(os.getenv("TRI_MAX_ATR", 4.0))     # start width at most 4 x ATR (a consolidation, not a trend)
+TRI_FLAT = 0.03                   # |slope| below 3% of ATR per candle counts as flat
+
+
+def _line(y: np.ndarray):
+    """Least-squares line through y over x = 0..n-1 -> (slope, intercept)."""
+    x = np.arange(len(y), dtype=float)
+    xm, ym = x.mean(), y.mean()
+    m = ((x - xm) * (y - ym)).sum() / ((x - xm) ** 2).sum()
+    return m, ym - m * xm
+
+
+def _tri_fit(hi, lo, a, b, A):
+    if not A or A != A:
+        return None
+    mh, ch = _line(hi[a:b + 1])
+    ml, cl = _line(lo[a:b + 1])
+    L = b - a
+    w0, w1 = ch - cl, (mh * L + ch) - (ml * L + cl)
+    if not (w0 > 0 and 0 < w1 <= TRI_CONTRACT * w0 and w0 <= TRI_MAX_ATR * A):
+        return None
+    flat = TRI_FLAT * A
+    if mh < -flat and ml > flat:
+        kind = "symmetric"
+    elif abs(mh) <= flat and ml > flat:
+        kind = "ascending"
+    elif mh < -flat and abs(ml) <= flat:
+        kind = "descending"
+    else:
+        return None                     # wedges/channels: trending, not tightening
+    x = np.arange(L + 1)
+    up, dn = mh * x + ch, ml * x + cl
+    inside = ((hi[a:b + 1] <= up + 0.3 * A) & (lo[a:b + 1] >= dn - 0.3 * A)).mean()
+    touches_up = (np.abs(hi[a:b + 1] - up) <= 0.3 * A).sum()
+    touches_dn = (np.abs(lo[a:b + 1] - dn) <= 0.3 * A).sum()
+    if inside < 0.85 or touches_up < 2 or touches_dn < 2:
+        return None
+    return dict(a=a, b=b, mh=mh, ch=ch, ml=ml, cl=cl, kind=kind)
+
+
+def find_tightening(c4: pd.DataFrame, atr: pd.Series) -> list[dict]:
+    hi, lo, A = c4["High"].to_numpy(float), c4["Low"].to_numpy(float), atr.to_numpy(float)
+    n, pats, cur = len(c4), [], None
+    for b in range(TRI_MIN - 1, n):
+        best = None
+        for L in range(min(TRI_MAX, b + 1), TRI_MIN - 1, -1):
+            best = _tri_fit(hi, lo, b - L + 1, b, A[b])
+            if best:
+                break
+        if best and cur and best["a"] <= cur["b"] + 1:
+            cur = best if best["a"] <= cur["a"] or best["b"] - best["a"] >= cur["b"] - cur["a"] else dict(cur, b=b)
+        elif best:
+            if cur:
+                pats.append(cur)
+            cur = best
+        elif cur and b - cur["b"] > 0:
+            pats.append(cur)
+            cur = None
+    if cur:
+        pats.append(cur)
+    for p in pats:
+        a, b = p["a"], p["b"]
+        p.update(start_i=a, end_i=b, low=float(lo[a:b + 1].min()), high=float(hi[a:b + 1].max()),
+                 sessions=(b - a + 1) // 2, active=(b == n - 1))
+    return pats
+
+
+def tri_lines(p: dict, j: int) -> tuple[float, float]:
+    """Upper and lower line values at candle j (lines extended past the pattern)."""
+    k = j - p["a"]
+    return p["mh"] * k + p["ch"], p["ml"] * k + p["cl"]
+
+
+def analyze_tightening(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
+    close, atr = res["close"], res["atr"]
+    n = len(close)
+    pats = find_tightening(c4, atr)
+    trades = []
+    for p in pats:
+        if p["active"]:
+            continue
+        brk = None
+        for j in range(p["end_i"] + 1, min(p["end_i"] + 1 + s.horizon, n)):
+            up, dn = tri_lines(p, j)
+            if up <= dn:
+                break                   # past the apex
+            c = close.iloc[j]
+            if c > up:
+                brk = (j, 1, up)
+                break
+            if c < dn:
+                brk = (j, -1, dn)
+                break
+        if not brk:
+            continue
+        i0, d, edge = brk
+        target, shelf = target_for(res["hubs"], dict(p, high=edge, low=edge), d, float(atr.iloc[i0]), s) \
+            if res["hubs"] else (edge + d * s.target_atr * float(atr.iloc[i0]), None)
+        if shelf is None:
+            target = edge + d * s.target_atr * float(atr.iloc[i0])
+        outcome, oi = "pending", None
+        for j in range(i0, min(i0 + 1 + s.horizon, n)):
+            c = close.iloc[j]
+            if (c - target) * d >= 0:
+                outcome, oi = "follow-through", j
+                break
+            if (c - edge) * d <= 0:
+                outcome, oi = "snap-back", j
+                break
+        else:
+            if i0 + s.horizon < n:
+                outcome, oi = "stalled", i0 + s.horizon
+        entry = float(close.iloc[i0])
+        chase = outcome == "follow-through" and oi == i0
+        ret = None
+        if outcome != "pending" and not chase:
+            exit_px = target if outcome == "follow-through" else float(close.iloc[oi])
+            ret = d * (exit_px / entry - 1) * 100
+        fwd = d * (close.iloc[i0 + s.horizon] / close.iloc[i0] - 1) * 100 if i0 + s.horizon < n else None
+        trades.append(dict(hub=p, i0=i0, direction=d, edge=edge, target=target, shelf=shelf,
+                           outcome=outcome, oi=oi, fwd=fwd, entry=entry, ret=ret, chase=chase))
+    return dict(patterns=pats, trades=trades)
