@@ -19,7 +19,7 @@ import db
 
 log = logging.getLogger("auth")
 COOKIE = "hs_session"
-SESSION_DAYS = 30
+SESSION_DAYS = 365        # stay signed in for a year (renewed each visit)
 FREE_TICKER_LIMIT = int(os.getenv("FREE_TICKER_LIMIT", 3))
 
 
@@ -69,7 +69,10 @@ def current_user(request: Request) -> dict | None:
     token = request.cookies.get(COOKIE)
     if not token:
         return None
-    return db.session_user(_sha(token), _now().isoformat())
+    u = db.session_user(_sha(token), _now().isoformat())
+    if u:   # sliding expiry: every visit pushes sign-out another year away
+        db.touch_session(_sha(token), (_now() + pd.Timedelta(days=SESSION_DAYS)).isoformat())
+    return u
 
 
 def require_user(request: Request) -> dict:

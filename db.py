@@ -217,6 +217,10 @@ def session_user(token_hash: str, now: str) -> dict | None:
     return dict(r) if r else None
 
 
+def touch_session(token_hash: str, expires_at: str):
+    _run("UPDATE sessions SET expires_at=? WHERE token_hash=?", (expires_at, token_hash))
+
+
 def delete_session(token_hash: str):
     _run("DELETE FROM sessions WHERE token_hash=?", (token_hash,))
 

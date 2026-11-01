@@ -224,7 +224,10 @@ def login_page(request: Request):
 def index(request: Request):
     if not auth.current_user(request):
         return RedirectResponse("/login", 302)
-    return FileResponse(STATIC / "index.html")
+    resp = FileResponse(STATIC / "index.html")
+    resp.set_cookie(auth.COOKIE, request.cookies[auth.COOKIE], max_age=auth.SESSION_DAYS * 86400, httponly=True,
+                    samesite="lax", secure=auth._secure(request), path="/")
+    return resp
 
 
 @app.get("/t/{symbol}")
