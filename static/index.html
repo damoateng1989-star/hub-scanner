@@ -210,115 +210,236 @@
   .bact { display: flex; align-items: center; gap: 6px; }
   .bact .tv { margin-left: 0; padding: 5px 8px; }
   @media (max-width: 600px) { .bact { grid-column: 2; justify-self: start; margin-top: 4px; } .brow button { margin-top: 0; } }
+  /* ---------- app shell (beginner-friendly redesign) ---------- */
+  nav .brand { text-decoration: none; color: var(--ink); }
+  .toptabs { display: flex; gap: 4px; }
+  .toptabs a { padding: 8px 14px; border-radius: 10px; color: var(--muted); text-decoration: none; font-size: 14px; font-weight: 500; }
+  .toptabs a:hover { color: var(--ink); background: var(--sunk); }
+  .toptabs a.on { color: var(--ink); background: var(--sunk); }
+  .navr { display: flex; align-items: center; gap: 10px; }
+  .helpbtn { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line-2);
+             color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px; }
+  .helpbtn:hover { color: var(--ink); border-color: var(--faint); }
+  nav.bottom { display: none; }
+  @media (max-width: 760px) {
+    .toptabs { display: none; }
+    body { padding-bottom: 76px; }
+    nav.bottom { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 15;
+                 height: auto; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); border-bottom: 0;
+                 background: color-mix(in srgb, var(--bg) 92%, transparent); }
+    nav.bottom a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; font-size: 11px; font-weight: 500;
+                   color: var(--faint); text-decoration: none; }
+    nav.bottom a.on { color: var(--ink); }
+    nav.bottom a.on svg { stroke-width: 2.2; }
+  }
+  .vh { margin: 30px 0 18px; }
+  .vh h1, .hello h1 { font: 600 30px/1.15 var(--sans); letter-spacing: -0.03em; margin: 0; }
+  .vh p { color: var(--muted); margin: 6px 0 0; font-size: 15px; }
+  .hello { margin: 30px 0 16px; display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+  .mkt { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 14px; color: var(--muted); background: var(--surface);
+         border: 1px solid var(--line); border-radius: 99px; padding: 7px 14px; }
+  .mkt i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 18%, transparent); }
+  .mkt b { color: var(--ink); font-weight: 500; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; margin: 0 0 16px; overflow: hidden; }
+  .ph { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px 10px; }
+  .ph h2 { font: 600 17px var(--sans); letter-spacing: -0.01em; margin: 0; }
+  .more-link { font-size: 14px; color: var(--muted); text-decoration: none; }
+  .more-link:hover { color: var(--ink); }
+  .panel .empty { border: 0; padding: 18px; text-align: left; }
+  .arow { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line);
+          text-decoration: none; color: inherit; }
+  .arow:hover { background: var(--sunk); }
+  .arow i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+  .arow .t { font-size: 14px; line-height: 1.45; min-width: 0; }
+  .arow .t .tk { font-family: var(--mono); font-weight: 600; margin-right: 6px; color: var(--ink); }
+  .arow .t b { font-weight: 600; }
+  .arow .t span { color: var(--muted); }
+  .arow .go { color: var(--faint); font-size: 18px; }
+  .setup { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin: 0 0 16px; }
+  .setup h2 { font: 600 17px var(--sans); margin: 0; }
+  .prog { height: 6px; background: var(--sunk); border-radius: 99px; margin: 10px 0 6px; overflow: hidden; }
+  .prog span { display: block; height: 100%; background: var(--up); border-radius: 99px; }
+  .todo { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .todo:first-of-type { border-top: 0; }
+  .todo .ck { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-2); display: grid; place-items: center; font-size: 12px; color: var(--bg); }
+  .todo.done .ck { background: var(--up); border-color: var(--up); }
+  .todo.done .tx { color: var(--faint); text-decoration: line-through; }
+  .todo .tx { font-size: 14px; }
+  .todo .tx small { display: block; color: var(--muted); font-size: 12px; text-decoration: none; }
+  .btnx { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-2);
+          background: var(--surface); color: var(--ink); text-decoration: none; font: 500 14px var(--sans); cursor: pointer; white-space: nowrap; }
+  .btnx.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .btnx.sm { padding: 5px 10px; font-size: 13px; }
+  /* My list rows */
+  .lrows { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+  .lrow { border-top: 1px solid var(--line); }
+  .lrow:first-child { border-top: 0; }
+  .lrow > summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: 76px 1fr auto 18px; gap: 12px; align-items: center; padding: 14px 18px; }
+  .lrow > summary::-webkit-details-marker { display: none; }
+  .lrow > summary:hover { background: var(--sunk); }
+  .lrow .s { font: 600 15px var(--mono); }
+  .lrow .s small { display: block; font: 400 12px var(--mono); color: var(--muted); margin-top: 1px; }
+  .lrow .one { font-size: 14px; color: var(--muted); min-width: 0; }
+  .lrow .one b { font-weight: 600; }
+  .lrow .chev { color: var(--faint); transition: transform .15s; }
+  .lrow[open] .chev { transform: rotate(90deg); }
+  .lrow .body { padding: 0 18px 16px; }
+  .lrow .body .sum { margin-top: 0; }
+  @media (max-width: 600px) { .lrow > summary { grid-template-columns: 64px 1fr 14px; } .lrow .badge { display: none; } }
+  .q { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line-2); background: transparent; color: var(--muted);
+       font: 600 11px var(--sans); padding: 0; display: inline-grid; place-items: center; vertical-align: 1px; margin-left: 4px; cursor: pointer; }
+  .steps3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+  @media (max-width: 760px) { .steps3 { grid-template-columns: 1fr; } }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .step .n { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--bg); display: grid; place-items: center; font: 600 13px var(--sans); }
+  .step h3 { margin: 12px 0 6px; font: 600 17px var(--sans); }
+  .step svg { width: 100%; height: 100px; display: block; margin: 6px 0; }
+  .step p { margin: 0; color: var(--muted); font-size: 14px; }
+  .step p b { color: var(--ink); font-weight: 500; }
+  .gloss { margin: 0; padding: 0 18px 8px; }
+  .gloss div { display: grid; grid-template-columns: 140px 1fr; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); font-size: 14px; }
+  .gloss dt { font-weight: 600; } .gloss dd { margin: 0; color: var(--muted); }
+  @media (max-width: 600px) { .gloss div { grid-template-columns: 1fr; gap: 2px; } }
+  #sheet { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+  #sheet[hidden] { display: none; }
+  .sheet-card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 20px 20px 0 0; width: 100%; max-width: 560px;
+                padding: 22px 22px calc(22px + env(safe-area-inset-bottom)); }
+  @media (min-width: 761px) { #sheet { align-items: center; } .sheet-card { border-radius: 20px; } }
+  .sheet-card h3 { margin: 0 0 6px; font: 600 19px var(--sans); }
+  .sheet-card p { color: var(--muted); margin: 0; }
+  .sheet-card .x { position: absolute; top: 12px; right: 12px; border: 0; background: var(--sunk); width: 32px; height: 32px; border-radius: 50%; font-size: 18px; padding: 0; }
   footer { margin: 40px 0 50px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted);
            display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
 <nav><div class="wrap">
-  <div class="brand">
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+  <a class="brand" href="#today">
+    <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
       <rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/>
       <rect x="5" y="9.5" width="14" height="5" rx="1.5" fill="var(--accent)" opacity=".9"/>
       <path d="M5 16.5 L9 12 L12 13 L15 11.5 L19 6.5" fill="none" stroke="var(--bg)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
-    Hub Scanner
+    <span>Hub Scanner</span>
+  </a>
+  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Discover</a><a href="#list" data-tab="list">My list</a><a href="#results" data-tab="results">Results</a><a href="#account" data-tab="account">Account</a></div>
+  <div class="navr">
+    <a href="#guide" class="helpbtn" title="How it works" aria-label="How it works">?</a>
+    <a href="#account" class="plan" id="planPill" hidden></a>
   </div>
-  <div style="display:flex;align-items:center;gap:14px"><a href="#account" class="plan" id="planPill" hidden></a></div>
 </div></nav>
 
-<div class="tabs"><div class="wrap">
-  <a href="#watch" data-tab="watch">Watchlist</a>
-  <a href="#board" data-tab="board">Hub Board</a>
-  <a href="#record" data-tab="record">Track record</a>
-  <a href="#paper" data-tab="paper" id="tabPaper" hidden>Paper trades</a>
-  <a href="#account" data-tab="account">Account</a>
-</div></div>
-
 <main class="wrap">
-<section data-view="watch">
-  <section class="hero">
-    <div class="eyebrow">4H closes · 4+ sessions · shelf to shelf</div>
-    <h1>Find the hub. <em>Catch the break.</em></h1>
-    <p class="lede">Every 4H close on your watchlist is checked for tight ranges that hold 4+ sessions. You get a warning before the candle closes outside one, a plan with the next shelf as the target, and the result.</p>
-    <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
 
-    <div class="stats">
-      <div><b id="sWatch">–</b><span>Watching</span></div>
-      <div><b id="sHub">–</b><span>Inside a hub</span></div>
-      <div><b id="sLive">–</b><span>Live breakouts</span></div>
-      <div><b id="sAlerts">–</b><span>Recent alerts</span></div>
-    </div>
-
-    <form class="cmd" id="add" autocomplete="off">
-      <span class="pre">$</span>
-      <input id="sym" placeholder="Add a ticker, e.g. NVDA" autocapitalize="characters" maxlength="10" aria-label="Ticker">
-      <button class="primary" id="addBtn">Add to watchlist</button>
-    </form>
-    <div class="err" id="err"></div>
-  </section>
-
-  <div class="sec">
-    <h2>Watchlist <em>live</em></h2>
-    <div class="chips" id="chips">
-      <button class="chip on" data-f="all">All</button>
-      <button class="chip" data-f="hub">Inside hub</button>
-      <button class="chip" data-f="live">Breakouts</button>
-      <button class="chip" id="scanBtn">Scan now</button>
-    </div>
+<!-- TODAY -->
+<section data-view="today">
+  <div class="hello">
+    <h1 id="hello">Welcome</h1>
+    <div id="mkt"></div>
   </div>
-  <details class="guide" id="guide">
-    <summary>How to read a card</summary>
-    <ol>
-      <li><b>Hub</b> <span style="color:var(--hub)">(blue)</span>: a tight price range that has held for 4+ sessions. The stock is coiling.</li>
-      <li><b>Breakout</b>: the first 4H candle that <i>closes</i> outside the hub. Above the hub is bullish (↑), below is bearish (↓).</li>
-      <li><b>Shelves</b>: earlier hubs that price tends to travel to next, <span style="color:var(--up)">green above</span> and <span style="color:var(--down)">red below</span>. The next shelf is the target.</li>
-      <li><b>Failed breakout</b>: if a 4H candle closes back inside the hub, the setup is off.</li>
-      <li>The <b>price ladder</b> lists every level from highest to lowest, with the distance from today's price.</li>
-    </ol>
-  </details>
-  <div class="grid" id="list"><div class="empty">Loading…</div></div>
-
-
-  <div class="sec"><h2>Recent <em>alerts</em></h2></div>
-  <div id="alerts"></div>
-
+  <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
+  <div id="setup"></div>
+  <div class="panel">
+    <div class="ph"><h2>Needs your attention</h2><a href="#list" class="more-link">My list →</a></div>
+    <div id="attn"><div class="empty">Loading…</div></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2>Worth a look</h2><a href="#discover" class="more-link">Discover →</a></div>
+    <div id="worth"><div class="empty">Loading…</div></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2>Latest alerts</h2><a href="#alerts" class="more-link">All alerts →</a></div>
+    <div id="latest"></div>
+  </div>
 </section>
 
-<section data-view="board" hidden>
-  <div class="sec" style="margin-top:34px">
-    <div><h2>Hub <em>Board</em></h2><div class="note" id="bMeta" style="margin-top:6px"></div></div>
-    <div class="chips"><button class="chip" id="bScan">Scan now</button></div>
+<!-- MY LIST -->
+<section data-view="list" hidden>
+  <div class="vh"><h1>My list</h1><p>The stocks you follow. Tap one to see its chart and price levels.</p></div>
+  <form class="cmd" id="add" autocomplete="off">
+    <span class="pre">$</span>
+    <input id="sym" placeholder="Add a ticker, e.g. NVDA" autocapitalize="characters" maxlength="10" aria-label="Ticker">
+    <button class="primary" id="addBtn">Add to watchlist</button>
+  </form>
+  <div class="err" id="err"></div>
+  <div class="chips" id="chips" style="margin:6px 0 14px">
+    <button class="chip on" data-f="all">All</button>
+    <button class="chip" data-f="hub">Inside a hub</button>
+    <button class="chip" data-f="live">Breaking out</button>
+    <button class="chip" id="scanBtn">Scan now</button>
   </div>
-  <p class="lede" style="font-size:15px">Every Nasdaq-100 stock (plus your watchlist), checked after each 4H close. Tap a ticker for its chart.</p>
+  <div id="list"><div class="empty">Loading…</div></div>
+  <div class="stats" hidden><b id="sWatch"></b><b id="sHub"></b><b id="sLive"></b><b id="sAlerts"></b></div>
+</section>
+
+<!-- DISCOVER -->
+<section data-view="discover" hidden>
+  <div class="vh"><h1>Discover</h1>
+    <p>Every Nasdaq-100 stock, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
+  <div class="chips" style="margin:0 0 14px"><button class="chip" id="bScan">Scan now</button></div>
   <div id="board"><div class="empty">Loading…</div></div>
 </section>
 
-<section data-view="record" hidden>
-  <div class="sec" style="margin-top:34px"><h2>Track <em>record</em></h2></div>
+<!-- RESULTS -->
+<section data-view="results" hidden>
+  <div class="vh"><h1>Results</h1><p>How every signal turned out. Nothing is removed.</p></div>
   <div id="record"><div class="empty">Loading…</div></div>
 </section>
 
+<!-- ALERTS -->
+<section data-view="alerts" hidden>
+  <div class="vh"><h1>Alerts</h1><p>Everything we've sent about the stocks on your list.</p></div>
+  <div id="alerts"></div>
+</section>
+
+<!-- ACCOUNT -->
 <section data-view="account" hidden>
-  <div class="sec" style="margin-top:34px"><h2>Your <em>account</em></h2></div>
+  <div class="vh"><h1>Account</h1></div>
   <div id="account"><div class="empty">Loading…</div></div>
 </section>
 
+<!-- PAPER (admin) -->
 <section data-view="paper" hidden>
-  <div class="sec" style="margin-top:34px">
-    <h2>Paper <em>trades</em></h2>
+  <div class="vh"><h1>Paper trades</h1><p>Automatic practice trades in your Alpaca paper account.</p>
     <span class="toggle"><span class="note" id="pBroker" style="margin:0"></span>
-      <button class="switch" id="pSwitch" aria-label="Auto paper trading"></button></span>
-  </div>
+      <button class="switch" id="pSwitch" aria-label="Auto paper trading"></button></span></div>
   <div id="paper"><div class="empty">Loading…</div></div>
+  <a id="tabPaper" hidden></a>
+</section>
 
+<!-- GUIDE -->
+<section data-view="guide" hidden>
+  <div class="vh"><h1>How it works</h1><p>The whole idea in one minute.</p></div>
+  <div class="steps3">
+    <div class="step"><span class="n">1</span><h3>A hub forms</h3>
+      <svg viewBox="0 0 300 110"><rect x="40" y="40" width="220" height="30" rx="5" fill="var(--hub)" opacity=".15" stroke="var(--hub)" stroke-opacity=".6"/>
+      <path d="M20 88 L40 66 L60 54 L80 62 L100 48 L120 60 L140 51 L160 63 L180 53 L200 59 L220 50 L240 58 L260 54" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/></svg>
+      <p>A stock's 4-hour candles keep closing inside a tight range for at least 4 days. It's resting, or "coiling".</p></div>
+    <div class="step"><span class="n">2</span><h3>A candle closes outside</h3>
+      <svg viewBox="0 0 300 110"><rect x="20" y="50" width="170" height="30" rx="5" fill="var(--hub)" opacity=".15" stroke="var(--hub)" stroke-opacity=".6"/>
+      <path d="M20 66 L50 58 L80 70 L110 60 L140 68 L170 62 L200 44 L230 32" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><circle cx="200" cy="44" r="6" fill="var(--up)"/></svg>
+      <p>The first 4-hour candle that <b>closes</b> above or below the range is the <b>breakout</b>. Above is bullish, below is bearish.</p></div>
+    <div class="step"><span class="n">3</span><h3>It heads to the next shelf</h3>
+      <svg viewBox="0 0 300 110"><rect x="20" y="12" width="260" height="16" fill="var(--up)" opacity=".14"/><line x1="20" y1="28" x2="280" y2="28" stroke="var(--up)" stroke-dasharray="4 5"/>
+      <rect x="20" y="72" width="120" height="24" rx="5" fill="var(--hub)" opacity=".15" stroke="var(--hub)" stroke-opacity=".6"/>
+      <path d="M20 86 L50 80 L80 90 L110 82 L140 68 L170 60 L200 48 L230 38 L260 27" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><circle cx="260" cy="27" r="6" fill="var(--up)"/></svg>
+      <p>Earlier ranges act as <b>shelves</b>. The nearest one is the target. If a candle closes back inside the range, the breakout <b>failed</b>.</p></div>
+  </div>
+  <div class="panel"><div class="ph"><h2>Words you'll see</h2></div>
+    <dl class="gloss" id="gloss"></dl></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+    <a class="btnx primary" href="#today" onclick="guideRead()">Got it</a>
+    <a class="btnx" href="#discover" onclick="guideRead()">Show me some stocks →</a></div>
 </section>
 
   <footer>
-    <span>Signals describe past price behaviour. Not financial advice. Backtest before trading.</span>
+    <span>Educational tool. Signals describe past price behaviour, not financial advice.</span>
     <span id="sched"></span>
   </footer>
 </main>
+
+<nav class="bottom" aria-label="Main"><a href="#today" data-tab="today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Today</span></a><a href="#discover" data-tab="discover"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Discover</span></a><a href="#list" data-tab="list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6L3.3 9.2l6.1-.6z"/></svg><span>My list</span></a><a href="#results" data-tab="results"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg><span>Results</span></a><a href="#account" data-tab="account"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Account</span></a></nav>
+<div id="sheet" hidden><div class="sheet-card"><button class="x" onclick="closeSheet()" aria-label="Close">×</button><div id="sheetBody"></div></div></div>
 
 <script>
 const STATES = {
@@ -350,7 +471,7 @@ async function api(path, opts = {}) {
 
 async function loadInfo() {
   try {
-    const i = await api("/api/info");
+    const i = INFO = await api("/api/info");
     $("demo").hidden = i.provider !== "demo";
     $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "Pre-close checks " + i.preclose_times.join(" & ") + " · " : ""}Scans ${i.scan_times.join(" & ")} ET on weekdays · ${i.settings.horizon}-candle limit`;
   } catch (e) {}
@@ -440,40 +561,63 @@ function ladder(st, key) {
   if (live && st.target_kind === "atr") rows.push({ v: st.target, html: `<div class="lr" style="--c:var(${st.direction === "up" ? "--up" : "--down"})">
       <i class="mk"></i><span>Target (ATR)</span><b>${money(st.target)}</b><em>${pctFrom(st.target, p)}</em></div>` });
   if (showHub) rows.push({ v: (st.hub.low + st.hub.high) / 2, html: `<div class="lr" style="--c:var(--hub)">
-      <i class="mk band"></i><span>Hub</span><b>${money(st.hub.low)}–${money(st.hub.high).slice(1)}</b><em></em></div>` });
+      <i class="mk band"></i><span>Hub ${tip("hub")}</span><b>${money(st.hub.low)}–${money(st.hub.high).slice(1)}</b><em></em></div>` });
   rows.push({ v: p + 1e-9, html: `<div class="lr now" style="--c:var(--ink)"><i class="mk dotm"></i><span>Price now</span><b>${money(p)}</b><em></em></div>` });
   if (!st.shelf_up && !live) rows.push({ v: Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf above yet</span><b></b><em></em></div>` });
   if (!st.shelf_down && !live) rows.push({ v: -Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf below yet</span><b></b><em></em></div>` });
   return `<div class="ladder">${rows.sort((a, b) => b.v - a.v).map(r => r.html).join("")}</div>`;
 }
 
-function card(t) {
+const OPEN = new Set();
+function oneLine(st, key) {
+  const h = st.hub, up = st.shelf_up, dn = st.shelf_down;
+  switch (key) {
+    case "forming": return `Resting in a range. Watch for a close <b class="u-up">above ${money(h.high)}</b> or <b class="u-down">below ${money(h.low)}</b>`;
+    case "watching": return `Range just ended. A close above ${money(h.high)} or below ${money(h.low)} still counts`;
+    case "breakout_up": return `<b class="u-up">Broke out ↑</b> · heading for ${money(st.target)} (${pctFrom(st.target, st.last_close)})`;
+    case "breakdown": return `<b class="u-down">Broke down ↓</b> · heading for ${money(st.target)} (${pctFrom(st.target, st.last_close)})`;
+    case "follow-through": return "Reached its target. Waiting for the next range";
+    case "snap-back": return "Breakout failed. Waiting for the next range";
+    case "stalled": return "Breakout ran out of time. Waiting for the next range";
+    case "error": return esc(st.error || "Couldn't load");
+    default: return "No range yet" + (up || dn ? ` · nearest levels ${[up && money(up.level), dn && money(dn.level)].filter(Boolean).join(" / ")}` : "");
+  }
+}
+function details(t) {
+  const st = t.status || {};
+  const key = st.error ? "error" : (st.state || "none");
+  const [, color] = STATES[key] || [key, "--idle"];
+  const showHub = ["forming", "watching", "breakout_up", "breakdown"].includes(key);
+  const chartSt = showHub ? st : {...st, hub: null};
+  const S = esc(t.symbol);
+  return (st.error ? `<div class="note">${esc(st.error)}</div>` : `
+    <p class="sum">${summary(S, st, key)}</p>
+    ${spark(chartSt, color)}
+    <div class="legend">${showHub ? `<span style="--c:var(--hub)"><i></i>Hub ${tip("hub")}</span>` : ""}
+      ${st.shelf_up ? `<span style="--c:var(--up)"><i></i>Shelf above ${tip("shelf")}</span>` : ""}
+      ${st.shelf_down ? `<span style="--c:var(--down)"><i></i>Shelf below</span>` : ""}
+      <span class="muted">last ${(st.spark || []).length} 4-hour candles</span></div>
+    ${ladder(st, key)}`) + `
+    <div class="foot" style="flex-wrap:wrap">
+      <span style="display:flex;gap:6px;flex-wrap:wrap">
+        <a class="btnx sm" href="/t/${encodeURIComponent(t.symbol)}">Full chart</a>
+        <a class="btnx sm" href="${tvUrl(t.symbol)}" target="_blank" rel="noopener">${TV_ICON} TradingView</a>
+        ${isPro() ? `<button class="btnx sm" onclick="runBacktest('${S}', this)">Past results</button>` : ""}
+      </span>
+      <button class="ghost" onclick="removeTicker('${S}', this)" aria-label="Remove ${S}">Remove</button>
+    </div>
+    <div class="bt" id="bt-${S}" hidden></div>`;
+}
+function listRow(t) {
   const st = t.status || {};
   const key = st.error ? "error" : (st.state || "none");
   const [label, color] = STATES[key] || [key, "--idle"];
-  const showHub = ["forming", "watching", "breakout_up", "breakdown"].includes(key);
-  const chartSt = showHub ? st : {...st, hub: null};
-  const body = st.error ? `<div class="note">${esc(st.error)}</div>` : `
-    <p class="sum">${summary(esc(t.symbol), st, key)}</p>
-    ${spark(chartSt, color)}
-    <div class="legend">${showHub ? `<span style="--c:var(--hub)"><i></i>Hub</span>` : ""}
-      ${st.shelf_up ? `<span style="--c:var(--up)"><i></i>Shelf above</span>` : ""}
-      ${st.shelf_down ? `<span style="--c:var(--down)"><i></i>Shelf below</span>` : ""}
-      <span class="muted">last ${(st.spark || []).length} 4H closes</span></div>
-    ${ladder(st, key)}`;
-  return `<div class="card" id="c-${esc(t.symbol)}">
-    <div class="top">
-      <div class="symrow"><a class="sym symlink" href="/t/${encodeURIComponent(t.symbol)}">${esc(t.symbol)}</a><span class="px">${money(st.last_close)}</span>${tvLink(t.symbol)}</div>
-      <span class="badge" style="--c: var(${color})">${label}</span>
-    </div>
-    ${body}
-    <div class="foot">
-      <span class="when">${st.last_candle ? "Updated " + new Date(st.last_candle_close || st.last_candle).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"}) : ""}</span>
-      <span>${isPro() ? `<button onclick="runBacktest('${esc(t.symbol)}', this)">Past results</button>` : `<a class="upsell" style="margin:0 6px 0 0" href="/t/${encodeURIComponent(t.symbol)}">Chart →</a>`}
-      <button class="ghost" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">Remove</button></span>
-    </div>
-    <div class="bt" id="bt-${esc(t.symbol)}" hidden></div>
-  </div>`;
+  const S = esc(t.symbol);
+  return `<details class="lrow" id="c-${S}"${OPEN.has(t.symbol) ? " open" : ""} ontoggle="this.open ? OPEN.add('${S}') : OPEN.delete('${S}')">
+    <summary><span class="s">${S}<small>${money(st.last_close)}</small></span>
+      <span class="one">${oneLine(st, key)}</span>
+      <span class="badge" style="--c: var(${color})">${label}</span><span class="chev">›</span></summary>
+    <div class="body">${details(t)}</div></details>`;
 }
 
 function render() {
@@ -483,10 +627,12 @@ function render() {
   $("sLive").textContent = TICKERS.filter(t => ["breakout_up", "breakdown"].includes(st(t))).length;
   const pr = (t) => PRIORITY[st(t)] ?? 4;
   const shown = [...TICKERS].sort((a, b) => pr(a) - pr(b) || a.symbol.localeCompare(b.symbol)).filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
-  $("list").innerHTML = shown.length ? shown.map(card).join("") :
-    `<div class="empty" style="grid-column:1/-1">${ME && ME.guest
-      ? `Add tickers above, or tap <b>+ Add to watchlist</b> on the <a href="#board">Hub Board</a>. You'll create a free account to save them.`
-      : TICKERS.length ? "Nothing matches this filter right now." : "No tickers yet. Add one above, for example NVDA."}</div>`;
+  $("list").innerHTML = shown.length ? `<div class="lrows">${shown.map(listRow).join("")}</div>` :
+    `<div class="empty">${ME && ME.guest
+      ? `Add a ticker above, or browse <a href="#discover">Discover</a> and tap <b>+ Add to watchlist</b>. You'll create a free account to save them.`
+      : TICKERS.length ? "Nothing matches this filter right now." :
+        `Your list is empty. Type a ticker above (for example <b>NVDA</b>), or find ideas in <a href="#discover">Discover</a>.`}</div>`;
+  if (CUR === "today") renderToday();
 }
 
 async function loadTickers() {
@@ -495,17 +641,20 @@ async function loadTickers() {
     ? `Free plan: ${TICKERS.length}/${ME.ticker_limit} tickers. <a class="upsell" style="margin:0" href="#account">Upgrade for unlimited →</a>` : $("err").innerHTML;
 }
 
+let ALERTS = [];
+function alertRow(x, compact) {
+  const lines = String(x.message).split("\n");
+  const title = lines[0].replace(/^[^\p{L}\p{N}$]+/u, "");
+  const rest = lines.slice(1).filter(l => !l.startsWith("Candle closed")).join("\n");
+  const t = (lines.find(l => l.startsWith("Candle closed")) || "").replace("Candle closed: ", "");
+  return `<div class="item" style="--c:var(${ALERT_COLORS[x.type] || "--idle"})"><i></i><div>
+    <b>${esc(title)}</b>${compact ? "" : `<p>${esc(rest)}</p>`}<div class="t">${esc(t)}</div></div></div>`;
+}
 async function loadAlerts() {
-  const a = await api("/api/alerts?limit=15");
-  $("sAlerts").textContent = a.length >= 15 ? "15+" : a.length;
-  $("alerts").innerHTML = a.length ? `<div class="feed">${a.map(x => {
-    const lines = String(x.message).split("\n");
-    const title = lines[0].replace(/^[^\p{L}\p{N}$]+/u, "");
-    const rest = lines.slice(1).filter(l => !l.startsWith("Candle closed")).join("\n");
-    const t = (lines.find(l => l.startsWith("Candle closed")) || "").replace("Candle closed: ", "");
-    return `<div class="item" style="--c:var(${ALERT_COLORS[x.type] || "--idle"})"><i></i><div>
-      <b>${esc(title)}</b><p>${esc(rest)}</p><div class="t">${esc(t)}</div></div></div>`;
-  }).join("")}</div>` : `<div class="empty">No alerts yet. New hubs, breakouts and outcomes will appear here and in Telegram.</div>`;
+  const a = ALERTS = await api("/api/alerts?limit=30");
+  $("alerts").innerHTML = a.length ? `<div class="feed">${a.map(x => alertRow(x)).join("")}</div>` :
+    `<div class="empty">No alerts yet. When a stock on your list forms a range, breaks out or hits its target, it shows up here${ME && !ME.guest ? " and in Telegram" : ""}.</div>`;
+  if (CUR === "today") renderToday();
 }
 
 $("add").addEventListener("submit", async (e) => {
@@ -672,7 +821,7 @@ const joinBox = (title, text) => `<div class="acct"><h3>${title}</h3><p>${text}<
 async function loadAccount() {
   if (!ME) await loadMe();
   if (ME.guest) {
-    $("account").innerHTML = joinBox("Join Hub Scanner", `Free: watch up to ${ME.ticker_limit} tickers with Telegram alerts, see the track record, and browse every chart. Pro adds pre-close warnings, the live board, phone calls and backtests.`);
+    $("account").innerHTML = `<div class="acct"><h3>New here?</h3><p>Learn the setup in about a minute.</p><a class="btnx sm" href="#guide">How it works</a></div>` + joinBox("Join Hub Scanner", `Free: watch up to ${ME.ticker_limit} tickers with Telegram alerts, see the track record, and browse every chart. Pro adds pre-close warnings, the live board, phone calls and backtests.`);
     return;
   }
   const m = ME, tg = m.telegram;
@@ -715,6 +864,9 @@ async function loadAccount() {
            <button>Save</button>${m.phone ? `<button type="button" onclick="testCall(this)">Test call</button>` : ""}</form>
          <div class="err" id="phoneMsg"></div>`}
     </div>
+    <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
+      <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
+      ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a>` : ""}</div></div>
     ${admin}`;
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -730,18 +882,140 @@ async function testCall(btn) {
   try { await api("/api/testcall", {method: "POST"}); btn.textContent = "Calling…"; } catch (e) { $("phoneMsg").textContent = e.message; }
 }
 
-// ---------------------------------------------------------------- tabs
+// ---------------------------------------------------------------- navigation
+const ALIAS = { watch: "list", board: "discover", record: "results" };
+const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide"];
+const NAV_FOR = { alerts: "today", paper: "account", guide: "" };
+let CUR = "today";
 function showTab() {
-  const tab = (location.hash || "#watch").slice(1);
-  const valid = ["watch", "board", "record", "paper", "account"].includes(tab) ? tab : "watch";
-  document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== valid);
-  document.querySelectorAll(".tabs a").forEach(a => a.classList.toggle("on", a.dataset.tab === valid));
-  if (valid === "board") loadBoard();
-  if (valid === "record") loadRecord();
-  if (valid === "paper") loadPaper();
-  if (valid === "account") loadAccount();
+  let tab = (location.hash || "#today").slice(1);
+  tab = ALIAS[tab] || tab;
+  CUR = VIEWS.includes(tab) ? tab : "today";
+  if (CUR === "paper" && !(ME && ME.is_admin)) CUR = "today";
+  document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== CUR);
+  const navKey = CUR in NAV_FOR ? NAV_FOR[CUR] : CUR;
+  document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
+  if (CUR === "today") loadToday();
+  if (CUR === "discover") loadBoard();
+  if (CUR === "results") loadRecord();
+  if (CUR === "paper") loadPaper();
+  if (CUR === "account") loadAccount();
+  if (CUR === "guide") renderGloss();
+  window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", showTab);
+
+// ---------------------------------------------------------------- help: glossary, "?" tips, sheet
+const GLOSS = {
+  hub: ["Hub", "A tight price range. The stock's 4-hour candles have closed inside it for at least 4 days in a row, like a spring coiling."],
+  breakout: ["Breakout", "The first 4-hour candle that closes outside the hub. Closing above it is a breakout up (bullish); closing below it is a breakdown (bearish)."],
+  shelf: ["Shelf", "An earlier hub. After a breakout, price often travels to the nearest shelf, so that's the target."],
+  target: ["Target", "Where a breakout is expected to head: the edge of the next shelf. If there's no shelf nearby, we use the stock's typical move (ATR)."],
+  failed: ["Failed breakout", "A 4-hour candle closed back inside the hub after the breakout. The setup is off."],
+  candle: ["4-hour candle", "Each trading day is split into two candles: 9:30 AM to 1:30 PM and 1:30 PM to 4:00 PM (New York time). We only care where each one closes."],
+  preclose: ["Pre-close warning", "A heads-up about 15 minutes before a 4-hour candle closes, when price is trading outside a hub. It gives you time to act at the close. (Pro)"],
+};
+function tip(term) {
+  return `<button class="q" type="button" onclick="event.preventDefault();event.stopPropagation();explain('${term}')" aria-label="What is ${GLOSS[term][0]}?">?</button>`;
+}
+function explain(term) { const [t, d] = GLOSS[term]; showSheet(`<h3>${t}</h3><p>${d}</p><p style="margin-top:12px"><a href="#guide" onclick="closeSheet()">How it all fits together →</a></p>`); }
+function showSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; }
+function closeSheet() { $("sheet").hidden = true; }
+$("sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") closeSheet(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
+function renderGloss() {
+  $("gloss").innerHTML = Object.values(GLOSS).map(([t, d]) => `<div><dt>${t}</dt><dd>${d}</dd></div>`).join("");
+}
+function guideRead() { try { localStorage.setItem("hs_guide_read", "1"); } catch (e) {} }
+const guideDone = () => { try { return !!localStorage.getItem("hs_guide_read"); } catch (e) { return false; } };
+
+// ---------------------------------------------------------------- today
+let INFO = null, BOARD = null;
+function etNow() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"})); }
+const fmtT = (hm) => { const [h, m] = hm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+function marketChip() {
+  const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
+  const weekday = wd >= 1 && wd <= 5, open = weekday && mins >= 570 && mins < 960;
+  const events = [];
+  ((INFO && INFO.preclose_times) || []).forEach(t => events.push([t, "pre-close check"]));
+  ((INFO && INFO.scan_times) || ["13:47", "16:17"]).forEach(t => events.push([t, "scan"]));
+  events.sort();
+  const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  let next = weekday ? events.find(([t]) => toMin(t) > mins) : null, label;
+  if (next) {
+    const d = toMin(next[0]) - mins;
+    label = `Next ${next[1]} <b>${fmtT(next[0])}</b> · in ${d >= 60 ? Math.floor(d / 60) + "h " : ""}${d % 60}m`;
+  } else {
+    const days = wd === 5 ? 3 : wd === 6 ? 2 : 1;
+    const dayName = new Date(n.getTime() + days * 864e5).toLocaleDateString("en-US", {weekday: "long"});
+    label = `Next ${events[0][1]} <b>${dayName} ${fmtT(events[0][0])}</b>`;
+  }
+  return `<span class="mkt" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
+}
+async function loadToday() {
+  renderToday();
+  try { BOARD = await api("/api/board"); } catch (e) {}
+  renderToday();
+}
+function renderToday() {
+  const h = etNow().getHours();
+  const greet = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+  const name = ME && !ME.guest && ME.name ? ", " + esc(ME.name.split(" ")[0]) : "";
+  $("hello").textContent = "";
+  $("hello").innerHTML = `${greet}${name}`;
+  $("mkt").innerHTML = marketChip();
+
+  // setup checklist
+  const steps = [];
+  if (!ME || ME.guest) steps.push([false, "Create a free account", "Save your list and get alerts", "/login#signup", "Sign up"]);
+  steps.push([TICKERS.length > 0, "Add your first stock", "Type a ticker in My list, or pick one in Discover", "#list", "Add"]);
+  if (ME && !ME.guest && ME.telegram && ME.telegram.enabled)
+    steps.push([ME.telegram.linked, "Turn on Telegram alerts", "Get a message the moment something breaks out", "#account", "Connect"]);
+  steps.push([guideDone(), "Learn the setup", "Takes about a minute", "#guide", "Read"]);
+  const done = steps.filter(x => x[0]).length;
+  let hidden = false; try { hidden = !!localStorage.getItem("hs_setup_hide"); } catch (e) {}
+  $("setup").innerHTML = (done === steps.length || hidden) ? "" : `<div class="setup">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2>Get set up</h2>
+      <button class="ghost" style="padding:4px 8px;font-size:13px" onclick="try{localStorage.setItem('hs_setup_hide','1')}catch(e){};renderToday()">Hide</button></div>
+    <div class="prog"><span style="width:${Math.round(100 * done / steps.length)}%"></span></div>
+    <div class="note" style="margin:0 0 6px">${done} of ${steps.length} done</div>
+    ${steps.map(([ok, t, sub, href, cta]) => `<div class="todo${ok ? " done" : ""}"><span class="ck">${ok ? "✓" : ""}</span>
+      <span class="tx">${t}<small>${sub}</small></span>${ok ? "" : `<a class="btnx sm" href="${href}">${cta}</a>`}</div>`).join("")}
+  </div>`;
+
+  // needs attention (my list)
+  const st = (t) => t.status?.error ? "error" : (t.status?.state || "none");
+  const urgent = TICKERS.filter(t => ["breakout_up", "breakdown", "forming", "watching"].includes(st(t)))
+    .sort((a, b) => (PRIORITY[st(a)] ?? 4) - (PRIORITY[st(b)] ?? 4));
+  $("attn").innerHTML = urgent.length ? urgent.slice(0, 6).map(t => {
+    const [, c] = STATES[st(t)] || ["", "--idle"];
+    return `<a class="arow" href="#list" onclick="OPEN.add('${esc(t.symbol)}')" style="--c:var(${c})"><i></i>
+      <span class="t"><span class="tk">${esc(t.symbol)}</span><span>${oneLine(t.status || {}, st(t))}</span></span><span class="go">›</span></a>`;
+  }).join("") : `<div class="empty">${!TICKERS.length
+      ? `Nothing yet. Add a few stocks to <a href="#list">My list</a> and we'll tell you here when one sets up.`
+      : `All quiet on your list. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
+
+  // worth a look (board)
+  if (BOARD) {
+    const mine = new Set(TICKERS.map(t => t.symbol));
+    let picks = [...(BOARD.live || []), ...(BOARD.near || [])].filter(r => !mine.has(r.symbol)).slice(0, 4);
+    const kind = (r) => r.state === "breakout_up" || r.state === "breakdown" ? "live" : "near";
+    if (!picks.length) picks = (BOARD.forming || []).filter(r => !mine.has(r.symbol)).slice(0, 4);
+    const txt = (r) => r.state === "breakout_up" ? `<b class="u-up">Broke out ↑</b> · target ${money(r.target)}`
+      : r.state === "breakdown" ? `<b class="u-down">Broke down ↓</b> · target ${money(r.target)}`
+      : r.near_edge ? `Pressing the ${r.near_edge === "up" ? "top" : "bottom"} of its range`
+      : `Resting in a range for ${r.hub.sessions} days`;
+    $("worth").innerHTML = (picks.length ? picks.map(r => `<a class="arow" href="/t/${encodeURIComponent(r.symbol)}" style="--c:var(${kind(r) === "live" ? (r.state === "breakdown" ? "--down" : "--up") : "--hub"})"><i></i>
+        <span class="t"><span class="tk">${esc(r.symbol)}</span><span>${txt(r)}</span></span><span class="go">›</span></a>`).join("")
+      : `<div class="empty">Nothing stands out right now.</div>`) +
+      (BOARD.locked ? `<a class="arow" href="#account" style="--c:var(--accent)"><i></i><span class="t"><span class="tk" style="color:var(--accent)">PRO</span><span>${BOARD.live_count} breaking out now · ${BOARD.near_count} about to</span></span><span class="go">›</span></a>` : "");
+  }
+
+  // latest alerts
+  $("latest").innerHTML = ALERTS.length ? `<div>${ALERTS.slice(0, 3).map(x => alertRow(x, true)).join("")}</div>`
+    : `<div class="empty">No alerts yet.</div>`;
+}
+setInterval(() => { if (CUR === "today") $("mkt").innerHTML = marketChip(); }, 30000);
 
 // ---------------------------------------------------------------- hub board
 const sym = (s) => `<a class="s symlink" href="/t/${encodeURIComponent(s)}">${esc(s)}</a>`;
@@ -778,13 +1052,13 @@ async function loadBoard() {
   $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
   if (!b.universe) { $("board").innerHTML = `<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>`; return; }
   $("board").innerHTML =
-    (b.locked ? `<div class="group"><h3>Breaking out now & at the edge · Pro</h3><div class="lock">
+    (b.locked ? `<div class="group"><h3>Breaking out now & about to · Pro</h3><div class="lock">
        <b>${b.live_count} breakouts · ${b.near_count} at the edge</b>
        <p>See which stocks are breaking out right now, and which are pressing against a hub edge, with targets.</p>
        <a class="upsell" href="#account">Upgrade to Pro →</a></div></div>` :
-    bGroup("Breaking out now", b.live, "live", "No live breakouts right now.") +
-    bGroup("At the edge of a hub", b.near, "near", "Nothing pressing against a hub edge right now.")) +
-    bGroup("Inside a hub", b.forming, "forming", "No stocks are in a hub right now.") +
+    bGroup("Breaking out now " + tip("breakout"), b.live, "live", "No breakouts right now.") +
+    bGroup("About to break out", b.near, "near", "Nothing is pressing against the edge of its range right now.")) +
+    bGroup("Resting in a range " + tip("hub"), b.forming, "forming", "No stocks are in a range right now.") +
     bGroup("Just finished", b.recent, "recent", "No recent results.");
 }
 async function boardWatch(s, btn) {
@@ -840,12 +1114,8 @@ async function loadRecord() {
     </table></div>` : `<div class="empty" style="margin-top:14px">No signals yet. The first ones appear after the next breakout on the board.</div>`}`;
 }
 
-try {
-  if (!localStorage.getItem("hs_seen_guide")) { $("guide").open = true; localStorage.setItem("hs_seen_guide", "1"); }
-} catch (e) { $("guide").open = true; }
-
-loadMe().then(() => { loadInfo(); loadTickers(); loadAlerts(); showTab(); finishPendingAdd(); }).catch(() => {});
-setInterval(() => { loadTickers(); loadAlerts(); showTab(); }, 120000);
+loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); }).catch(() => {});
+setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
 </body>
 </html>
