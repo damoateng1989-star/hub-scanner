@@ -1088,16 +1088,21 @@ function failedHTML(what, err, retry) {
 }
 function friendly(e) {
   if (!navigator.onLine) return "You're offline. Check your internet connection.";
-  if (e && e.name === "AbortError") return "It took too long to respond. The server may be busy running a market scan.";
+  if (e && (e.name === "AbortError" || e.timeout)) return "NextShelf is taking longer than usual. The server may be waking up or busy with a market scan. Please try again in a moment.";
   if (e && e.status >= 500) return "The server ran into a problem. Please try again in a moment.";
   if (e && e.message && !/Failed to fetch|NetworkError|Load failed/i.test(e.message)) return e.message;
   return "Can't reach NextShelf right now. Check your connection and try again.";
 }
 async function api(path, opts = {}) {
   if (!opts.signal) {                      // give every request a time limit so nothing spins forever
-    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 30000); opts = {...opts, signal: ctl.signal};
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), opts.timeout || 30000); opts = {...opts, signal: ctl.signal};
   }
-  const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
+  let r;
+  try { r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts}); }
+  catch (err) {                            // browsers word a timeout as "signal is aborted without reason": say it plainly
+    if (err && err.name === "AbortError") { const e = new Error("NextShelf is taking longer than usual. The server may be waking up or busy with a market scan. Please try again in a moment."); e.status = 408; e.timeout = true; throw e; }
+    throw err;
+  }
   const body = await r.json().catch(() => ({}));
   if (r.status === 401) { const e = new Error("Please sign in"); e.status = 401; throw e; }
   if (!r.ok) { const e = new Error(typeof body.detail === "string" ? body.detail : r.statusText); e.status = r.status; throw e; }
@@ -1315,9 +1320,11 @@ $("add").addEventListener("submit", async (e) => {
   $("err").textContent = "";
   if (!sym) { $("err").textContent = "Enter a ticker first"; return; }
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…";
+  const slowMsg = setTimeout(() => { $("err").style.color = "#9fb0c2"; $("err").textContent = "Still working: fetching price history for " + sym.toUpperCase() + "…"; }, 6000);
   try { if (await addToWatchlist(sym.toUpperCase())) { $("sym").value = ""; await loadTickers();
         toast(`${sym.toUpperCase()} added to your watchlist`); } }
-  catch (err) { $("err").innerHTML = esc(err.message) + (/Upgrade/.test(err.message) ? ` <a class="upsell" style="margin:0" href="#account">See Pro →</a>` : ""); }
+  catch (err) { $("err").innerHTML = esc(friendly(err)) + (/Upgrade/.test(err.message) ? ` <a class="upsell" style="margin:0" href="#account">See Pro →</a>` : ""); }
+  clearTimeout(slowMsg); if ($("err").textContent.startsWith("Still working")) $("err").textContent = ""; $("err").style.color = "";
   $("addBtn").disabled = false; $("addBtn").textContent = "Add to watchlist";
 });
 $("sym").addEventListener("input", () => { $("err").textContent = ""; });
@@ -1438,7 +1445,13 @@ function askToJoin(sym) {
 }
 async function addToWatchlist(sym) {
   if (!ME || ME.guest) { askToJoin(sym); return false; }
-  await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym})});
+  try { await api("/api/tickers", {method: "POST", body: JSON.stringify({symbol: sym}), timeout: 75000}); }
+  catch (e) {
+    if (!e.timeout) throw e;
+    // the server often finishes the add even when the browser stops waiting: check before reporting a problem
+    try { const t = await api("/api/tickers"); if (t.some(x => x.symbol === sym.toUpperCase())) { TICKERS = t; return true; } } catch (_) {}
+    throw e;
+  }
   return true;
 }
 async function finishPendingAdd() {

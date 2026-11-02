@@ -284,6 +284,19 @@ def preclose_all() -> list[str]:
     return sent
 
 
+def _fresh_board_status(sym: str) -> dict | None:
+    """The board's status for sym if it was scanned within the last 5 hours (one 4H candle)."""
+    r = db._run("SELECT status, updated_at FROM board WHERE symbol=?", (sym,)).fetchone()
+    if not r or not r["status"]:
+        return None
+    try:
+        age = pd.Timestamp.now(tz="UTC") - pd.Timestamp(r["updated_at"]).tz_localize("UTC")
+        st = json.loads(r["status"])
+    except Exception:
+        return None
+    return st if age < pd.Timedelta(hours=5) and st.get("last_candle") and st.get("state") else None
+
+
 def add_symbol(raw: str, uid: int | None = None) -> dict:
     """Add to the shared scan set (and to a user's watchlist when uid is given)."""
     sym = clean_symbol(raw)
@@ -291,7 +304,11 @@ def add_symbol(raw: str, uid: int | None = None) -> dict:
         row = db.get_ticker(sym)
         return dict(symbol=sym, status=json.loads(row["status"] or "{}") if row else {}, created=False)
     created = db.add_ticker(sym)
-    if created or not (db.get_ticker(sym) or {}).get("last_candle"):
+    fresh = _fresh_board_status(sym) if created else None
+    if fresh:     # the market board scanned this stock after the latest 4H close: reuse it (instant add)
+        status = fresh
+        db.update_ticker(sym, fresh["last_candle"], json.dumps(fresh))
+    elif created or not (db.get_ticker(sym) or {}).get("last_candle"):
         try:
             status, _ = scan_symbol(sym)
         except Exception:
