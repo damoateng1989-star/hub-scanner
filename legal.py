@@ -38,7 +38,7 @@ def terms() -> str:
 <p class="lead">These terms explain the rules for using NextShelf. By creating an account or using the site, you agree to them.</p>
 
 <h2>1. What NextShelf is</h2>
-<p>NextShelf is an educational software tool. It scans stock price data for chart patterns (such as hubs, triangles, channels and
+<p>NextShelf is an educational software tool. It scans stock price data for chart patterns (such as hubs, flags, double tops and bottoms, triangles, channels and
 support and resistance levels), sends alerts, and shows how similar patterns behaved in the past. NextShelf does not know your
 finances, goals or risk tolerance, and nothing on the site is a recommendation to buy, sell or hold any security.</p>
 

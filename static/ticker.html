@@ -250,6 +250,8 @@ async function load() {
         ${d.tightening ? `<span style="--c:var(--snap)"><i></i>Tightening hubs (Lab, only you see this)</span>` : ""}
         ${d.setups && d.setups.lines.some(l => l.kind === "triangle") ? `<span style="--c:#F2C14E"><i></i>Triangles</span>` : ""}
         ${d.setups && d.setups.lines.some(l => l.kind.startsWith("channel")) ? `<span style="--c:#2FD4C0"><i></i>Channels</span>` : ""}
+        ${d.setups && d.setups.lines.some(l => l.kind.startsWith("flag")) ? `<span style="--c:#B48CFF"><i></i>Flags</span>` : ""}
+        ${d.setups && d.setups.lines.some(l => l.kind.startsWith("double")) ? `<span style="--c:#FF6FAE"><i></i>Double top / bottom (peak & neckline)</span>` : ""}
         ${d.setups && d.setups.levels.length ? `<span style="--c:#c9d3df"><i class="dash"></i>Support / resistance (3+ touches)</span>` : ""}
       </div>
     </div>
@@ -263,7 +265,7 @@ async function load() {
     </div><p class="note">Based on the candles shown on this chart. Past results don't guarantee future ones.</p>`
     : `<p class="note">No completed breakouts in this period yet.</p>`}
     ${d.setups ? `<h2>Other <em>setups</em> <small style="font-size:12px;color:var(--snap)">beta</small></h2><div class="kv">
-      ${[["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]].map(([k, l]) => {
+      ${[["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]].map(([k, l]) => {
         const x = d.setups.stats[k] || {}; return `<div><small>${l}</small><b>${x.n ? `${x.win_rate ?? "–"}% <span style="font-size:12px;color:var(--muted)">win · ${x.n} breaks</span>` : "–"}</b></div>`; }).join("")}
       </div><p class="note">Same rules as hubs: act on a 4-hour close outside the pattern, target the next shelf. Based on this chart only.</p>` : ""}
     ${d.tightening_stats ? `<h2>Lab · <em>tightening hubs</em></h2><div class="kv">
@@ -325,7 +327,7 @@ async function load() {
   // other setups: triangles (yellow), channels (teal), support/resistance levels (dotted)
   if (d.setups) {
     d.setups.lines.forEach(l => {
-      const col = l.kind === "triangle" ? "#F2C14E" : "#2FD4C0";
+      const col = l.kind === "triangle" ? "#F2C14E" : l.kind.startsWith("flag") ? "#B48CFF" : l.kind.startsWith("double") ? "#FF6FAE" : "#2FD4C0";
       [["ua", "ub"], ["la", "lb"]].forEach(([a, b]) => {
         const ser = chart.addLineSeries({ color: col, lineWidth: l.live ? 2 : 1, lineStyle: l.live ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dotted,
                                           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });

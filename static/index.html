@@ -1946,6 +1946,10 @@ function briefHTML(sym, st, chart) {
       let t;
       if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).`;
       else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
+      else if (x.kind.startsWith("double")) t = x.kind === "double_top"
+        ? `<b>Double top</b>: two peaks near <b>${money(x.peak)}</b>. A 4-hour close <b>below the neckline ${money(x.neck)}</b> is the short setup.`
+        : `<b>Double bottom</b>: two lows near <b>${money(x.peak)}</b>. A 4-hour close <b>above the neckline ${money(x.neck)}</b> is the long setup.`;
+      else if (x.kind.startsWith("flag")) t = `<b>${esc(x.name)}</b> after a ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}% pole. A 4-hour close <b>${x.trigger === "up" ? "above " + money(x.upper) : "below " + money(x.lower)}</b> continues the move.`;
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
   return `<div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
@@ -2276,12 +2280,14 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Estimates use Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"]];
+const SETUP_TABS = [["hub", "Hubs"], ["flag", "Flags"], ["double", "Double tops & bottoms"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"]];
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
   channel: '<path d="M3 7l18 6M3 13l18 6"/>',
   sr: '<path d="M3 7h18M3 17h18"/><path d="M6 15l3-6 3 4 3-5 3 6" opacity=".6"/>',
+  flag: '<path d="M5 20V5"/><path d="M5 5l4-1 0 0"/><path d="M5 5l3 6"/><path d="M9 10l9-3M9 15l9-3"/>',
+  double: '<path d="M3 18l4-11 4 7 4-7 4 11"/><path d="M3 14h18" stroke-dasharray="2 2"/>',
 };
 const setupIcon = (k) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SETUP_ICON[k]}</svg>`;
 function styleCard() {
@@ -2306,6 +2312,8 @@ function setupWord(x) {
   if (x.state === "breakout_up") return ["Breakout ↑", "up"];
   if (x.state === "breakdown") return ["Breakdown ↓", "down"];
   if (x.state === "testing") return [x.near === "resistance" ? "Testing resistance" : "Testing support", "near"];
+  if (x.kind && x.kind.startsWith("double")) return x.near_edge ? ["Near the neckline", "near"] : ["Second peak in", "hub"];
+  if (x.kind && x.kind.startsWith("flag")) return x.near_edge ? ["Pressing the flag", "near"] : ["Flag forming", "hub"];
   if (x.near_edge) return [x.near_edge === "up" ? "Near the top line" : "Near the bottom line", "near"];
   return ["Forming", "hub"];
 }
@@ -2323,12 +2331,15 @@ function renderSetupBoard() {
   const lock = b.locked && b.setups_locked ? `<div class="board-lock"><div><strong>${b.setups_locked} more setups are breaking out or testing a level right now</strong><p>Live breakouts on every setup are part of Pro.</p></div><a class="upsell" href="#account">View Pro access →</a></div>` : "";
   const about = { triangle: "Lower highs and higher lows squeezing toward a point. The trade is a 4-hour close outside a line.",
     channel: "Price trending between two parallel lines. A close above a falling channel can signal a reversal; a close below it, more downside.",
-    sr: "Horizontal levels price has tested 3 or more times. The trade is a 4-hour close through the level, aiming for the next level or shelf." }[SETUP_TAB];
+    sr: "Horizontal levels price has tested 3 or more times. The trade is a 4-hour close through the level, aiming for the next level or shelf.",
+    flag: "A sharp move (the pole), then a short pause drifting against it. The trade is a 4-hour close out of the flag in the direction of the pole.",
+    double: "Two tests of the same high (or low) with a dip between. The trade is a 4-hour close through the neckline, the middle of the M (or W)." }[SETUP_TAB];
   $("setupBoard").innerHTML = lock + `<p class="setup-about">${about}</p>` + (rows.length ? `<div class="board-frame"><div class="board-scroll"><table class="board-table setup-table"><thead><tr>
     <th>Instrument</th><th>Setup</th><th>Status</th><th>Last price</th><th>Upper</th><th>Lower</th><th>Target</th><th>Context</th><th>Analysis</th></tr></thead><tbody>
     ${rows.map(x => { const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown";
       const up = live ? (x.state === "breakout_up" ? x.edge : null) : x.upper, lo = live ? (x.state === "breakdown" ? x.edge : null) : x.lower;
-      const ctx = live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches` : `${x.sessions} sessions`;
+      const ctx = live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches`
+        : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>NASDAQ · 4H</small></div></td>
         <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
         <td>${up == null ? "—" : money(up)}</td><td>${lo == null ? "—" : money(lo)}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
@@ -2487,7 +2498,8 @@ async function loadRecord() {
   try { r = await api("/api/record?pattern=" + RECORD_PAT); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
-  const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]];
+  const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"],
+    ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]];
   $("record").innerHTML = `
     <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
       return `<button class="${RECORD_PAT === k ? "on" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${x.closed ? `${x.win_rate ?? "–"}% winners · ${x.closed} done` : "no results yet"}</small></button>`; }).join("")}</div>

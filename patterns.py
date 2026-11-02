@@ -18,13 +18,20 @@ KINDS = {
     "channel_down": "Descending channel",
     "channel_up": "Ascending channel",
     "sr":         "Support & resistance",
+    "flag_bull":  "Bull flag",
+    "flag_bear":  "Bear flag",
+    "double_top": "Double top",
+    "double_bottom": "Double bottom",
 }
-STYLE_OF = {"hub": "hub", "triangle": "triangle", "channel_down": "channel", "channel_up": "channel", "sr": "sr"}
+STYLE_OF = {"hub": "hub", "triangle": "triangle", "channel_down": "channel", "channel_up": "channel", "sr": "sr",
+            "flag_bull": "flag", "flag_bear": "flag", "double_top": "double", "double_bottom": "double"}
 STYLES = {   # what members pick in Settings
     "hub":      ("Hubs", "Tight sideways ranges that break out. NextShelf's core setup."),
     "triangle": ("Triangles", "Lower highs and higher lows squeezing into a point."),
     "channel":  ("Channels", "Price trending between two parallel lines, up or down."),
     "sr":       ("Support & resistance", "Horizontal levels price has tested 3+ times."),
+    "flag":     ("Flags", "A sharp move (the pole), then a short pause that drifts against it. Trades with the move."),
+    "double":   ("Double tops & bottoms", "Two tests of the same high or low, then a close through the middle (the neckline)."),
 }
 
 # ---------------------------------------------------------------- sloped patterns (triangles, channels)
@@ -102,6 +109,138 @@ def _find_sloped(c4: pd.DataFrame, atr: np.ndarray, lo_len: int, hi_len: int, cl
 def lines_at(p: dict, j: int) -> tuple[float, float]:
     k = j - p["a"]
     return p["mh"] * k + p["ch"], p["ml"] * k + p["cl"]
+
+
+# ---------------------------------------------------------------- flags: a pole, then a short pause against it
+POLE_MIN, POLE_MAX = 2, 6          # pole length in 4H candles
+FLAG_MIN, FLAG_MAX = 4, 12         # flag length in 4H candles (2 to 6 sessions)
+POLE_ATR = 3.0                     # the pole must move at least 3 x ATR
+
+
+def _find_flags(c4: pd.DataFrame, atr: np.ndarray) -> list[dict]:
+    hi, lo, cl = c4["High"].to_numpy(float), c4["Low"].to_numpy(float), c4["Close"].to_numpy(float)
+    fh, fl = engine._Fit(hi), engine._Fit(lo)
+    n, out, p = len(c4), [], POLE_MAX
+    while p < n - FLAG_MIN:
+        A = atr[p]
+        if A != A or not A:
+            p += 1
+            continue
+        pole = None
+        for k in range(POLE_MIN, POLE_MAX + 1):
+            mv = cl[p] - cl[p - k]
+            if abs(mv) >= POLE_ATR * A:
+                path = np.abs(np.diff(cl[p - k:p + 1])).sum()
+                if path and abs(mv) / path >= 0.7:          # mostly one-way, not a whipsaw
+                    pole = (k, 1 if mv > 0 else -1, abs(mv))
+                    break
+        if not pole or (pole[1] == 1 and cl[p] < hi[p - pole[0]:p + 1].max() - 0.5 * A) or (pole[1] == -1 and cl[p] > lo[p - pole[0]:p + 1].min() + 0.5 * A):
+            p += 1
+            continue
+        k, d, height = pole
+        top = hi[p - k:p + 1].max() if d == 1 else lo[p - k:p + 1].min()
+        best = None
+        for b in range(p + FLAG_MIN, min(p + FLAG_MAX, n - 1) + 1):
+            a = p + 1
+            mh, ch = fh.line(a, b)
+            ml, cl0 = fl.line(a, b)
+            L = b - a
+            w0, w1 = ch - cl0, (mh * L + ch) - (ml * L + cl0)
+            if not (0 < w1 <= w0 * 1.15 and w0 <= min(0.6 * height, 3.0 * A)):
+                break                                         # too wide / widening: no longer a flag
+            drift = (mh + ml) / 2
+            if (d == 1 and drift > 0.05 * A) or (d == -1 and drift < -0.05 * A):
+                break                                         # a flag drifts against the pole, or sideways
+            seg_lo, seg_hi = lo[a:b + 1].min(), hi[a:b + 1].max()
+            if (d == 1 and seg_lo < top - 0.5 * height) or (d == -1 and seg_hi > top + 0.5 * height):
+                break                                         # gave back more than half the pole
+            x = np.arange(L + 1)
+            up, dn = mh * x + ch, ml * x + cl0
+            if ((hi[a:b + 1] <= up + 0.35 * A) & (lo[a:b + 1] >= dn - 0.35 * A)).mean() < 0.85:
+                break
+            if not (dn[-1] - 0.1 * A <= cl[b] <= up[-1] + 0.1 * A):
+                break                                         # a close outside is the break
+            best = dict(a=a, b=b, mh=mh, ch=ch, ml=ml, cl=cl0)
+        if best:
+            kind = "flag_bull" if d == 1 else "flag_bear"
+            best.update(kind=kind, only_dir=d, pole_start=p - k, pole_height=height, start_i=best["a"], end_i=best["b"],
+                        sessions=(best["b"] - best["a"] + 1) // 2, active=(best["b"] == n - 1))
+            out.append(best)
+            p = best["b"] + 1
+        else:
+            p += 1
+    return out
+
+
+# ---------------------------------------------------------------- double tops and bottoms
+DBL_GAP_MIN, DBL_GAP_MAX = 6, 60   # candles between the two peaks (3 to 30 sessions)
+DBL_DEPTH_ATR = 2.0                # the dip between them must be at least 2 x ATR deep
+DBL_TREND_ATR = 2.5                # a real move into the first peak: at least 2.5 x ATR over the 15 candles before it
+DBL_WAIT = 20                      # the neckline break must come within 20 candles of the second peak
+
+
+def _pivots(arr: np.ndarray, high: bool) -> list[int]:
+    k, out = PIVOT_K, []
+    for i in range(k, len(arr) - k):
+        w = arr[i - k:i + k + 1]
+        if arr[i] == (w.max() if high else w.min()):
+            out.append(i)
+    return out
+
+
+def _find_doubles(c4: pd.DataFrame, atr: np.ndarray, close: pd.Series) -> list[dict]:
+    hi, lo = c4["High"].to_numpy(float), c4["Low"].to_numpy(float)
+    cl = close.to_numpy(float)
+    n, out, used = len(c4), [], set()
+    for top, arr, other in ((True, hi, lo), (False, lo, hi)):
+        piv = _pivots(arr, top)
+        for x, i2 in enumerate(piv):
+            A = atr[i2]
+            if A != A or not A or i2 in used:
+                continue
+            for i1 in reversed(piv[:x]):
+                gap = i2 - i1
+                if gap < DBL_GAP_MIN:
+                    continue
+                if gap > DBL_GAP_MAX:
+                    break
+                if abs(arr[i1] - arr[i2]) > 0.35 * A:
+                    continue
+                before = cl[max(0, i1 - 15):i1]
+                if not len(before) or (top and arr[i1] - before.min() < DBL_TREND_ATR * A) or (not top and before.max() - arr[i1] < DBL_TREND_ATR * A):
+                    continue                          # a double top needs a rally into it (a double bottom, a drop)
+                mid = other[i1 + 1:i2]
+                if not len(mid):
+                    continue
+                neck = float(mid.min() if top else mid.max())
+                peak = float(max(arr[i1], arr[i2]) if top else min(arr[i1], arr[i2]))
+                if abs(peak - neck) < DBL_DEPTH_ATR * A:
+                    continue
+                # nothing between the peaks may go beyond them
+                if (top and arr[i1:i2 + 1].max() > peak + 0.1 * A) or (not top and arr[i1:i2 + 1].min() < peak - 0.1 * A):
+                    continue
+                d = -1 if top else 1
+                conf = i2 + PIVOT_K                      # the second peak is only known PIVOT_K candles later
+                brk, dead = None, None
+                for j in range(conf, min(i2 + DBL_WAIT, n)):
+                    c = cl[j]
+                    if (top and c > peak + 0.3 * A) or (not top and c < peak - 0.3 * A):
+                        dead = j                         # made a new high/low instead: pattern void
+                        break
+                    if (top and c < neck) or (not top and c > neck):
+                        brk = j
+                        break
+                active = brk is None and dead is None and conf <= n - 1 and i2 >= n - 15
+                if brk is None and not active:
+                    continue
+                kind = "double_top" if top else "double_bottom"
+                up, dn = (peak, neck) if top else (neck, peak)
+                out.append(dict(kind=kind, a=i1, b=i2, end_i=(brk - 1) if brk else n - 1, start_i=i1, i1=i1, i2=i2,
+                                mh=0.0, ch=up, ml=0.0, cl=dn, neck=neck, peak=peak, brk=brk, d=d, active=active,
+                                sessions=(i2 - i1) // 2))
+                used.add(i2)
+                break
+    return out
 
 
 # ---------------------------------------------------------------- support & resistance
@@ -185,7 +324,8 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
     if n < 40:
         return out
 
-    sloped = _find_sloped(c4, atr, TRI_MIN, TRI_MAX, _classify_triangle) + _find_sloped(c4, atr, CH_MIN, CH_MAX, _classify_channel)
+    sloped = (_find_sloped(c4, atr, TRI_MIN, TRI_MAX, _classify_triangle) + _find_sloped(c4, atr, CH_MIN, CH_MAX, _classify_channel)
+              + _find_flags(c4, atr))
     for p in sloped:
         A = float(atr[min(p["end_i"], n - 1)])
         if p["active"]:
@@ -205,14 +345,25 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
             if c < dn:
                 brk = (j, -1, dn)
                 break
-        if not brk:
-            continue
+        if not brk or (p.get("only_dir") and brk[1] != p["only_dir"]):
+            continue                         # flags only trade in the direction of the pole
         i0, d, edge = brk
         target, shelf = _target(res, p["a"], d, edge, float(atr[i0]), s)
         t = dict(kind=p["kind"], hub=dict(start_i=p["a"], end_i=p["end_i"], low=min(lines_at(p, p["end_i"])),
                                           high=max(lines_at(p, p["end_i"])), sessions=p["sessions"]),
                  p=p, i0=i0, direction=d, edge=edge, target=target, shelf=shelf, **_outcome(close, i0, d, edge, target, s))
         out["trades"].append(t)
+
+    # double tops and bottoms: a close through the neckline
+    for p in _find_doubles(c4, atr, close):
+        if p["active"]:
+            out["live"].append(dict(kind=p["kind"], state="forming", upper=p["ch"], lower=p["cl"], sessions=p["sessions"],
+                                    start_i=p["a"], end_i=n - 1, p=p))
+            continue
+        i0, d, edge = p["brk"], p["d"], p["neck"]
+        target, shelf = _target(res, p["a"], d, edge, float(atr[i0]), s)
+        out["trades"].append(dict(kind=p["kind"], hub=dict(start_i=p["a"], end_i=i0 - 1, low=p["cl"], high=p["ch"], sessions=p["sessions"]),
+                                  p=p, i0=i0, direction=d, edge=edge, target=target, shelf=shelf, **_outcome(close, i0, d, edge, target, s)))
 
     # support & resistance: a close through a level tested 3+ times
     lv_at = _sr_levels(c4, atr)
@@ -296,6 +447,12 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             w = L["upper"] - L["lower"]
             pos = (last - L["lower"]) / w if w > 0 else 0.5
             row["near_edge"] = "up" if pos >= 0.8 else "down" if pos <= 0.2 else None
+            if k.startswith("double"):           # only the neckline side is a trigger
+                row.update(neck=round(p["neck"], 2), peak=round(p["peak"], 2), trigger="down" if k == "double_top" else "up")
+                row["near_edge"] = row["near_edge"] if row["near_edge"] == row["trigger"] else None
+            if k.startswith("flag"):
+                row.update(trigger="up" if k == "flag_bull" else "down", pole_pct=round(p["pole_height"] / last * 100, 1))
+                row["near_edge"] = row["near_edge"] if row["near_edge"] == row["trigger"] else None
         out.append(row)
     order = {"breakout_up": 0, "breakdown": 0, "testing": 1, "forming": 2, "between": 3}
     out.sort(key=lambda r: order.get(r["state"], 9))
