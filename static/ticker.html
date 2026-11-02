@@ -7,9 +7,6 @@
 <title>NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #F6F6F3; --surface: #FFFFFF; --sunk: #EFEEE9; --ink: #111110; --muted: #6F6E69; --faint: #A3A29C;
@@ -156,6 +153,20 @@ h2 em { font-family: var(--sans) !important; font-style: normal !important; font
 .pfoot { border-top: 1px solid #1b2734; margin-top: 50px; padding: 26px 0 40px; color: #6b7a8c; font-size: 13px; }
 .pfoot a { color: #a3b1c2; margin-right: 16px; text-decoration: none; } .pfoot a:hover { color: #eef2f7; }
 </style>
+<link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
+@font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+:root { --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+        --serif: "Geist", -apple-system, sans-serif !important; }
+html, body { font-family: var(--sans) !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+             text-rendering: optimizeLegibility; font-feature-settings: "kern", "liga", "calt"; }
+h1, h2, h3, .brand, .sb-brand { letter-spacing: -0.025em; }
+input, button, select, textarea { font-family: inherit; }
+td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b, .price { font-variant-numeric: tabular-nums; }
+</style>
 </head>
 <body>
 <nav><div class="wrap">
@@ -276,7 +287,7 @@ async function load() {
   const el = $("chart");
   const chart = LightweightCharts.createChart(el, {
     autoSize: true,
-    layout: { background: { color: "transparent" }, textColor: css("--muted"), fontFamily: "JetBrains Mono, monospace", fontSize: 11 },
+    layout: { background: { color: "transparent" }, textColor: css("--muted"), fontFamily: "Geist Mono, ui-monospace, monospace", fontSize: 11 },
     grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
     rightPriceScale: { borderColor: css("--line") },
     timeScale: { borderColor: css("--line"), timeVisible: true, secondsVisible: false },

@@ -214,6 +214,15 @@ def touch_icon():
     return FileResponse(STATIC / "apple-touch-icon.png", media_type="image/png")
 
 
+@app.get("/fonts/{name}")
+def fonts(name: str):
+    """Self-hosted Geist fonts (SIL Open Font License): sharp, fast, no third-party font requests."""
+    if name not in ("Geist.woff2", "GeistMono.woff2", "OFL.txt"):
+        raise HTTPException(404)
+    return FileResponse(STATIC / "fonts" / name, media_type="font/woff2" if name.endswith("woff2") else "text/plain",
+                        headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
 @app.get("/vendor/lightweight-charts.js")
 def lwc():
     return FileResponse(STATIC / "vendor" / "lightweight-charts.js", media_type="application/javascript")

@@ -7,9 +7,6 @@
 <title>NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #F6F6F3; --surface: #FFFFFF; --sunk: #EFEEE9; --ink: #111110; --muted: #6F6E69; --faint: #A3A29C;
@@ -822,6 +819,20 @@ body.brief-open .sf-hello { display: none; }
 .app-legal { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
 .app-legal a { color: var(--muted, #91a0b2) !important; text-decoration: none; font-size: 13px; }
 .app-legal a:hover { color: #eef2f7 !important; }
+</style>
+<link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
+@font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+:root { --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+        --serif: "Geist", -apple-system, sans-serif !important; }
+html, body { font-family: var(--sans) !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+             text-rendering: optimizeLegibility; font-feature-settings: "kern", "liga", "calt"; }
+h1, h2, h3, .brand, .sb-brand { letter-spacing: -0.025em; }
+input, button, select, textarea { font-family: inherit; }
+td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b, .price { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body class="term">
@@ -2148,7 +2159,7 @@ document.addEventListener("click", (e) => {
   showSheet(`<div class="nudge">
     <div class="ng-art" aria-hidden="true"><svg viewBox="0 0 220 70"><rect x="14" y="22" width="192" height="30" rx="7" fill="rgba(124,147,255,.14)" stroke="rgba(124,147,255,.55)"/>
       <path d="M20 44 34 30 48 45 62 29 76 44 90 30 104 45 118 29 132 44 146 30 160 45 174 30 188 43 200 33" fill="none" stroke="#FF6B5E" stroke-width="2.2" stroke-linejoin="round"/>
-      <text x="110" y="15" text-anchor="middle" fill="#9fb3ff" font-size="11" font-family="Inter,sans-serif" font-weight="600">THE CHOP ZONE</text></svg></div>
+      <text x="110" y="15" text-anchor="middle" fill="#9fb3ff" font-size="11" font-family="Geist,sans-serif" font-weight="600">THE CHOP ZONE</text></svg></div>
     <div class="ng-k">Rule #1 check</div>
     <h3>Hold on. ${esc(sym)} is still inside its hub.</h3>
     <p>It's been closing between <b>${money(h.low)}</b> and <b>${money(h.high)}</b> for ${h.sessions} sessions. Trades in here tend to get chopped up: buy the top, sell the bottom, repeat.</p>

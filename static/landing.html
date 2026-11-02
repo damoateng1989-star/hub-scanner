@@ -8,9 +8,6 @@
 <meta name="description" content="NextShelf checks every Nasdaq-100 stock after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0B0B0D; --panel: #121215; --panel-2: #17171B; --line: #24242A; --line-2: #33333B;
@@ -514,6 +511,20 @@ details summary::after { color: var(--ns-green) !important; }
 .mf-c svg { width: 100%; height: 70px; display: block; margin-bottom: 14px; }
 .mf-c b { font: 700 17px var(--sans); color: #fff; } .mf-c p { margin: 6px 0 0; color: #93a3b5; font-size: 15px; line-height: 1.55; }
 @media (max-width: 860px) { .mf-grid { grid-template-columns: 1fr; } .manifesto { padding: 64px 0 56px; margin-top: 70px; } .mf-sub { font-size: 16px; } }
+</style>
+<link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
+@font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+:root { --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
+        --serif: "Geist", -apple-system, sans-serif !important; }
+html, body { font-family: var(--sans) !important; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+             text-rendering: optimizeLegibility; font-feature-settings: "kern", "liga", "calt"; }
+h1, h2, h3, .brand, .sb-brand { letter-spacing: -0.025em; }
+input, button, select, textarea { font-family: inherit; }
+td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b, .price { font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
