@@ -728,6 +728,26 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .sb-motto { margin: 0 10px 8px; padding: 10px 12px; border-left: 2px solid #3DD68C; color: #9fb0c2; font: 600 12.5px/1.45 var(--sans); }
 .sb-motto b { display: block; color: #e8eef5; }
 body.side-min .sb-motto { display: none; }
+
+/* chop-zone nudge */
+#sheet { z-index: 60 !important; }
+#sheet .sheet-card:has(.nudge) { max-width: 460px !important; }
+.nudge { font-family: var(--sans); color: #eef2f7; }
+.ng-art { margin: 0 0 12px; padding: 10px; border-radius: 14px; background: #0a1017; border: 1px solid #1b2734; }
+.ng-art svg { width: 100%; height: auto; max-height: 76px; display: block; }
+.ng-art path { stroke-dasharray: 600; stroke-dashoffset: 600; animation: ngDraw 2.4s ease-out forwards; }
+@keyframes ngDraw { to { stroke-dashoffset: 0; } }
+.ng-k { font: 700 12.5px var(--sans); color: #F2C14E; }
+.nudge h3 { margin: 4px 0 8px; font: 800 22px/1.25 var(--sans); letter-spacing: -.02em; }
+.nudge p { margin: 0 0 12px; color: #b9c6d6; font-size: 15px; line-height: 1.55; } .nudge p b { color: #fff; }
+.ng-plan { display: grid; gap: 6px; margin: 0 0 14px; }
+.ng-plan div { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #0a1017; border: 1px solid #1b2734; font-size: 14px; color: #c9d3df; }
+.ng-plan i { width: 10px; height: 4px; border-radius: 2px; background: var(--c); flex: none; } .ng-plan b { color: #fff; }
+.ng-q { font: 700 16px var(--sans) !important; color: #fff !important; }
+.ng-acts { display: grid; gap: 8px; }
+.ng-acts button { padding: 12px 14px !important; border-radius: 12px !important; font: 700 14.5px var(--sans) !important; cursor: pointer; }
+.ng-snooze { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: #7d8da0; font-size: 13px; cursor: pointer; }
+.ng-snooze input { width: 16px; height: 16px; accent-color: #3DD68C; }
 </style>
 </head>
 <body class="term">
@@ -2015,6 +2035,42 @@ $("bScan").addEventListener("click", async () => {
 });
 
 
+
+
+// ---------------------------------------------------------------- chop-zone nudge (Rule #1 at the moment of a forced trade)
+function nudgeSnoozed() { try { return localStorage.getItem("hs_nudge_off") === new Date().toDateString(); } catch (e) { return false; } }
+document.addEventListener("click", (e) => {
+  const a = e.target.closest && e.target.closest('a[href*="tradingview.com/chart"]');
+  if (!a || a.dataset.nudged || nudgeSnoozed()) return;
+  const m = /symbol=([^&]+)/.exec(a.href); if (!m) return;
+  const sym = decodeURIComponent(m[1]), st = findStatus(sym);
+  if (!st || st.state !== "forming" || !st.hub) return;
+  e.preventDefault(); e.stopPropagation();
+  const h = st.hub, onList = TICKERS.some(t => t.symbol === sym);
+  showSheet(`<div class="nudge">
+    <div class="ng-art" aria-hidden="true"><svg viewBox="0 0 220 70"><rect x="14" y="22" width="192" height="30" rx="7" fill="rgba(124,147,255,.14)" stroke="rgba(124,147,255,.55)"/>
+      <path d="M20 44 34 30 48 45 62 29 76 44 90 30 104 45 118 29 132 44 146 30 160 45 174 30 188 43 200 33" fill="none" stroke="#FF6B5E" stroke-width="2.2" stroke-linejoin="round"/>
+      <text x="110" y="15" text-anchor="middle" fill="#9fb3ff" font-size="11" font-family="Inter,sans-serif" font-weight="600">THE CHOP ZONE</text></svg></div>
+    <div class="ng-k">Rule #1 check</div>
+    <h3>Hold on. ${esc(sym)} is still inside its hub.</h3>
+    <p>It's been closing between <b>${money(h.low)}</b> and <b>${money(h.high)}</b> for ${h.sessions} sessions. Trades in here tend to get chopped up: buy the top, sell the bottom, repeat.</p>
+    <div class="ng-plan"><div><i style="--c:#3DD68C"></i><span>Long only after a 4-hour <b>close above ${money(h.high)}</b></span></div><div><i style="--c:#FF6B5E"></i><span>Short only after a 4-hour <b>close below ${money(h.low)}</b></span></div></div>
+    <p class="ng-q">Is this trade coming to you, or are you forcing it?</p>
+    <div class="ng-acts">
+      <button class="sp-go" onclick="nudgeWait('${esc(sym)}', ${onList})">${onList ? "You're right, I'll wait" : `Wait. Add ${esc(sym)} to my list`}</button>
+      <button class="sp-alt" onclick="nudgeOpen('${esc(a.href)}')">I'm just looking at the chart</button>
+    </div>
+    <label class="ng-snooze"><input type="checkbox" id="ngSnooze"> Don't ask again today</label>
+  </div>`);
+}, true);
+function nudgeSnoozeSave() { try { if ($("ngSnooze") && $("ngSnooze").checked) localStorage.setItem("hs_nudge_off", new Date().toDateString()); } catch (e) {} }
+async function nudgeWait(sym, onList) {
+  nudgeSnoozeSave(); closeSheet();
+  if (onList) { toast(`Good call. NextShelf will tell you when ${sym} closes outside its hub.`); return; }
+  try { if (await addToWatchlist(sym)) { await loadTickers(); toast(`${sym} added. You'll get an alert when it closes outside the hub.`); } }
+  catch (e) { toast(friendly(e)); }
+}
+function nudgeOpen(href) { nudgeSnoozeSave(); closeSheet(); window.open(href, "_blank", "noopener"); }
 
 // ---------------------------------------------------------------- Rule #1 (discipline banner on Today)
 function renderRule() {
