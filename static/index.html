@@ -754,10 +754,11 @@ function summary(sym, st, key) {
         `<b class="u-down">below ${money(h.low)}</b> in the next few candles would still count.`;
     case "breakout_up": case "breakdown": {
       const isUp = key === "breakout_up", edge = isUp ? h.high : h.low;
-      return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. ` +
-        `Target: ${st.target_kind === "shelf" ? "next shelf" : "ATR target (no shelf in range)"} at <b class="u-${isUp ? "up" : "down"}">${money(st.target)}</b> ` +
-        `(${pctFrom(st.target, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}. ` +
-        `<span class="muted">${esc(st.label.split(", ")[1] || "")} used.</span>`;
+      if (st.target_kind === "atr" && st.target_zone) {
+        const z = st.target_zone;
+        return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. No historical shelf was found, so the suggested take-profit zone is <b class="u-${isUp ? "up" : "down"}">${money(z.low)}–${money(z.high)}</b> (${pctFrom(z.low, p)} to ${pctFrom(z.high, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}.`;
+      }
+      return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. Next shelf target ${money(st.target)} (${pctFrom(st.target, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}.`;
     }
     case "follow-through": return `The last breakout reached its target shelf. Now waiting for a new hub to form.`;
     case "snap-back": return `The last breakout failed and closed back inside its hub. Waiting for a new hub.`;
