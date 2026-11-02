@@ -538,89 +538,96 @@ footer{color:#718397!important;border-color:#1e2b39!important}
 #netbar { position: fixed; left: 50%; top: 66px; transform: translateX(-50%); z-index: 40; background: var(--down); color: #fff;
           padding: 8px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,.3); }
 
-/* ================= terminal shell (sidebar, ticker strip, hub brief) ================= */
-:root { --sbw: 264px; --t-bg: #070b11; --t-side: #080d14; --t-line: #1a2633; --t-line2: #243446; --t-mut: #6f8196; --t-ink: #e8eef5; }
-.side, .tstrip, .brief, .bf-scrim { display: none; }
+/* ================= NextShelf app shell: sidebar + shelf card ================= */
+:root { --sbw: 236px; --t-bg: #080c12; --t-side: #0b1119; --t-line: #19232f; --t-line2: #243242; --t-mut: #7d8da0; --t-ink: #eef2f7; --shelf: #3DD68C; }
+.side, .brief, .bf-scrim { display: none; }
 @media (min-width: 1000px) {
   body.term { padding-left: var(--sbw); background: var(--t-bg) !important; }
-  body.term.side-min { --sbw: 68px; }
+  body.term.side-min { --sbw: 72px; }
   body.term > nav:not(.bottom) { display: none !important; }
-  body.term main.wrap { max-width: none !important; margin: 0 !important; padding: 0 28px 40px !important; }
-  body.term .side { display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; width: var(--sbw); z-index: 25;
-    background: var(--t-side); border-right: 1px solid var(--t-line); font-family: var(--mono); transition: width .18s; }
-  .sb-head { display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 14px 0 18px; border-bottom: 1px solid var(--t-line); }
-  .sb-brand { display: flex; align-items: center; gap: 12px; color: var(--t-ink); text-decoration: none; font: 600 17px var(--mono); letter-spacing: .06em; white-space: nowrap; overflow: hidden; }
-  .sb-min { background: transparent !important; border: 0 !important; color: var(--t-mut) !important; padding: 6px !important; cursor: pointer; }
-  .sb-min:hover { color: var(--t-ink) !important; }
-  .sb-scroll { flex: 1; overflow-y: auto; padding: 14px 0; scrollbar-width: thin; }
-  .sb-group { margin: 6px 0 16px; }
-  .sb-gh { display: flex; align-items: center; gap: 12px; padding: 8px 18px; color: var(--t-ink); font: 700 13px var(--mono); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
-  .sb-tree { margin-left: 29px; border-left: 1px solid var(--t-line2); }
-  .sb-item { position: relative; display: block; padding: 9px 14px 9px 22px; color: var(--t-mut); text-decoration: none; font: 500 12px var(--mono);
-    letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
-  .sb-item::before { content: ""; position: absolute; left: 0; top: 50%; width: 12px; border-top: 1px solid var(--t-line2); }
-  .sb-item:hover { color: var(--t-ink); }
-  .sb-item.on { color: var(--t-ink); font-weight: 700; }
-  .sb-item.on::after { content: ""; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); width: 7px; height: 16px; border-radius: 2px; background: #7C93FF; }
-  .sb-plan { padding: 10px 18px; border-top: 1px solid var(--t-line); font: 500 11px var(--mono); letter-spacing: .1em; color: var(--t-mut); text-transform: uppercase; white-space: nowrap; overflow: hidden; }
-  .sb-plan b { color: #7C93FF; }
-  .sb-foot { display: flex; gap: 6px; padding: 12px 14px 16px; border-top: 1px solid var(--t-line); }
-  .sb-foot a, .sb-foot button { width: 40px; height: 40px; display: grid; place-items: center; color: var(--t-mut) !important; background: transparent !important;
-    border: 0 !important; border-radius: 8px !important; padding: 0 !important; cursor: pointer; }
-  .sb-foot a:hover, .sb-foot button:hover { color: var(--t-ink) !important; background: #101924 !important; }
-  body.side-min .sb-brand span, body.side-min .sb-gh span, body.side-min .sb-tree, body.side-min .sb-plan { display: none; }
-  body.side-min .sb-head { padding: 0 10px; justify-content: center; } body.side-min .sb-brand { display: none; }
-  body.side-min .sb-gh { justify-content: center; padding: 10px 0; } body.side-min .sb-foot { flex-direction: column; align-items: center; }
-
-  /* ticker strip */
-  body.term .tstrip { display: flex; gap: 8px; align-items: center; position: sticky; top: 0; z-index: 12; margin: 0 -28px 8px; padding: 12px 28px;
-    background: color-mix(in srgb, var(--t-bg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--t-line); overflow-x: auto; scrollbar-width: none; }
-  .ts-all, .ts-chip { flex: none; display: inline-flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; border-radius: 10px !important;
-    border: 1px solid var(--t-line2) !important; background: #0b121b !important; color: var(--t-ink) !important; font: 500 14px var(--mono) !important; cursor: pointer; text-decoration: none; }
-  .ts-all small { color: var(--t-mut); font-size: 13px; }
-  .ts-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--c, #3a4a5c); }
-  .ts-chip:hover, .ts-all:hover { border-color: #3a5068 !important; background: #0f1824 !important; }
-  .ts-chip.on { border-color: #7C93FF !important; }
+  body.term main.wrap { max-width: 1240px !important; margin: 0 auto !important; padding: 28px 32px 48px !important; }
+  body.term .side { display: flex; flex-direction: column; position: fixed; left: 12px; top: 12px; bottom: 12px; width: calc(var(--sbw) - 24px); z-index: 25;
+    background: var(--t-side); border: 1px solid var(--t-line); border-radius: 18px; font-family: var(--sans); transition: width .18s; overflow: hidden; }
+  .sb-head { display: flex; align-items: center; justify-content: space-between; height: 62px; padding: 0 10px 0 16px; }
+  .sb-brand { display: flex; align-items: center; gap: 10px; color: var(--t-ink); text-decoration: none; font: 700 17px var(--sans); letter-spacing: -.01em; white-space: nowrap; overflow: hidden; }
+  .sb-min { background: transparent !important; border: 0 !important; color: var(--t-mut) !important; padding: 6px !important; cursor: pointer; border-radius: 8px !important; }
+  .sb-min:hover { color: var(--t-ink) !important; background: #121b26 !important; }
+  .sb-scroll { flex: 1; overflow-y: auto; padding: 4px 10px 12px; scrollbar-width: thin; }
+  .sb-label { display: flex; justify-content: space-between; align-items: center; margin: 18px 8px 6px; color: #5d6d80; font: 600 12px var(--sans); white-space: nowrap; }
+  .sb-label a { color: var(--t-mut); text-decoration: none; font-weight: 500; } .sb-label a:hover { color: var(--shelf); }
+  .sb-item { position: relative; display: flex; align-items: center; gap: 12px; padding: 9px 10px; margin: 1px 0; border-radius: 10px; color: #a9b6c6; text-decoration: none;
+    font: 500 14.5px var(--sans); white-space: nowrap; }
+  .sb-item svg { flex: none; opacity: .85; }
+  .sb-item:hover { color: var(--t-ink); background: #111a25; }
+  .sb-item.on { color: #fff; background: #13202c; }
+  .sb-item.on svg { color: var(--shelf); opacity: 1; }
+  .sb-item.on::after { content: ""; position: absolute; left: 10px; right: 10px; bottom: 3px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, var(--shelf), transparent 70%); }
+  .sb-shelf { display: grid; grid-template-columns: 1fr 64px; gap: 4px 10px; align-items: center; width: 100%; padding: 8px 10px; border-radius: 10px; border: 0 !important;
+    background: transparent !important; color: var(--t-ink) !important; cursor: pointer; text-align: left; font: 600 13.5px var(--sans) !important; }
+  .sb-shelf:hover, .sb-shelf.on { background: #111a25 !important; }
+  .sb-shelf small { grid-column: 1 / -1; color: var(--t-mut); font: 500 11.5px var(--sans); margin-top: -2px; }
+  .sb-gauge { position: relative; height: 16px; }
+  .sb-gauge::before { content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: #223040; border-radius: 2px; }
+  .sb-gauge b { position: absolute; top: 3px; height: 10px; border-radius: 3px; background: rgba(124,147,255,.28); border: 1px solid rgba(124,147,255,.6); }
+  .sb-gauge i { position: absolute; top: 2px; width: 3px; height: 12px; margin-left: -1.5px; border-radius: 2px; background: var(--c, #eef2f7); box-shadow: 0 0 6px var(--c, transparent); }
+  .sb-plan { margin: 0 10px; padding: 10px 12px; border-radius: 12px; background: #0f1721; font: 500 12.5px var(--sans); color: var(--t-mut); white-space: nowrap; overflow: hidden; }
+  .sb-plan b { color: var(--shelf); }
+  .sb-foot { display: flex; gap: 4px; padding: 10px 10px 12px; }
+  .sb-foot a, .sb-foot button { width: 38px; height: 38px; display: grid; place-items: center; color: var(--t-mut) !important; background: transparent !important;
+    border: 0 !important; border-radius: 10px !important; padding: 0 !important; cursor: pointer; }
+  .sb-foot a:hover, .sb-foot button:hover { color: var(--t-ink) !important; background: #121b26 !important; }
+  body.side-min .sb-brand span, body.side-min .sb-item span, body.side-min .sb-label, body.side-min .sb-shelves, body.side-min .sb-plan { display: none; }
+  body.side-min .sb-head { padding: 0; justify-content: center; } body.side-min .sb-brand { display: none; }
+  body.side-min .sb-item { justify-content: center; } body.side-min .sb-foot { flex-direction: column; align-items: center; }
 }
-/* ---------- hub brief ---------- */
-.brief { position: fixed; top: 0; right: 0; bottom: 0; width: min(580px, 100%); z-index: 35; display: flex; flex-direction: column;
-  background: linear-gradient(180deg, #0c1622, #0a121c); border-left: 1px solid #2a3c52; box-shadow: -30px 0 80px rgba(0,0,0,.45);
-  transform: translateX(105%); transition: transform .25s ease; font-family: var(--mono); color: var(--t-ink); }
-.brief::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, #7C93FF, #3DD68C 60%, transparent); }
-body.brief-open .brief { display: flex; transform: none; }
-.brief { display: flex; }
-.bf-scrim { position: fixed; inset: 0; z-index: 34; background: rgba(0,0,0,.35); }
+/* ---------- shelf card (slide-over) ---------- */
+.brief { position: fixed; top: 12px; right: 12px; bottom: 12px; width: min(460px, calc(100% - 24px)); z-index: 35; display: flex; flex-direction: column;
+  background: #0d141d; border: 1px solid #223042; border-radius: 20px; box-shadow: 0 30px 90px rgba(0,0,0,.55);
+  transform: translateX(calc(100% + 24px)); transition: transform .28s cubic-bezier(.2,.8,.2,1); font-family: var(--sans); color: var(--t-ink); overflow: hidden; }
+body.brief-open .brief { transform: none; }
+.bf-scrim { position: fixed; inset: 0; z-index: 34; background: rgba(3,6,10,.5); backdrop-filter: blur(2px); }
 body.brief-open .bf-scrim { display: block; }
-.bf-top { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px; border-bottom: 1px solid var(--t-line); }
-.bf-tabs { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.bf-tabs span, .bf-tabs a { padding: 8px 14px; border-radius: 10px; font: 500 14px var(--sans); color: var(--t-mut); text-decoration: none; }
-.bf-tabs .on { background: #16243a; color: #9fb3ff; }
-.bf-tabs a:hover { color: var(--t-ink); }
-.bf-x { width: 40px; height: 40px; border-radius: 50% !important; border: 1px solid var(--t-line2) !important; background: #0b121b !important; color: var(--t-ink) !important; font-size: 16px; padding: 0 !important; cursor: pointer; }
-.bf-cmds { display: flex; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--t-line); flex-wrap: wrap; }
-.bf-cmds button { font: 500 14px var(--mono) !important; padding: 7px 14px !important; border-radius: 9px !important; border: 1px solid var(--t-line2) !important;
-  background: transparent !important; color: #b9c6d4 !important; cursor: pointer; }
-.bf-cmds button.on { border-color: #7C93FF !important; color: var(--t-ink) !important; background: #121e30 !important; }
-.bf-body { flex: 1; overflow-y: auto; padding: 18px 20px 30px; }
-.bf-disc { border-left: 2px solid var(--t-line2); padding: 2px 0 2px 14px; color: #7b8ca0; font-size: 12px; line-height: 1.7; margin: 0 0 18px; }
-.bf-title { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin: 6px 0 16px; }
-.bf-title h3 { margin: 0; font: 600 22px var(--mono); letter-spacing: .02em; }
-.bf-title h3 small { font: 400 15px var(--mono); color: #b9c6d4; margin-left: 10px; letter-spacing: .04em; }
-.bf-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 99px; font: 700 13px var(--mono); letter-spacing: .1em;
-  color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 12%, transparent); }
-.bf-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
-.bf-kv { display: grid; grid-template-columns: minmax(150px, 40%) 1fr; gap: 12px 18px; font-size: 14px; margin-bottom: 8px; }
-.bf-kv dt { color: #8a9aae; text-align: right; } .bf-kv dd { margin: 0; color: var(--t-ink); }
-.bf-kv dd b { font-weight: 600; } .bf-kv dd small { color: #8a9aae; font-size: 13px; }
-.bf-sec { display: flex; align-items: center; gap: 12px; margin: 22px 0 12px; color: #8a9aae; font: 500 13px var(--mono); letter-spacing: .12em; text-transform: uppercase; }
-.bf-sec::after { content: ""; flex: 1; border-top: 1px solid var(--t-line); }
-.bf-row { display: grid; grid-template-columns: 110px 80px 1fr auto; gap: 10px; align-items: center; padding: 6px 0; font-size: 15px; }
-.bf-row .bar { height: 3px; border-radius: 2px; background: color-mix(in srgb, var(--c) 70%, transparent); }
-.bf-row small { color: #8a9aae; font-size: 13px; }
-.bf-note { margin-top: 16px; padding: 12px 14px; border: 1px solid #3a3020; background: rgba(242,193,78,.06); color: #f2c14e; border-radius: 10px; font-size: 13px; line-height: 1.6; }
-.bf-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+.bf-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 14px; }
+.bf-head h3 { margin: 0; font: 800 28px var(--sans); letter-spacing: -.02em; }
+.bf-head p { margin: 4px 0 0; color: var(--t-mut); font-size: 14px; }
+.bf-x { flex: none; width: 36px; height: 36px; border-radius: 12px !important; border: 0 !important; background: #162130 !important; color: var(--t-ink) !important; font-size: 14px; padding: 0 !important; cursor: pointer; }
+.bf-tag { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 5px 11px; border-radius: 8px; font: 600 13px var(--sans);
+  color: var(--c); background: color-mix(in srgb, var(--c) 13%, transparent); }
+.bf-tag::before { content: ""; width: 10px; height: 4px; border-radius: 2px; background: currentColor; }
+.bf-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 0 20px 4px; padding: 3px; border-radius: 12px; background: #0a1017; border: 1px solid #1b2734; }
+.bf-seg button { padding: 8px 6px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: var(--t-mut) !important;
+  font: 600 13.5px var(--sans) !important; cursor: pointer; }
+.bf-seg button.on { background: #1a2736 !important; color: #fff !important; box-shadow: 0 1px 0 rgba(255,255,255,.05) inset; }
+.bf-body { flex: 1; overflow-y: auto; padding: 8px 20px 24px; scroll-padding-top: 8px; }
+.bf-foot { display: flex; justify-content: space-between; gap: 10px; padding: 14px 20px; border-top: 1px solid #1b2734; font: 600 14px var(--sans); }
+.bf-foot a { color: var(--shelf); text-decoration: none; } .bf-foot a + a { color: var(--t-mut); } .bf-foot a:hover { color: #fff; }
+.bf-h { margin: 22px 0 10px; font: 700 15px var(--sans); color: #fff; }
+.bf-h:first-child { margin-top: 12px; }
+/* level map: a vertical price ladder drawn to scale */
+.lm { position: relative; border-radius: 14px; background: #0a1017; border: 1px solid #1b2734; padding: 6px 0; }
+.lm-row { position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; min-height: 40px; padding: 4px 14px 4px 30px; }
+.lm-row::before { content: ""; position: absolute; left: 13px; top: 50%; width: 6px; height: 6px; margin-top: -3px; border-radius: 2px; background: var(--c); }
+.lm-row span { font: 500 13.5px var(--sans); color: #b8c4d2; } .lm-row span small { display: block; color: var(--t-mut); font-size: 12px; }
+.lm-row b { font: 600 15px var(--mono); color: var(--c); text-align: right; } .lm-row b small { display: block; font: 500 11.5px var(--sans); color: var(--t-mut); }
+.lm-row.shelf { background: linear-gradient(90deg, color-mix(in srgb, var(--c) 10%, transparent), transparent 80%); }
+.lm-row.hub { background: rgba(124,147,255,.07); }
+.lm-row.now { min-height: 34px; }
+.lm-row.now::before { left: 9px; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 4px rgba(255,255,255,.12); }
+.lm-row.now span { color: #fff; font-weight: 700; } .lm-row.now b { color: #fff; }
+.lm-gap { height: 1px; margin: 0 14px 0 30px; background: repeating-linear-gradient(90deg, #243242 0 4px, transparent 4px 8px); }
+.gp { display: grid; gap: 8px; }
+.gp > div { display: grid; grid-template-columns: 28px 1fr; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #0a1017; border: 1px solid #1b2734; font-size: 14px; line-height: 1.5; color: #c9d3df; }
+.gp > div::before { content: attr(data-n); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #162130; color: var(--c, #fff); font: 700 13px var(--sans); }
+.gp b { color: #fff; }
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.tiles div { padding: 12px 14px; border-radius: 12px; background: #0a1017; border: 1px solid #1b2734; }
+.tiles b { display: block; font: 700 20px var(--sans); color: #fff; } .tiles span { color: var(--t-mut); font-size: 12.5px; }
+.trs { margin-top: 10px; } .trs div { display: flex; justify-content: space-between; padding: 8px 2px; border-bottom: 1px solid #16202b; font-size: 13.5px; color: #c9d3df; }
+.trs div:last-child { border: 0; } .trs i { font-style: normal; color: var(--c); }
+.bf-fine { margin-top: 22px; color: #5d6d80; font-size: 12px; line-height: 1.55; }
+.bf-addbtn { margin-top: 16px; width: 100%; }
 .u-up2 { color: #3DD68C !important; } .u-down2 { color: #FF6B5E !important; } .u-hub2 { color: #9fb3ff !important; }
-@media (max-width: 999px) { .brief { width: 100%; } .bf-kv { grid-template-columns: 1fr 1.2fr; } .bf-row { grid-template-columns: 90px 64px 1fr auto; } }
+@media (max-width: 999px) { .brief { top: auto; left: 0; right: 0; bottom: 0; width: 100%; height: 88vh; border-radius: 20px 20px 0 0; transform: translateY(105%); } }
 
 /* ================= Scout: the scanning agent on Discover ================= */
 .agent { position: relative; display: grid; grid-template-columns: 76px 1fr auto; gap: 16px; align-items: center; margin: 0 0 16px;
@@ -642,11 +649,11 @@ body.brief-open .bf-scrim { display: block; }
 .ag-radar { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 1px solid rgba(61,214,140,.5); opacity: 0; }
 .agent.run .ag-radar { animation: agRadar 1.8s ease-out infinite; }
 @keyframes agRadar { 0% { transform: scale(.6); opacity: .8; } 100% { transform: scale(1.6); opacity: 0; } }
-.ag-name { font: 700 13px var(--mono, ui-monospace, monospace); letter-spacing: .12em; color: #e8eef5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.ag-name small { font-weight: 500; letter-spacing: .02em; color: #6f8196; }
-.ag-state { margin-left: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #8a9aae; border: 1px solid #2a3a50; }
+.ag-name { font: 700 16px var(--sans); letter-spacing: -.01em; color: #e8eef5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ag-name small { font: 500 13.5px var(--sans); color: #7d8da0; }
+.ag-state { margin-left: 4px; padding: 3px 9px; border-radius: 8px; font: 600 12px var(--sans); color: #8a9aae; border: 1px solid #2a3a50; }
 .agent.run .ag-state { color: #3DD68C; border-color: rgba(61,214,140,.45); background: rgba(61,214,140,.08); }
-.ag-line { margin-top: 6px; font: 500 13.5px var(--mono, ui-monospace, monospace); color: #b9c6d6; }
+.ag-line { margin-top: 6px; font: 400 14.5px var(--sans); color: #b9c6d6; }
 .ag-line b { color: #fff; }
 .ag-line .cur::after { content: "▍"; color: #3DD68C; animation: agPing 1s steps(1) infinite; margin-left: 2px; }
 .ag-bar { height: 3px; margin-top: 10px; border-radius: 3px; background: #1a2535; overflow: hidden; }
@@ -655,7 +662,7 @@ body.brief-open .bf-scrim { display: block; }
 .ag-finds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .ag-finds:empty { display: none; }
 .ag-find { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 8px; border: 1px solid #22324a; background: #0f1824;
-  font: 600 12px var(--mono, ui-monospace, monospace); color: #e8eef5; cursor: pointer; animation: agIn .4s ease both; }
+  font: 600 13px var(--sans); color: #e8eef5; cursor: pointer; animation: agIn .4s ease both; }
 .ag-find:hover { border-color: var(--c); }
 .ag-find i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
 .ag-find small { color: #8a9aae; font-weight: 500; }
@@ -673,16 +680,16 @@ body.brief-open .bf-scrim { display: block; }
     <button class="sb-min" onclick="toggleSide()" aria-label="Collapse sidebar" title="Collapse"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 10l-2 2 2 2"/></svg></button>
   </div>
   <div class="sb-scroll">
-    <div class="sb-group"><div class="sb-gh"><svg class="sb-mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#1a2535"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#7C93FF"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#F4F4F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Home</span></div><div class="sb-tree"><a class="sb-item" href="#today" data-nav="today">Today</a><a class="sb-item" href="#alerts" data-nav="alerts">Alerts</a><a class="sb-item" href="#guide" data-nav="guide">How it works</a></div></div>
-    <div class="sb-group"><div class="sb-gh"><svg class="sb-mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#1a2535"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#7C93FF"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#F4F4F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Discover</span></div><div class="sb-tree"><a class="sb-item" href="#discover" data-nav="discover">Market board</a><a class="sb-item" href="#lab" data-nav="lab" data-admin>Lab</a></div></div>
-    <div class="sb-group"><div class="sb-gh"><svg class="sb-mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#1a2535"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#7C93FF"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#F4F4F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>My list</span></div><div class="sb-tree"><a class="sb-item" href="#list" data-nav="list">Watchlist</a></div></div>
-    <div class="sb-group"><div class="sb-gh"><svg class="sb-mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#1a2535"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#7C93FF"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#F4F4F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Results</span></div><div class="sb-tree"><a class="sb-item" href="#results" data-nav="results">Track record</a><a class="sb-item" href="#paper" data-nav="paper" data-admin>Paper trades</a></div></div>
-    <div class="sb-group"><div class="sb-gh"><svg class="sb-mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="6" fill="#1a2535"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#7C93FF"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#F4F4F6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Account</span></div><div class="sb-tree"><a class="sb-item" href="#account" data-nav="account">Settings</a></div></div>
+    <div class="sb-label">Market</div>
+    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Discover</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a>
+    <div class="sb-label">Yours</div>
+    <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>My list</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a>
+    <div class="sb-label sb-shelves-h">My shelves <a href="#list" title="Add a ticker">+ Add</a></div>
+    <div class="sb-shelves" id="sbShelves"></div>
   </div>
   <div class="sb-plan" id="sbPlan"></div>
   <div class="sb-foot">
     <a href="#guide" title="How it works" aria-label="How it works"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h6a3 3 0 0 1 3 3v13a2 2 0 0 0-2-2H4z"/><path d="M20 4h-6a3 3 0 0 0-3 3v13a2 2 0 0 1 2-2h7z"/></svg></a>
-    <a href="#alerts" title="Alerts" aria-label="Alerts"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg></a>
     <a href="#account" title="Account" aria-label="Account"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg></a>
     <button onclick="signOut()" id="sbOut" title="Sign out" aria-label="Sign out"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h11"/></svg></button>
   </div>
@@ -704,7 +711,6 @@ body.brief-open .bf-scrim { display: block; }
 </div></nav>
 
 <main class="wrap">
-<div class="tstrip" id="tstrip"></div>
 
 <!-- TODAY -->
 <section data-view="today">
@@ -782,7 +788,7 @@ body.brief-open .bf-scrim { display: block; }
       <span class="ag-radar"></span>
     </div>
     <div class="ag-main">
-      <div class="ag-name">SCOUT <small>· hub scanner agent</small><span class="ag-state" id="agState">idle</span></div>
+      <div class="ag-name">Scout <small>your hub-hunting assistant</small><span class="ag-state" id="agState">idle</span></div>
       <div class="ag-line" id="agLine">Getting ready…</div>
       <div class="ag-bar"><i id="agBar"></i></div>
       <div class="ag-finds" id="agFinds"></div>
@@ -855,15 +861,16 @@ body.brief-open .bf-scrim { display: block; }
     <span id="sched"></span>
   </footer>
 </main>
-<aside class="brief" id="brief" aria-hidden="true" aria-label="Hub brief">
+<aside class="brief" id="brief" aria-hidden="true" aria-label="Shelf card">
   <div class="bf-top">
-    <div class="bf-tabs"><span class="on">◆ Brief</span><a id="bfChart" href="#">Full chart</a><a id="bfTv" href="#" target="_blank" rel="noopener">TradingView</a></div>
-    <button class="bf-x" onclick="closeBrief()" aria-label="Close brief">✕</button>
+    <div class="bf-head" id="bfHead"></div>
+    <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
-  <div class="bf-cmds" id="bfCmds">
-    <button data-sec="levels" class="on">/levels</button><button data-sec="setup">/setup</button><button data-sec="history">/history</button>
+  <div class="bf-seg" id="bfCmds" role="tablist">
+    <button data-sec="levels" class="on">Levels</button><button data-sec="setup">Game plan</button><button data-sec="history">Track record</button>
   </div>
   <div class="bf-body" id="bfBody"></div>
+  <div class="bf-foot"><a id="bfChart" href="#">Open full chart →</a><a id="bfTv" href="#" target="_blank" rel="noopener">TradingView ↗</a></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
 
@@ -1602,15 +1609,24 @@ function renderSide() {
   document.querySelectorAll(".sb-item").forEach(a => a.classList.toggle("on", a.dataset.nav === CUR));
   if ($("sbOut")) $("sbOut").hidden = !ME || !!ME.guest;
   if ($("sbPlan")) $("sbPlan").innerHTML = !ME ? "" : ME.guest ? `<a href="/login" style="color:#9fb3ff">Sign in →</a>`
-    : `Plan · <b>${isPro() ? "Pro" : "Free"}</b>`;
+    : isPro() ? `You're on <b>Pro</b>` : `Free plan · <a href="#account" style="color:#3DD68C">Go Pro</a>`;
 }
-function stateColor(key) { return ({ breakout_up: "#3DD68C", breakdown: "#FF6B5E", forming: "#7C93FF", watching: "#8a9aae" })[key] || "#3a4a5c"; }
+function stateColor(key) { return ({ breakout_up: "#3DD68C", breakdown: "#FF6B5E", forming: "#7C93FF", watching: "#8a9aae" })[key] || "#5d6d80"; }
+const STATE_WORD = { breakout_up: "Breaking out ↑", breakdown: "Breaking down ↓", forming: "Resting in a hub", watching: "Hub just ended",
+  "follow-through": "Reached its shelf", "snap-back": "Failed breakout", stalled: "Ran out of time" };
+function gaugeHTML(st) {
+  const h = st && st.hub, p = st && st.last_close;
+  if (!h || !p || !["forming", "watching", "breakout_up", "breakdown"].includes(st.state)) return `<span class="sb-gauge"><i style="left:50%;--c:#5d6d80"></i></span>`;
+  const w = Math.max(h.high - h.low, p * 0.002), lo = h.low - w * 0.9, hi = h.high + w * 0.9;
+  const x = (v) => Math.max(2, Math.min(98, (v - lo) / (hi - lo) * 100));
+  return `<span class="sb-gauge" title="Price vs. the hub"><b style="left:${x(h.low)}%;width:${x(h.high) - x(h.low)}%"></b><i style="left:${x(p)}%;--c:${stateColor(st.state)}"></i></span>`;
+}
 function renderStrip() {
-  const el = $("tstrip"); if (!el) return;
-  const st = (t) => t.status?.error ? "error" : (t.status?.state || "none");
-  el.innerHTML = `<a class="ts-all" href="#discover">≡ Market board <small>${(BOARD && BOARD.universe) || ""}</small></a>` +
-    TICKERS.map(t => `<button class="ts-chip" style="--c:${stateColor(st(t))}" onclick="openBrief('${esc(t.symbol)}')" title="Open the hub brief"><i></i>${esc(t.symbol)}</button>`).join("") +
-    `<a class="ts-all" href="#list" title="Add a ticker">＋</a>`;
+  const el = $("sbShelves"); if (!el) return;
+  const rows = TICKERS.filter(t => t.status && !t.status.error);
+  el.innerHTML = rows.length ? rows.map(t => `<button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(t.status)}
+      <small>${STATE_WORD[t.status.state] || "No setup yet"}</small></button>`).join("")
+    : `<p style="color:#5d6d80;font-size:13px;margin:4px 8px">Add tickers to see where each one sits against its hub.</p>`;
 }
 function findStatus(sym) {
   const t = TICKERS.find(x => x.symbol === sym);
@@ -1621,7 +1637,7 @@ function findStatus(sym) {
 let BRIEF_SYM = null, BRIEF_SEC = "levels", BRIEF_CHART = null;
 async function openBrief(sym) {
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null;
-  document.querySelectorAll(".ts-chip").forEach(c => c.classList.toggle("on", c.textContent.trim() === sym));
+  renderStrip(); briefHead(sym, findStatus(sym));
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`; $("bfTv").href = tvUrl(sym);
   document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false");
   const st = findStatus(sym);
@@ -1629,16 +1645,20 @@ async function openBrief(sym) {
   setCmd("levels");
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART);
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); }
   } catch (e) {
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
-    const h = document.getElementById("bf-history");
-    if (h && h.nextElementSibling) h.nextElementSibling.outerHTML = `<p style="color:#8a9aae;font-size:14px">History isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
+    if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#8a9aae;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
   }
 }
 function closeBrief() { document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
-  document.querySelectorAll(".ts-chip.on").forEach(c => c.classList.remove("on")); }
+  renderStrip(); }
+function briefHead(sym, st) {
+  const k = st && st.state, c = stateColor(k === "follow-through" ? "breakout_up" : k);
+  $("bfHead").innerHTML = `<h3>${esc(sym)}</h3><p>${st && st.last_close ? money(st.last_close) + " · last 4-hour close" : "Loading…"}</p>
+    ${st ? `<span class="bf-tag" style="--c:${c}">${STATE_WORD[k] || "No setup right now"}</span>` : ""}`;
+}
 function setCmd(sec) {
   BRIEF_SEC = sec;
   document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === sec));
@@ -1646,55 +1666,62 @@ function setCmd(sec) {
   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 document.querySelectorAll("#bfCmds button").forEach(b => b.onclick = () => setCmd(b.dataset.sec));
+$("bfBody").addEventListener("scroll", () => {
+  const top = $("bfBody").getBoundingClientRect().top + 40; let cur = "levels";
+  ["levels", "setup", "history"].forEach(k => { const el = document.getElementById("bf-" + k); if (el && el.getBoundingClientRect().top <= top) cur = k; });
+  document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === cur));
+}, {passive: true});
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && BRIEF_SYM) closeBrief(); });
 
 function briefHTML(sym, st, chart) {
   const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down, key = st.state || "none";
-  const pc = (v) => v == null ? "" : `<small>(${pctFrom(v, p)})</small>`;
-  const pill = { breakout_up: ["BULLISH", "#3DD68C"], breakdown: ["BEARISH", "#FF6B5E"], forming: ["IN HUB", "#7C93FF"],
-    watching: ["HUB ENDED", "#8a9aae"], "follow-through": ["HIT SHELF", "#2FD4C0"], "snap-back": ["FAILED", "#FF8A4C"], stalled: ["TIMED OUT", "#F2C14E"] }[key] || ["NO SETUP", "#8a9aae"];
   const live = key === "breakout_up" || key === "breakdown", isUp = key === "breakout_up";
-  const kv = [["Spot", `<b>${money(p)}</b>`]];
-  if (st.last_candle_close) kv.push(["Last 4H close", new Date(st.last_candle_close).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"})]);
-  if (h && ["forming", "watching", "breakout_up", "breakdown"].includes(key)) kv.push(["Hub", `<b class="u-hub2">${money(h.low)} – ${money(h.high)}</b> <small>${h.sessions} sessions · ${((h.high - h.low) / h.low * 100).toFixed(2)}% wide</small>`]);
-  if (key === "forming" || key === "watching") {
-    kv.push(["Long trigger", `4H close above <b class="u-up2">${money(h.high)}</b> ${pc(h.high)}`]);
-    kv.push(["Short trigger", `4H close below <b class="u-down2">${money(h.low)}</b> ${pc(h.low)}`]);
-    kv.push(["Inside the hub", `No trade. Price chops here. Wait for the close.`]);
-  }
-  if (live) {
+  const hasHub = h && ["forming", "watching", "breakout_up", "breakdown"].includes(key);
+  // ---- level map: every level that matters, highest first, with price slotted in
+  const lv = [];
+  if (up) lv.push({v: up.level, cls: "shelf", c: "#3DD68C", name: "Next shelf above", sub: `zone ${money(up.low)}–${money(up.high).slice(1)}`});
+  if (hasHub) { lv.push({v: h.high, cls: "hub", c: "#9fb3ff", name: "Hub top", sub: key === "forming" ? "close above = long setup" : ""});
+                lv.push({v: h.low, cls: "hub", c: "#9fb3ff", name: "Hub bottom", sub: key === "forming" ? "close below = short setup" : ""}); }
+  if (dn) lv.push({v: dn.level, cls: "shelf", c: "#FF6B5E", name: "Next shelf below", sub: `zone ${money(dn.low)}–${money(dn.high).slice(1)}`});
+  if (live && st.target && !lv.some(l => Math.abs(l.v - st.target) < 0.005)) lv.push({v: st.target, cls: "shelf", c: isUp ? "#3DD68C" : "#FF6B5E", name: "Target", sub: "ATR target · no shelf in range"});
+  lv.push({v: p, cls: "now", c: "#fff", name: "Price now", sub: ""});
+  lv.sort((a, b) => b.v - a.v);
+  const map = `<div class="lm">${lv.map((l, i) => `${i && l.cls === "now" || i && lv[i - 1].cls === "now" ? '<div class="lm-gap"></div>' : ""}
+    <div class="lm-row ${l.cls}" style="--c:${l.c}"><span>${l.name}${l.sub ? `<small>${l.sub}</small>` : ""}</span>
+      <b>${money(l.v)}${l.cls !== "now" ? `<small>${pctFrom(l.v, p)}</small>` : ""}</b></div>`).join("")}</div>`;
+  // ---- game plan in plain words
+  const steps = [];
+  if (key === "forming") {
+    steps.push(["#9fb3ff", `It's been closing inside <b>${money(h.low)}–${money(h.high)}</b> for ${h.sessions} sessions. Inside the hub there's <b>no trade</b>. Let it come to you.`]);
+    steps.push(["#3DD68C", `A 4-hour <b>close above ${money(h.high)}</b> starts a long setup${up ? `, aiming for the shelf at <b>${money(up.level)}</b>` : ""}.`]);
+    steps.push(["#FF6B5E", `A 4-hour <b>close below ${money(h.low)}</b> starts a short setup${dn ? `, aiming for the shelf at <b>${money(dn.level)}</b>` : ""}.`]);
+  } else if (live) {
     const edge = isUp ? h.high : h.low;
-    kv.push(["Breakout close", `<b class="${isUp ? "u-up2" : "u-down2"}">${isUp ? "above" : "below"} ${money(edge)}</b> <small>${esc((st.label || "").split(", ")[1] || "")}</small>`]);
-    kv.push(["Invalidation", `4H close back ${isUp ? "below" : "above"} <b>${money(edge)}</b> ${pc(edge)}`]);
-    kv.push(["Target", `<b class="${isUp ? "u-up2" : "u-down2"}">${money(st.target)}</b> ${pc(st.target)} <small>${st.target_kind === "shelf" ? "next shelf" : "ATR target · no shelf in range"}</small>`]);
+    steps.push([isUp ? "#3DD68C" : "#FF6B5E", `It closed <b>${isUp ? "above" : "below"} the hub at ${money(edge)}</b>.${(() => { const m = /(\d+)\/(\d+)/.exec(st.label || ""); return m ? ` This is candle ${m[1]} of the ${m[2]} it gets to reach the target.` : ""; })()}`]);
+    steps.push(["#fff", `The aim is <b>${money(st.target)}</b> (${pctFrom(st.target, p)}), ${st.target_kind === "shelf" ? "the next shelf" : "an ATR-based target, since there's no shelf nearby"}.`]);
+    steps.push(["#F2C14E", `It's wrong if a 4-hour candle <b>closes back ${isUp ? "below" : "above"} ${money(edge)}</b>.`]);
+  } else {
+    steps.push(["#8a9aae", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 4+ sessions." : "The last breakout has played out. Waiting for a new hub to form."]);
+    if (up || dn) steps.push(["#9fb3ff", `Shelves to keep in mind: ${[up && `<b>${money(up.level)}</b> above`, dn && `<b>${money(dn.level)}</b> below`].filter(Boolean).join(" and ")}.`]);
   }
-  if (!live && !["forming", "watching"].includes(key)) kv.push(["Setup", `No active hub. ${key === "none" ? "Waiting for a tight range to form." : "The last breakout has finished."}`]);
-  const shelfRow = (sh, d) => sh ? `<div class="bf-row" style="--c:${d > 0 ? "#3DD68C" : "#FF6B5E"}"><b>${money(sh.level)}</b><small>${pctFrom(sh.level, p)}</small>
-      <span class="bar" style="width:${Math.min(100, Math.abs(sh.level / p - 1) * 100 * 12)}%"></span><small>${d > 0 ? "shelf above" : "shelf below"} · ${money(sh.low)}–${money(sh.high).slice(1)}</small></div>` : "";
-  let hist = "";
+  const plan = `<div class="gp">${steps.map(([c, t], i) => `<div data-n="${i + 1}" style="--c:${c}"><span>${t}</span></div>`).join("")}</div>`;
+  // ---- track record
+  let rec;
   if (chart) {
-    const s = chart.stats || {}, tr = (chart.trades || []).slice(-6).reverse();
-    const word = { "follow-through": "hit shelf", "snap-back": "failed", stalled: "timed out", pending: "live" };
-    hist = `<div class="bf-sec" id="bf-history">History · last ~9 months</div>
-      <dl class="bf-kv"><dt>Breakouts</dt><dd><b>${s.n || 0}</b></dd>
-        <dt>Reached shelf</dt><dd><b>${s["follow-through"] ?? "–"}%</b></dd>
-        <dt>Win rate</dt><dd><b>${s.win_rate ?? "–"}${s.win_rate == null ? "" : "%"}</b> <small>entered at the breakout close</small></dd>
-        <dt>Avg per trade</dt><dd><b class="${(s.expectancy_pct ?? 0) > 0 ? "u-up2" : "u-down2"}">${s.expectancy_pct == null ? "–" : (s.expectancy_pct > 0 ? "+" : "") + s.expectancy_pct + "%"}</b></dd></dl>
-      ${tr.map(t => `<div class="bf-row" style="--c:${t.direction === 1 ? "#3DD68C" : "#FF6B5E"}"><b>${new Date(t.time * 1000).toLocaleDateString(undefined, {month: "short", day: "numeric", timeZone: "UTC"})}</b>
-        <small>${t.direction === 1 ? "▲ long" : "▼ short"}</small><span class="bar" style="width:40%"></span><small>${t.chase ? "skipped (chase)" : word[t.outcome] || t.outcome}</small></div>`).join("")}`;
-  } else hist = `<div class="bf-sec" id="bf-history">History</div>${loadingHTML("Loading history…")}`;
-  return `<div class="bf-disc">DISCLAIMER: This readout describes past price behaviour from NextShelf's hub rules. It is educational, not financial advice. Do your own research and plan accordingly.</div>
-    <div class="bf-title" id="bf-levels"><h3>${esc(sym)}<small>Hub Brief</small></h3><span class="bf-pill" style="--c:${pill[1]}">${pill[0]}</span></div>
-    <dl class="bf-kv">${kv.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>
-    <div class="bf-sec" id="bf-setup">Potential targets · shelves</div>
-    ${shelfRow(up, 1)}${shelfRow(dn, -1)}${!up && !dn ? `<p style="color:#8a9aae;font-size:14px">No earlier hub zones nearby. A breakout would use the ATR target.</p>` : ""}
-    ${key === "forming" ? `<div class="bf-note">⚠ Inside the hub: don't force trades. Let the trade come to you. The setup starts with a 4-hour <b>close</b> outside ${money(h.low)}–${money(h.high)}.</div>` : ""}
-    ${hist}
-    <div class="bf-actions"><a class="btnx sm" href="/t/${encodeURIComponent(sym)}">Open full chart</a>
-      <a class="btnx sm" href="${tvUrl(sym)}" target="_blank" rel="noopener">TradingView</a>
-      ${TICKERS.find(t => t.symbol === sym) ? "" : `<button class="btnx sm" onclick="addToWatchlist('${esc(sym)}').then(ok => { if (ok) { toast('${esc(sym)} added to your watchlist'); loadTickers(); } }).catch(e => toast(e.message))">+ Add to watchlist</button>`}</div>`;
+    const s = chart.stats || {}, tr = (chart.trades || []).slice(-5).reverse();
+    const word = { "follow-through": ["Reached shelf", "#3DD68C"], "snap-back": ["Failed", "#FF6B5E"], stalled: ["Timed out", "#F2C14E"], pending: ["Live", "#9fb3ff"] };
+    rec = `<div class="tiles"><div><b>${s.n || 0}</b><span>breakouts in ~9 months</span></div><div><b>${s["follow-through"] ?? "–"}%</b><span>reached the shelf</span></div>
+      <div><b>${s.win_rate ?? "–"}${s.win_rate == null ? "" : "%"}</b><span>win rate</span></div>
+      <div><b class="${(s.expectancy_pct ?? 0) > 0 ? "u-up2" : "u-down2"}">${s.expectancy_pct == null ? "–" : (s.expectancy_pct > 0 ? "+" : "") + s.expectancy_pct + "%"}</b><span>average per trade</span></div></div>
+      <div class="trs">${tr.map(t => { const w = t.chase ? ["Skipped (too far)", "#8a9aae"] : word[t.outcome] || [t.outcome, "#8a9aae"];
+        return `<div><span>${new Date(t.time * 1000).toLocaleDateString(undefined, {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.direction === 1 ? "Long" : "Short"}</span><i style="--c:${w[1]}">${w[0]}</i></div>`; }).join("")}</div>`;
+  } else rec = loadingHTML("Loading the track record…");
+  const add = TICKERS.find(t => t.symbol === sym) ? "" : `<button class="btnx bf-addbtn" onclick="addToWatchlist('${esc(sym)}').then(ok => { if (ok) { toast('${esc(sym)} added to your list'); loadTickers(); } }).catch(e => toast(e.message))">☆ Add ${esc(sym)} to my list</button>`;
+  return `<div class="bf-h" id="bf-levels">Level map</div>${map}
+    <div class="bf-h" id="bf-setup">Game plan</div>${plan}
+    <div class="bf-h" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}
+    <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
-
 // ---------------------------------------------------------------- today
 let INFO = null, BOARD = null;
 function etNow() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"})); }
@@ -1954,7 +1981,7 @@ function boardFinds() {
 function renderAgent(sc) {
   const el = $("agent"); if (!el) return;
   el.classList.toggle("run", !!sc.running);
-  $("agState").textContent = sc.running ? "scanning" : "standing by";
+  $("agState").textContent = sc.running ? "Scanning…" : "Standing by";
   if (sc.running) {
     const pct = sc.total ? Math.round(sc.done / sc.total * 100) : 2;
     $("agBar").style.width = Math.max(2, pct) + "%";
