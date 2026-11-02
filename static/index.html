@@ -591,7 +591,7 @@ body.brief-open .bf-scrim { display: block; }
 .bf-tag { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; padding: 5px 11px; border-radius: 8px; font: 600 13px var(--sans);
   color: var(--c); background: color-mix(in srgb, var(--c) 13%, transparent); }
 .bf-tag::before { content: ""; width: 10px; height: 4px; border-radius: 2px; background: currentColor; }
-.bf-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin: 0 20px 4px; padding: 3px; border-radius: 12px; background: #0a1017; border: 1px solid #1b2734; }
+.bf-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin: 0 20px 4px; padding: 3px; border-radius: 12px; background: #0a1017; border: 1px solid #1b2734; }
 .bf-seg button { padding: 8px 6px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: var(--t-mut) !important;
   font: 600 13.5px var(--sans) !important; cursor: pointer; }
 .bf-seg button.on { background: #1a2736 !important; color: #fff !important; box-shadow: 0 1px 0 rgba(255,255,255,.05) inset; }
@@ -819,6 +819,27 @@ body.brief-open .sf-hello { display: none; }
 .app-legal { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
 .app-legal a { color: var(--muted, #91a0b2) !important; text-decoration: none; font-size: 13px; }
 .app-legal a:hover { color: #eef2f7 !important; }
+
+/* options swing */
+.ox-beta { margin-left: 6px; padding: 2px 7px; border-radius: 6px; background: #22324a; color: #c9d3df; font: 700 10.5px var(--sans); vertical-align: 2px; }
+.ox { margin-bottom: 12px; padding: 14px; border-radius: 14px; background: #0a1017; border: 1px solid #1b2734; border-top: 3px solid var(--c); }
+.ox-h { font: 800 17px var(--sans); color: #fff; } .ox-h small { margin-left: 6px; font: 500 13px var(--sans); color: #8a9aae; }
+.ox-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 12px; }
+.ox-chips span { padding: 6px 10px; border-radius: 9px; background: #111b27; font: 600 13px var(--sans); color: #e8eef5; }
+.ox-chips small { display: block; font: 500 11px var(--sans); color: #7d8da0; }
+.ox-c { padding: 12px 0; border-top: 1px solid #16202b; }
+.ox-ct { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; } .ox-ct b { font: 700 16px var(--sans); color: #fff; }
+.ox-ct small { color: #8a9aae; font-size: 12.5px; }
+.ox-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+.ox-grid > div { padding: 9px 10px; border-radius: 10px; background: #0d151f; }
+.ox-grid small { display: block; color: #7d8da0; font-size: 11.5px; } .ox-grid b { display: block; font: 700 16px var(--sans); color: #eef2f7; font-variant-numeric: tabular-nums; }
+.ox-grid i { font-style: normal; color: #8a9aae; font-size: 12px; }
+.ox-warn { margin: 8px 0 0; color: #F2C14E; font-size: 12.5px; }
+.ox-note { margin: 10px 0 0; color: #9fb0c2; font-size: 13.5px; line-height: 1.5; } .ox-note b { color: #fff; }
+.ox-demo { margin: 0 0 10px; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,138,76,.4); color: #FF8A4C; font-size: 12.5px; }
+.ox-rules { margin-top: 4px; }
+.ox-lock { padding: 16px; border-radius: 14px; border: 1px dashed #2a3a50; background: #0a1017; }
+.ox-lock b { color: #fff; font-size: 15px; } .ox-lock p { color: #9fb0c2; font-size: 14px; margin: 6px 0 12px; }
 </style>
 <link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -1019,7 +1040,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   <div class="bf-seg" id="bfCmds" role="tablist">
-    <button data-sec="levels" class="on">Levels</button><button data-sec="setup">Game plan</button><button data-sec="history">Track record</button>
+    <button data-sec="levels" class="on">Levels</button><button data-sec="setup">Game plan</button><button data-sec="options">Options</button><button data-sec="history">Track record</button>
   </div>
   <div class="bf-body" id="bfBody"></div>
   <div class="bf-foot"><a id="bfChart" href="#">Open full chart →</a><a id="bfTv" href="#" target="_blank" rel="noopener">TradingView ↗</a></div>
@@ -1489,7 +1510,7 @@ async function loadAccount() {
         <div class="tier"><b>Free · your plan</b><ul><li>Watch up to ${m.ticker_limit} tickers</li><li>Telegram alerts after each breakout</li>
           <li>Hub Board: stocks inside a hub</li><li>Track record and charts</li></ul></div>
         <div class="tier pro"><b>Pro</b><ul><li>Unlimited watchlist</li><li><b style="display:inline;font-size:inherit">Pre-close warnings</b> 15 min before the candle closes</li>
-          <li>Full Hub Board: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Backtests on any ticker</li></ul></div>
+          <li>Full Hub Board: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Options swing plans on every breakout</li><li>Backtests on any ticker</li></ul></div>
       </div></div>`}
 
     ${styleCard()}
@@ -1820,6 +1841,7 @@ async function openBrief(sym) {
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   setCmd("levels");
+  loadOptions(sym);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); }
@@ -1845,7 +1867,7 @@ function setCmd(sec) {
 document.querySelectorAll("#bfCmds button").forEach(b => b.onclick = () => setCmd(b.dataset.sec));
 $("bfBody").addEventListener("scroll", () => {
   const top = $("bfBody").getBoundingClientRect().top + 40; let cur = "levels";
-  ["levels", "setup", "history"].forEach(k => { const el = document.getElementById("bf-" + k); if (el && el.getBoundingClientRect().top <= top) cur = k; });
+  ["levels", "setup", "options", "history"].forEach(k => { const el = document.getElementById("bf-" + k); if (el && el.getBoundingClientRect().top <= top) cur = k; });
   document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === cur));
 }, {passive: true});
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && BRIEF_SYM) closeBrief(); });
@@ -1904,6 +1926,7 @@ function briefHTML(sym, st, chart) {
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
   return `<div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
     <div class="bf-h" id="bf-setup">Game plan</div>${plan}
+    <div class="bf-h" id="bf-options">Options swing <span class="ox-beta">educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>
     <div class="bf-h" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}
     <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
@@ -2182,6 +2205,52 @@ async function nudgeWait(sym, onList) {
 function nudgeOpen(href) { nudgeSnoozeSave(); closeSheet(); window.open(href, "_blank", "noopener"); }
 
 
+
+// ---------------------------------------------------------------- options swing plan (Shelf card)
+const OPT_CACHE = {};
+async function loadOptions(sym) {
+  const put = (h) => { if (BRIEF_SYM === sym && $("bfOpt")) $("bfOpt").innerHTML = h; };
+  if (!ME || ME.guest || !isPro()) {
+    put(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
+      <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}" onclick="closeBrief()">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
+    return;
+  }
+  if (OPT_CACHE[sym] && Date.now() - OPT_CACHE[sym]._t < 60000) { put(optionsHTML(OPT_CACHE[sym])); return; }
+  try { const o = await api(`/api/options/${encodeURIComponent(sym)}`); o._t = Date.now(); OPT_CACHE[sym] = o; put(optionsHTML(o)); }
+  catch (e) { put(`<p class="ox-note">Options prices aren't available right now (${esc(friendly(e))}).</p>`); }
+}
+function optionsHTML(o) {
+  if (!o.plans || !o.plans.length) return `<p class="ox-note">${esc(o.message || "No options swing to plan right now.")}</p>`;
+  const sgn = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString(undefined, {month: "short", day: "numeric"});
+  return (o.demo ? `<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>` : "") + o.plans.map(p => {
+    const up = p.direction === 1, col = up ? "#3DD68C" : "#FF6B5E", side = up ? "Calls" : "Puts";
+    const head = p.mode === "prep" ? `${side} <small>if a 4-hour candle closes ${up ? "above" : "below"} ${money(p.edge)}</small>`
+      : `${side} <small>${esc(p.setup)} breakout is live</small>`;
+    const h = p.history || {};
+    const hist = h.n ? `On ${esc(o.symbol)}, <b>${h.reached} of ${h.n}</b> past ${up ? "upside" : "downside"} breakouts reached the shelf${h.median_days != null ? `, usually within <b>${h.median_days} trading day${h.median_days === 1 ? "" : "s"}</b>` : ""}.` : "Not enough past breakouts on this stock to judge timing yet.";
+    return `<div class="ox" style="--c:${col}">
+      <div class="ox-h">${head}</div>
+      <div class="ox-chips"><span><small>Expiry</small>${day(p.expiry)} · ${p.dte} days</span><span><small>Aim</small>${money(p.target)} (${sgn(p.target_pct)})</span>
+        <span><small>Wrong if</small>4H close ${up ? "below" : "above"} ${money(p.edge)}</span></div>
+      ${p.contracts.map(c => `<div class="ox-c">
+        <div class="ox-ct"><b>$${c.strike} ${up ? "call" : "put"}</b><small>${esc(c.label)} · delta ${c.delta}</small></div>
+        <div class="ox-grid">
+          <div><small>${c.estimated ? "Est. cost at the breakout" : "Cost now (mid)"}</small><b>${money(c.mid)}</b><i>${money(c.cost)} per contract</i></div>
+          <div><small>If it reaches the shelf</small><b class="u-up2">≈ ${money(c.at_shelf)}</b><i>${sgn(c.at_shelf_pct)}</i></div>
+          <div><small>If the breakout fails</small><b class="u-down2">≈ ${money(c.at_fail)}</b><i>${sgn(c.at_fail_pct)}</i></div>
+          <div><small>Breakeven at expiry</small><b>${money(c.breakeven)}</b><i>max loss ${money(c.cost)}</i></div>
+        </div>
+        ${c.wide_spread ? `<p class="ox-warn">⚠ Wide bid/ask spread (${money(c.bid)} / ${money(c.ask)}). Use a limit order near the middle.</p>` : ""}
+      </div>`).join("")}
+      <p class="ox-note">${hist}</p>
+    </div>`;
+  }).join("") + `<div class="gp ox-rules">
+      <div data-n="1" style="--c:#3DD68C"><span>Take profit when the stock reaches the <b>shelf</b>, not when the option "feels" high.</span></div>
+      <div data-n="2" style="--c:#FF6B5E"><span>Exit on a 4-hour <b>close back inside</b> the pattern, whatever the option is worth.</span></div>
+      <div data-n="3" style="--c:#F2C14E"><span>Size small. The most you can lose is what you pay for the contract.</span></div></div>
+    <p class="bf-fine">Educational example, not a recommendation. Estimates use Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
+}
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
 const SETUP_TABS = [["hub", "Hubs"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"]];
 const SETUP_ICON = {

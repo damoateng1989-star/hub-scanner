@@ -29,6 +29,7 @@ import pandas as pd  # noqa: E402
 import auth  # noqa: E402
 import engine  # noqa: E402
 import legal  # noqa: E402
+import options  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
 import data  # noqa: E402
@@ -614,6 +615,15 @@ def record_data(pattern: str = "hub", u: dict = User):
     if pattern not in patterns.KINDS:
         raise HTTPException(400, "unknown setup")
     return board.track_record(pattern)
+
+
+@app.get("/api/options/{symbol}")
+async def options_plan(symbol: str, u: dict = Pro):
+    """Educational options swing plan for the current setup (Pro)."""
+    try:
+        return await run_in_threadpool(options.plan, symbol)
+    except Exception as e:
+        raise HTTPException(400, str(e))
 
 
 @app.get("/api/chart/{symbol}")

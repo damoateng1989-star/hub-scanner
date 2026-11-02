@@ -44,7 +44,7 @@ finances, goals or risk tolerance, and nothing on the site is a recommendation t
 
 <h2>2. Not financial advice</h2>
 <p>NextShelf is not a broker-dealer, investment adviser or financial planner, and is not registered as one. Alerts, targets ("shelves"),
-plans, track records and every other part of the service are general information for educational purposes only. You alone decide
+plans (including options swing plans), track records and every other part of the service are general information for educational purposes only. You alone decide
 whether to place any trade, and you are fully responsible for those decisions and their results. Please read our
 <a href="/disclaimer">risk disclaimer</a>.</p>
 
@@ -159,7 +159,7 @@ def disclaimer() -> str:
 <p class="lead">Trading stocks involves substantial risk, including the possible loss of all the money you invest. Please read this before using NextShelf's signals.</p>
 
 <h2>Educational information only</h2>
-<p>Everything on NextShelf, including alerts, setups, targets, game plans, the Scout assistant, lessons and track records, is general
+<p>Everything on NextShelf, including alerts, setups, targets, game plans, options swing plans, the Scout assistant, lessons and track records, is general
 educational information. It is not personalized investment advice and is not an offer or recommendation to buy or sell any security.
 NextShelf is not a registered investment adviser or broker-dealer.</p>
 
@@ -171,6 +171,14 @@ fact that real fills can differ from closing prices. Real trading results will d
 <h2>Signals can be wrong or late</h2>
 <p>Breakouts fail often. Market data can be delayed or inaccurate, and alerts can arrive late or not at all. Never rely on a single alert
 or tool to make a decision.</p>
+
+<h2>Options carry extra risk</h2>
+<p>NextShelf's options swing plans are educational examples of how a setup could be expressed with calls or puts. They are not
+recommendations to buy any contract. Options are complex and can lose 100% of their value quickly, especially close to expiry.
+Estimated option values use a standard pricing model (Black-Scholes) and assume implied volatility stays the same; real prices,
+bid/ask spreads and fills will differ. Option quotes may be delayed or indicative rather than live exchange prices. Before trading
+options, read the <a href="https://www.theocc.com/company-information/documents-and-archives/options-disclosure-document" target="_blank" rel="noopener">Characteristics and Risks of Standardized Options</a>
+and make sure your broker has approved you for options trading.</p>
 
 <h2>Your responsibility</h2>
 <ul>

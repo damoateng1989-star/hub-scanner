@@ -12,6 +12,7 @@ import pandas as pd
 import data
 import db
 import engine
+import options
 import patterns
 import notify
 import phone
@@ -199,8 +200,14 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     # ring only for the newest candle (no burst of calls after downtime), and not for chases
                     chase = e["type"] in ("breakout", "breakdown") and \
                         (e["close"] - e["target"]) * (1 if e["type"] == "breakout" else -1) >= 0
-                    speech = speak_event(sym, e) if e["time"] == c4.index[-1] and not chase else None
-                    notify.symbol_alert(sym, e["type"], msg, speech)
+                    newest = e["time"] == c4.index[-1]
+                    speech = speak_event(sym, e) if newest and not chase else None
+                    extra = None
+                    if newest and not chase and e["type"] in ("breakout", "breakdown"):
+                        d_ = 1 if e["type"] == "breakout" else -1
+                        edge_ = e["high"] if d_ == 1 else e["low"]
+                        extra = (lambda s_=sym, d_=d_, c_=e["close"], ed_=edge_, t_=e["target"]: options.alert_line(s_, d_, c_, ed_, t_))
+                    notify.symbol_alert(sym, e["type"], msg, speech, pro_extra=extra)
                     sent.append(msg)
     try:      # other setups (triangles, channels, support & resistance): alert on new breaks only
         pa = patterns.analyze_all(c4, res, SETTINGS)
