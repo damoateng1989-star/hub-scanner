@@ -164,7 +164,12 @@ function summary(st) {
     case "forming": return `${SYM} has held a tight range for <b>${h.sessions} sessions</b>. A 4H close <b class="u-up">above ${money(h.high)}</b>: ${lvl(up, "up")}. A 4H close <b class="u-down">below ${money(h.low)}</b>: ${lvl(dn, "down")}.`;
     case "watching": return `The range just ended without a breakout. A 4H close above ${money(h.high)} or below ${money(h.low)} in the next few candles would still count.`;
     case "breakout_up": case "breakdown": { const u = st.state === "breakout_up";
-      return `${SYM} closed <b class="u-${u ? "up" : "down"}">${u ? "above" : "below"} its hub</b>. Target ${money(st.target)} (${pctFrom(st.target, p)}). It fails on a 4H close back ${u ? "below" : "above"} ${money(u ? h.high : h.low)}.`; }
+      if (st.target_kind === "atr" && st.target_zone) {
+        const z = st.target_zone;
+        return `${SYM} closed <b class="u-${u ? "up" : "down"}">${u ? "above" : "below"} its hub</b>. No historical shelf was found, so the suggested take-profit zone is <b class="u-${u ? "up" : "down"}">${money(z.low)}–${money(z.high)}</b> (${pctFrom(z.low, p)} to ${pctFrom(z.high, p)} from here). It fails on a 4H close back ${u ? "below" : "above"} ${money(u ? h.high : h.low)}.`;
+      }
+      return `${SYM} closed <b class="u-${u ? "up" : "down"}">${u ? "above" : "below"} its hub</b>. Next shelf target ${money(st.target)} (${pctFrom(st.target, p)}). It fails on a 4H close back ${u ? "below" : "above"} ${money(u ? h.high : h.low)}.`; }
+
     case "follow-through": return "The last breakout reached its shelf. Waiting for a new hub.";
     case "snap-back": return "The last breakout failed. Waiting for a new hub.";
     case "stalled": return "The last breakout ran out of time. Waiting for a new hub.";
