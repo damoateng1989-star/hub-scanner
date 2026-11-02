@@ -919,6 +919,22 @@ body.brief-open .sf-hello { display: none; }
 .lm-row.livepx b { color: #3DD68C; }
 .lrow > summary { grid-template-columns: 140px 1fr auto 18px !important; }
 @media (max-width: 600px) { .lrow > summary { grid-template-columns: 96px 1fr 14px !important; } .lrow .s .live { font-size: 11.5px; } .lrow .lvh { display: block; margin: 4px 0 0; width: fit-content; } }
+
+/* morning brief */
+.mbrief { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid #1d2a38; background: linear-gradient(180deg, #0e1622, #0b121a); }
+.mbrief[hidden] { display: none; }
+.mb-t { font: 800 17px var(--sans); color: #fff; } .mb-t span { margin-left: 6px; font: 600 13px var(--sans); color: #8a9aae; }
+.mb-s { margin-top: 3px; color: #a9b6c6; font-size: 14px; }
+.mb-k { margin: 14px 0 7px; font: 700 12.5px var(--sans); color: #8a9aae; }
+.mb-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.mb-chip { flex: none; display: grid; text-align: left; gap: 1px; padding: 9px 12px !important; border-radius: 12px !important; border: 1px solid #22324a !important;
+  border-left: 3px solid var(--c) !important; background: #0f1824 !important; cursor: pointer; }
+.mb-chip b { font: 800 15px var(--sans); color: #fff; } .mb-chip small { font: 600 12px var(--sans); color: var(--c); white-space: nowrap; }
+.mb-lock { margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: #111b27; color: #c9d3df; font-size: 14px; }
+.mb-lock a { color: #3DD68C; } .mb-quiet { color: #9fb0c2; margin: 12px 0 0; }
+.mb-f { margin-top: 12px; color: #6b7a8c; font-size: 12.5px; } .mb-f a { color: #3DD68C; }
+.brief-sw { display: inline-flex !important; width: auto !important; align-items: center; gap: 8px; margin-right: 12px; font-weight: 600; color: #e8eef5; cursor: pointer; }
+.brief-sw input { width: 18px !important; min-width: 0 !important; height: 18px !important; padding: 0 !important; margin: 0 !important; flex: none; accent-color: #3DD68C; }
 </style>
 <link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -982,6 +998,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     <div id="mkt"></div>
   </div>
   <div class="rule1" id="rule1"></div>
+  <div class="mbrief" id="mbrief" hidden></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
   <div class="lesson" id="lesson">
     <div class="lh">
@@ -1036,7 +1053,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 <!-- DISCOVER -->
 <section data-view="discover" hidden>
   <div class="vh"><h1>Browse setups</h1>
-    <p>Every Nasdaq-100 stock, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
+    <p><span id="bUni">The S&amp;P 500, Nasdaq-100 and major ETFs</span>, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
   <div class="agent" id="agent">
     <div class="ag-main">
       <div class="ag-name">Scout <small>your hub-hunting assistant</small><span class="ag-state" id="agState">idle</span></div>
@@ -1192,6 +1209,7 @@ async function loadInfo() {
   try {
     const i = INFO = await api("/api/info");
     $("demo").hidden = i.provider !== "demo";
+    if (i.universe_name && $("bUni")) $("bUni").textContent = i.universe_name.charAt(0).toUpperCase() + i.universe_name.slice(1);
     if (i.storage_ok === false && ME && ME.is_admin && !$("storageWarn")) {
       const w = document.createElement("div"); w.id = "storageWarn"; w.className = "storage-warn";
       w.innerHTML = `<b>⚠ Your data resets every time the site redeploys.</b> Accounts, sign-ins, watchlists and the track record are wiped on each update,
@@ -1588,7 +1606,7 @@ async function loadAccount() {
           <option value="free"${x.plan === "free" ? " selected" : ""}>Free</option><option value="pro"${x.plan === "pro" ? " selected" : ""}>Pro</option></select>`}</td></tr>`).join("")}
       </table></div></div>`;
     let msgs = [];
-    try { msgs = await api("/api/admin/messages"); } catch (e) {}
+    try { const m = await api("/api/admin/messages"); msgs = Array.isArray(m) ? m : []; } catch (e) {}
     const open = msgs.filter(x => !x.handled).length;
     admin += `<div class="acct"><h3>Inbox · ${open} new</h3><p>Messages from the <a href="/contact" style="color:#3DD68C">contact page</a>. Reply by email, then mark them done.</p>
       ${msgs.length ? `<div class="inbox">${msgs.slice(0, 30).map(x => `<div class="msgi${x.handled ? " done" : ""}">
@@ -1612,6 +1630,8 @@ async function loadAccount() {
       </div></div>`}
 
     ${styleCard()}
+
+    ${briefCard()}
 
     <div class="acct"><h3>Telegram alerts</h3>
       ${!tg.enabled ? `<p>Telegram isn't set up on this site yet.</p>` :
@@ -2063,6 +2083,7 @@ async function loadToday() {
   renderToday();
   try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
   renderToday(); renderStrip();
+  loadBrief();
 }
 function renderToday() {
   const h = etNow().getHours();
@@ -2199,7 +2220,7 @@ function renderInstitutionalBoard(){
     const kind=r._kind,status=boardStatus(r,kind),h=r.hub||{},dist=boardDistance(r,kind),shelf=boardShelf(r,kind);
     const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions":kind==="recent"?"Completed setup":"—";
-    return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>NASDAQ · 4H</small></div></td>'+
+    return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
       '<td><span class="board-state '+status[1]+'">'+esc(status[0])+'</span></td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
@@ -2239,7 +2260,7 @@ async function loadBoard() {
     '<button class="board-filter" data-kind="near" onclick="filterInstitutionalBoard(\'near\')">At edge</button>'+
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">In hub</button>'+
     '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')">Recent</button></div></div>'+
-    '<div class="board-frame"><div class="board-caption"><span>NASDAQ-100 · HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
+    '<div class="board-frame"><div class="board-caption"><span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
@@ -2427,7 +2448,7 @@ function renderSetupBoard() {
       const up = live ? (x.state === "breakout_up" ? x.edge : null) : x.upper, lo = live ? (x.state === "breakdown" ? x.edge : null) : x.lower;
       const ctx = live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches`
         : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
-      return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>NASDAQ · 4H</small></div></td>
+      return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>4H</small></div></td>
         <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
         <td>${up == null ? "—" : money(up)}</td><td>${lo == null ? "—" : money(lo)}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${tvLink(x.symbol)}</div></td></tr>`; }).join("")}
@@ -2435,6 +2456,49 @@ function renderSetupBoard() {
     + `<div class="note" style="margin-top:10px">${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf). Check the Results page for how they've actually done.</div>`;
 }
 let RECORD_PAT = "hub";
+
+
+// ---------------------------------------------------------------- morning brief (Today card + settings)
+async function loadBrief() {
+  let d; try { d = await api("/api/brief"); } catch (e) { return; }
+  const el = $("mbrief"); if (!el) return;
+  const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
+  let main;
+  if (d.pro && d.closest.length) main = `<div class="mb-k">Closest to a breakout today</div><div class="mb-row">${d.closest.map(c =>
+      chip(c.symbol, c.dist < 0.05 ? `right at the ${c.side === "up" ? "top ↑" : "bottom ↓"}` : `${c.dist}% to ${c.side === "up" ? "breakout ↑" : "breakdown ↓"}`, c.side === "up" ? "#3DD68C" : "#FF6B5E")).join("")}</div>`;
+  else if (!d.pro) main = `<div class="mb-lock">🔒 <b>${d.near_count}</b> stocks are at the edge of a hub today. <a href="${ME && !ME.guest ? "#account" : "/login#signup"}">Pro shows the 5 closest to breaking out →</a></div>`
+      + (d.resting.length ? `<div class="mb-k">Resting in a hub</div><div class="mb-row">${d.resting.map(c => chip(c.symbol, `${c.sessions} sessions`, "#7C93FF")).join("")}</div>` : "");
+  else main = `<p class="mb-quiet">Nothing is pressing a hub edge right now.</p>`;
+  const play = d.pro && d.in_play.length ? `<div class="mb-k">Breakouts still in play</div><div class="mb-row">${d.in_play.map(c =>
+      chip(c.symbol, `${c.up ? "↑" : "↓"} aiming ${money(c.target)}`, c.up ? "#3DD68C" : "#FF6B5E")).join("")}</div>` : "";
+  const t12 = (ME && ME.brief_time || "08:45").replace(/^0/, "");
+  const ways = [ME && ME.telegram && ME.telegram.linked && "on Telegram", ME && ME.email_on && "by email"].filter(Boolean);
+  const deliver = !ME || ME.guest ? `<a href="/login#signup">Sign up free</a> to get this every weekday before the open.`
+    : !ME.brief ? `<a href="#account">Turn on the morning brief</a> to get this before the open.`
+    : ways.length ? `Arrives ${ways.join(" and ")} at ${t12} AM ET on weekdays.` : `<a href="#account">Connect Telegram</a> to get this at ${t12} AM ET every weekday.`;
+  el.innerHTML = `<div class="mb-h"><div><div class="mb-t">☀️ Morning brief <span>${esc(d.date)}</span></div>
+      <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
+    ${main}${play}<div class="mb-f">${deliver}</div>`;
+  el.hidden = false;
+}
+function briefCard() {
+  if (!ME || ME.guest) return "";
+  const tg = ME.telegram && ME.telegram.linked;
+  const where = [tg && "Telegram", ME.email_on && "email"].filter(Boolean).join(" and ");
+  return `<div class="acct"><h3>Morning brief</h3><p>Every weekday at ${esc((ME.brief_time || "08:45").replace(/^0/, ""))} AM ET: the stocks closest to a breakout, breakouts still in play, and your watchlist.${where ? ` Sent by ${where}.` : " Connect Telegram below to receive it."}</p>
+    <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.brief ? "checked" : ""} onchange="setBriefOn(this.checked)"> Send me the morning brief</label>
+      <button class="btnx sm" onclick="testBrief(this)">Send one now</button></div></div>`;
+}
+async function setBriefOn(on) {
+  try { await api("/api/me/brief", {method: "POST", body: JSON.stringify({on})}); ME.brief = on; toast(on ? "Morning brief is on" : "Morning brief is off"); }
+  catch (e) { toast(friendly(e)); }
+}
+async function testBrief(btn) {
+  btn.disabled = true; btn.textContent = "Sending…";
+  try { const r = await api("/api/brief/test", {method: "POST"}); toast("Sent" + (r.telegram ? " to Telegram" : "") + (r.email ? (r.telegram ? " and" : "") + " by email" : "")); }
+  catch (e) { toast(friendly(e)); }
+  btn.disabled = false; btn.textContent = "Send one now";
+}
 
 // ---------------------------------------------------------------- Rule #1 (discipline banner on Today)
 function renderRule() {
@@ -2539,7 +2603,7 @@ function renderScout() {
   else if (MY_SCAN) {
     const hits = MY_SCAN.results.filter(r => ["breakout_up", "breakdown", "forming"].includes(r.state));
     line = `Checked your <b>${MY_SCAN.results.length}</b> ticker${MY_SCAN.results.length === 1 ? "" : "s"} just now. ` + (hits.length ? `<b>${hits.length}</b> worth watching:` : "Nothing is setting up yet. Let the trade come to you.");
-  } else line = guest ? "I check every Nasdaq-100 stock after each 4-hour close. Sign in and I'll scan your own watchlist on demand."
+  } else line = guest ? "I check 540+ stocks and ETFs after each 4-hour close. Sign in and I'll scan your own watchlist on demand."
     : `I sweep the market after every 4-hour close${sc.next ? ` (next: <b>${agDay(sc.next)}</b>)` : ""}. Want me to check your watchlist right now?`;
   $("spLine").innerHTML = line;
   $("spActs").innerHTML = guest ? `<a class="sp-go" href="/login#signup">Sign up free to scan</a><a class="sp-alt" href="#discover" onclick="toggleScout(false)">See the market board</a>`

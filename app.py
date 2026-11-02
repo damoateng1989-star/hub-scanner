@@ -32,6 +32,7 @@ import legal  # noqa: E402
 import options  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
+import brief  # noqa: E402
 import data  # noqa: E402
 import db  # noqa: E402
 import notify  # noqa: E402
@@ -39,6 +40,7 @@ import paper  # noqa: E402
 import phone  # noqa: E402
 import scanner  # noqa: E402
 import telegram_bot  # noqa: E402
+import universe  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 log = logging.getLogger("app")
@@ -130,6 +132,10 @@ async def lifespan(_app: FastAPI):
         sched.add_job(paper.run_check, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                    timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1)
+    if brief.BRIEF_TIME:      # morning brief, weekdays before the open
+        bh, bm = map(int, brief.BRIEF_TIME.split(":"))
+        sched.add_job(brief.send_all, CronTrigger(day_of_week="mon-fri", hour=bh, minute=bm, timezone="America/New_York"),
+                      id="brief", replace_existing=True)
     for t in BOARD_TIMES:
         h, m = t.split(":")
         sched.add_job(board.scan_board, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
@@ -410,13 +416,39 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)),
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), brief=u.get("brief", 1) != 0,
+                brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
                 style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
 
 
 class StylesBody(BaseModel):
     styles: list[str]
+
+
+@app.get("/api/brief")
+def brief_today(u: dict | None = Maybe):
+    """Today's morning brief (the same one that goes out by Telegram and email)."""
+    return brief.build(u)
+
+
+class OnBody(BaseModel):
+    on: bool
+
+
+@app.post("/api/me/brief")
+def set_brief(body: OnBody, u: dict = User):
+    db.update_user(u["id"], brief=1 if body.on else 0)
+    return {"brief": body.on}
+
+
+@app.post("/api/brief/test")
+def brief_test(request: Request, u: dict = User):
+    auth.throttle(f"brief:{u['id']}", limit=3, window=3600)
+    sent = brief.send_to(u)
+    if not (sent["telegram"] or sent["email"]):
+        raise HTTPException(400, "Connect Telegram (or ask the site owner to turn on email) to receive the brief.")
+    return sent
 
 
 @app.post("/api/me/styles")
@@ -482,7 +514,8 @@ def storage_persistent() -> bool | None:
 @app.get("/api/info")
 def info(u: dict | None = Maybe):
     s = scanner.SETTINGS
-    return dict(storage_ok=storage_persistent() is not False, provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u and u["telegram_chat"]),
+    return dict(storage_ok=storage_persistent() is not False, universe_name=universe.describe(), universe_size=len(universe.board_universe()),
+                provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u and u["telegram_chat"]),
                 phone=bool(u and u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
                 scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],
                 entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
