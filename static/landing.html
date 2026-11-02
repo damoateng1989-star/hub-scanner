@@ -437,6 +437,67 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
 }
 
 </style>
+
+<style>
+/* ================= NextShelf identity layer (own look: shelves, green candles, plain type) ================= */
+:root { --ns-green: #3DD68C; --ns-green-2: #22B573; --ns-hub: #7C93FF; --ns-bg: #070b10; }
+html, body { background: var(--ns-bg) !important; }
+nav { background: rgba(7,11,16,.86) !important; }
+.brand { font: 700 18px var(--sans) !important; letter-spacing: -.01em !important; text-transform: none !important; }
+.links { gap: 30px !important; font-size: 14.5px !important; }
+.btn { border-radius: 999px !important; font: 600 14px var(--sans) !important; }
+.btn.solid, .primary { background: var(--ns-green) !important; border-color: var(--ns-green) !important; color: #04140b !important; box-shadow: 0 8px 30px rgba(61,214,140,.22) !important; }
+.btn.solid:hover { background: #57e39f !important; }
+.btn.ghost { background: transparent !important; border-color: #2a3646 !important; color: #e8eef5 !important; }
+/* hero: price shelves in the background instead of a glow */
+.hero { position: relative; }
+.shelves-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 90%); -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 90%); }
+.shelves-bg i { position: absolute; left: -5%; right: -5%; height: 0; border-top: 1px dashed rgba(124,147,255,.16); }
+.shelves-bg i.z { height: 46px; border: 0; background: linear-gradient(90deg, transparent, rgba(61,214,140,.07) 30%, rgba(61,214,140,.07) 70%, transparent);
+  border-top: 1px dashed rgba(61,214,140,.28); }
+.shelves-bg i.dn { background: linear-gradient(90deg, transparent, rgba(255,107,94,.05) 30%, rgba(255,107,94,.05) 70%, transparent); border-top-color: rgba(255,107,94,.2); }
+.hero > .wrap { position: relative; z-index: 1; }
+.eyebrow { gap: 10px !important; padding: 7px 14px 7px 10px !important; border-radius: 999px !important; border: 1px solid rgba(61,214,140,.3) !important;
+  background: rgba(61,214,140,.07) !important; color: #c9f3dc !important; font: 600 13.5px var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; }
+.eyebrow i { display: none; }
+.hero h1 { letter-spacing: -.04em !important; }
+.hero h1 .l1 { background: none !important; color: #f4f6f9 !important; -webkit-text-fill-color: #f4f6f9; }
+.hero h1 .l2 { position: relative; display: inline-block !important; background: linear-gradient(180deg, #5BEAA6 15%, #22B573) !important; -webkit-background-clip: text !important;
+  background-clip: text !important; color: transparent !important; -webkit-text-fill-color: transparent; padding-bottom: .12em !important; }
+.hero h1 .l2::after { content: ""; position: absolute; left: 2%; right: 2%; bottom: .02em; height: 0; border-top: 3px dashed rgba(61,214,140,.55); }
+.join input[type=email] { border-radius: 999px !important; padding-left: 22px !important; }
+#how .kicker, #features .kicker { display: flex !important; width: auto !important; }
+.alt a { color: #b9c6d4 !important; }
+.trust svg { color: var(--ns-green) !important; }
+/* section headings: plain sans, the second half in green-grey, no serif italics */
+.kicker { display: inline-flex !important; align-items: center; gap: 8px; font: 600 14px var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--ns-green) !important; }
+.kicker::before { content: ""; width: 18px; height: 3px; border-radius: 2px; background: currentColor; }
+.kicker { justify-content: center; }
+h2 em { font-family: var(--sans) !important; font-style: normal !important; font-weight: 600 !important; letter-spacing: -0.035em !important; color: #6f8a7e !important; }
+/* cards */
+.card, .tier, .lesson { border-radius: 16px !important; }
+.num { display: inline-grid !important; place-items: center; min-width: 30px; height: 30px; padding: 0 10px; border-radius: 9px; background: rgba(61,214,140,.1);
+  color: var(--ns-green) !important; font: 700 14px var(--sans) !important; letter-spacing: 0 !important; width: auto !important; }
+#how .steps > .card .num { width: auto !important; }
+.tier .num { background: #142030; color: #cfd8e3 !important; }
+.tier.pro .num { background: rgba(61,214,140,.14); color: var(--ns-green) !important; }
+.tier.pro { border-color: rgba(61,214,140,.45) !important; box-shadow: 0 0 0 1px rgba(61,214,140,.12), 0 30px 80px rgba(61,214,140,.06) !important; }
+.ribbon { background: var(--ns-green) !important; color: #04140b !important; font: 700 12px var(--sans) !important; letter-spacing: 0 !important; border-radius: 999px !important; }
+.pro-badge { font: 700 10.5px var(--sans) !important; letter-spacing: .02em !important; color: var(--ns-green) !important; border-color: rgba(61,214,140,.4) !important; border-radius: 6px !important; }
+.icon { color: var(--ns-green) !important; background: rgba(61,214,140,.08) !important; border-color: rgba(61,214,140,.2) !important; border-radius: 12px !important; }
+/* product windows: app cards, not macOS windows */
+.win { border-radius: 16px !important; }
+.win .bar { justify-content: flex-start; gap: 10px; }
+.win .bar b { position: static !important; text-align: left !important; font: 600 13.5px var(--sans) !important; letter-spacing: 0 !important; color: #e8eef5 !important; }
+.win .bar small { margin-left: auto; color: #5d6d80; font: 500 12px var(--sans); }
+.wdot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); box-shadow: 0 0 10px var(--c); }
+/* lesson card label */
+.kick { font: 600 13px var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; color: var(--ns-green) !important; }
+.final { background: radial-gradient(ellipse at 50% 0%, rgba(61,214,140,.12), transparent 60%), #0d141d !important; border-radius: 24px !important; }
+.final .dots { display: none !important; }
+details summary::after { color: var(--ns-green) !important; }
+</style>
 </head>
 <body>
 
@@ -455,9 +516,9 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
 </div></nav>
 
 <header class="hero">
-  <div class="dots"></div><div class="glow"></div>
+  <div class="shelves-bg" aria-hidden="true"><i style="top:18%"></i><i class="z" style="top:34%"></i><i style="top:57%"></i><i class="z dn" style="top:76%"></i></div>
   <div class="wrap" style="position:relative">
-    <span class="eyebrow"><i></i>Scanning the market for a hub setup</span>
+    <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg>Scanning the market for a hub setup</span>
     <h1><span class="l1">Your Next Trade</span><span class="l2">Is Setting Up.</span></h1>
     <p class="lede">NextShelf finds stocks coiling in tight ranges, warns you before a breakout candle closes, and gives every setup a target: the next shelf. From the first scan to your own decision, it all happens in one place.</p>
     <form class="join" data-source="hero" novalidate>
@@ -494,13 +555,13 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
 
     <div class="stage" aria-label="Product preview">
       <div class="win w-left">
-        <div class="bar"><i></i><i></i><i></i><b>NEXTSHELF / BOARD</b></div>
+        <div class="bar"><span class="wdot" style="--c:#3DD68C"></span><b>Market board</b><small>NextShelf</small></div>
         <div class="rows" id="boardRows">
           <div class="r"><span class="s">·····</span><span class="d">Loading the board…</span><span></span></div>
         </div>
       </div>
       <div class="win w-right">
-        <div class="bar"><i></i><i></i><i></i><b>NEXTSHELF / ALERTS</b></div>
+        <div class="bar"><span class="wdot" style="--c:#F2C14E"></span><b>Alerts</b><small>NextShelf</small></div>
         <div class="msgs">
           <div class="msg"><b>⚠️ Trading above hub, ~15 min to the 4H close</b>If the candle closes above the hub edge, that's the breakout. Plan: entry near the close, target the next shelf.</div>
           <div class="msg"><b>🚀 4H close above hub</b>Close outside the range after 6 sessions. Next shelf +2.4% away. Snap-back if a close comes back inside.</div>
@@ -508,7 +569,7 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
         </div>
       </div>
       <div class="win w-mid">
-        <div class="bar"><i></i><i></i><i></i><b>NEXTSHELF / CHART</b></div>
+        <div class="bar"><span class="wdot" style="--c:#7C93FF"></span><b>Chart · 4-hour</b><small>NextShelf</small></div>
         <div class="chartwrap"><svg id="demoChart" viewBox="0 0 800 280" preserveAspectRatio="none" role="img" aria-label="Example: a hub, a breakout and the next shelf"></svg></div>
         <div class="legend">
           <span style="--c:var(--hub)"><em></em>Hub</span><span style="--c:var(--up)"><em></em>Next shelf above</span>
@@ -524,14 +585,14 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
   <h2>Three steps. <em>One clear plan.</em></h2>
   <p class="sub">A simple, repeatable setup on 4-hour candles, with every rule spelled out so you always know why an alert fired.</p>
   <div class="steps">
-    <div class="card"><span class="num">01</span><h3>A hub forms</h3><p>4H closes hold inside a tight range for at least 4 sessions. The stock is coiling.</p>
+    <div class="card"><span class="num">1</span><h3>A hub forms</h3><p>4H closes hold inside a tight range for at least 4 sessions. The stock is coiling.</p>
       <svg class="ill" viewBox="0 0 300 120"><rect x="40" y="45" width="220" height="30" rx="5" fill="var(--hub)" opacity=".14" stroke="var(--hub)" stroke-opacity=".5"/>
         <path d="M20 90 L40 70 L60 58 L80 66 L100 52 L120 64 L140 55 L160 67 L180 57 L200 63 L220 54 L240 62 L260 58" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linejoin="round"/></svg></div>
-    <div class="card"><span class="num">02</span><h3>A candle closes outside</h3><p>The first 4H <i>close</i> above or below the hub is the breakout. You're warned 15 minutes before it prints.</p>
+    <div class="card"><span class="num">2</span><h3>A candle closes outside</h3><p>The first 4H <i>close</i> above or below the hub is the breakout. You're warned 15 minutes before it prints.</p>
       <svg class="ill" viewBox="0 0 300 120"><rect x="20" y="55" width="170" height="30" rx="5" fill="var(--hub)" opacity=".14" stroke="var(--hub)" stroke-opacity=".5"/>
         <path d="M20 72 L50 64 L80 76 L110 66 L140 74 L170 68 L200 50 L230 38" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linejoin="round"/>
         <circle cx="200" cy="50" r="6" fill="var(--up)"/><path d="M200 34 l0 -14 M194 26 l6 -6 6 6" stroke="var(--up)" stroke-width="2" fill="none"/></svg></div>
-    <div class="card"><span class="num">03</span><h3>It travels to the next shelf</h3><p>Earlier hubs act as shelves. The nearest one is the target, and a close back inside the hub means it failed.</p>
+    <div class="card"><span class="num">3</span><h3>It travels to the next shelf</h3><p>Earlier hubs act as shelves. The nearest one is the target, and a close back inside the hub means it failed.</p>
       <svg class="ill" viewBox="0 0 300 120"><rect x="20" y="16" width="260" height="16" fill="var(--up)" opacity=".12"/><line x1="20" y1="32" x2="280" y2="32" stroke="var(--up)" stroke-dasharray="4 5"/>
         <rect x="20" y="78" width="120" height="24" rx="5" fill="var(--hub)" opacity=".14" stroke="var(--hub)" stroke-opacity=".5"/>
         <path d="M20 92 L50 86 L80 96 L110 88 L140 74 L170 66 L200 54 L230 44 L260 31" fill="none" stroke="#F4F4F6" stroke-width="2" stroke-linejoin="round"/>
@@ -562,10 +623,10 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
   <div class="kicker">Pricing</div>
   <h2>Start free. <em>Upgrade when it earns it.</em></h2>
   <div class="tiers">
-    <div class="card tier"><div class="num">FREE</div><div class="price">$0</div>
+    <div class="card tier"><div class="num">Free</div><div class="price">$0</div>
       <ul><li>Watch up to 3 tickers</li><li>Telegram alerts after each breakout</li><li>Hub Board: stocks inside a hub</li><li>Charts and the full track record</li></ul>
       <a class="btn ghost" href="/login#signup">Create a free account</a></div>
-    <div class="card tier pro"><span class="ribbon">MOST USEFUL</span><div class="num" style="color:var(--violet)">PRO</div>
+    <div class="card tier pro"><span class="ribbon">Most useful</span><div class="num">Pro</div>
       <div class="price">$29<small> / month</small></div><div style="color:var(--muted);font-size:14px">or $290 a year, two months free</div>
       <ul><li>Unlimited watchlist</li><li>Pre-close warnings, 15 min before the close</li><li>Full Hub Board: live breakouts and stocks at the edge</li>
         <li>Phone-call alerts</li><li>Backtests on any ticker</li></ul>
