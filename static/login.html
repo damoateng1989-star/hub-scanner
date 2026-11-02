@@ -152,6 +152,19 @@ label,.sub{color:var(--muted)!important}
 }
 
 </style>
+
+<style>
+/* NextShelf identity on the sign-in page */
+html, body { background: #070b10 !important; }
+h1 em, h2 em, .pitch em, em { font-family: var(--sans, Inter, sans-serif) !important; font-style: normal !important; font-weight: inherit !important; }
+.pitch h1 em, h1 em { color: #3DD68C !important; background: none !important; -webkit-text-fill-color: #3DD68C; }
+h2 em { color: #3DD68C !important; }
+form button, button[type=submit], form > button { background: #3DD68C !important; border-color: #3DD68C !important; color: #04140b !important;
+  border-radius: 999px !important; font-weight: 700 !important; }
+form button:hover { background: #57e39f !important; }
+input { border-radius: 12px !important; }
+input:focus { border-color: #3DD68C !important; box-shadow: 0 0 0 3px rgba(61,214,140,.15) !important; }
+</style>
 </head>
 <body>
 <section class="pitch">
@@ -168,7 +181,8 @@ label,.sub{color:var(--muted)!important}
       <li><b>Honest track record:</b> every signal logged with its result.</li>
     </ul>
   </div>
-  <p class="fine">Educational tool. Signals describe past price behaviour and are not financial advice.</p>
+  <p class="fine">Educational tool. Signals describe past price behaviour and are not financial advice.<br>
+    <a href="/terms" style="color:inherit">Terms</a> · <a href="/privacy" style="color:inherit">Privacy</a> · <a href="/disclaimer" style="color:inherit">Risk disclaimer</a> · <a href="/contact" style="color:inherit">Contact</a></p>
 </section>
 
 <section class="side"><div class="box">
@@ -209,7 +223,7 @@ label,.sub{color:var(--muted)!important}
       <label for="su-pw">Password (8+ characters)</label><input id="su-pw" type="password" autocomplete="new-password" minlength="8" required>
       <button>Create account</button>
     </form>
-    <p class="fine" style="margin-top:14px">By creating an account you agree that NextShelf is an educational tool and not financial advice.</p>
+    <p class="fine" style="margin-top:14px">By creating an account you agree to the <a href="/terms" style="color:inherit;text-decoration:underline">Terms of Service</a> and <a href="/privacy" style="color:inherit;text-decoration:underline">Privacy Policy</a>, and you understand that NextShelf is an educational tool, not financial advice (<a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>).</p>
     <div class="links"><a href="#signin">I already have an account</a><a href="/app#board">Keep browsing</a></div>
   </div>
 

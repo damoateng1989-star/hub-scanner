@@ -811,6 +811,17 @@ body.brief-open .sf-hello { display: none; }
 .gp > .gp-setup { grid-template-columns: 28px 1fr; }
 .gp > .gp-setup::before { display: none; }
 .gp-ic { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #162130; color: var(--c); }
+
+/* admin inbox */
+.inbox { display: grid; gap: 8px; margin-top: 10px; }
+.msgi { padding: 12px 14px; border-radius: 12px; background: #0a1017; border: 1px solid #1b2734; border-left: 3px solid #3DD68C; }
+.msgi.done { opacity: .55; border-left-color: #2a3a50; }
+.mi-h { display: flex; justify-content: space-between; gap: 10px; } .mi-h b { color: #eef2f7; } .mi-h span { color: #7d8da0; font-size: 13px; }
+.mi-f { color: #8a9aae; font-size: 13.5px; margin-top: 2px; } .mi-f a { color: #9fb3ff; }
+.msgi p { margin: 8px 0 10px; color: #c9d3df; white-space: pre-wrap; font-size: 14.5px; }
+.app-legal { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; }
+.app-legal a { color: var(--muted, #91a0b2) !important; text-decoration: none; font-size: 13px; }
+.app-legal a:hover { color: #eef2f7 !important; }
 </style>
 </head>
 <body class="term">
@@ -987,6 +998,7 @@ body.brief-open .sf-hello { display: none; }
 
   <footer>
     <span>Educational tool. Signals describe past price behaviour, not financial advice.</span>
+    <span class="app-legal"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></span>
     <span id="sched"></span>
   </footer>
 </main>
@@ -1445,6 +1457,16 @@ async function loadAccount() {
         <td>${x.telegram ? "yes" : "–"}</td><td>${x.is_admin ? "Pro" : `<select onchange="setPlan(${x.id}, this.value)">
           <option value="free"${x.plan === "free" ? " selected" : ""}>Free</option><option value="pro"${x.plan === "pro" ? " selected" : ""}>Pro</option></select>`}</td></tr>`).join("")}
       </table></div></div>`;
+    let msgs = [];
+    try { msgs = await api("/api/admin/messages"); } catch (e) {}
+    const open = msgs.filter(x => !x.handled).length;
+    admin += `<div class="acct"><h3>Inbox · ${open} new</h3><p>Messages from the <a href="/contact" style="color:#3DD68C">contact page</a>. Reply by email, then mark them done.</p>
+      ${msgs.length ? `<div class="inbox">${msgs.slice(0, 30).map(x => `<div class="msgi${x.handled ? " done" : ""}">
+        <div class="mi-h"><b>${esc(x.topic)}</b><span>${day(x.created_at + "Z")}</span></div>
+        <div class="mi-f">${esc(x.name || "(no name)")} · <a href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Re: " + x.topic)}">${esc(x.email)}</a></div>
+        <p>${esc(x.message)}</p>
+        <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
+        : `<p class="note">No messages yet.</p>`}</div>`;
   }
   $("account").innerHTML = `
     <div class="acct"><h3>${esc(m.name || m.email)}</h3><p>${esc(m.email)} · ${m.google ? "Google sign-in" : "email and password"}</p>
@@ -2165,6 +2187,9 @@ function styleCard() {
       return `<label class="style-opt${lock ? " lock" : ""}"><input type="checkbox" value="${o.key}" ${picked.has(o.key) ? "checked" : ""} ${lock ? "disabled" : ""} onchange="saveStyles()">
         <span class="so-ic">${setupIcon(o.key)}</span><span><b>${esc(o.name)}${lock ? ' <em>Pro</em>' : ""}${o.key === "hub" ? ' <em class="core">Core</em>' : ""}</b><small>${esc(o.about)}</small></span></label>`; }).join("")}</div>
     <p class="note" style="margin-top:10px">New setups are in beta. Each one keeps its own public track record so you can see which actually works.</p></div>`;
+}
+async function markMsg(id, handled) {
+  try { await api(`/api/admin/messages/${id}`, {method: "POST", body: JSON.stringify({handled})}); loadAccount(); } catch (e) { toast(friendly(e)); }
 }
 async function saveStyles() {
   const picked = [...document.querySelectorAll('.styles input:checked')].map(i => i.value);

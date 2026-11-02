@@ -140,6 +140,22 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
   .errbox b { color: var(--down); display: block; } .errbox span { color: var(--muted); font-size: 14px; }
   .btnx { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font: 500 14px var(--sans); cursor: pointer; }
 </style>
+
+<style>
+/* NextShelf identity on the chart page: same type and colours as the app */
+html, body { background: #070b10 !important; }
+h1 { font: 800 38px/1 var(--sans) !important; letter-spacing: -.03em !important; }
+h1 small { font: 600 20px var(--sans) !important; color: #a3b1c2 !important; }
+h2 { font: 700 20px var(--sans) !important; letter-spacing: -.01em !important; text-transform: none !important; }
+h2 em { font-family: var(--sans) !important; font-style: normal !important; font-weight: 700 !important; color: #3DD68C !important; }
+.card, .kv > div { border-radius: 14px !important; }
+.kv b { font-family: var(--sans) !important; font-weight: 700 !important; }
+.badge { border-radius: 8px !important; }
+.tvbtn, button, .sec { border-radius: 999px !important; }
+#watch { background: #3DD68C !important; color: #04140b !important; border: 0 !important; font-weight: 700 !important; }
+.pfoot { border-top: 1px solid #1b2734; margin-top: 50px; padding: 26px 0 40px; color: #6b7a8c; font-size: 13px; }
+.pfoot a { color: #a3b1c2; margin-right: 16px; text-decoration: none; } .pfoot a:hover { color: #eef2f7; }
+</style>
 </head>
 <body>
 <nav><div class="wrap">
@@ -151,6 +167,8 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 </div></nav>
 
 <main class="wrap" id="main"><div class="loading"><span class="spin"></span>Loading chart…</div></main>
+<div class="wrap"><div class="pfoot"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a><br>
+  Educational tool, not financial advice. Past results don't guarantee future ones.</div></div>
 
 <script src="/vendor/lightweight-charts.js"></script>
 <script>

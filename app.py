@@ -28,6 +28,7 @@ import pandas as pd  # noqa: E402
 
 import auth  # noqa: E402
 import engine  # noqa: E402
+import legal  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
 import data  # noqa: E402
@@ -245,6 +246,78 @@ def index(request: Request):
 @app.get("/t/{symbol}")
 def ticker_page(symbol: str):
     return FileResponse(STATIC / "ticker.html")
+
+
+# ---------------------------------------------------------------- trust pages: terms, privacy, risk disclaimer, contact
+@app.get("/terms", response_class=HTMLResponse)
+def terms_page():
+    return legal.render("terms")
+
+
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_page():
+    return legal.render("privacy")
+
+
+@app.get("/disclaimer", response_class=HTMLResponse)
+def disclaimer_page():
+    return legal.render("disclaimer")
+
+
+@app.get("/contact", response_class=HTMLResponse)
+def contact_page():
+    return legal.render("contact")
+
+
+class ContactBody(BaseModel):
+    name: str = ""
+    email: str
+    topic: str = "General question"
+    message: str
+    website: str = ""          # honeypot
+
+
+@app.post("/api/contact")
+def contact_send(body: ContactBody, request: Request):
+    import html as _h
+    import re as _re
+    auth.throttle("contact:" + (request.client.host if request.client else ""), limit=5, window=3600)
+    if body.website:
+        return {"ok": True}
+    email = body.email.strip().lower()
+    msg = body.message.strip()
+    if not _re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email) or len(email) > 200:
+        raise HTTPException(400, "Please enter a valid email address.")
+    if len(msg) < 5:
+        raise HTTPException(400, "Please write a short message.")
+    name, topic = body.name.strip()[:120], body.topic.strip()[:60] or "General question"
+    u = auth.current_user(request)
+    db.add_message(name, email, topic, msg[:5000], u["id"] if u else None)
+    to = os.getenv("CONTACT_EMAIL", "").strip() or next((x["email"] for x in db.all_users() if x["is_admin"]), "")
+    if to:
+        auth.send_email(to, f"NextShelf contact: {topic}",
+                        f"<p><b>From:</b> {_h.escape(name or '(no name)')} &lt;{_h.escape(email)}&gt;</p><p><b>Topic:</b> {_h.escape(topic)}</p>"
+                        f"<p style='white-space:pre-wrap'>{_h.escape(msg[:5000])}</p>")
+    try:
+        notify.admins(f"✉️ New message ({topic}) from {email}:\n{msg[:500]}")
+    except Exception:
+        pass
+    return {"ok": True}
+
+
+@app.get("/api/admin/messages")
+def admin_messages(u: dict = Admin):
+    return db.list_messages()
+
+
+class HandledBody(BaseModel):
+    handled: bool = True
+
+
+@app.post("/api/admin/messages/{mid}")
+def admin_message_handled(mid: int, body: HandledBody, u: dict = Admin):
+    db.set_message_handled(mid, body.handled)
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------- auth

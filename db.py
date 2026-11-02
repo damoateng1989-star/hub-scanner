@@ -52,6 +52,10 @@ with _lock:
         email TEXT PRIMARY KEY, source TEXT, token TEXT, status TEXT DEFAULT 'subscribed',
         created_at TEXT DEFAULT CURRENT_TIMESTAMP, unsubscribed_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, email TEXT, topic TEXT, message TEXT,
+        user_id INTEGER, handled INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS board (
         symbol TEXT PRIMARY KEY, status TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -290,6 +294,19 @@ def alerts_for_symbols(symbols: list[str], limit: int = 50, exclude_types: tuple
 
 
 # --- email list
+def add_message(name: str, email: str, topic: str, message: str, user_id: int | None) -> int:
+    return _run("INSERT INTO messages(name, email, topic, message, user_id) VALUES (?,?,?,?,?)",
+                (name, email, topic, message, user_id)).lastrowid
+
+
+def list_messages(limit: int = 100) -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM messages ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+
+
+def set_message_handled(mid: int, handled: bool):
+    _run("UPDATE messages SET handled=? WHERE id=?", (int(handled), mid))
+
+
 def add_subscriber(email: str, source: str, token: str) -> str:
     """Returns 'new', 'again' (was unsubscribed, now back) or 'exists'."""
     r = _run("SELECT status FROM subscribers WHERE email=?", (email,)).fetchone()
