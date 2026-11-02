@@ -456,6 +456,10 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-table th:nth-child(7),.board-table td:nth-child(7){width:13%;text-align:right}
 .board-table th:nth-child(8),.board-table td:nth-child(8){width:10%;text-align:center}
 .board-table th:nth-child(9),.board-table td:nth-child(9){width:9%;text-align:right;padding-right:16px}
+.board-table th:nth-child(3),.board-table td:nth-child(3),.board-table th:nth-child(4),.board-table td:nth-child(4),.board-table th:nth-child(5),.board-table td:nth-child(5){width:9%}
+.board-table th:nth-child(6),.board-table td:nth-child(6),.board-table th:nth-child(7),.board-table td:nth-child(7){width:11%}
+.board-table th:nth-child(9),.board-table td:nth-child(9){width:16%}
+.board-table td:nth-child(8){overflow:hidden;text-overflow:ellipsis}
 .board-table th:nth-child(2) .board-sort{display:block;text-align:left}
 .board-table th:nth-child(3) .board-sort,.board-table th:nth-child(6) .board-sort{display:block;width:100%;text-align:right}
 .board-table th:first-child,.board-table td:first-child{text-align:left}
@@ -1488,7 +1492,9 @@ function boardShelf(r,kind){
 }
 function boardRows(){
   const rows=[];
-  [["live","live"],["near","near"],["forming","forming"],["recent","recent"]].forEach(pair=>(BOARD_DATA[pair[1]]||[]).forEach(r=>rows.push({...r,_kind:pair[0]})));
+  const seen=new Set();   // a stock "at the edge" is also "in a hub": list it once, under its most urgent state
+  [["live","live"],["near","near"],["forming","forming"],["recent","recent"]].forEach(pair=>(BOARD_DATA[pair[1]]||[]).forEach(r=>{
+    if(seen.has(r.symbol))return; seen.add(r.symbol); rows.push({...r,_kind:pair[0]});}));
   return rows;
 }
 function renderInstitutionalBoard(){
