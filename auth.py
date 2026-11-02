@@ -104,13 +104,30 @@ def is_pro(u: dict | None) -> bool:
 _attempts: dict[str, list[float]] = defaultdict(list)
 
 
-def throttle(key: str, limit: int = 8, window: int = 600):
+def client_ip(request: Request) -> str:
+    """The visitor's real IP. Behind Render's proxy, request.client is the proxy (shared by everyone)."""
+    fwd = request.headers.get("x-forwarded-for", "")
+    return fwd.split(",")[0].strip() if fwd else (request.client.host if request.client else "")
+
+
+def throttle(key: str, limit: int = 8, window: int = 600, record: bool = True):
     """Simple brute-force guard: at most `limit` attempts per `window` seconds per key."""
     now = time.time()
     _attempts[key] = [t for t in _attempts[key] if now - t < window]
     if len(_attempts[key]) >= limit:
-        raise HTTPException(429, "Too many attempts. Try again in a few minutes.")
-    _attempts[key].append(now)
+        wait = int(window - (now - _attempts[key][0])) // 60 + 1
+        raise HTTPException(429, f"Too many tries. Please wait about {wait} minute{'s' if wait != 1 else ''} and try again, "
+                                 "or use 'Forgot password?' to reset it.")
+    if record:
+        _attempts[key].append(now)
+
+
+def record_failure(key: str):
+    _attempts[key].append(time.time())
+
+
+def clear_attempts(key: str):
+    _attempts.pop(key, None)
 
 
 def _new_user(email: str, name: str = "", password_hash: str | None = None, google_sub: str | None = None) -> int:
@@ -154,10 +171,12 @@ def signup(email: str, password: str, name: str = "") -> int:
 def login(email: str, password: str) -> int:
     email = clean_email(email)
     u = db.user_by("email", email)
-    if not u or not check_password(password, u["password_hash"]):
-        if u and not u["password_hash"] and u["google_sub"]:
+    if not u:
+        raise HTTPException(400, "There's no account with that email yet. Tap 'Create an account' to sign up.")
+    if not check_password(password, u["password_hash"]):
+        if not u["password_hash"] and u["google_sub"]:
             raise HTTPException(400, "This email signs in with Google. Use the Google button.")
-        raise HTTPException(400, "Wrong email or password")
+        raise HTTPException(400, "Wrong password. Try again or use 'Forgot password?'.")
     return u["id"]
 
 

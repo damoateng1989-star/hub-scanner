@@ -243,6 +243,21 @@ def login_page(request: Request):
     return FileResponse(STATIC / "login.html")
 
 
+@app.get("/owner")
+def owner_signin(request: Request, key: str = ""):
+    """Rescue sign-in for the site owner: /owner?key=YOUR_OWNER_KEY (set OWNER_KEY on the server). No password needed."""
+    want = os.getenv("OWNER_KEY", "").strip()
+    auth.throttle("owner:" + auth.client_ip(request), limit=10, window=3600)
+    if not want or len(want) < 12 or not secrets.compare_digest(key, want):
+        raise HTTPException(404)
+    admin = next((u for u in db.all_users() if u["is_admin"]), None)
+    if not admin:
+        return RedirectResponse("/login#signup", 302)      # no account yet: the first sign-up becomes the owner
+    resp = RedirectResponse("/app", 302)
+    auth.start_session(resp, request, admin["id"])
+    return resp
+
+
 @app.get("/")
 def landing():
     """Public homepage. Signed-in members see an "Open app" button instead of Login / Sign Up."""
@@ -297,7 +312,7 @@ class ContactBody(BaseModel):
 def contact_send(body: ContactBody, request: Request):
     import html as _h
     import re as _re
-    auth.throttle("contact:" + (request.client.host if request.client else ""), limit=5, window=3600)
+    auth.throttle("contact:" + auth.client_ip(request), limit=5, window=3600)
     if body.website:
         return {"ok": True}
     email = body.email.strip().lower()
@@ -344,7 +359,7 @@ def auth_config():
 
 @app.post("/auth/signup")
 def signup(body: SignupBody, request: Request):
-    auth.throttle("signup:" + (request.client.host if request.client else ""), limit=10)
+    auth.throttle("signup:" + auth.client_ip(request), limit=10, window=3600)
     uid = auth.signup(body.email, body.password, body.name)
     resp = JSONResponse({"ok": True})
     auth.start_session(resp, request, uid)
@@ -353,8 +368,15 @@ def signup(body: SignupBody, request: Request):
 
 @app.post("/auth/login")
 def do_login(body: LoginBody, request: Request):
-    auth.throttle("login:" + body.email.strip().lower())
-    uid = auth.login(body.email, body.password)
+    key = "login:" + body.email.strip().lower() + "|" + auth.client_ip(request)
+    auth.throttle(key, limit=10, window=900, record=False)     # only wrong passwords count
+    try:
+        uid = auth.login(body.email, body.password)
+    except HTTPException as e:
+        if "Wrong password" in str(e.detail):
+            auth.record_failure(key)
+        raise
+    auth.clear_attempts(key)
     resp = JSONResponse({"ok": True})
     auth.start_session(resp, request, uid)
     return resp
@@ -736,7 +758,7 @@ def _mailing_address() -> str:
 
 @app.post("/api/subscribe")
 def subscribe(body: SubscribeBody, request: Request):
-    auth.throttle("sub:" + (request.client.host if request.client else ""), limit=6, window=3600)
+    auth.throttle("sub:" + auth.client_ip(request), limit=6, window=3600)
     if body.website:                       # bot filled the hidden field: pretend it worked
         return {"ok": True, "status": "new"}
     email = auth.clean_email(body.email)
