@@ -704,6 +704,7 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .sp-go { background: #3DD68C !important; color: #04140b !important; border: 0 !important; }
 .sp-go:disabled { opacity: .55; cursor: default; }
 .sp-alt { background: transparent !important; color: #c9d3df !important; border: 1px solid #2a3a50 !important; }
+.sp-hint { margin: 0; color: #8a9aae; font-size: 13px; line-height: 1.45; }
 .sp-res { display: grid; gap: 4px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
 .sp-res:empty { display: none; }
 .sp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #0a1017; border: 0 !important;
@@ -2370,7 +2371,9 @@ function renderScout() {
   const guest = !ME || ME.guest, admin = ME && ME.is_admin, n = TICKERS.length;
   let line;
   if (MY_SCANNING) line = `Checking the latest 4-hour candles for your <b>${n}</b> ticker${n === 1 ? "" : "s"}…`;
-  else if (sc.running) line = `Sweeping the market: <b>${esc(sc.current || "")}</b> · ${sc.done}/${sc.total}, ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} so far.`;
+  else if (sc.running) line = sc.current === "loading prices" || !sc.done
+      ? `Sweeping the market: downloading the latest prices for <b>${sc.total}</b> stocks…`
+      : `Sweeping the market: checking <b>${esc(sc.current || "")}</b> · ${sc.done} of ${sc.total} done, ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} found so far.`;
   else if (MY_SCAN) {
     const hits = MY_SCAN.results.filter(r => ["breakout_up", "breakdown", "forming"].includes(r.state));
     line = `Checked your <b>${MY_SCAN.results.length}</b> ticker${MY_SCAN.results.length === 1 ? "" : "s"} just now. ` + (hits.length ? `<b>${hits.length}</b> worth watching:` : "Nothing is setting up yet. Let the trade come to you.");
@@ -2379,7 +2382,7 @@ function renderScout() {
   $("spLine").innerHTML = line;
   $("spActs").innerHTML = guest ? `<a class="sp-go" href="/login#signup">Sign up free to scan</a><a class="sp-alt" href="#discover" onclick="toggleScout(false)">See the market board</a>`
     : (n ? `<button class="sp-go" onclick="scoutScanMine()" ${MY_SCANNING ? "disabled" : ""}>🔍 ${MY_SCANNING ? "Scanning…" : "Scan my list now"}</button>`
-         : `<a class="sp-go" href="#list" onclick="toggleScout(false)">Add tickers to scan</a>`)
+         : `<a class="sp-go" href="#list" onclick="toggleScout(false)">＋ Add stocks to My list</a><p class="sp-hint">Your list is empty. Add a few stocks (like NVDA or AAPL) and I can scan them for you anytime.</p>`)
       + (admin ? `<button class="sp-alt" onclick="scoutSweep()" ${sc.running ? "disabled" : ""}>${sc.running ? "Sweep running…" : "Sweep the whole market"}</button>` : "")
       + `<a class="sp-alt" href="#discover" onclick="toggleScout(false)">Open the market board</a>`;
   const col = { breakout_up: ["Breaking out ↑", "#3DD68C"], breakdown: ["Breaking down ↓", "#FF6B5E"], forming: ["Resting in a hub", "#7C93FF"] };
