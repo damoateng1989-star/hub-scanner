@@ -170,11 +170,13 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 </head>
 <body>
 <nav><div class="wrap">
-  <a class="brand" href="/">
+  <a class="tk-back" href="/app#discover" onclick="return goBack(event)" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span>Back</span></a>
+  <a class="brand" href="/app">
     <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="var(--ink)"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="var(--hub)"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="var(--bg)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     NextShelf
   </a>
-  <span><a href="/app#board">Hub Board</a> &nbsp;·&nbsp; <a href="/app">Watchlist</a><span id="signin"></span></span>
+  <span class="tk-links"><a href="/app#discover">Browse setups</a> &nbsp;·&nbsp; <a href="/app#list">Watchlist</a><span id="signin"></span></span>
+  <a class="tk-x" href="/app#discover" onclick="return goBack(event)" aria-label="Close chart" title="Close (Esc)">✕</a>
 </div></nav>
 
 <main class="wrap" id="main"><div class="loading"><span class="spin"></span>Loading chart…</div></main>
@@ -361,5 +363,28 @@ async function load() {
 }
 load();
 </script>
+<script>
+// leave the chart: go back to wherever you came from in NextShelf, otherwise to Browse setups
+function goBack(e) {
+  if (e) e.preventDefault();
+  let ref = "";
+  try { ref = document.referrer ? new URL(document.referrer).origin : ""; } catch (_) {}
+  if (ref === location.origin && history.length > 1) history.back();
+  else location.href = "/app#discover";
+  return false;
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") goBack(e); });
+</script>
+<style>
+nav .wrap { gap: 12px; }
+.tk-back { display: inline-flex; align-items: center; gap: 4px; padding: 7px 12px 7px 8px; border-radius: 999px; border: 1px solid #22324a;
+  background: #0d151f; color: #e8eef5 !important; font: 600 14px var(--sans); text-decoration: none !important; flex: none; }
+.tk-back:hover { border-color: #3DD68C; }
+.tk-x { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: #162130; color: #e8eef5 !important;
+  font-size: 15px; text-decoration: none !important; flex: none; }
+.tk-x:hover { background: #1d2c3f; }
+nav .brand { margin-right: auto; }
+@media (max-width: 640px) { .tk-links { display: none; } .tk-back span { display: none; } .tk-back { padding: 8px; } }
+</style>
 </body>
 </html>
