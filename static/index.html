@@ -1306,9 +1306,9 @@ function ladder(st, key) {
       <i class="mk"></i><span>Target (ATR)</span><b>${money(st.target)}</b><em>${pctFrom(st.target, p)}</em></div>` });
   if (showHub) rows.push({ v: (st.hub.low + st.hub.high) / 2, html: `<div class="lr" style="--c:var(--hub)">
       <i class="mk band"></i><span>Hub ${tip("hub")}</span><b>${money(st.hub.low)}–${money(st.hub.high).slice(1)}</b><em></em></div>` });
-  rows.push({ v: p + 1e-9, html: `<div class="lr now" style="--c:var(--ink)"><i class="mk dotm"></i><span>Price now</span><b>${money(p)}</b><em></em></div>` });
-  if (!st.shelf_up && !live) rows.push({ v: Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf above yet</span><b></b><em></em></div>` });
-  if (!st.shelf_down && !live) rows.push({ v: -Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf below yet</span><b></b><em></em></div>` });
+  rows.push({ v: p + 1e-9, html: `<div class="lr now" style="--c:var(--ink)"><i class="mk dotm"></i><span>Last 4-hour close</span><b>${money(p)}</b><em></em></div>` });
+  if (!st.shelf_up && !live) rows.push({ v: Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf above in the last ~9 months</span><b></b><em></em></div>` });
+  if (!st.shelf_down && !live) rows.push({ v: -Infinity, html: `<div class="lr none"><i class="mk"></i><span>No shelf below in the last ~9 months</span><b></b><em></em></div>` });
   return `<div class="ladder">${rows.sort((a, b) => b.v - a.v).map(r => r.html).join("")}</div>`;
 }
 
@@ -1324,7 +1324,11 @@ function oneLine(st, key) {
     case "snap-back": return "Breakout failed. Waiting for the next range";
     case "stalled": return "Breakout ran out of time. Waiting for the next range";
     case "error": return esc(st.error || "Couldn't load");
-    default: return "No range yet" + (up || dn ? ` · nearest levels ${[up && money(up.level), dn && money(dn.level)].filter(Boolean).join(" / ")}` : "");
+    default: {
+      const live = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${esc(live.name)}: ${live.state === "breakout_up" ? "broke out ↑" : "broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}`;
+      return "No hub yet" + (up || dn ? ` · nearest shelves ${[up && money(up.level) + " above", dn && money(dn.level) + " below"].filter(Boolean).join(" / ")}` : "");
+    }
   }
 }
 function details(t) {
@@ -1344,7 +1348,7 @@ function details(t) {
     ${ladder(st, key)}`) + `
     <div class="foot" style="flex-wrap:wrap">
       <span style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btnx sm" onclick="openBrief('${S}')">Hub brief</button>
+        <button class="btnx sm" onclick="openBrief('${S}')">Shelf card</button>
         <a class="btnx sm" href="/t/${encodeURIComponent(t.symbol)}">Full chart</a>
         <a class="btnx sm" href="${tvUrl(t.symbol)}" target="_blank" rel="noopener">${TV_ICON} TradingView</a>
         ${isPro() ? `<button class="btnx sm" onclick="runBacktest('${S}', this)">Past results</button>` : ""}

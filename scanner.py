@@ -19,7 +19,7 @@ import phone
 
 log = logging.getLogger("scanner")
 SETTINGS = engine.Settings.from_env()
-SCAN_DAYS = int(os.getenv("SCAN_DAYS", 200))
+SCAN_DAYS = int(os.getenv("SCAN_DAYS", 260))      # same history everywhere, so every screen finds the same shelves
 BACKTEST_DAYS = int(os.getenv("BACKTEST_DAYS", 720))
 SYMBOL_RE = re.compile(r"^[A-Z][A-Z.\-]{0,9}$")
 _scan_lock = threading.Lock()

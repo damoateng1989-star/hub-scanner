@@ -18,7 +18,7 @@ import universe
 
 log = logging.getLogger("board")
 _lock = threading.Lock()
-BOARD_DAYS = int(os.getenv("BOARD_DAYS", 200))
+BOARD_DAYS = int(os.getenv("BOARD_DAYS", os.getenv("SCAN_DAYS", 260)))
 
 
 def record_start() -> str:
@@ -242,7 +242,7 @@ def _seg(p, idx, t, a, b, kind, live):
 
 def chart(sym: str, lab_mode: bool = False) -> dict:
     sym = scanner.clean_symbol(sym)
-    c4 = scanner.load_4h(sym, 260)
+    c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
     if c4.empty:
         raise ValueError("no price data")
     res = engine.analyze(c4, scanner.SETTINGS)
