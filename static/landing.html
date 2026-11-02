@@ -92,6 +92,7 @@
                             background: rgba(255,255,255,.04); color: var(--ink); font: 16px var(--sans); outline: 0; }
   .join input[type=email]:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(122,162,255,.18); }
   .join .btn { padding: 15px 22px; border-radius: 14px; font-size: 16px; cursor: pointer; }
+  @media (max-width: 560px) { .join { flex-direction: column; } .join input[type=email] { flex: 0 0 auto; } .join .btn { justify-content: center; } }
   .join .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   .jmsg { flex-basis: 100%; margin: 4px 0 0; min-height: 22px; font-size: 15px; color: var(--muted); }
   .jmsg.ok { color: var(--up); } .jmsg.err { color: var(--down); }
@@ -293,6 +294,7 @@ h1 .l2{color:#afc2d8!important}.lede{color:var(--muted)!important;max-width:660p
   .hero .lede{font-size:16px!important;margin-top:20px!important}
   .hero .join{margin-top:26px!important;flex-direction:column!important}
   .hero .join input[type=email],.hero .join .btn{width:100%!important;min-height:48px!important;box-sizing:border-box!important}
+  .hero .join input[type=email]{flex:0 0 auto!important;height:52px!important}
   .hero .alt{font-size:13px!important}
   .hero .lesson-wrap{margin-top:40px!important}
   .hero .trust{justify-content:flex-start!important;text-align:left!important;gap:12px 18px!important}
