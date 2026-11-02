@@ -535,7 +535,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     <span>NextShelf</span>
   </a>
   <div class="links">
-    <a href="#how">How it works</a><a href="#features">Features</a><a href="/app#board">Hub Board</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
+    <a href="#how">How it works</a><a href="#features">Features</a><a href="#live">Live setups</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a>
   </div>
   <div class="auth" id="auth">
     <a class="login" href="/login">Log in</a>
@@ -549,13 +549,18 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg>Scanning the market for a hub setup</span>
     <h1><span class="l1">Your Next Trade</span><span class="l2">Is Setting Up.</span></h1>
     <p class="lede">NextShelf finds stocks coiling in tight ranges, warns you before a breakout candle closes, and gives every setup a target: the next shelf. From the first scan to your own decision, it all happens in one place.</p>
-    <form class="join" data-source="hero" novalidate>
-      <input type="email" name="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
-      <input type="text" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
-      <button class="btn solid">Get early access <span aria-hidden="true">→</span></button>
-      <p class="jmsg" role="status"></p>
+    <form class="askbox" id="askbox" autocomplete="off">
+      <div class="ab-in">
+        <span class="ab-bot" aria-hidden="true"><svg viewBox="0 0 64 64" width="30" height="30"><line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle cx="32" cy="5" r="3.4" fill="#3DD68C"/><rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2f4258" stroke-width="1.5"/><rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/><circle cx="25" cy="29.5" r="3.4" fill="#8ef0bf"/><circle cx="39" cy="29.5" r="3.4" fill="#8ef0bf"/></svg></span>
+        <input id="abSym" name="sym" placeholder="Ask Scout about a stock… try NVDA" aria-label="Ticker to check" maxlength="10" autocapitalize="characters" spellcheck="false">
+        <button class="ab-go" aria-label="Check this stock"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </div>
+      <div class="ab-chips"><span>Try:</span>
+        <button type="button" data-s="NVDA">NVDA</button><button type="button" data-s="AAPL">AAPL</button><button type="button" data-s="QQQ">QQQ</button>
+        <button type="button" data-s="TSLA">TSLA</button><button type="button" data-s="SPY">SPY</button></div>
+      <p class="ab-msg" id="abMsg"></p>
     </form>
-    <p class="alt">Join the list for launch news and early-member pricing. Or <a href="/login#signup">try the free beta</a> · <a href="/app#board">browse the Hub Board</a><br><span style="font-size:13px">No spam, unsubscribe anytime. <a href="/privacy">Privacy Policy</a></span></p>
+    <p class="alt">Free to try · <a href="/login#signup">create an account</a> · <a href="#join">get early access</a></p>
 
     <div class="lesson-wrap">
   <div class="lesson" id="lesson">
@@ -607,6 +612,14 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     </div>
   </div>
 </header>
+
+<section class="gallery" id="live"><div class="wrap">
+  <div class="g-head"><div><div class="kicker">Live from the scanner</div><h2>What's setting up <em>right now.</em></h2></div>
+    <a class="btn ghost" href="/app#discover">Browse all setups →</a></div>
+  <div class="g-tabs" id="gTabs"></div>
+  <div class="g-grid" id="gGrid"><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div></div>
+  <p class="g-note" id="gNote">Educational, not financial advice. Updated after every 4-hour close.</p>
+</div></section>
 
 <section class="manifesto" id="rule"><div class="wrap">
   <div class="mf-k">Rule #1</div>
@@ -689,7 +702,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     <details><summary>Is this financial advice?</summary><p>No. NextShelf is an educational tool that describes past price behaviour. Signals can and do fail. Do your own research and never risk money you can't afford to lose.</p></details>
   </div>
 
-  <div class="final">
+  <div class="final" id="join">
     <div class="dots"></div>
     <h2 style="margin-top:0;position:relative">Be first in line for <em>NextShelf.</em></h2>
     <p class="sub" style="margin:0 auto;position:relative">Get launch news, new features and early-member pricing. No spam, unsubscribe anytime.</p>
@@ -921,5 +934,121 @@ fetch("/api/board").then(r => r.json()).then(b => {
   svg.innerHTML = out;
 })();
 </script>
+
+<script>
+// ---- Ask Scout box: type a ticker, open its chart with hubs and shelves
+(function () {
+  const f = document.getElementById("askbox"), i = document.getElementById("abSym"), m = document.getElementById("abMsg");
+  const go = (raw) => {
+    const s = (raw || "").trim().toUpperCase().replace(/^\$/, "");
+    if (!/^[A-Z][A-Z.\-]{0,9}$/.test(s)) { m.textContent = "Type a ticker like NVDA, AAPL or QQQ."; i.focus(); return; }
+    m.textContent = "Scout is checking " + s + "…"; location.href = "/t/" + encodeURIComponent(s);
+  };
+  f.addEventListener("submit", (e) => { e.preventDefault(); go(i.value); });
+  f.querySelectorAll(".ab-chips button").forEach(b => b.onclick = () => { i.value = b.dataset.s; go(b.dataset.s); });
+  i.addEventListener("input", () => { m.textContent = ""; });
+  // typing placeholder
+  const ex = ["NVDA", "QQQ", "AAPL", "TSLA", "SPY", "AMD"]; let k = 0;
+  const ph = (t) => innerWidth < 520 ? "Ask Scout: try " + t : "Ask Scout about a stock… try " + t;
+  i.placeholder = ph("NVDA");
+  setInterval(() => { if (document.activeElement !== i && !i.value) i.placeholder = ph(ex[k++ % ex.length]); }, 2600);
+})();
+
+// ---- Live setups gallery (public board data)
+(async function () {
+  const grid = document.getElementById("gGrid"), tabs = document.getElementById("gTabs"), note = document.getElementById("gNote");
+  const money = (v) => v == null ? "–" : "$" + Number(v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+  let b;
+  try { const r = await fetch("/api/board"); if (!r.ok) throw 0; b = await r.json(); } catch (e) { b = null; }
+  if (!b || !b.universe) { document.getElementById("live").hidden = true; return; }
+  const card = (sym, kind, title, line, col, extra) => `<a class="g-card" href="/t/${encodeURIComponent(sym)}" style="--c:${col}">
+      <div class="g-top"><b>${esc(sym)}</b><span class="g-pill">${esc(kind)}</span></div>
+      <div class="g-viz">${extra || ""}</div>
+      <div class="g-t">${title}</div><div class="g-l">${line}</div></a>`;
+  const hubViz = (h, p) => { if (!h || !p) return ""; const w = Math.max(h.high - h.low, p * .002), lo = h.low - w * 1.2, hi = h.high + w * 1.2, y = v => 64 - (v - lo) / (hi - lo) * 56;
+    return `<svg viewBox="0 0 200 70" preserveAspectRatio="none"><rect x="0" y="${y(h.high)}" width="200" height="${y(h.low) - y(h.high)}" fill="rgba(124,147,255,.16)" stroke="rgba(124,147,255,.6)" stroke-dasharray="3 3"/>
+      <circle cx="176" cy="${y(p)}" r="5" fill="var(--c)"/><path d="M8 ${y((h.low + h.high) / 2 + w * .2)} L40 ${y((h.low + h.high) / 2 - w * .25)} L72 ${y((h.low + h.high) / 2 + w * .3)} L104 ${y((h.low + h.high) / 2 - w * .2)} L140 ${y((h.low + h.high) / 2 + w * .15)} L176 ${y(p)}" fill="none" stroke="#e8eef5" stroke-width="2" stroke-linejoin="round"/></svg>`; };
+  const groups = {
+    hubs: [...(b.live || []).map(r => card(r.symbol, r.state === "breakdown" ? "Breakdown" : "Breakout", r.state === "breakdown" ? "Closed below its hub" : "Closed above its hub",
+              `Aiming for ${money(r.target)}`, r.state === "breakdown" ? "#FF6B5E" : "#3DD68C", hubViz(r.hub, r.last_close))),
+           ...(b.near || []).map(r => card(r.symbol, "At the edge", `Pressing the ${r.near_edge === "up" ? "top" : "bottom"} of its hub`, `${money(r.hub.low)}–${money(r.hub.high)} · ${r.hub.sessions} sessions`, "#F2C14E", hubViz(r.hub, r.last_close))),
+           ...(b.forming || []).map(r => card(r.symbol, "In a hub", "Resting in a tight range", `${money(r.hub.low)}–${money(r.hub.high)} · ${r.hub.sessions} sessions`, "#7C93FF", hubViz(r.hub, r.last_close)))],
+    patterns: (b.setups || []).filter(x => x.kind !== "sr").map(x => card(x.symbol, x.name, x.state === "breakout_up" ? "Broke out ↑" : x.state === "breakdown" ? "Broke down ↓" : "Forming now",
+              x.target ? `Aiming for ${money(x.target)}` : x.upper ? `Lines ${money(x.lower)}–${money(x.upper)}` : "", x.state === "breakdown" ? "#FF6B5E" : x.state === "breakout_up" ? "#3DD68C" : "#B48CFF")),
+    levels: (b.setups || []).filter(x => x.kind === "sr").map(x => card(x.symbol, "Support & resistance", x.state === "breakout_up" ? "Closed above resistance" : x.state === "breakdown" ? "Closed below support" : x.near ? `Testing ${x.near}` : "Between levels",
+              x.upper ? `Resistance ${money(x.upper)}` + (x.lower ? ` · support ${money(x.lower)}` : "") : `Level ${money(x.edge)}`, x.state === "breakdown" ? "#FF6B5E" : x.state === "breakout_up" ? "#3DD68C" : "#F2C14E")),
+  };
+  const names = {hubs: "Hubs", patterns: "Flags, triangles & more", levels: "Support & resistance"};
+  let cur = "hubs";
+  const show = (k) => { cur = k; tabs.querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.k === k));
+    const list = groups[k].slice(0, 9); grid.innerHTML = list.length ? list.join("") : `<div class="g-empty">Nothing here right now. Scout checks again after the next 4-hour close.</div>`; };
+  tabs.innerHTML = Object.keys(groups).filter(k => groups[k].length).map(k => `<button data-k="${k}">${names[k]} <small>${groups[k].length}</small></button>`).join("");
+  tabs.querySelectorAll("button").forEach(x => x.onclick = () => show(x.dataset.k));
+  show(groups.hubs.length ? "hubs" : Object.keys(groups).find(k => groups[k].length) || "hubs");
+  if (b.locked && (b.live_count || b.near_count)) note.innerHTML = `🔒 ${b.live_count} breakouts and ${b.near_count} stocks at a hub edge are members-only. <a href="/login#signup">Sign up free</a> to see more. · Educational, not financial advice.`;
+})();
+</script>
+<style>
+/* ================= Lovable-inspired layer: soft aurora, prompt box, gallery ================= */
+.hero { overflow: hidden; }
+.hero::before { content: ""; position: absolute; left: 50%; top: 120px; width: min(1400px, 160vw); height: 820px; transform: translate(-50%, 0); pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(closest-side at 32% 58%, rgba(61,214,140,.55), transparent 72%),
+    radial-gradient(closest-side at 52% 48%, rgba(47,212,192,.38), transparent 72%),
+    radial-gradient(closest-side at 70% 62%, rgba(124,147,255,.50), transparent 72%),
+    radial-gradient(closest-side at 50% 85%, rgba(242,193,78,.22), transparent 72%);
+  filter: blur(40px); opacity: .9; animation: aurora 18s ease-in-out infinite alternate; }
+.hero::after { content: ""; position: absolute; left: 0; right: 0; top: 760px; height: 260px; background: linear-gradient(180deg, transparent, var(--ns-bg, #070b10)); pointer-events: none; z-index: 0; }
+@keyframes aurora { 0% { transform: translate(-50%, 0) scale(1); } 50% { transform: translate(-48%, -3%) scale(1.07); } 100% { transform: translate(-52%, 2%) scale(.97); } }
+.shelves-bg { opacity: .55; }
+.hero h1 .l1 { text-shadow: 0 2px 40px rgba(0,0,0,.25); }
+/* the prompt box */
+.askbox { width: min(680px, 100%); margin: 34px auto 0; position: relative; z-index: 2; }
+.ab-in { display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; border-radius: 26px;
+  background: rgba(13,20,29,.72); border: 1px solid rgba(255,255,255,.12); backdrop-filter: blur(18px) saturate(1.3); -webkit-backdrop-filter: blur(18px) saturate(1.3);
+  box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); transition: border-color .2s, box-shadow .2s; }
+.ab-in:focus-within { border-color: rgba(61,214,140,.6); box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 4px rgba(61,214,140,.14); }
+.ab-bot { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: #0b131c; flex: none; }
+.askbox input { flex: 1; min-width: 0; height: 52px; border: 0 !important; background: transparent !important; color: #fff !important; font: 500 18px var(--sans) !important;
+  outline: 0; box-shadow: none !important; padding: 0 4px !important; text-transform: uppercase; }
+.askbox input::placeholder { text-transform: none; color: #8a9aae; }
+.ab-go { width: 48px; height: 48px; border-radius: 16px; border: 0; background: #3DD68C; color: #04140b; display: grid; place-items: center; cursor: pointer; flex: none;
+  transition: transform .15s, background .15s; } .ab-go:hover { transform: translateY(-1px); background: #57e39f; }
+.ab-chips { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin-top: 14px; color: #8a9aae; font-size: 14px; }
+.ab-chips button { padding: 6px 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: #e8eef5;
+  font: 600 13.5px var(--sans); cursor: pointer; backdrop-filter: blur(8px); } .ab-chips button:hover { border-color: #3DD68C; }
+.ab-msg { min-height: 20px; margin: 8px 0 0; color: #F2C14E; font-size: 14px; }
+.hero .lesson-wrap { position: relative; z-index: 2; } .hero .alt { position: relative; z-index: 2; }
+/* gallery */
+.gallery { padding: 90px 0 10px; }
+.g-head { display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.g-head h2 { margin: 10px 0 0 !important; }
+.gallery .kicker { justify-content: flex-start !important; }
+.g-tabs { display: flex; gap: 8px; margin: 22px 0 18px; overflow-x: auto; scrollbar-width: none; }
+.g-tabs button { flex: none; padding: 9px 15px; border-radius: 999px; border: 1px solid #22324a; background: #0b121b; color: #a9b6c6; font: 600 14px var(--sans); cursor: pointer; }
+.g-tabs button.on { background: #fff; color: #070b10; border-color: #fff; } .g-tabs small { opacity: .6; margin-left: 4px; }
+.g-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 900px) { .g-grid { grid-template-columns: repeat(2, 1fr); } } @media (max-width: 600px) { .g-grid { grid-template-columns: 1fr; } }
+.g-card { display: block; padding: 16px; border-radius: 22px; background: linear-gradient(180deg, #0f1823, #0b121a); border: 1px solid #1c2939; color: #e8eef5 !important;
+  text-decoration: none !important; transition: transform .2s, border-color .2s, box-shadow .2s; min-height: 210px; }
+.g-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--c) 60%, transparent); box-shadow: 0 24px 60px rgba(0,0,0,.4), 0 0 0 1px color-mix(in srgb, var(--c) 25%, transparent); }
+.g-card.sk { background: linear-gradient(90deg, #0d151f, #121c28, #0d151f); background-size: 200% 100%; animation: sk 1.4s infinite; border-color: #16202b; }
+@keyframes sk { to { background-position: -200% 0; } }
+.g-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; } .g-top b { font: 800 20px var(--sans); letter-spacing: -.02em; }
+.g-pill { padding: 4px 10px; border-radius: 999px; font: 700 12px var(--sans); color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); white-space: nowrap; }
+.g-viz { height: 78px; margin: 12px 0; border-radius: 14px; background: radial-gradient(ellipse at 80% 50%, color-mix(in srgb, var(--c) 14%, transparent), transparent 70%), #0a1017; overflow: hidden; }
+.g-viz svg { width: 100%; height: 100%; display: block; }
+.g-viz:empty { background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(255,255,255,.03) 19px 20px), radial-gradient(ellipse at 80% 50%, color-mix(in srgb, var(--c) 18%, transparent), transparent 70%), #0a1017; }
+.g-t { font: 700 16px var(--sans); color: #fff; } .g-l { margin-top: 3px; color: #93a3b5; font-size: 14px; }
+.g-empty { grid-column: 1 / -1; padding: 30px; text-align: center; color: #93a3b5; border: 1px dashed #22324a; border-radius: 22px; }
+.g-note { margin-top: 16px; color: #6b7a8c; font-size: 13px; } .g-note a { color: #3DD68C; }
+/* softer, rounder everything */
+.card, .tier, .lesson, .mf-c, .win { border-radius: 24px !important; }
+.btn { border-radius: 999px !important; }
+.final { border-radius: 32px !important; background: radial-gradient(ellipse at 30% 0%, rgba(61,214,140,.18), transparent 55%), radial-gradient(ellipse at 80% 100%, rgba(124,147,255,.16), transparent 55%), #0d141d !important; }
+@media (max-width: 600px) { .ab-in { border-radius: 22px; padding: 8px 8px 8px 10px; } .ab-bot { width: 38px; height: 38px; } .askbox input { font-size: 16px !important; height: 46px; } .ab-go { width: 44px; height: 44px; } }
+@media (prefers-reduced-motion: reduce) { .hero::before, .g-card.sk { animation: none; } }
+</style>
 </body>
 </html>
