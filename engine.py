@@ -349,13 +349,58 @@ def _tri_fit(hi, lo, a, b, A):
     return dict(a=a, b=b, mh=mh, ch=ch, ml=ml, cl=cl, kind=kind)
 
 
+class _Fit:
+    """O(1) least-squares lines over any window, using prefix sums (fast enough for 100+ stocks)."""
+    def __init__(self, y: np.ndarray):
+        j = np.arange(len(y), dtype=float)
+        z = lambda v: np.concatenate([[0.0], np.cumsum(v)])
+        self.S1, self.Sj, self.Sjj, self.Sy, self.Sjy = z(np.ones_like(j)), z(j), z(j * j), z(y), z(j * y)
+
+    def line(self, a: int, b: int):
+        n = b - a + 1
+        sj, sjj = self.Sj[b + 1] - self.Sj[a], self.Sjj[b + 1] - self.Sjj[a]
+        sy, sjy = self.Sy[b + 1] - self.Sy[a], self.Sjy[b + 1] - self.Sjy[a]
+        sx, sxx, sxy = sj - a * n, sjj - 2 * a * sj + n * a * a, sjy - a * sy     # shift x so the window starts at 0
+        m = (n * sxy - sx * sy) / (n * sxx - sx * sx)
+        return m, (sy - m * sx) / n
+
+
 def find_tightening(c4: pd.DataFrame, atr: pd.Series) -> list[dict]:
     hi, lo, A = c4["High"].to_numpy(float), c4["Low"].to_numpy(float), atr.to_numpy(float)
+    fh, fl = _Fit(hi), _Fit(lo)
     n, pats, cur = len(c4), [], None
+
+    def fit(a, b, Ab):
+        if not Ab or Ab != Ab:
+            return None
+        mh, ch = fh.line(a, b)
+        ml, cl = fl.line(a, b)
+        L = b - a
+        w0, w1 = ch - cl, (mh * L + ch) - (ml * L + cl)
+        if not (w0 > 0 and 0 < w1 <= TRI_CONTRACT * w0 and w0 <= TRI_MAX_ATR * Ab):
+            return None                       # cheap rejection: most windows stop here
+        flat = TRI_FLAT * Ab
+        if mh < -flat and ml > flat:
+            kind = "symmetric"
+        elif abs(mh) <= flat and ml > flat:
+            kind = "ascending"
+        elif mh < -flat and abs(ml) <= flat:
+            kind = "descending"
+        else:
+            return None
+        x = np.arange(L + 1)
+        up, dn = mh * x + ch, ml * x + cl
+        h, l_ = hi[a:b + 1], lo[a:b + 1]
+        if ((h <= up + 0.3 * Ab) & (l_ >= dn - 0.3 * Ab)).mean() < 0.85:
+            return None
+        if (np.abs(h - up) <= 0.3 * Ab).sum() < 2 or (np.abs(l_ - dn) <= 0.3 * Ab).sum() < 2:
+            return None
+        return dict(a=a, b=b, mh=mh, ch=ch, ml=ml, cl=cl, kind=kind)
+
     for b in range(TRI_MIN - 1, n):
         best = None
         for L in range(min(TRI_MAX, b + 1), TRI_MIN - 1, -1):
-            best = _tri_fit(hi, lo, b - L + 1, b, A[b])
+            best = fit(b - L + 1, b, A[b])
             if best:
                 break
         if best and cur and best["a"] <= cur["b"] + 1:

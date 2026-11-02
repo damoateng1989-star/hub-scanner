@@ -129,8 +129,8 @@ async def lifespan(_app: FastAPI):
         sched.add_job(board.scan_board, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                     timezone="America/New_York"),
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
-    if BOARD_TIMES and not db.board_rows():      # first start: fill the board right away
-        threading.Thread(target=board.scan_board, daemon=True).start()
+    if BOARD_TIMES and not db.board_rows():      # first start: fill the board shortly after the site is up
+        threading.Timer(20, board.scan_board).start()
     sched.add_job(paper.sync, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5",
                                           timezone="America/New_York"),
                   misfire_grace_time=120, coalesce=True, max_instances=1)

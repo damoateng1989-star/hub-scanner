@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import threading
+import time
 
 import pandas as pd
 
@@ -71,6 +72,7 @@ def scan_board() -> int:
         done = 0
         lab_hub, lab_tri, lab_live = [], [], []
         for sym in syms:
+            time.sleep(0.01)          # let web requests through between stocks so the site stays quick during a scan
             try:
                 c4 = engine.to_4h(bars.get(sym, pd.DataFrame()), now=now)
                 if len(c4) < scanner.SETTINGS.window + 15:

@@ -1518,12 +1518,25 @@ function renderInstitutionalBoard(){
 }
 function filterInstitutionalBoard(kind){if(kind)BOARD_KIND=kind;renderInstitutionalBoard();}
 function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else{BOARD_SORT=key;BOARD_SORT_DIR=1;}renderInstitutionalBoard();}
+let BOARD_LOADING = false;
 async function loadBoard() {
+  if (BOARD_LOADING) return;
+  BOARD_LOADING = true;
+  if (!$("board").querySelector(".board-frame")) $("board").innerHTML = `<div class="empty">Loading the board…</div>`;
+  const slow = setTimeout(() => { if (!$("board").querySelector(".board-frame"))
+    $("board").innerHTML = `<div class="empty">Still loading. A market scan may be running, which can take a minute or two.</div>`; }, 6000);
   let b;
-  try { b = await api("/api/board"); } catch (e) { $("board").innerHTML = '<div class="empty">'+esc(e.message)+'</div>'; return; }
-  $("bMeta").textContent = b.universe ? b.universe+' stocks · updated '+when(b.updated+"Z") : "";
-  if (!b.universe) { $("board").innerHTML = '<div class="empty">The first market-wide scan is running. This takes a minute or two; refresh shortly.</div>'; return; }
-  BOARD_DATA=b;
+  try {
+    const ctl = new AbortController(), kill = setTimeout(() => ctl.abort(), 45000);
+    try { b = await api("/api/board", {signal: ctl.signal}); } finally { clearTimeout(kill); }
+  } catch (e) {
+    $("board").innerHTML = `<div class="empty">Couldn't load the board${e.name === "AbortError" ? " (it took too long)" : ": " + esc(e.message)}.
+      <button class="btnx sm" style="margin-left:8px" onclick="loadBoard()">Try again</button></div>`;
+    return;
+  } finally { clearTimeout(slow); BOARD_LOADING = false; }
+  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
+  if (!b.universe) { $("board").innerHTML = `<div class="empty">The first market scan is running. It takes a few minutes. This page will fill in by itself.</div>`; setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
+  BOARD_DATA = b;
   $("board").innerHTML =
     (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
