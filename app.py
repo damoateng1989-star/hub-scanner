@@ -28,6 +28,7 @@ import pandas as pd  # noqa: E402
 
 import auth  # noqa: E402
 import engine  # noqa: E402
+import patterns  # noqa: E402
 import board  # noqa: E402
 import data  # noqa: E402
 import db  # noqa: E402
@@ -326,7 +327,22 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]))
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)),
+                styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
+                style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
+
+
+class StylesBody(BaseModel):
+    styles: list[str]
+
+
+@app.post("/api/me/styles")
+def set_styles(body: StylesBody, u: dict = User):
+    picked = [x for x in dict.fromkeys(body.styles) if x in patterns.STYLES]
+    if not picked:
+        raise HTTPException(400, "Pick at least one setup")
+    db.update_user(u["id"], styles=",".join(picked))
+    return {"styles": picked}
 
 
 @app.post("/api/me/phone")
@@ -468,6 +484,10 @@ def board_data(u: dict | None = Maybe):
         b["locked"] = True
         b["live_count"], b["near_count"] = len(b["live"]), len(b["near"])
         b["live"], b["near"] = [], []
+        b["setups_locked"] = sum(1 for x in b["setups"] if x["state"] in ("breakout_up", "breakdown", "testing"))
+        b["setups"] = [x for x in b["setups"] if x["state"] not in ("breakout_up", "breakdown", "testing")]
+    for x in b["setups"]:
+        x["watching"] = x["symbol"] in mine
     return b
 
 
@@ -508,8 +528,10 @@ def scanner_status(request: Request):
 
 
 @app.get("/api/record")
-def record_data(u: dict = User):
-    return board.track_record()
+def record_data(pattern: str = "hub", u: dict = User):
+    if pattern not in patterns.KINDS:
+        raise HTTPException(400, "unknown setup")
+    return board.track_record(pattern)
 
 
 @app.get("/api/chart/{symbol}")

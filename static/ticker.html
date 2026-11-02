@@ -219,6 +219,9 @@ async function load() {
         <span>▲▼ breakouts, labelled hit / failed / timed out</span>
         <span>4H candles, regular hours, New York time</span>
         ${d.tightening ? `<span style="--c:var(--snap)"><i></i>Tightening hubs (Lab, only you see this)</span>` : ""}
+        ${d.setups && d.setups.lines.some(l => l.kind === "triangle") ? `<span style="--c:#F2C14E"><i></i>Triangles</span>` : ""}
+        ${d.setups && d.setups.lines.some(l => l.kind.startsWith("channel")) ? `<span style="--c:#2FD4C0"><i></i>Channels</span>` : ""}
+        ${d.setups && d.setups.levels.length ? `<span style="--c:#c9d3df"><i class="dash"></i>Support / resistance (3+ touches)</span>` : ""}
       </div>
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
@@ -230,6 +233,10 @@ async function load() {
       <div><small>Avg per trade</small><b style="color:var(${(s.expectancy_pct ?? 0) > 0 ? "--up" : "--down"})">${sign(s.expectancy_pct)}</b></div>
     </div><p class="note">Based on the candles shown on this chart. Past results don't guarantee future ones.</p>`
     : `<p class="note">No completed breakouts in this period yet.</p>`}
+    ${d.setups ? `<h2>Other <em>setups</em> <small style="font-size:12px;color:var(--snap)">beta</small></h2><div class="kv">
+      ${[["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]].map(([k, l]) => {
+        const x = d.setups.stats[k] || {}; return `<div><small>${l}</small><b>${x.n ? `${x.win_rate ?? "–"}% <span style="font-size:12px;color:var(--muted)">win · ${x.n} breaks</span>` : "–"}</b></div>`; }).join("")}
+      </div><p class="note">Same rules as hubs: act on a 4-hour close outside the pattern, target the next shelf. Based on this chart only.</p>` : ""}
     ${d.tightening_stats ? `<h2>Lab · <em>tightening hubs</em></h2><div class="kv">
       <div><small>Breakouts</small><b>${d.tightening_stats.n}</b></div>
       <div><small>Reached shelf</small><b>${d.tightening_stats["follow-through"]}%</b></div>
@@ -284,6 +291,22 @@ async function load() {
         ser.setData([{ time: tp.start, value: tp[a] }, { time: tp.end, value: tp[b] }]);
       });
     });
+  }
+
+  // other setups: triangles (yellow), channels (teal), support/resistance levels (dotted)
+  if (d.setups) {
+    d.setups.lines.forEach(l => {
+      const col = l.kind === "triangle" ? "#F2C14E" : "#2FD4C0";
+      [["ua", "ub"], ["la", "lb"]].forEach(([a, b]) => {
+        const ser = chart.addLineSeries({ color: col, lineWidth: l.live ? 2 : 1, lineStyle: l.live ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dotted,
+                                          priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        if (l.end > l.start) ser.setData([{ time: l.start, value: l[a] }, { time: l.end, value: l[b] }]);
+      });
+    });
+    const p = st.last_close;
+    d.setups.levels.filter(L => Math.abs(L.price / p - 1) < 0.12).sort((a, b) => Math.abs(a.price - p) - Math.abs(b.price - p)).slice(0, 4)
+      .forEach(L => candles.createPriceLine({ price: L.price, color: "rgba(201,211,223,.55)", lineWidth: 1, lineStyle: LightweightCharts.LineStyle.Dotted,
+        axisLabelVisible: true, title: `${L.price > p ? "R" : "S"} ×${L.touches}` }));
   }
 
   // shelves from here

@@ -12,6 +12,7 @@ import pandas as pd
 import data
 import db
 import engine
+import patterns
 import scanner
 import universe
 
@@ -53,7 +54,8 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             continue
         h = t["hub"]
         db.upsert_signal(
-            id=(f"{sym}|{bt.isoformat()}" if pattern == "hub" else f"T|{sym}|{bt.isoformat()}"), pattern=pattern,
+            id=(f"{sym}|{bt.isoformat()}" if pattern == "hub" else f"T|{sym}|{bt.isoformat()}" if pattern == "tightening"
+                else f"{pattern}|{sym}|{bt.isoformat()}"), pattern=pattern,
             symbol=sym, direction=t["direction"],
             hub_low=round(h["low"], 2), hub_high=round(h["high"], 2), hub_sessions=h["sessions"],
             breakout_time=bt.isoformat(), entry=round(t["entry"], 2), target=round(t["target"], 2),
@@ -87,7 +89,7 @@ def _scan_board() -> int:
                     started=pd.Timestamp.now(tz="UTC").isoformat())
         bars = data.get_bars_many(syms, BOARD_DAYS)
         done = 0
-        lab_hub, lab_tri, lab_live = [], [], []
+        lab_hub, lab_tri, lab_live, lab_pat = [], [], [], {}
         for k, sym in enumerate(syms):
             time.sleep(0.01)          # let web requests through between stocks so the site stays quick during a scan
             SCAN.update(current=sym, done=k)
@@ -105,6 +107,21 @@ def _scan_board() -> int:
                     SCAN["found"].append(dict(symbol=sym, kind=kind))
                 _record(sym, c4, res, start)
                 lab_hub += res["trades"]
+                try:      # more setups: triangles, channels, support & resistance
+                    pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
+                    bs["setups"] = patterns.live_json(sym, c4, res, pa)
+                    db.set_board(sym, json.dumps(bs))
+                    for kind in patterns.KINDS:
+                        if kind == "hub":
+                            continue
+                        tr = [x for x in pa["trades"] if x["kind"] == kind]
+                        _record(sym, c4, res, start, kind, tr)
+                        lab_pat.setdefault(kind, []).extend(tr)
+                    for st in bs["setups"]:
+                        if st["state"] in ("breakout_up", "breakdown"):
+                            SCAN["found"].append(dict(symbol=sym, kind="breakout" if st["state"] == "breakout_up" else "breakdown", setup=st["name"]))
+                except Exception as e:
+                    log.warning("pattern scan failed for %s: %s", sym, e)
                 try:      # test mode: tightening hubs (triangles), admin-only
                     tri = engine.analyze_tightening(c4, res, scanner.SETTINGS)
                     _record(sym, c4, res, start, "tightening", tri["trades"])
@@ -117,7 +134,8 @@ def _scan_board() -> int:
                 log.warning("board scan failed for %s: %s", sym, e)
         db.set_setting("lab", json.dumps(dict(
             updated=pd.Timestamp.now(tz=engine.NY).isoformat(), symbols=done, days=BOARD_DAYS,
-            hub=engine.stats(lab_hub), tightening=engine.stats(lab_tri), live=lab_live)))
+            hub=engine.stats(lab_hub), tightening=engine.stats(lab_tri), live=lab_live,
+            patterns={k: engine.stats(v) for k, v in lab_pat.items()})))
         log.info("board scan done: %d/%d symbols", done, len(syms))
         return done
 
@@ -170,11 +188,34 @@ def board() -> dict:
     forming.sort(key=lambda r: -(r.get("hub") or {}).get("sessions", 0))
     recent = [r for r in rows if r.get("state") in ("follow-through", "snap-back", "stalled")]
     updated = max((r["updated_at"] for r in db.board_rows()), default=None)
-    return dict(updated=updated, universe=len(rows), live=live, near=near, forming=forming, recent=recent)
+    setups = []      # every non-hub setup on the board, one row each
+    for r in rows:
+        for st in r.get("setups") or []:
+            if st["state"] == "between":
+                continue
+            setups.append(dict(st, symbol=r["symbol"], last_close=r.get("last_close"), watching=r["watching"]))
+    rank = {"breakout_up": 0, "breakdown": 0, "testing": 1, "forming": 2}
+    setups.sort(key=lambda x: (rank.get(x["state"], 9), x["symbol"]))
+    for r in rows:
+        r.pop("setups", None)
+    return dict(updated=updated, universe=len(rows), live=live, near=near, forming=forming, recent=recent, setups=setups)
 
 
-def track_record() -> dict:
-    sigs = db.all_signals(1000)
+def _summary(sigs: list) -> dict:
+    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
+    rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
+    return dict(signals=len(sigs), closed=len(closed),
+                reached=round(100 * sum(s["outcome"] == "follow-through" for s in closed) / len(closed), 1) if closed else None,
+                win_rate=round(100 * sum(r > 0 for r in rets) / len(rets), 1) if rets else None,
+                avg_ret=round(sum(rets) / len(rets), 2) if rets else None)
+
+
+def by_pattern() -> dict:
+    return {k: dict(_summary(db.all_signals(1000, k)), name=patterns.KINDS[k]) for k in patterns.KINDS}
+
+
+def track_record(pattern: str = "hub") -> dict:
+    sigs = db.all_signals(1000, pattern)
     closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
     rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
     wins = [r for r in rets if r > 0]
@@ -189,7 +230,14 @@ def track_record() -> dict:
                    avg_loss=round(sum(r for r in rets if r <= 0) / max(1, len(rets) - len(wins)), 2)
                    if len(rets) > len(wins) else None,
                    by_outcome=by),
-        signals=sigs[:200])
+        signals=sigs[:200], pattern=pattern, patterns=by_pattern())
+
+
+def _seg(p, idx, t, a, b, kind, live):
+    ua, da = patterns.lines_at(p, a)
+    ub, db_ = patterns.lines_at(p, b)
+    return dict(kind=kind, name=patterns.KINDS[kind], live=live, start=t(idx[a]), end=t(idx[b]),
+                ua=round(ua, 2), ub=round(ub, 2), la=round(da, 2), lb=round(db_, 2))
 
 
 def chart(sym: str, lab_mode: bool = False) -> dict:
@@ -213,6 +261,27 @@ def chart(sym: str, lab_mode: bool = False) -> dict:
                    outcome_time=t(idx[x["oi"]]) if x["oi"] is not None else None) for x in res["trades"]]
     out = dict(symbol=sym, candles=candles, hubs=hubs, trades=trades, status=st,
                stats=engine.stats(res["trades"]), watching=db.get_ticker(sym) is not None)
+    try:      # other setups, drawn as lines on the chart
+        pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
+        st["setups"] = patterns.live_json(sym, c4, res, pa)
+        draw = []
+        for L in pa["live"]:
+            if L["kind"] != "sr" and L["state"] == "forming":
+                p = L["p"]
+                draw.append(_seg(p, idx, t, p["a"], len(idx) - 1, L["kind"], True))
+        for x in pa["trades"][-12:]:
+            if x["kind"] != "sr" and x["i0"] >= len(idx) - 120:
+                p = x["p"]
+                draw.append(_seg(p, idx, t, p["a"], x["i0"], x["kind"], False))
+        levels = []
+        for L in pa.get("levels_now", []):
+            levels.append(dict(price=round(L["price"], 2), touches=L["touches"], since=t(idx[L["first"]])))
+        out["setups"] = dict(lines=draw, levels=levels,
+                             trades=[dict(time=t(idx[x["i0"]]), direction=x["direction"], kind=x["kind"], outcome=x["outcome"],
+                                          chase=x["chase"]) for x in pa["trades"] if x["i0"] >= len(idx) - 160],
+                             stats={k: engine.stats([x for x in pa["trades"] if x["kind"] == k]) for k in patterns.KINDS if k != "hub"})
+    except Exception as e:
+        log.warning("chart setups failed for %s: %s", sym, e)
     if lab_mode:   # admin test mode: tightening hubs as two lines each
         tri = engine.analyze_tightening(c4, res, scanner.SETTINGS)
         out["tightening"] = []

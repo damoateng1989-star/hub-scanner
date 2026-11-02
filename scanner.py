@@ -12,6 +12,7 @@ import pandas as pd
 import data
 import db
 import engine
+import patterns
 import notify
 import phone
 
@@ -201,8 +202,37 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     speech = speak_event(sym, e) if e["time"] == c4.index[-1] and not chase else None
                     notify.symbol_alert(sym, e["type"], msg, speech)
                     sent.append(msg)
+    try:      # other setups (triangles, channels, support & resistance): alert on new breaks only
+        pa = patterns.analyze_all(c4, res, SETTINGS)
+        status["setups"] = patterns.live_json(sym, c4, res, pa)
+        if baseline:
+            b = pd.Timestamp(baseline)
+            for e in patterns.events(sym, res, pa):
+                if e["time"] <= b or e["time"] != c4.index[-1]:
+                    continue                 # only the newest candle: no burst of old breaks after downtime
+                msg = format_pattern_event(sym, e)
+                if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
+                    notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]])
+                    sent.append(msg)
+    except Exception as ex:
+        log.warning("pattern scan failed for %s: %s", sym, ex)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
+
+
+def format_pattern_event(sym: str, e: dict) -> str:
+    up = e["type"] == "breakout"
+    d = 1 if up else -1
+    name = patterns.KINDS[e["kind"]].lower()
+    if e["kind"] == "sr":
+        what = f"{'resistance' if up else 'support'} at {_money(e['edge'])}" + (f" (tested {e['touches']}x)" if e.get("touches") else "")
+    else:
+        what = f"the {name} {'upper' if up else 'lower'} line at {_money(e['edge'])}"
+    reached = (e["close"] - e["target"]) * d >= 0
+    return (f"{'🚀' if up else '🔻'} {sym}: 4H close {'ABOVE' if up else 'BELOW'} {what}\n"
+            f"Setup: {patterns.KINDS[e['kind']]}\n"
+            + plan_lines(e["close"], e["edge"], e["target"], d, reached, e.get("shelf"))
+            + f"\nCandle closed: {candle_close(e['time'])}")
 
 
 def scan_all() -> list[str]:

@@ -782,6 +782,35 @@ body.brief-open .sf-hello { display: none; }
   .sf-hello { right: 92px; bottom: calc(96px + env(safe-area-inset-bottom)); max-width: 200px; font-size: 13.5px; }
 }
 @media (prefers-reduced-motion: reduce) { .scout-fab::before, .sf-halo, .sf-bot { animation: none !important; } }
+
+/* ================= setups: styles, tabs ================= */
+.styles { display: grid; gap: 8px; margin-top: 12px; }
+.style-opt { display: grid; grid-template-columns: auto 36px 1fr; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line, #1e2b39);
+  background: #0a1017; cursor: pointer; }
+.style-opt:has(input:checked) { border-color: rgba(61,214,140,.5); background: rgba(61,214,140,.06); }
+.style-opt.lock { opacity: .6; cursor: default; }
+.style-opt input { width: 18px !important; height: 18px !important; min-width: 0 !important; padding: 0 !important; accent-color: #3DD68C; }
+.setup-table { table-layout: auto !important; } .setup-table td, .setup-table th { white-space: nowrap; }
+.so-ic { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: #142030; color: #9fb3ff; }
+.style-opt:has(input:checked) .so-ic { color: #3DD68C; }
+.style-opt b { display: block; font: 700 15px var(--sans); color: #eef2f7; } .style-opt small { color: #8a9aae; font-size: 13px; }
+.style-opt em { font-style: normal; font: 700 10.5px var(--sans); padding: 2px 6px; border-radius: 6px; background: #22324a; color: #c9d3df; margin-left: 6px; vertical-align: 2px; }
+.style-opt em.core { background: rgba(61,214,140,.15); color: #3DD68C; }
+.setup-tabs { display: flex; gap: 8px; margin: 0 0 14px; overflow-x: auto; scrollbar-width: none; }
+.setup-tabs button { flex: none; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px !important; border-radius: 12px !important; border: 1px solid #22324a !important;
+  background: #0b121b !important; color: #a9b6c6 !important; font: 600 14px var(--sans) !important; cursor: pointer; }
+.setup-tabs button.on { border-color: rgba(61,214,140,.55) !important; background: rgba(61,214,140,.08) !important; color: #fff !important; }
+.setup-tabs button.on svg { color: #3DD68C; }
+.setup-tabs small { padding: 1px 7px; border-radius: 99px; background: #162130; color: #c9d3df; font: 700 12px var(--sans); }
+.setup-tabs i { font-style: normal; font: 700 10px var(--sans); color: #F2C14E; text-transform: uppercase; letter-spacing: .04em; }
+.setup-about { margin: 0 0 12px; color: #a9b6c6; font-size: 14.5px; }
+.rec-tabs { display: flex; gap: 8px; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none; }
+.rec-tabs button { flex: none; text-align: left; padding: 10px 14px !important; border-radius: 12px !important; border: 1px solid #22324a !important; background: #0b121b !important; cursor: pointer; }
+.rec-tabs button.on { border-color: rgba(61,214,140,.55) !important; background: rgba(61,214,140,.08) !important; }
+.rec-tabs b { display: block; font: 700 14px var(--sans); color: #eef2f7; } .rec-tabs small { color: #8a9aae; font-size: 12px; }
+.gp > .gp-setup { grid-template-columns: 28px 1fr; }
+.gp > .gp-setup::before { display: none; }
+.gp-ic { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; background: #162130; color: var(--c); }
 </style>
 </head>
 <body class="term">
@@ -1430,6 +1459,8 @@ async function loadAccount() {
           <li>Full Hub Board: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Backtests on any ticker</li></ul></div>
       </div></div>`}
 
+    ${styleCard()}
+
     <div class="acct"><h3>Telegram alerts</h3>
       ${!tg.enabled ? `<p>Telegram isn't set up on this site yet.</p>` :
         tg.linked ? `<p>Connected. Alerts for your watchlist go to your Telegram chat.</p><button onclick="unlinkTg()">Disconnect</button>` :
@@ -1742,8 +1773,10 @@ function renderStrip() {
 function findStatus(sym) {
   const t = TICKERS.find(x => x.symbol === sym);
   if (t && t.status && !t.status.error) return t.status;
-  if (BOARD) for (const g of ["live", "near", "forming", "recent"]) { const r = (BOARD[g] || []).find(x => x.symbol === sym); if (r) return r; }
-  return null;
+  let r = null;
+  if (BOARD) for (const g of ["live", "near", "forming", "recent"]) { r = (BOARD[g] || []).find(x => x.symbol === sym); if (r) break; }
+  if (r && BOARD.setups && !r.setups) r = {...r, setups: BOARD.setups.filter(x => x.symbol === sym)};
+  return r;
 }
 let BRIEF_SYM = null, BRIEF_SEC = "levels", BRIEF_CHART = null;
 async function openBrief(sym) {
@@ -1828,7 +1861,15 @@ function briefHTML(sym, st, chart) {
         return `<div><span>${new Date(t.time * 1000).toLocaleDateString(undefined, {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.direction === 1 ? "Long" : "Short"}</span><i style="--c:${w[1]}">${w[0]}</i></div>`; }).join("")}</div>`;
   } else rec = loadingHTML("Loading the track record…");
   const add = TICKERS.find(t => t.symbol === sym) ? "" : `<button class="btnx bf-addbtn" onclick="addToWatchlist('${esc(sym)}').then(ok => { if (ok) { toast('${esc(sym)} added to your list'); loadTickers(); } }).catch(e => toast(e.message))">☆ Add ${esc(sym)} to my list</button>`;
-  return `<div class="bf-h" id="bf-levels">Level map</div>${map}
+  const others = (st.setups || []).filter(x => x.state !== "between" || x.kind === "sr");
+  const setupsHTML = others.length ? `<div class="bf-h">Other setups on ${esc(sym)}</div><div class="gp">${others.map(x => {
+      const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", hub: "#9fb3ff"}[c];
+      let t;
+      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).`;
+      else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
+      else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
+      return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
+  return `<div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
     <div class="bf-h" id="bf-setup">Game plan</div>${plan}
     <div class="bf-h" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}
     <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
@@ -2028,7 +2069,7 @@ async function loadBoard() {
   $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
   if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
-  $("board").innerHTML =
+  $("board").innerHTML = setupTabs(b) + '<div id="setupBoard" hidden></div><div id="hubBoard">' +
     (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
     '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
@@ -2042,8 +2083,8 @@ async function loadBoard() {
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
     '<th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
     '<th>Next shelf / target</th><th>4H context</th><th>Analysis</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
-    '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels; unavailable values are shown as —.</div>';
-  BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard();
+    '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels; unavailable values are shown as —.</div></div>';
+  BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
 }
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";
@@ -2107,6 +2148,67 @@ async function nudgeWait(sym, onList) {
 }
 function nudgeOpen(href) { nudgeSnoozeSave(); closeSheet(); window.open(href, "_blank", "noopener"); }
 
+
+// ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
+const SETUP_TABS = [["hub", "Hubs"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"]];
+const SETUP_ICON = {
+  hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
+  triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
+  channel: '<path d="M3 7l18 6M3 13l18 6"/>',
+  sr: '<path d="M3 7h18M3 17h18"/><path d="M6 15l3-6 3 4 3-5 3 6" opacity=".6"/>',
+};
+const setupIcon = (k) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SETUP_ICON[k]}</svg>`;
+function styleCard() {
+  const opts = (ME && ME.style_options) || [], picked = new Set((ME && ME.styles_picked) || ["hub"]), pro = isPro();
+  return `<div class="acct"><h3>My trading style</h3><p>Pick the setups you trade. You'll get alerts for these on your list${pro ? "" : ". Hubs are free; triangles, channels and support &amp; resistance alerts are Pro"}.</p>
+    <div class="styles">${opts.map(o => { const lock = !pro && o.key !== "hub";
+      return `<label class="style-opt${lock ? " lock" : ""}"><input type="checkbox" value="${o.key}" ${picked.has(o.key) ? "checked" : ""} ${lock ? "disabled" : ""} onchange="saveStyles()">
+        <span class="so-ic">${setupIcon(o.key)}</span><span><b>${esc(o.name)}${lock ? ' <em>Pro</em>' : ""}${o.key === "hub" ? ' <em class="core">Core</em>' : ""}</b><small>${esc(o.about)}</small></span></label>`; }).join("")}</div>
+    <p class="note" style="margin-top:10px">New setups are in beta. Each one keeps its own public track record so you can see which actually works.</p></div>`;
+}
+async function saveStyles() {
+  const picked = [...document.querySelectorAll('.styles input:checked')].map(i => i.value);
+  if (!picked.length) { toast("Pick at least one setup"); loadAccount(); return; }
+  try { await api("/api/me/styles", {method: "POST", body: JSON.stringify({styles: picked})}); ME.styles_picked = picked; toast("Saved. Alerts now follow your style."); }
+  catch (e) { toast(friendly(e)); }
+}
+let SETUP_TAB = "hub";
+function setupWord(x) {
+  if (x.state === "breakout_up") return ["Breakout ↑", "up"];
+  if (x.state === "breakdown") return ["Breakdown ↓", "down"];
+  if (x.state === "testing") return [x.near === "resistance" ? "Testing resistance" : "Testing support", "near"];
+  if (x.near_edge) return [x.near_edge === "up" ? "Near the top line" : "Near the bottom line", "near"];
+  return ["Forming", "hub"];
+}
+function setupTabs(b) {
+  const n = (k) => k === "hub" ? (b.live || []).length + (b.near || []).length + (b.forming || []).length + (b.live_count || 0) + (b.near_count || 0)
+    : (b.setups || []).filter(x => x.style === k).length;
+  return `<div class="setup-tabs" role="tablist">${SETUP_TABS.map(([k, label]) =>
+    `<button class="${SETUP_TAB === k ? "on" : ""}" onclick="pickSetupTab('${k}')">${setupIcon(k)}<span>${label}</span><small>${n(k)}</small>${k !== "hub" ? '<i>beta</i>' : ""}</button>`).join("")}</div>`;
+}
+function pickSetupTab(k) { SETUP_TAB = k; document.querySelectorAll(".setup-tabs button").forEach((b, i) => b.classList.toggle("on", SETUP_TABS[i][0] === k));
+  $("hubBoard").hidden = k !== "hub"; $("setupBoard").hidden = k === "hub"; if (k !== "hub") renderSetupBoard(); }
+function renderSetupBoard() {
+  const b = BOARD_DATA, rows = (b.setups || []).filter(x => x.style === SETUP_TAB);
+  const name = SETUP_TABS.find(t => t[0] === SETUP_TAB)[1];
+  const lock = b.locked && b.setups_locked ? `<div class="board-lock"><div><strong>${b.setups_locked} more setups are breaking out or testing a level right now</strong><p>Live breakouts on every setup are part of Pro.</p></div><a class="upsell" href="#account">View Pro access →</a></div>` : "";
+  const about = { triangle: "Lower highs and higher lows squeezing toward a point. The trade is a 4-hour close outside a line.",
+    channel: "Price trending between two parallel lines. A close above a falling channel can signal a reversal; a close below it, more downside.",
+    sr: "Horizontal levels price has tested 3 or more times. The trade is a 4-hour close through the level, aiming for the next level or shelf." }[SETUP_TAB];
+  $("setupBoard").innerHTML = lock + `<p class="setup-about">${about}</p>` + (rows.length ? `<div class="board-frame"><div class="board-scroll"><table class="board-table setup-table"><thead><tr>
+    <th>Instrument</th><th>Setup</th><th>Status</th><th>Last price</th><th>Upper</th><th>Lower</th><th>Target</th><th>Context</th><th>Analysis</th></tr></thead><tbody>
+    ${rows.map(x => { const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown";
+      const up = live ? (x.state === "breakout_up" ? x.edge : null) : x.upper, lo = live ? (x.state === "breakdown" ? x.edge : null) : x.lower;
+      const ctx = live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches` : `${x.sessions} sessions`;
+      return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>NASDAQ · 4H</small></div></td>
+        <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
+        <td>${up == null ? "—" : money(up)}</td><td>${lo == null ? "—" : money(lo)}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
+        <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${tvLink(x.symbol)}</div></td></tr>`; }).join("")}
+    </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Scout checks again after the next 4-hour close.</div>`)
+    + `<div class="note" style="margin-top:10px">${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf). Check the Results page for how they've actually done.</div>`;
+}
+let RECORD_PAT = "hub";
+
 // ---------------------------------------------------------------- Rule #1 (discipline banner on Today)
 function renderRule() {
   const el = $("rule1"); if (!el) return;
@@ -2163,7 +2265,7 @@ function renderScout() {
       + (admin ? `<button class="sp-alt" onclick="scoutSweep()" ${sc.running ? "disabled" : ""}>${sc.running ? "Sweep running…" : "Sweep the whole market"}</button>` : "")
       + `<a class="sp-alt" href="#discover" onclick="toggleScout(false)">Open the market board</a>`;
   const col = { breakout_up: ["Breaking out ↑", "#3DD68C"], breakdown: ["Breaking down ↓", "#FF6B5E"], forming: ["Resting in a hub", "#7C93FF"] };
-  if (sc.running && (sc.found || []).length) $("spRes").innerHTML = sc.found.slice().reverse().map(f => scoutRow(f.symbol, f.kind, FIND_C[f.kind] || "#8a9aae")).join("");
+  if (sc.running && (sc.found || []).length) $("spRes").innerHTML = sc.found.slice().reverse().map(f => scoutRow(f.symbol, (f.setup ? f.setup + " " : "") + f.kind, FIND_C[f.kind] || "#8a9aae")).join("");
   else if (MY_SCAN && !MY_SCANNING) $("spRes").innerHTML = MY_SCAN.results.map(r => r.error ? `<div class="sp-row" style="cursor:default">${esc(r.symbol)}<span style="--c:#8a9aae">couldn't check</span></div>`
       : scoutRow(r.symbol, (col[r.state] || [STATE_WORD[r.state] || "No setup"])[0], (col[r.state] || [0, "#5d6d80"])[1])).join("");
   else $("spRes").innerHTML = "";
@@ -2202,8 +2304,8 @@ function agDay(iso) {
   const same = d.toDateString() === t.toDateString();
   return (same ? "today " : d.toLocaleDateString([], {weekday: "short"}) + " ") + agTime(iso);
 }
-function findChip(sym, kind) {
-  return `<button class="ag-find" style="--c:${FIND_C[kind] || "#8a9aae"}" onclick="openBrief('${esc(sym)}')"><i></i>${esc(sym)} <small>${kind}</small></button>`;
+function findChip(sym, kind, setup) {
+  return `<button class="ag-find" style="--c:${FIND_C[kind] || "#8a9aae"}" onclick="openBrief('${esc(sym)}')"><i></i>${esc(sym)} <small>${setup ? esc(setup.toLowerCase()) + " " : ""}${kind}</small></button>`;
 }
 function boardFinds() {
   if (!BOARD) return "";
@@ -2224,7 +2326,7 @@ function renderAgent(sc) {
     $("agLine").innerHTML = sc.current === "loading prices" || !sc.done
       ? `<span class="cur">Pulling 4-hour candles for ${sc.total || ""} stocks</span>`
       : `<span class="cur">Checking <b>${esc(sc.current || "")}</b></span> · ${sc.done}/${sc.total} · ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} so far`;
-    $("agFinds").innerHTML = (sc.found || []).map(f => findChip(f.symbol, f.kind)).join("");
+    $("agFinds").innerHTML = (sc.found || []).map(f => findChip(f.symbol, f.kind, f.setup)).join("");
   } else {
     const live = BOARD ? (BOARD.live || []).length || BOARD.live_count || 0 : 0;
     const near = BOARD ? (BOARD.near || []).length || BOARD.near_count || 0 : 0;
@@ -2251,10 +2353,13 @@ async function loadRecord() {
   let r;
   if (ME && ME.guest) { $("record").innerHTML = joinBox("Members only", "Every breakout the board finds is logged with its result. Create a free account to see the full track record."); return; }
   if (!$("record").querySelector("table, .stats")) $("record").innerHTML = loadingHTML("Loading results…");
-  try { r = await api("/api/record"); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
+  try { r = await api("/api/record?pattern=" + RECORD_PAT); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
+  const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]];
   $("record").innerHTML = `
+    <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
+      return `<button class="${RECORD_PAT === k ? "on" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${x.closed ? `${x.win_rate ?? "–"}% winners · ${x.closed} done` : "no results yet"}</small></button>`; }).join("")}</div>
     <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout the Hub Board detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.</p>
     <div class="stats" style="margin-top:0">
       <div><b>${st.closed}</b><span>Completed signals</span></div>
