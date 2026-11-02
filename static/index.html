@@ -514,6 +514,20 @@ footer{color:#718397!important;border-color:#1e2b39!important}
  .lesson .lfoot p{font-size:9px!important}
 }
 
+
+/* loading spinner + error states */
+@keyframes ns-spin { to { transform: rotate(360deg); } }
+.loading { display: flex; align-items: center; gap: 12px; padding: 22px 18px; color: var(--muted); font-size: 14px; }
+.spin { width: 18px; height: 18px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 30%, transparent);
+        border-top-color: var(--accent, #7AA2FF); animation: ns-spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .spin { animation-duration: 2.4s; } }
+.errbox { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 18px; margin: 0 0 12px;
+          border: 1px solid color-mix(in srgb, var(--down) 45%, transparent); background: color-mix(in srgb, var(--down) 8%, transparent);
+          border-radius: 14px; font-size: 14px; color: var(--ink); }
+.errbox b { color: var(--down); font-weight: 600; display: block; margin-bottom: 2px; }
+.errbox span { color: var(--muted); }
+#netbar { position: fixed; left: 50%; top: 66px; transform: translateX(-50%); z-index: 40; background: var(--down); color: #fff;
+          padding: 8px 14px; border-radius: 99px; font-size: 13px; font-weight: 500; box-shadow: 0 8px 30px rgba(0,0,0,.3); }
 </style>
 </head>
 <body>
@@ -561,11 +575,11 @@ footer{color:#718397!important;border-color:#1e2b39!important}
   <div id="setup"></div>
   <div class="panel">
     <div class="ph"><h2>Needs your attention</h2><a href="#list" class="more-link">My list →</a></div>
-    <div id="attn"><div class="empty">Loading…</div></div>
+    <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
   </div>
   <div class="panel">
     <div class="ph"><h2>Worth a look</h2><a href="#discover" class="more-link">Discover →</a></div>
-    <div id="worth"><div class="empty">Loading…</div></div>
+    <div id="worth"><div class="loading"><span class="spin"></span>Loading…</div></div>
   </div>
   <div class="panel">
     <div class="ph"><h2>Latest alerts</h2><a href="#alerts" class="more-link">All alerts →</a></div>
@@ -588,7 +602,7 @@ footer{color:#718397!important;border-color:#1e2b39!important}
     <button class="chip" data-f="live">Breaking out</button>
     <button class="chip" id="scanBtn">Scan now</button>
   </div>
-  <div id="list"><div class="empty">Loading…</div></div>
+  <div id="list"><div class="loading"><span class="spin"></span>Loading…</div></div>
   <div class="stats" hidden><b id="sWatch"></b><b id="sHub"></b><b id="sLive"></b><b id="sAlerts"></b></div>
 </section>
 
@@ -597,13 +611,13 @@ footer{color:#718397!important;border-color:#1e2b39!important}
   <div class="vh"><h1>Discover</h1>
     <p>Every Nasdaq-100 stock, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
   <div class="chips" style="margin:0 0 14px"><button class="chip" id="bScan">Scan now</button></div>
-  <div id="board"><div class="empty">Loading…</div></div>
+  <div id="board"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
 <!-- RESULTS -->
 <section data-view="results" hidden>
   <div class="vh"><h1>Results</h1><p>How every signal turned out. Nothing is removed.</p></div>
-  <div id="record"><div class="empty">Loading…</div></div>
+  <div id="record"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
 <!-- ALERTS -->
@@ -615,7 +629,7 @@ footer{color:#718397!important;border-color:#1e2b39!important}
 <!-- ACCOUNT -->
 <section data-view="account" hidden>
   <div class="vh"><h1>Account</h1></div>
-  <div id="account"><div class="empty">Loading…</div></div>
+  <div id="account"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
 <!-- PAPER (admin) -->
@@ -623,14 +637,14 @@ footer{color:#718397!important;border-color:#1e2b39!important}
   <div class="vh"><h1>Paper trades</h1><p>Automatic practice trades in your Alpaca paper account.</p>
     <span class="toggle"><span class="note" id="pBroker" style="margin:0"></span>
       <button class="switch" id="pSwitch" aria-label="Auto paper trading"></button></span></div>
-  <div id="paper"><div class="empty">Loading…</div></div>
+  <div id="paper"><div class="loading"><span class="spin"></span>Loading…</div></div>
   <a id="tabPaper" hidden></a>
 </section>
 
 <!-- LAB (admin) -->
 <section data-view="lab" hidden>
   <div class="vh"><h1>Lab</h1><p>Testing <b>tightening hubs</b> (triangles) next to regular hubs. Only you can see this page; members get no alerts from it.</p></div>
-  <div id="lab"><div class="empty">Loading…</div></div>
+  <div id="lab"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
 <!-- GUIDE -->
@@ -687,11 +701,26 @@ const tvUrl = (s) => `https://www.tradingview.com/chart/?symbol=${encodeURICompo
 const tvLink = (s) => `<a class="tv" href="${tvUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in TradingView (4H)" aria-label="Open ${esc(s)} in TradingView">${TV_ICON}<span>TradingView</span></a>`;
 let TICKERS = [], FILTER = "all";
 
+const loadingHTML = (text = "Loading…") => `<div class="loading"><span class="spin"></span>${text}</div>`;
+function failedHTML(what, err, retry) {
+  return `<div class="errbox" role="alert"><div><b>Couldn't load ${what}</b><span>${esc(friendly(err))}</span></div>
+    ${retry ? `<button class="btnx sm" onclick="${retry}">Try again</button>` : ""}</div>`;
+}
+function friendly(e) {
+  if (!navigator.onLine) return "You're offline. Check your internet connection.";
+  if (e && e.name === "AbortError") return "It took too long to respond. The server may be busy running a market scan.";
+  if (e && e.status >= 500) return "The server ran into a problem. Please try again in a moment.";
+  if (e && e.message && !/Failed to fetch|NetworkError|Load failed/i.test(e.message)) return e.message;
+  return "Can't reach NextShelf right now. Check your connection and try again.";
+}
 async function api(path, opts = {}) {
+  if (!opts.signal) {                      // give every request a time limit so nothing spins forever
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 30000); opts = {...opts, signal: ctl.signal};
+  }
   const r = await fetch(path, {headers: {"Content-Type": "application/json"}, ...opts});
   const body = await r.json().catch(() => ({}));
   if (r.status === 401) { const e = new Error("Please sign in"); e.status = 401; throw e; }
-  if (!r.ok) throw new Error(typeof body.detail === "string" ? body.detail : r.statusText);
+  if (!r.ok) { const e = new Error(typeof body.detail === "string" ? body.detail : r.statusText); e.status = r.status; throw e; }
   return body;
 }
 
@@ -862,13 +891,21 @@ function render() {
   if (CUR === "today") renderToday();
 }
 
+let TICKERS_ERR = null;
 async function loadTickers() {
-  TICKERS = await api("/api/tickers"); render();
+  try { TICKERS = await api("/api/tickers"); TICKERS_ERR = null; }
+  catch (e) {
+    TICKERS_ERR = e;
+    $("list").innerHTML = failedHTML("your list", e, "loadTickers()");
+    if (CUR === "today") renderToday();
+    return;
+  }
+  render();
   if (ME && ME.ticker_limit) $("err").innerHTML = TICKERS.length >= ME.ticker_limit && !$("err").textContent
     ? `Free plan: ${TICKERS.length}/${ME.ticker_limit} tickers. <a class="upsell" style="margin:0" href="#account">Upgrade for unlimited →</a>` : $("err").innerHTML;
 }
 
-let ALERTS = [];
+let ALERTS = [], ALERTS_ERR = null;
 function alertRow(x, compact) {
   const lines = String(x.message).split("\n");
   const title = lines[0].replace(/^[^\p{L}\p{N}$]+/u, "");
@@ -878,7 +915,14 @@ function alertRow(x, compact) {
     <b>${esc(title)}</b>${compact ? "" : `<p>${esc(rest)}</p>`}<div class="t">${esc(t)}</div></div></div>`;
 }
 async function loadAlerts() {
-  const a = ALERTS = await api("/api/alerts?limit=30");
+  let a;
+  try { a = ALERTS = await api("/api/alerts?limit=30"); ALERTS_ERR = null; }
+  catch (e) {
+    ALERTS_ERR = e;
+    $("alerts").innerHTML = failedHTML("alerts", e, "loadAlerts()");
+    if ($("latest")) $("latest").innerHTML = failedHTML("alerts", e, "loadAlerts()");
+    return;
+  }
   $("alerts").innerHTML = a.length ? `<div class="feed">${a.map(x => alertRow(x)).join("")}</div>` :
     `<div class="empty">No alerts yet. When a stock on your list forms a range, breaks out or hits its target, it shows up here${ME && !ME.guest ? " and in Telegram" : ""}.</div>`;
   if (CUR === "today") renderToday();
@@ -968,7 +1012,8 @@ async function runBacktest(sym, btn) {
 
 async function loadPaper() {
   let p;
-  try { p = await api("/api/paper"); } catch (e) { $("paper").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!$("paper").querySelector(".stats")) $("paper").innerHTML = loadingHTML("Loading paper trades…");
+  try { p = await api("/api/paper"); } catch (e) { $("paper").innerHTML = failedHTML("paper trades", e, "loadPaper()"); return; }
   $("pSwitch").classList.toggle("on", p.enabled);
   $("pBroker").textContent = `${p.enabled ? "Auto-trading on" : "Off"} · ${p.broker}`;
   const st = p.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
@@ -1095,14 +1140,14 @@ async function loadAccount() {
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
       ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>
-    ${admin}${m.is_admin ? `<div class="acct" id="emailList"><h3>Email list</h3><p>Loading…</p></div>` : ""}`;
+    ${admin}${m.is_admin ? `<div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>` : ""}`;
   if (m.is_admin) api("/api/admin/subscribers").then(d => {
     $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
       <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
       ${d.recent.length ? `<div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>From</th><th>Status</th></tr>
         ${d.recent.slice(0, 15).map(x => `<tr><td>${esc(x.email)}</td><td>${day(x.created_at + "Z")}</td><td>${esc(x.source)}</td>
           <td style="color:var(${x.status === "subscribed" ? "--up" : "--faint"})">${x.status}</td></tr>`).join("")}</table></div>` : `<p>No sign-ups yet.</p>`}`;
-  }).catch(() => {});
+  }).catch(e => { if ($("emailList")) $("emailList").innerHTML = failedHTML("the email list", e, "loadAccount()"); });
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }
@@ -1324,7 +1369,8 @@ function renderKpis() {
 // ---------------------------------------------------------------- lab (admin)
 async function loadLab() {
   let L;
-  try { L = await api("/api/admin/lab"); } catch (e) { $("lab").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("lab").innerHTML = loadingHTML("Loading the Lab…");
+  try { L = await api("/api/admin/lab"); } catch (e) { $("lab").innerHTML = failedHTML("the Lab", e, "loadLab()"); return; }
   const S = L.snapshot || {}, F = L.forward || {};
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const pc = (v) => v == null ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
@@ -1375,9 +1421,10 @@ function marketChip() {
   }
   return `<span class="mkt${open ? " open" : ""}" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
 }
+let BOARD_ERR = null;
 async function loadToday() {
   renderToday();
-  try { BOARD = await api("/api/board"); } catch (e) {}
+  try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
   renderToday();
 }
 function renderToday() {
@@ -1419,7 +1466,9 @@ function renderToday() {
       ? `Nothing yet. Add a few stocks to <a href="#list">My list</a> and we'll tell you here when one sets up.`
       : `All quiet on your list. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
 
+  if (TICKERS_ERR) $("attn").innerHTML = failedHTML("your list", TICKERS_ERR, "loadTickers()");
   // worth a look (board)
+  if (BOARD_ERR && !BOARD) $("worth").innerHTML = failedHTML("market ideas", BOARD_ERR, "loadToday()");
   if (BOARD) {
     const mine = new Set(TICKERS.map(t => t.symbol));
     let picks = [...(BOARD.live || []), ...(BOARD.near || [])].filter(r => !mine.has(r.symbol)).slice(0, 4);
@@ -1436,7 +1485,7 @@ function renderToday() {
   }
 
   // latest alerts
-  $("latest").innerHTML = ALERTS.length ? `<div>${ALERTS.slice(0, 3).map(x => alertRow(x, true)).join("")}</div>`
+  $("latest").innerHTML = ALERTS_ERR ? failedHTML("alerts", ALERTS_ERR, "loadAlerts()") : ALERTS.length ? `<div>${ALERTS.slice(0, 3).map(x => alertRow(x, true)).join("")}</div>`
     : `<div class="empty">No alerts yet.</div>`;
 }
 setInterval(() => { if (CUR === "today") $("mkt").innerHTML = marketChip(); }, 30000);
@@ -1528,20 +1577,19 @@ let BOARD_LOADING = false;
 async function loadBoard() {
   if (BOARD_LOADING) return;
   BOARD_LOADING = true;
-  if (!$("board").querySelector(".board-frame")) $("board").innerHTML = `<div class="empty">Loading the board…</div>`;
+  if (!$("board").querySelector(".board-frame")) $("board").innerHTML = loadingHTML("Loading the market board…");
   const slow = setTimeout(() => { if (!$("board").querySelector(".board-frame"))
-    $("board").innerHTML = `<div class="empty">Still loading. A market scan may be running, which can take a minute or two.</div>`; }, 6000);
+    $("board").innerHTML = loadingHTML("Still loading. A market scan may be running, which can take a minute or two…"); }, 6000);
   let b;
   try {
     const ctl = new AbortController(), kill = setTimeout(() => ctl.abort(), 45000);
     try { b = await api("/api/board", {signal: ctl.signal}); } finally { clearTimeout(kill); }
   } catch (e) {
-    $("board").innerHTML = `<div class="empty">Couldn't load the board${e.name === "AbortError" ? " (it took too long)" : ": " + esc(e.message)}.
-      <button class="btnx sm" style="margin-left:8px" onclick="loadBoard()">Try again</button></div>`;
+    $("board").innerHTML = failedHTML("the market board", e, "loadBoard()");
     return;
   } finally { clearTimeout(slow); BOARD_LOADING = false; }
   $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
-  if (!b.universe) { $("board").innerHTML = `<div class="empty">The first market scan is running. It takes a few minutes. This page will fill in by itself.</div>`; setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
+  if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
   $("board").innerHTML =
     (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
@@ -1589,7 +1637,8 @@ $("bScan").addEventListener("click", async (e) => {
 async function loadRecord() {
   let r;
   if (ME && ME.guest) { $("record").innerHTML = joinBox("Members only", "Every breakout the board finds is logged with its result. Create a free account to see the full track record."); return; }
-  try { r = await api("/api/record"); } catch (e) { $("record").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!$("record").querySelector("table, .stats")) $("record").innerHTML = loadingHTML("Loading results…");
+  try { r = await api("/api/record"); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
   $("record").innerHTML = `
@@ -1614,7 +1663,25 @@ async function loadRecord() {
 }
 
 LESSON.init();
-loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); }).catch(() => {});
+function boot() {
+  loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); })
+    .catch(e => {
+      const main = document.querySelector("main");
+      const box = document.createElement("div");
+      box.innerHTML = failedHTML("NextShelf", e, "location.reload()");
+      main.prepend(box.firstElementChild);
+      document.querySelectorAll(".loading").forEach(l => l.remove());
+    });
+}
+function netbar() {
+  let b = $("netbar");
+  if (navigator.onLine) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement("div"); b.id = "netbar"; b.setAttribute("role", "status"); document.body.appendChild(b); }
+  b.textContent = "You're offline. Data will refresh when you reconnect.";
+}
+window.addEventListener("offline", netbar);
+window.addEventListener("online", () => { netbar(); loadTickers(); loadAlerts(); showTab(); });
+boot();
 setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
 </body>

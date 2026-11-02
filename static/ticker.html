@@ -131,6 +131,14 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 #chart{border-radius:5px}.kv{background:var(--line)!important;border-color:var(--line)!important;border-radius:6px!important}.kv>div{background:var(--surface)!important}
 h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 
+  @keyframes ns-spin { to { transform: rotate(360deg); } }
+  .loading { display: flex; align-items: center; gap: 12px; padding: 60px 0; color: var(--muted); justify-content: center; }
+  .spin { width: 20px; height: 20px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--muted) 30%, transparent);
+          border-top-color: var(--hub); animation: ns-spin .8s linear infinite; }
+  .errbox { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 40px 0; padding: 18px;
+            border: 1px solid color-mix(in srgb, var(--down) 45%, transparent); background: color-mix(in srgb, var(--down) 8%, transparent); border-radius: 14px; }
+  .errbox b { color: var(--down); display: block; } .errbox span { color: var(--muted); font-size: 14px; }
+  .btnx { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font: 500 14px var(--sans); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -142,7 +150,7 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
   <span><a href="/app#board">Hub Board</a> &nbsp;·&nbsp; <a href="/app">Watchlist</a><span id="signin"></span></span>
 </div></nav>
 
-<main class="wrap" id="main"><div class="empty">Loading chart…</div></main>
+<main class="wrap" id="main"><div class="loading"><span class="spin"></span>Loading chart…</div></main>
 
 <script src="/vendor/lightweight-charts.js"></script>
 <script>
@@ -183,7 +191,13 @@ async function load() {
     const r = await fetch(`/api/chart/${encodeURIComponent(SYM)}`);
     d = await r.json();
     if (!r.ok) throw new Error(d.detail || r.statusText);
-  } catch (e) { $("main").innerHTML = `<div class="empty">Couldn't load ${esc(SYM)}: ${esc(e.message)}</div>`; return; }
+  } catch (e) {
+    const why = !navigator.onLine ? "You're offline. Check your internet connection."
+      : /Failed to fetch|NetworkError|Load failed/i.test(e.message) ? "Can't reach NextShelf right now." : e.message;
+    $("main").innerHTML = `<div class="errbox" role="alert"><div><b>Couldn't load ${esc(SYM)}</b><span>${esc(why)}</span></div>
+      <button class="btnx" onclick="location.reload()">Try again</button></div>`;
+    return;
+  }
   if (d.guest) $("signin").innerHTML = ` &nbsp;·&nbsp; <a href="/login" style="color:var(--hub)">Sign in</a>`;
   const st = d.status, [label, color] = STATES[st.state] || ["", "--idle"], s = d.stats;
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
