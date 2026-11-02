@@ -490,6 +490,14 @@ def info(u: dict | None = Maybe):
                               shelf_min_atr=s.shelf_min_atr))
 
 
+@app.get("/api/live")
+def live_prices(symbols: str = ""):
+    """Live prices for watching (refreshed every ~30s by the app during market hours). Signals still use 4H closes."""
+    syms = [x.strip().upper() for x in symbols.split(",") if scanner.SYMBOL_RE.match(x.strip().upper())][:150]
+    return dict(market_open=data.market_open(), as_of=pd.Timestamp.now(tz="UTC").isoformat(),
+                prices=data.latest_prices(syms) if syms else {})
+
+
 @app.get("/api/tickers")
 def tickers(u: dict | None = Maybe):
     if not u:

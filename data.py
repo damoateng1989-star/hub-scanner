@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import time
 import zlib
 
 import numpy as np
@@ -42,6 +43,69 @@ def latest_price(symbol: str) -> float | None:
         return float(yf.Ticker(symbol).fast_info["last_price"])
     bars = get_bars(symbol, 5)
     return float(bars["Close"].iloc[-1]) if not bars.empty else None
+
+
+# ---------------------------------------------------------------- live prices (watching only; signals still use 4H closes)
+_LIVE: dict[str, tuple[float, dict]] = {}
+LIVE_TTL = 15          # seconds: everyone shares one fetch, so Alpaca's free rate limit is never a problem
+
+
+def market_open(now: pd.Timestamp | None = None) -> bool:
+    """Regular session, Mon-Fri 9:30-16:00 New York (market holidays aren't checked)."""
+    now = (now or pd.Timestamp.now(tz="UTC")).tz_convert("America/New_York")
+    mins = now.hour * 60 + now.minute
+    return now.weekday() < 5 and 9 * 60 + 30 <= mins < 16 * 60
+
+
+def latest_prices(symbols: list[str]) -> dict[str, dict]:
+    """Latest trade price + change vs yesterday's close, for many symbols at once (cached for LIVE_TTL)."""
+    now = time.time()
+    want = [s for s in dict.fromkeys(symbols) if s]
+    stale = [s for s in want if s not in _LIVE or now - _LIVE[s][0] > LIVE_TTL]
+    if stale:
+        try:
+            fresh = _alpaca_snapshots(stale) if provider() == "alpaca" else _demo_live(stale)
+        except Exception:
+            fresh = {}
+        for s, v in fresh.items():
+            _LIVE[s] = (now, v)
+    return {s: _LIVE[s][1] for s in want if s in _LIVE}
+
+
+def _alpaca_snapshots(symbols: list[str]) -> dict[str, dict]:
+    headers = {"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""), "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")}
+    out = {}
+    for i in range(0, len(symbols), 100):
+        r = requests.get("https://data.alpaca.markets/v2/stocks/snapshots", headers=headers, timeout=15,
+                         params={"symbols": ",".join(symbols[i:i + 100]), "feed": os.getenv("ALPACA_LIVE_FEED", "iex")})
+        if r.status_code != 200:
+            raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
+        for sym, snap in (r.json() or {}).items():
+            if not snap:
+                continue
+            t = snap.get("latestTrade") or {}
+            prev = (snap.get("prevDailyBar") or {}).get("c")
+            px = t.get("p") or (snap.get("minuteBar") or {}).get("c") or (snap.get("dailyBar") or {}).get("c")
+            if not px:
+                continue
+            out[sym] = dict(price=round(float(px), 2), time=t.get("t"),
+                            change_pct=round((float(px) / float(prev) - 1) * 100, 2) if prev else None)
+    return out
+
+
+def _demo_live(symbols: list[str]) -> dict[str, dict]:
+    """Demo: the last demo close plus a small drift that changes every few seconds."""
+    out, tick = {}, int(time.time() // 5)
+    for s in symbols:
+        b = _demo(s, 5)
+        if b.empty:
+            continue
+        last = float(b["Close"].iloc[-1])
+        prev = float(b["Close"].iloc[-14]) if len(b) > 14 else last
+        wiggle = np.random.default_rng(zlib.crc32(f"{s}{tick}".encode())).normal(0, 0.0025)
+        px = last * (1 + wiggle)
+        out[s] = dict(price=round(px, 2), time=pd.Timestamp.now(tz="UTC").isoformat(), change_pct=round((px / prev - 1) * 100, 2))
+    return out
 
 
 def get_bars_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
