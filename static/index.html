@@ -630,7 +630,7 @@ body.brief-open .bf-scrim { display: block; }
 @media (max-width: 999px) { .brief { top: auto; left: 0; right: 0; bottom: 0; width: 100%; height: 88vh; border-radius: 20px 20px 0 0; transform: translateY(105%); } }
 
 /* ================= Scout: the scanning agent on Discover ================= */
-.agent { position: relative; display: grid; grid-template-columns: 76px 1fr auto; gap: 16px; align-items: center; margin: 0 0 16px;
+.agent { position: relative; display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; margin: 0 0 16px;
   padding: 16px 18px; border: 1px solid #1d2a3a; border-radius: 14px; background: linear-gradient(180deg, #0d1520, #0a1018); overflow: hidden; }
 .agent::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(61,214,140,.06), transparent);
   transform: translateX(-100%); pointer-events: none; }
@@ -668,9 +668,54 @@ body.brief-open .bf-scrim { display: block; }
 .ag-find small { color: #8a9aae; font-weight: 500; }
 .ag-find.lock { cursor: default; color: #8a9aae; }
 @keyframes agIn { from { opacity: 0; transform: translateY(4px); } }
-@media (max-width: 640px) { .agent { grid-template-columns: 56px 1fr; padding: 14px; gap: 12px; align-items: start; } .ag-bot, .ag-bot svg { width: 52px; height: 52px; }
+@media (max-width: 640px) { .agent { grid-template-columns: 1fr; padding: 14px; gap: 12px; align-items: start; }
   .ag-side { grid-column: 1 / -1; } .ag-side:has(#bScan[hidden]) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .agent *, .agent::before { animation: none !important; } }
+
+/* ================= Scout floating robot ================= */
+.scout-fab { position: fixed; right: 22px; bottom: 22px; z-index: 30; width: 66px; height: 66px; padding: 0 !important; border-radius: 22px !important;
+  border: 1px solid #2a3a50 !important; background: radial-gradient(circle at 50% 30%, #18283a, #0c141e) !important; cursor: pointer;
+  box-shadow: 0 14px 40px rgba(0,0,0,.5), 0 0 0 4px rgba(61,214,140,.06); transition: transform .18s, box-shadow .18s; }
+.scout-fab:hover { transform: translateY(-3px); box-shadow: 0 18px 46px rgba(0,0,0,.55), 0 0 0 5px rgba(61,214,140,.14); }
+.sf-bot { position: absolute; inset: 6px; display: block; animation: agBob 3.2s ease-in-out infinite; }
+.sf-bot svg { width: 100%; height: 100%; display: block; }
+.sf-radar { position: absolute; inset: 0; border-radius: 22px; border: 1px solid rgba(61,214,140,.6); opacity: 0; pointer-events: none; }
+.scout-fab.run .sf-radar { animation: sfRadar 1.6s ease-out infinite; }
+@keyframes sfRadar { 0% { transform: scale(.9); opacity: .9; } 100% { transform: scale(1.45); opacity: 0; } }
+.scout-fab .ag-ant { fill: #7C93FF; animation: agPing 4s ease-in-out infinite; }
+.scout-fab.run .ag-ant { fill: #3DD68C; animation-duration: 1s; }
+.sf-tip { position: absolute; right: 76px; top: 50%; transform: translateY(-50%); padding: 6px 11px; border-radius: 10px; background: #3DD68C; color: #04140b;
+  font: 700 13px var(--sans); white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s; }
+.scout-fab:hover .sf-tip { opacity: 1; }
+.sf-tip::after { content: ""; position: absolute; right: -5px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-right: 0; border-left-color: #3DD68C; }
+.sf-badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #3DD68C; color: #04140b;
+  font: 800 12px/22px var(--sans); box-shadow: 0 0 0 3px var(--t-bg, #080c12); }
+body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
+.scout-pop { position: fixed; right: 22px; bottom: 100px; z-index: 31; width: min(360px, calc(100vw - 24px)); padding: 16px; border-radius: 18px;
+  background: #0d141d; border: 1px solid #223042; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #eef2f7; font-family: var(--sans); animation: agIn .2s ease both; }
+.scout-pop[hidden] { display: none !important; }
+.sp-head { display: flex; justify-content: space-between; align-items: center; }
+.sp-head b { font: 800 18px var(--sans); } .sp-head small { margin-left: 8px; padding: 2px 8px; border-radius: 7px; border: 1px solid #2a3a50; color: #8a9aae; font: 600 12px var(--sans); }
+.scout-pop.run .sp-head small { color: #3DD68C; border-color: rgba(61,214,140,.45); background: rgba(61,214,140,.08); }
+.sp-line { margin: 10px 0 0; color: #b9c6d6; font-size: 14px; line-height: 1.5; } .sp-line b { color: #fff; }
+.sp-bar { display: none; } .scout-pop.run .sp-bar, .scout-pop.mine .sp-bar { display: block; }
+.scout-pop.mine .sp-bar i { width: 40% !important; animation: spIndet 1.1s ease-in-out infinite; }
+@keyframes spIndet { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+.sp-acts { display: grid; gap: 8px; margin-top: 14px; }
+.sp-acts button, .sp-acts a { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 14px !important; border-radius: 12px !important;
+  font: 700 14px var(--sans) !important; cursor: pointer; text-decoration: none; }
+.sp-go { background: #3DD68C !important; color: #04140b !important; border: 0 !important; }
+.sp-go:disabled { opacity: .55; cursor: default; }
+.sp-alt { background: transparent !important; color: #c9d3df !important; border: 1px solid #2a3a50 !important; }
+.sp-res { display: grid; gap: 4px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
+.sp-res:empty { display: none; }
+.sp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #0a1017; border: 0 !important;
+  color: #eef2f7 !important; font: 600 14px var(--sans) !important; cursor: pointer; text-align: left; width: 100%; }
+.sp-row:hover { background: #121c28 !important; }
+.sp-row span { display: inline-flex; align-items: center; gap: 7px; color: var(--c); font: 500 13px var(--sans); }
+.sp-row span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+@media (max-width: 999px) { .scout-fab { right: 14px; bottom: calc(84px + env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 19px !important; }
+  .sf-radar { border-radius: 19px; } .scout-pop { right: 12px; bottom: calc(152px + env(safe-area-inset-bottom)); } .sf-tip { display: none; } }
 </style>
 </head>
 <body class="term">
@@ -774,19 +819,6 @@ body.brief-open .bf-scrim { display: block; }
   <div class="vh"><h1>Discover</h1>
     <p>Every Nasdaq-100 stock, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
   <div class="agent" id="agent">
-    <div class="ag-bot" aria-hidden="true">
-      <svg viewBox="0 0 64 64" width="64" height="64">
-        <line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/>
-        <circle class="ag-ant" cx="32" cy="5" r="3.2" fill="#3DD68C"/>
-        <rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2a3a50" stroke-width="1.5"/>
-        <rect x="5" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/><rect x="54" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/>
-        <rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/>
-        <g class="ag-eyes"><circle cx="25" cy="29.5" r="3.4" fill="#7C93FF"/><circle cx="39" cy="29.5" r="3.4" fill="#7C93FF"/></g>
-        <rect class="ag-beam" x="17" y="23" width="3" height="13" rx="1.5" fill="#3DD68C" opacity=".7"/>
-        <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#2a3a50"/>
-      </svg>
-      <span class="ag-radar"></span>
-    </div>
     <div class="ag-main">
       <div class="ag-name">Scout <small>your hub-hunting assistant</small><span class="ag-state" id="agState">idle</span></div>
       <div class="ag-line" id="agLine">Getting ready…</div>
@@ -873,6 +905,16 @@ body.brief-open .bf-scrim { display: block; }
   <div class="bf-foot"><a id="bfChart" href="#">Open full chart →</a><a id="bfTv" href="#" target="_blank" rel="noopener">TradingView ↗</a></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
+<button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Scout: scan for setups" aria-expanded="false">
+  <span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
+</button>
+<div class="scout-pop" id="scoutPop" hidden role="dialog" aria-label="Scout">
+  <div class="sp-head"><div><b>Scout</b><small id="spState">Standing by</small></div><button class="bf-x" onclick="toggleScout(false)" aria-label="Close">✕</button></div>
+  <p class="sp-line" id="spLine">Checking in…</p>
+  <div class="ag-bar sp-bar"><i id="spBar"></i></div>
+  <div class="sp-acts" id="spActs"></div>
+  <div class="sp-res" id="spRes"></div>
+</div>
 
 <nav class="bottom" aria-label="Main"><a href="#today" data-tab="today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Today</span></a><a href="#discover" data-tab="discover"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Discover</span></a><a href="#list" data-tab="list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6L3.3 9.2l6.1-.6z"/></svg><span>My list</span></a><a href="#results" data-tab="results"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg><span>Results</span></a><a href="#account" data-tab="account"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Account</span></a></nav>
 <div id="sheet" hidden><div class="sheet-card"><button class="x" onclick="closeSheet()" aria-label="Close">×</button><div id="sheetBody"></div></div></div>
@@ -1957,6 +1999,70 @@ $("bScan").addEventListener("click", async () => {
   pollAgent();
 });
 
+
+// ---------------------------------------------------------------- Scout floating robot
+const ROBOT_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle class="ag-ant" cx="32" cy="5" r="3.4" fill="#3DD68C"/>
+  <rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="5" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/><rect x="54" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/>
+  <rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/>
+  <g class="ag-eyes"><circle cx="25" cy="29.5" r="3.4" fill="#7C93FF"/><circle cx="39" cy="29.5" r="3.4" fill="#7C93FF"/></g>
+  <rect class="ag-beam" x="17" y="23" width="3" height="13" rx="1.5" fill="#3DD68C" opacity=".75"/>
+  <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#2a3a50"/></svg>`;
+$("sfBot").innerHTML = ROBOT_SVG;
+let SCOUT_SC = {running: false}, MY_SCAN = null, MY_SCANNING = false;
+function toggleScout(force) {
+  const pop = $("scoutPop"), open = force ?? pop.hidden;
+  pop.hidden = !open; $("scoutFab").setAttribute("aria-expanded", String(open));
+  if (open) { renderScout(); pollAgent(); }
+}
+document.addEventListener("click", (e) => {
+  const pop = $("scoutPop");
+  if (!pop.hidden && document.contains(e.target) && !pop.contains(e.target) && !$("scoutFab").contains(e.target)) toggleScout(false);
+});
+function scoutRow(sym, kind, color) {
+  return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
+}
+function renderScout() {
+  const sc = SCOUT_SC, pop = $("scoutPop");
+  pop.classList.toggle("run", !!sc.running); pop.classList.toggle("mine", MY_SCANNING);
+  $("scoutFab").classList.toggle("run", !!sc.running || MY_SCANNING);
+  $("spState").textContent = MY_SCANNING || sc.running ? "Scanning…" : "Standing by";
+  if (sc.running) $("spBar").style.width = Math.max(3, sc.total ? Math.round(sc.done / sc.total * 100) : 3) + "%";
+  const guest = !ME || ME.guest, admin = ME && ME.is_admin, n = TICKERS.length;
+  let line;
+  if (MY_SCANNING) line = `Checking the latest 4-hour candles for your <b>${n}</b> ticker${n === 1 ? "" : "s"}…`;
+  else if (sc.running) line = `Sweeping the market: <b>${esc(sc.current || "")}</b> · ${sc.done}/${sc.total}, ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} so far.`;
+  else if (MY_SCAN) {
+    const hits = MY_SCAN.results.filter(r => ["breakout_up", "breakdown", "forming"].includes(r.state));
+    line = `Checked your <b>${MY_SCAN.results.length}</b> ticker${MY_SCAN.results.length === 1 ? "" : "s"} just now. ` + (hits.length ? `<b>${hits.length}</b> worth watching:` : "Nothing is setting up yet. Let the trade come to you.");
+  } else line = guest ? "I check every Nasdaq-100 stock after each 4-hour close. Sign in and I'll scan your own list on demand."
+    : `I sweep the market after every 4-hour close${sc.next ? ` (next: <b>${agDay(sc.next)}</b>)` : ""}. Want me to check your list right now?`;
+  $("spLine").innerHTML = line;
+  $("spActs").innerHTML = guest ? `<a class="sp-go" href="/login#signup">Sign up free to scan</a><a class="sp-alt" href="#discover" onclick="toggleScout(false)">See the market board</a>`
+    : (n ? `<button class="sp-go" onclick="scoutScanMine()" ${MY_SCANNING ? "disabled" : ""}>🔍 ${MY_SCANNING ? "Scanning…" : "Scan my list now"}</button>`
+         : `<a class="sp-go" href="#list" onclick="toggleScout(false)">Add tickers to scan</a>`)
+      + (admin ? `<button class="sp-alt" onclick="scoutSweep()" ${sc.running ? "disabled" : ""}>${sc.running ? "Sweep running…" : "Sweep the whole market"}</button>` : "")
+      + `<a class="sp-alt" href="#discover" onclick="toggleScout(false)">Open the market board</a>`;
+  const col = { breakout_up: ["Breaking out ↑", "#3DD68C"], breakdown: ["Breaking down ↓", "#FF6B5E"], forming: ["Resting in a hub", "#7C93FF"] };
+  if (sc.running && (sc.found || []).length) $("spRes").innerHTML = sc.found.slice().reverse().map(f => scoutRow(f.symbol, f.kind, FIND_C[f.kind] || "#8a9aae")).join("");
+  else if (MY_SCAN && !MY_SCANNING) $("spRes").innerHTML = MY_SCAN.results.map(r => r.error ? `<div class="sp-row" style="cursor:default">${esc(r.symbol)}<span style="--c:#8a9aae">couldn't check</span></div>`
+      : scoutRow(r.symbol, (col[r.state] || [STATE_WORD[r.state] || "No setup"])[0], (col[r.state] || [0, "#5d6d80"])[1])).join("");
+  else $("spRes").innerHTML = "";
+  const badge = MY_SCAN ? MY_SCAN.results.filter(r => r.state === "breakout_up" || r.state === "breakdown").length : 0;
+  $("sfBadge").hidden = !badge || !pop.hidden; $("sfBadge").textContent = badge;
+}
+async function scoutScanMine() {
+  MY_SCANNING = true; renderScout();
+  try { MY_SCAN = await api("/api/scan/mine", {method: "POST"}); await loadTickers(); }
+  catch (e) { toast(friendly(e)); }
+  MY_SCANNING = false; renderScout();
+}
+async function scoutSweep() {
+  try { await api("/api/board/scan", {method: "POST"}); toast("Scout is sweeping the market"); } catch (e) { toast(friendly(e)); }
+  pollAgent();
+}
+
 // ---------------------------------------------------------------- Scout: the scanning agent on Discover
 let AGENT_T = null, AGENT_WAS_RUNNING = false, AGENT_NEXT = null;
 const FIND_C = { breakout: "#3DD68C", breakdown: "#FF6B5E", "at edge": "#F2C14E", "in hub": "#7C93FF" };
@@ -2002,12 +2108,11 @@ function renderAgent(sc) {
 }
 async function pollAgent() {
   clearTimeout(AGENT_T);
-  if (CUR !== "discover") return;
   let sc;
   try { sc = await api("/api/scanner"); } catch (e) { sc = {running: false}; }
-  if (AGENT_WAS_RUNNING && !sc.running) { AGENT_WAS_RUNNING = false; await loadBoard(); }
+  if (AGENT_WAS_RUNNING && !sc.running) { AGENT_WAS_RUNNING = false; if (CUR === "discover") await loadBoard(); }
   AGENT_WAS_RUNNING = !!sc.running; AGENT_NEXT = sc.next || AGENT_NEXT;
-  renderAgent(sc);
+  SCOUT_SC = sc; renderAgent(sc); renderScout();
   AGENT_T = setTimeout(pollAgent, sc.running ? 2500 : 60000);
 }
 
@@ -2059,7 +2164,7 @@ function netbar() {
 }
 window.addEventListener("offline", netbar);
 window.addEventListener("online", () => { netbar(); loadTickers(); loadAlerts(); showTab(); });
-boot();
+boot(); setTimeout(pollAgent, 1500);
 setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
 </body>

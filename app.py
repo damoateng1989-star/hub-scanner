@@ -425,6 +425,32 @@ async def scan_now(u: dict = Admin):
     return {"alerts": len(sent)}
 
 
+_MY_SCAN_AT: dict[int, float] = {}
+
+
+@app.post("/api/scan/mine")
+async def scan_my_list(u: dict = User):
+    """Scout, on demand: re-check every ticker on this member's list against the latest 4H candles."""
+    import time as _t
+    last = _MY_SCAN_AT.get(u["id"], 0)
+    if _t.time() - last < 60:
+        raise HTTPException(429, f"Scout just checked your list. Try again in {int(60 - (_t.time() - last))}s.")
+    _MY_SCAN_AT[u["id"]] = _t.time()
+    syms = db.user_symbols(u["id"])
+
+    def run():
+        out = []
+        with scanner._scan_lock:
+            for sym in syms:
+                try:
+                    st, _ = scanner.scan_symbol(sym)
+                    out.append(dict(symbol=sym, state=st.get("state"), label=st.get("label")))
+                except Exception as e:
+                    out.append(dict(symbol=sym, error=str(e)))
+        return out
+    return {"results": await run_in_threadpool(run), "at": pd.Timestamp.now(tz="UTC").isoformat()}
+
+
 @app.post("/api/precheck")
 async def precheck_now(u: dict = Admin):
     sent = await run_in_threadpool(scanner.preclose_all)
