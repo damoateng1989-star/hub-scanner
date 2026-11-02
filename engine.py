@@ -243,8 +243,13 @@ def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         st["target"] = round(trade["target"], 2)
         st["direction"] = "up" if trade["direction"] == 1 else "down"
         key = "shelf_up" if trade["direction"] == 1 else "shelf_down"
-        st[key] = shelf_json(trade["shelf"], True)   # the shelf used as this breakout's target
+        st[key] = shelf_json(trade["shelf"], True)
         st["target_kind"] = "shelf" if trade["shelf"] else "atr"
+        if trade["shelf"] is None:
+            edge = h["high"] if trade["direction"] == 1 else h["low"]
+            near = edge + trade["direction"] * 0.75 * float(res["atr"].iloc[trade["i0"]])
+            far = edge + trade["direction"] * 1.25 * float(res["atr"].iloc[trade["i0"]])
+            st["target_zone"] = dict(low=round(min(near, far), 2), high=round(max(near, far), 2))
         k = n - 1 - trade["i0"]
         word = "Breakout up" if trade["direction"] == 1 else "Breakdown"
         st.update(state="breakout_up" if trade["direction"] == 1 else "breakdown",
