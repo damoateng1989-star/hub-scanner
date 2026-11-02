@@ -471,10 +471,18 @@ def admin_set_plan(uid: int, body: PlanBody, u: dict = Admin):
 
 
 # ---------------------------------------------------------------- data
+def storage_persistent() -> bool | None:
+    """On Render, data survives deploys only on a mounted disk. None = can't tell (not on Render)."""
+    if not os.getenv("RENDER"):
+        return None
+    p = db.DATA_DIR.resolve()
+    return any(os.path.ismount(x) for x in [p, *p.parents] if str(x) != "/")
+
+
 @app.get("/api/info")
 def info(u: dict | None = Maybe):
     s = scanner.SETTINGS
-    return dict(provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u and u["telegram_chat"]),
+    return dict(storage_ok=storage_persistent() is not False, provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u and u["telegram_chat"]),
                 phone=bool(u and u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
                 scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],
                 entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,

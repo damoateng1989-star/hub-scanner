@@ -841,6 +841,10 @@ body.brief-open .sf-hello { display: none; }
 .ox-rules { margin-top: 4px; }
 .ox-lock { padding: 16px; border-radius: 14px; border: 1px dashed #2a3a50; background: #0a1017; }
 .ox-lock b { color: #fff; font-size: 15px; } .ox-lock p { color: #9fb0c2; font-size: 14px; margin: 6px 0 12px; }
+
+.storage-warn { margin: 0 0 16px; padding: 14px 16px; border-radius: 14px; border: 1px solid rgba(255,138,76,.5); background: rgba(255,138,76,.08);
+  color: #ffd2b8; font-size: 14.5px; line-height: 1.55; }
+.storage-warn b { color: #fff; } .storage-warn code { background: #1a2433; padding: 1px 6px; border-radius: 6px; color: #fff; }
 </style>
 <link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
 <style>
@@ -1114,6 +1118,12 @@ async function loadInfo() {
   try {
     const i = INFO = await api("/api/info");
     $("demo").hidden = i.provider !== "demo";
+    if (i.storage_ok === false && ME && ME.is_admin && !$("storageWarn")) {
+      const w = document.createElement("div"); w.id = "storageWarn"; w.className = "storage-warn";
+      w.innerHTML = `<b>⚠ Your data resets every time the site redeploys.</b> Accounts, sign-ins, watchlists and the track record are wiped on each update,
+        which is why members get signed out. Fix: in Render, add a <b>Disk</b> (mount path <code>/data</code>) and set <code>DATA_DIR=/data</code>. Only admins see this.`;
+      document.querySelector("main").prepend(w);
+    }
     $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "Pre-close checks " + i.preclose_times.join(" & ") + " · " : ""}Scans ${i.scan_times.join(" & ")} ET on weekdays · ${i.settings.horizon}-candle limit`;
   } catch (e) {}
 }
