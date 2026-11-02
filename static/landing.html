@@ -498,6 +498,23 @@ h2 em { font-family: var(--sans) !important; font-style: normal !important; font
 .final .dots { display: none !important; }
 details summary::after { color: var(--ns-green) !important; }
 </style>
+
+<style>
+/* Rule #1 manifesto */
+.manifesto { position: relative; margin-top: 110px; padding: 90px 0 80px; text-align: center; border-top: 1px solid #16212d; border-bottom: 1px solid #16212d;
+  background: radial-gradient(ellipse at 50% 0%, rgba(61,214,140,.10), transparent 60%), linear-gradient(180deg, #091018, #070b10); overflow: hidden; }
+.manifesto::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px dashed rgba(124,147,255,.12); }
+.manifesto .wrap { position: relative; }
+.mf-k { display: inline-block; padding: 6px 14px; border-radius: 999px; background: #3DD68C; color: #04140b; font: 800 13px var(--sans); }
+.mf-h { margin: 22px auto 0 !important; font: 800 clamp(40px, 6.4vw, 84px)/1.03 var(--sans) !important; letter-spacing: -.045em !important; color: #fff; }
+.mf-h span { background: linear-gradient(180deg, #5BEAA6 15%, #22B573); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+.mf-sub { max-width: 680px; margin: 24px auto 0; color: #a9b6c6; font-size: 18px; line-height: 1.65; }
+.mf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 1080px; margin: 50px auto 0; text-align: left; }
+.mf-c { padding: 22px; border-radius: 16px; background: #0d141d; border: 1px solid #1d2a38; }
+.mf-c svg { width: 100%; height: 70px; display: block; margin-bottom: 14px; }
+.mf-c b { font: 700 17px var(--sans); color: #fff; } .mf-c p { margin: 6px 0 0; color: #93a3b5; font-size: 15px; line-height: 1.55; }
+@media (max-width: 860px) { .mf-grid { grid-template-columns: 1fr; } .manifesto { padding: 64px 0 56px; margin-top: 70px; } .mf-sub { font-size: 16px; } }
+</style>
 </head>
 <body>
 
@@ -580,6 +597,20 @@ details summary::after { color: var(--ns-green) !important; }
   </div>
 </header>
 
+<section class="manifesto" id="rule"><div class="wrap">
+  <div class="mf-k">Rule #1</div>
+  <h2 class="mf-h">Don't force trades.<br><span>Let the trade come to you.</span></h2>
+  <p class="mf-sub">Most accounts aren't blown on bad breakouts. They bleed out inside the range, buying the top of the chop and selling the bottom, trade after trade. NextShelf is built to keep you out of there.</p>
+  <div class="mf-grid">
+    <div class="mf-c"><svg viewBox="0 0 160 60" aria-hidden="true"><rect x="10" y="20" width="140" height="24" rx="5" fill="rgba(124,147,255,.14)" stroke="rgba(124,147,255,.5)"/><path d="M14 38 26 26 38 38 50 25 62 39 74 26 86 38 98 25 110 38 122 27 134 37 146 28" fill="none" stroke="#FF6B5E" stroke-width="2" stroke-linejoin="round"/></svg>
+      <b>Inside the hub: sit on your hands</b><p>Price chops back and forth. Every trade in here is a coin flip that costs you fees and nerves.</p></div>
+    <div class="mf-c"><svg viewBox="0 0 160 60" aria-hidden="true"><rect x="10" y="26" width="90" height="22" rx="5" fill="rgba(124,147,255,.14)" stroke="rgba(124,147,255,.5)"/><path d="M14 42 26 32 38 41 50 31 62 40 74 32 86 39 98 30 110 22" fill="none" stroke="#e8eef5" stroke-width="2" stroke-linejoin="round"/><circle cx="110" cy="22" r="5" fill="#3DD68C"/><path d="M110 12V4M106 8l4-4 4 4" stroke="#3DD68C" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      <b>At the close: act</b><p>A 4-hour candle closes outside the hub. Now there's a trade, and NextShelf warns you 15 minutes before it happens.</p></div>
+    <div class="mf-c"><svg viewBox="0 0 160 60" aria-hidden="true"><rect x="96" y="6" width="56" height="12" rx="3" fill="rgba(61,214,140,.15)"/><path d="M96 16H152" stroke="#3DD68C" stroke-dasharray="4 3"/><path d="M10 50 30 46 50 48 70 38 90 30 110 22 128 16" fill="none" stroke="#e8eef5" stroke-width="2" stroke-linejoin="round"/><circle cx="128" cy="16" r="5" fill="#3DD68C"/></svg>
+      <b>Toward the shelf: follow the plan</b><p>The target and the exit are set before you enter. No guessing, no revenge trades.</p></div>
+  </div>
+</div></section>
+
 <section class="block" id="how"><div class="wrap">
   <div class="kicker">How it works</div>
   <h2>Three steps. <em>One clear plan.</em></h2>
@@ -661,7 +692,7 @@ details summary::after { color: var(--ns-green) !important; }
 
 <footer><div class="wrap">
   <div><a href="/app#board">Hub Board</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a><a href="/login">Login</a></div>
-  <div>© <span id="yr"></span> NextShelf. Educational tool, not financial advice. Past results don't guarantee future ones.</div>
+  <div><b style="color:#3DD68C;font-weight:600">Don't force trades. Let the trade come to you.</b><br>© <span id="yr"></span> NextShelf. Educational tool, not financial advice. Past results don't guarantee future ones.</div>
 </div></footer>
 
 <script>
