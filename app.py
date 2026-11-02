@@ -24,7 +24,10 @@ from fastapi.concurrency import run_in_threadpool  # noqa: E402
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
+import pandas as pd  # noqa: E402
+
 import auth  # noqa: E402
+import engine  # noqa: E402
 import board  # noqa: E402
 import data  # noqa: E402
 import db  # noqa: E402
@@ -444,7 +447,38 @@ def board_data(u: dict | None = Maybe):
 
 @app.post("/api/board/scan")
 async def board_scan_now(u: dict = Admin):
-    return {"scanned": await run_in_threadpool(board.scan_board)}
+    if board.SCAN["running"]:
+        return {"started": False, "running": True}
+    threading.Thread(target=board.scan_board, daemon=True).start()   # the scanner agent shows progress
+    return {"started": True}
+
+
+def _next_sweep() -> str | None:
+    """When the next scheduled market sweep runs (weekdays, BOARD_TIMES in New York time)."""
+    now = pd.Timestamp.now(tz=engine.NY)
+    for d in range(8):
+        day = (now + pd.Timedelta(days=d)).normalize()
+        if day.weekday() >= 5:
+            continue
+        for t in sorted(BOARD_TIMES):
+            h, m = map(int, t.split(":"))
+            when = day + pd.Timedelta(hours=h, minutes=m)
+            if when > now:
+                return when.isoformat()
+    return None
+
+
+@app.get("/api/scanner")
+def scanner_status(request: Request):
+    """Live state of the market-scanning agent shown on Discover."""
+    u = auth.current_user(request)
+    full = bool(u and (u.get("is_admin") or u.get("plan") == "pro"))
+    sc = dict(board.SCAN)
+    found = sc.pop("found", [])
+    sc["found_count"] = len(found)
+    sc["found"] = found[-12:] if full else []       # names of fresh finds are a Pro feature, like the board
+    sc["next"] = _next_sweep()
+    return sc
 
 
 @app.get("/api/record")

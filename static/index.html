@@ -621,6 +621,49 @@ body.brief-open .bf-scrim { display: block; }
 .bf-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
 .u-up2 { color: #3DD68C !important; } .u-down2 { color: #FF6B5E !important; } .u-hub2 { color: #9fb3ff !important; }
 @media (max-width: 999px) { .brief { width: 100%; } .bf-kv { grid-template-columns: 1fr 1.2fr; } .bf-row { grid-template-columns: 90px 64px 1fr auto; } }
+
+/* ================= Scout: the scanning agent on Discover ================= */
+.agent { position: relative; display: grid; grid-template-columns: 76px 1fr auto; gap: 16px; align-items: center; margin: 0 0 16px;
+  padding: 16px 18px; border: 1px solid #1d2a3a; border-radius: 14px; background: linear-gradient(180deg, #0d1520, #0a1018); overflow: hidden; }
+.agent::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(61,214,140,.06), transparent);
+  transform: translateX(-100%); pointer-events: none; }
+.agent.run::before { animation: agSweep 2.4s linear infinite; }
+@keyframes agSweep { to { transform: translateX(100%); } }
+.ag-bot { position: relative; width: 64px; height: 64px; }
+.ag-bot svg { position: relative; z-index: 1; animation: agBob 3.2s ease-in-out infinite; }
+@keyframes agBob { 50% { transform: translateY(-3px); } }
+.ag-beam { animation: agBeam 2.6s ease-in-out infinite; }
+@keyframes agBeam { 0%,100% { transform: translateX(0); } 50% { transform: translateX(26px); } }
+.ag-eyes { transform-origin: 32px 29.5px; animation: agBlink 4.5s infinite; }
+@keyframes agBlink { 0%,46%,50%,100% { transform: scaleY(1); } 48% { transform: scaleY(.1); } }
+.ag-ant { animation: agPing 2s ease-in-out infinite; }
+.agent:not(.run) .ag-ant { fill: #7C93FF; animation-duration: 4s; }
+@keyframes agPing { 50% { opacity: .25; } }
+.ag-radar { position: absolute; left: 50%; top: 50%; width: 64px; height: 64px; margin: -32px 0 0 -32px; border-radius: 50%; border: 1px solid rgba(61,214,140,.5); opacity: 0; }
+.agent.run .ag-radar { animation: agRadar 1.8s ease-out infinite; }
+@keyframes agRadar { 0% { transform: scale(.6); opacity: .8; } 100% { transform: scale(1.6); opacity: 0; } }
+.ag-name { font: 700 13px var(--mono, ui-monospace, monospace); letter-spacing: .12em; color: #e8eef5; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ag-name small { font-weight: 500; letter-spacing: .02em; color: #6f8196; }
+.ag-state { margin-left: 4px; padding: 2px 8px; border-radius: 99px; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: #8a9aae; border: 1px solid #2a3a50; }
+.agent.run .ag-state { color: #3DD68C; border-color: rgba(61,214,140,.45); background: rgba(61,214,140,.08); }
+.ag-line { margin-top: 6px; font: 500 13.5px var(--mono, ui-monospace, monospace); color: #b9c6d6; }
+.ag-line b { color: #fff; }
+.ag-line .cur::after { content: "▍"; color: #3DD68C; animation: agPing 1s steps(1) infinite; margin-left: 2px; }
+.ag-bar { height: 3px; margin-top: 10px; border-radius: 3px; background: #1a2535; overflow: hidden; }
+.ag-bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #7C93FF, #3DD68C); transition: width .6s ease; }
+.agent:not(.run) .ag-bar { display: none; }
+.ag-finds { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.ag-finds:empty { display: none; }
+.ag-find { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 8px; border: 1px solid #22324a; background: #0f1824;
+  font: 600 12px var(--mono, ui-monospace, monospace); color: #e8eef5; cursor: pointer; animation: agIn .4s ease both; }
+.ag-find:hover { border-color: var(--c); }
+.ag-find i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.ag-find small { color: #8a9aae; font-weight: 500; }
+.ag-find.lock { cursor: default; color: #8a9aae; }
+@keyframes agIn { from { opacity: 0; transform: translateY(4px); } }
+@media (max-width: 640px) { .agent { grid-template-columns: 56px 1fr; padding: 14px; gap: 12px; align-items: start; } .ag-bot, .ag-bot svg { width: 52px; height: 52px; }
+  .ag-side { grid-column: 1 / -1; } .ag-side:has(#bScan[hidden]) { display: none; } }
+@media (prefers-reduced-motion: reduce) { .agent *, .agent::before { animation: none !important; } }
 </style>
 </head>
 <body class="term">
@@ -724,7 +767,28 @@ body.brief-open .bf-scrim { display: block; }
 <section data-view="discover" hidden>
   <div class="vh"><h1>Discover</h1>
     <p>Every Nasdaq-100 stock, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
-  <div class="chips" style="margin:0 0 14px"><button class="chip" id="bScan">Scan now</button></div>
+  <div class="agent" id="agent">
+    <div class="ag-bot" aria-hidden="true">
+      <svg viewBox="0 0 64 64" width="64" height="64">
+        <line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/>
+        <circle class="ag-ant" cx="32" cy="5" r="3.2" fill="#3DD68C"/>
+        <rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2a3a50" stroke-width="1.5"/>
+        <rect x="5" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/><rect x="54" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/>
+        <rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/>
+        <g class="ag-eyes"><circle cx="25" cy="29.5" r="3.4" fill="#7C93FF"/><circle cx="39" cy="29.5" r="3.4" fill="#7C93FF"/></g>
+        <rect class="ag-beam" x="17" y="23" width="3" height="13" rx="1.5" fill="#3DD68C" opacity=".7"/>
+        <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#2a3a50"/>
+      </svg>
+      <span class="ag-radar"></span>
+    </div>
+    <div class="ag-main">
+      <div class="ag-name">SCOUT <small>· hub scanner agent</small><span class="ag-state" id="agState">idle</span></div>
+      <div class="ag-line" id="agLine">Getting ready…</div>
+      <div class="ag-bar"><i id="agBar"></i></div>
+      <div class="ag-finds" id="agFinds"></div>
+    </div>
+    <div class="ag-side"><button class="chip" id="bScan">Sweep now</button></div>
+  </div>
   <div id="board"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
@@ -1304,7 +1368,7 @@ function showTab() {
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
   renderSide();
   if (CUR === "today") loadToday();
-  if (CUR === "discover") loadBoard();
+  if (CUR === "discover") { loadBoard(); pollAgent(); }
   if (CUR === "results") loadRecord();
   if (CUR === "paper") loadPaper();
   if (CUR === "account") loadAccount();
@@ -1821,7 +1885,7 @@ async function loadBoard() {
     $("board").innerHTML = failedHTML("the market board", e, "loadBoard()");
     return;
   } finally { clearTimeout(slow); BOARD_LOADING = false; }
-  BOARD = b; renderStrip();
+  BOARD = b; renderStrip(); if (!$("agent").classList.contains("run")) renderAgent({running: false, next: AGENT_NEXT});
   $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
   if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
@@ -1861,11 +1925,64 @@ function toast(text, href, linkText) {
   t.className = "show";
   clearTimeout(t._h); t._h = setTimeout(() => t.className = "", 4000);
 }
-$("bScan").addEventListener("click", async (e) => {
-  const b = e.target; b.disabled = true; b.textContent = "Scanning…";
-  try { await api("/api/board/scan", {method: "POST"}); } catch {}
-  b.disabled = false; b.textContent = "Scan now"; loadBoard();
+$("bScan").addEventListener("click", async () => {
+  try { await api("/api/board/scan", {method: "POST"}); toast("Scout is sweeping the market"); } catch (e) { toast(friendly(e)); }
+  pollAgent();
 });
+
+// ---------------------------------------------------------------- Scout: the scanning agent on Discover
+let AGENT_T = null, AGENT_WAS_RUNNING = false, AGENT_NEXT = null;
+const FIND_C = { breakout: "#3DD68C", breakdown: "#FF6B5E", "at edge": "#F2C14E", "in hub": "#7C93FF" };
+function agTime(iso) { return iso ? new Date(iso).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) : ""; }
+function agDay(iso) {
+  if (!iso) return ""; const d = new Date(iso), t = new Date();
+  const same = d.toDateString() === t.toDateString();
+  return (same ? "today " : d.toLocaleDateString([], {weekday: "short"}) + " ") + agTime(iso);
+}
+function findChip(sym, kind) {
+  return `<button class="ag-find" style="--c:${FIND_C[kind] || "#8a9aae"}" onclick="openBrief('${esc(sym)}')"><i></i>${esc(sym)} <small>${kind}</small></button>`;
+}
+function boardFinds() {
+  if (!BOARD) return "";
+  const out = [];
+  (BOARD.live || []).forEach(r => out.push(findChip(r.symbol, r.state === "breakdown" ? "breakdown" : "breakout")));
+  (BOARD.near || []).forEach(r => out.push(findChip(r.symbol, "at edge")));
+  const locked = (BOARD.live_count || 0) + (BOARD.near_count || 0);
+  if (!out.length && locked) out.push(`<a class="ag-find lock" href="${ME && ME.guest ? "/login" : "#account"}" style="--c:#F2C14E"><i></i>🔒 ${locked} setup${locked > 1 ? "s" : ""} found · ${ME && ME.guest ? "sign in" : "Pro"} to see them</a>`);
+  return out.slice(0, 12).join("");
+}
+function renderAgent(sc) {
+  const el = $("agent"); if (!el) return;
+  el.classList.toggle("run", !!sc.running);
+  $("agState").textContent = sc.running ? "scanning" : "standing by";
+  if (sc.running) {
+    const pct = sc.total ? Math.round(sc.done / sc.total * 100) : 2;
+    $("agBar").style.width = Math.max(2, pct) + "%";
+    $("agLine").innerHTML = sc.current === "loading prices" || !sc.done
+      ? `<span class="cur">Pulling 4-hour candles for ${sc.total || ""} stocks</span>`
+      : `<span class="cur">Checking <b>${esc(sc.current || "")}</b></span> · ${sc.done}/${sc.total} · ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} so far`;
+    $("agFinds").innerHTML = (sc.found || []).map(f => findChip(f.symbol, f.kind)).join("");
+  } else {
+    const live = BOARD ? (BOARD.live || []).length || BOARD.live_count || 0 : 0;
+    const near = BOARD ? (BOARD.near || []).length || BOARD.near_count || 0 : 0;
+    const last = sc.finished || (BOARD && BOARD.updated ? BOARD.updated + "Z" : null);
+    const total = BOARD && BOARD.universe;
+    $("agLine").innerHTML = !BOARD || !total ? `Waiting for the first sweep of the market.`
+      : `Swept <b>${total}</b> stocks${last ? " " + agDay(last) : ""}: <b style="color:#3DD68C">${live}</b> breakout${live === 1 ? "" : "s"}, <b style="color:#F2C14E">${near}</b> at the edge.`
+        + (sc.next ? ` Next sweep ${agDay(sc.next)}.` : "");
+    $("agFinds").innerHTML = boardFinds();
+  }
+}
+async function pollAgent() {
+  clearTimeout(AGENT_T);
+  if (CUR !== "discover") return;
+  let sc;
+  try { sc = await api("/api/scanner"); } catch (e) { sc = {running: false}; }
+  if (AGENT_WAS_RUNNING && !sc.running) { AGENT_WAS_RUNNING = false; await loadBoard(); }
+  AGENT_WAS_RUNNING = !!sc.running; AGENT_NEXT = sc.next || AGENT_NEXT;
+  renderAgent(sc);
+  AGENT_T = setTimeout(pollAgent, sc.running ? 2500 : 60000);
+}
 
 // ---------------------------------------------------------------- track record
 async function loadRecord() {

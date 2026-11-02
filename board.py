@@ -62,23 +62,47 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=int(bool(t["chase"])))
 
 
+# live progress of the market sweep, read by the scanner agent on Discover
+SCAN = dict(running=False, done=0, total=0, current=None, started=None, finished=None, found=[])
+FIND_STATES = {"breakout_up": "breakout", "breakdown": "breakdown"}
+
+
 def scan_board() -> int:
     """Scan the whole universe (plus your watchlist). Runs after each 4H close."""
-    with _lock:
+    if not _lock.acquire(blocking=False):      # a sweep is already running
+        return 0
+    try:
+        return _scan_board()
+    finally:
+        SCAN.update(running=False, current=None, finished=pd.Timestamp.now(tz="UTC").isoformat())
+        _lock.release()
+
+
+def _scan_board() -> int:
+    if True:
         syms = sorted(set(universe.board_universe()) | {r["symbol"] for r in db.list_tickers()})
         start = pd.Timestamp(record_start())
         now = pd.Timestamp.now(tz="UTC")
+        SCAN.update(running=True, done=0, total=len(syms), current="loading prices", found=[],
+                    started=pd.Timestamp.now(tz="UTC").isoformat())
         bars = data.get_bars_many(syms, BOARD_DAYS)
         done = 0
         lab_hub, lab_tri, lab_live = [], [], []
-        for sym in syms:
+        for k, sym in enumerate(syms):
             time.sleep(0.01)          # let web requests through between stocks so the site stays quick during a scan
+            SCAN.update(current=sym, done=k)
             try:
                 c4 = engine.to_4h(bars.get(sym, pd.DataFrame()), now=now)
                 if len(c4) < scanner.SETTINGS.window + 15:
                     continue
                 res = engine.analyze(c4, scanner.SETTINGS)
-                db.set_board(sym, json.dumps(_board_status(c4, res)))
+                bs = _board_status(c4, res)
+                db.set_board(sym, json.dumps(bs))
+                kind = FIND_STATES.get(bs.get("state"))
+                if not kind and bs.get("state") == "forming" and bs.get("near_edge"):
+                    kind = "at edge"
+                if kind:
+                    SCAN["found"].append(dict(symbol=sym, kind=kind))
                 _record(sym, c4, res, start)
                 lab_hub += res["trades"]
                 try:      # test mode: tightening hubs (triangles), admin-only
