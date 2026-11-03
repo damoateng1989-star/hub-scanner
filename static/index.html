@@ -2007,6 +2007,14 @@ function findStatus(sym) {
   return r;
 }
 let BRIEF_SYM = null, BRIEF_SEC = "levels", BRIEF_CHART = null;
+// Ask Scout on the homepage lands here as /app?shelf=QQQ: open that stock's Shelf card straight away
+function openShelfFromUrl() {
+  const q = new URLSearchParams(location.search), sym = (q.get("shelf") || "").trim().toUpperCase().replace(/^\$/, "");
+  if (!sym) return;
+  q.delete("shelf");
+  history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
+  if (/^[A-Z][A-Z.\-]{0,9}$/.test(sym)) openBrief(sym);
+}
 async function openBrief(sym) {
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null;
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
@@ -2818,7 +2826,7 @@ async function loadRecord() {
 
 LESSON.init();
 function boot() {
-  loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); })
+  loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); openShelfFromUrl(); })
     .catch(e => {
       const main = document.querySelector("main");
       const box = document.createElement("div");

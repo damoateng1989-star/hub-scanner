@@ -1035,13 +1035,13 @@ fetch("/api/board").then(r => r.json()).then(b => {
 </script>
 
 <script>
-// ---- Ask Scout box: type a ticker, open its chart with hubs and shelves
+// ---- Ask Scout box: type a ticker, open its Shelf card (levels, game plan, options, track record) in the app
 (function () {
   const f = document.getElementById("askbox"), i = document.getElementById("abSym"), m = document.getElementById("abMsg");
   const go = (raw) => {
     const s = (raw || "").trim().toUpperCase().replace(/^\$/, "");
     if (!/^[A-Z][A-Z.\-]{0,9}$/.test(s)) { m.textContent = "Type a ticker like NVDA, AAPL or QQQ."; i.focus(); return; }
-    m.textContent = "Scout is checking " + s + "…"; location.href = "/t/" + encodeURIComponent(s);
+    m.textContent = "Scout is checking " + s + "…"; location.href = "/app?shelf=" + encodeURIComponent(s) + "#discover";
   };
   f.addEventListener("submit", (e) => { e.preventDefault(); go(i.value); });
   f.querySelectorAll(".ab-chips button").forEach(b => b.onclick = () => { i.value = b.dataset.s; go(b.dataset.s); });
