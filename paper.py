@@ -63,7 +63,14 @@ class AlpacaPaper:
     def _req(self, method: str, path: str, **kw):
         r = requests.request(method, PAPER_URL + path, headers=self.h, timeout=20, **kw)
         if r.status_code >= 300:
-            raise RuntimeError(f"Alpaca {r.status_code}: {r.text[:200]}")
+            msg = r.text[:200]
+            try:
+                msg = r.json().get("message") or msg
+            except Exception:
+                pass
+            if r.status_code in (401, 403) and "forbidden" in msg.lower():
+                msg += " (check that ALPACA_API_KEY / ALPACA_SECRET_KEY are PAPER keys)"
+            raise RuntimeError(f"Alpaca {r.status_code}: {msg}")
         return r.json() if r.text else {}
 
     def is_open(self) -> bool:
@@ -79,14 +86,25 @@ class AlpacaPaper:
             if o["status"] == "filled":
                 return float(o["filled_avg_price"])
             if o["status"] in ("canceled", "rejected", "expired"):
-                raise RuntimeError(f"order {o['status']}")
+                raise RuntimeError(f"Alpaca {o['status']} the order")
             time.sleep(0.5)
-        raise RuntimeError("order not filled within 30s")
+        try:                       # don't leave an order sitting there to fill later behind our back
+            self._req("DELETE", f"/v2/orders/{oid}")
+        except RuntimeError:
+            pass
+        raise RuntimeError("order didn't fill within 30 seconds, so it was cancelled")
 
     def enter(self, sym: str, qty: int, side: str) -> tuple[float, str]:
         o = self._req("POST", "/v2/orders", json=dict(symbol=sym, qty=str(qty), side=side,
                                                        type="market", time_in_force="day"))
         return self._wait_fill(o["id"]), o["id"]
+
+    def shortable(self, sym: str) -> bool:
+        try:
+            a = self._req("GET", f"/v2/assets/{sym}")
+            return bool(a.get("shortable") and a.get("easy_to_borrow"))
+        except RuntimeError:
+            return False
 
     def place_target(self, sym: str, qty: int, side: str, price: float) -> str:
         o = self._req("POST", "/v2/orders", json=dict(symbol=sym, qty=str(qty), side=side, type="limit",
@@ -198,6 +216,10 @@ def _try_entry(b, sym: str, candle_start: pd.Timestamp) -> str | None:
     qty = math.floor(trade_usd() / price)
     if qty < 1:
         return None
+    if not b.is_open():                 # the scan can take a while; never send an order after the bell
+        return None
+    if d == -1 and hasattr(b, "shortable") and not b.shortable(sym):
+        return None
     fill, oid = b.enter(sym, qty, "buy" if d == 1 else "sell")
     tp = b.place_target(sym, qty, "sell" if d == 1 else "buy", sig["target"])
     kind = "shelf" if sig["shelf"] else "atr"
@@ -224,7 +246,7 @@ def run_check(force: bool = False) -> list[str]:
     except Exception as e:
         log.warning("clock check failed: %s", e)
         return []
-    msgs = []
+    msgs, failed = [], []
     with _lock:
         start = engine.current_candle_start(pd.Timestamp.now(tz="UTC"))
         for t in db.open_trades():
@@ -245,7 +267,9 @@ def run_check(force: bool = False) -> list[str]:
                     msgs.append(m)
             except Exception as e:
                 log.warning("entry failed for %s: %s", row["symbol"], e)
-                msgs.append(f"🧪 {row['symbol']}: paper entry failed ({e})")
+                failed.append(f"{row['symbol']}: {e}")
+    if failed:
+        msgs.append("🧪 Paper entries that failed:\n" + "\n".join(failed[:8]) + (f"\n…and {len(failed) - 8} more" if len(failed) > 8 else ""))
     for m in msgs:
         notify.admins(m)
     return msgs
@@ -276,10 +300,16 @@ def summary(with_prices: bool = True) -> dict:
     trades = db.all_trades(500)
     closed = [t for t in trades if t["status"] == "closed"]
     opened = [t for t in trades if t["status"] == "open"]
+    live = {}
+    if with_prices and opened:
+        try:
+            live = data.latest_prices([t["symbol"] for t in opened])
+        except Exception as e:
+            log.warning("live prices failed: %s", e)
     if with_prices:
         for t in opened:
             try:
-                p = data.latest_price(t["symbol"])
+                p = (live.get(t["symbol"]) or {}).get("price") or data.latest_price(t["symbol"])
                 t["last_price"] = p
                 t["unreal_pct"] = round(t["direction"] * (p / t["entry_price"] - 1) * 100, 2)
                 t["unreal"] = round(t["direction"] * (p - t["entry_price"]) * t["qty"], 2)

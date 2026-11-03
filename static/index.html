@@ -1551,7 +1551,7 @@ async function loadPaper() {
   $("pBroker").textContent = `${p.enabled ? "Auto-trading on" : "Off"} · ${p.broker}`;
   const st = p.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const usd = (v) => v == null ? "–" : (v < 0 ? "-" : "+") + money(Math.abs(v));
-  const pc = (v) => v == null ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
+  const pc = (v) => v == null || v === 0 ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
   const row = (t, open) => `<div class="pos">
       <div><b class="mono">${esc(t.symbol)}</b> <small><span style="color:var(${t.direction === 1 ? "--up" : "--down"});font-weight:500">${t.direction === 1 ? "LONG" : "SHORT"}</span> ${t.qty} @ ${money(t.entry_price)}</small></div>
       <div class="r" style="${pc(open ? t.unreal_pct : t.pnl_pct)}">${open ? sign(t.unreal_pct) : sign(t.pnl_pct)}</div>
@@ -1569,7 +1569,7 @@ async function loadPaper() {
     <div class="note">${p.account ? `Paper account equity ${money(p.account.equity)} · ` : ""}${money(p.trade_usd)} per trade${p.allow_short ? " · longs and shorts" : " · longs only"} · entries and exits ~2 min before each 4H close</div>
     ${p.open.length ? `<div class="eyebrow" style="margin:16px 0 8px">Open</div><div class="feed">${p.open.map(t => row(t, true)).join("")}</div>` : ""}
     ${p.closed.length ? `<div class="eyebrow" style="margin:16px 0 8px">Closed</div><div class="feed">${p.closed.map(t => row(t, false)).join("")}</div>`
-      : `<div class="empty" style="margin-top:12px">${p.enabled ? "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub." : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
+      : p.open.length ? "" : `<div class="empty" style="margin-top:12px">${p.enabled ? "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub." : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
 }
 
 $("pSwitch").addEventListener("click", async () => {
@@ -1977,7 +1977,7 @@ async function loadLab() {
   try { L = await api("/api/admin/lab"); } catch (e) { $("lab").innerHTML = failedHTML("the Lab", e, "loadLab()"); return; }
   const S = L.snapshot || {}, F = L.forward || {};
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
-  const pc = (v) => v == null ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
+  const pc = (v) => v == null || v === 0 ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
   const row = (name, st) => st ? `<tr><td><b>${name}</b></td><td>${st.n ?? 0}</td><td>${st["follow-through"] ?? "–"}%</td>
       <td>${st.win_rate ?? "–"}%</td><td style="${pc(st.expectancy_pct)}">${sign(st.expectancy_pct)}</td></tr>` : "";
   const frow = (name, st) => st ? `<tr><td><b>${name}</b></td><td>${st.closed}</td><td>${st.reached ?? "–"}${st.reached == null ? "" : "%"}</td>
