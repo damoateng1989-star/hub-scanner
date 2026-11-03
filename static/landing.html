@@ -526,6 +526,24 @@ h1, h2, h3, .brand, .sb-brand { letter-spacing: -0.025em; }
 input, button, select, textarea { font-family: inherit; }
 td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b, .price { font-variant-numeric: tabular-nums; }
 </style>
+
+<link rel="preload" href="/fonts/Newsreader.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* ================= Serif headlines (Newsreader, SIL Open Font License); Geist stays for body, prices and UI ================= */
+@font-face { font-family: "Newsreader"; src: url("/fonts/Newsreader.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "Newsreader"; src: url("/fonts/NewsreaderItalic.woff2") format("woff2"); font-weight: 200 800; font-style: italic; font-display: swap; }
+:root { --display: "Newsreader", Georgia, "Times New Roman", serif; }
+.hero h1, .hero h1 .l1, .hero h1 .l2, section h2, .final h2, .mf-h, .g-head h2 {
+  font-family: var(--display) !important; font-weight: 500 !important; letter-spacing: -0.02em !important; font-optical-sizing: auto; }
+.hero h1 { font-size: clamp(48px, 7.4vw, 104px) !important; line-height: 1.0 !important; }
+.hero h1 .l2 { font-style: italic !important; font-weight: 400 !important; padding-right: .06em; }
+section h2, .g-head h2 { font-size: clamp(34px, 5vw, 58px) !important; line-height: 1.05 !important; }
+section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !important; font-style: italic !important; font-weight: 400 !important; letter-spacing: -0.01em !important; }
+.mf-h { font-size: clamp(42px, 6.6vw, 88px) !important; line-height: 1.02 !important; }
+.mf-h span { font-style: italic; font-weight: 400; }
+.card h3, .g-t, .mf-c b, .tier .price { font-family: var(--sans) !important; }
+.lede { font-size: clamp(17px, 1.9vw, 20px) !important; }
+</style>
 </head>
 <body>
 
@@ -986,7 +1004,7 @@ fetch("/api/board").then(r => r.json()).then(b => {
   tabs.innerHTML = Object.keys(groups).filter(k => groups[k].length).map(k => `<button data-k="${k}">${names[k]} <small>${groups[k].length}</small></button>`).join("");
   tabs.querySelectorAll("button").forEach(x => x.onclick = () => show(x.dataset.k));
   show(groups.hubs.length ? "hubs" : Object.keys(groups).find(k => groups[k].length) || "hubs");
-  if (b.locked && (b.live_count || b.near_count)) note.innerHTML = `🔒 ${b.live_count} breakouts and ${b.near_count} stocks at a hub edge are members-only. <a href="/login#signup">Sign up free</a> to see more. · Educational, not financial advice.`;
+  if (b.locked && (b.live_count || b.near_count)) note.innerHTML = `🔒 ${b.live_count} breakout${b.live_count === 1 ? "" : "s"} and ${b.near_count} stock${b.near_count === 1 ? "" : "s"} at a hub edge are members-only. <a href="/login#signup">Sign up free</a> to see more. · Educational, not financial advice.`;
 })();
 </script>
 <style>
