@@ -100,5 +100,20 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 document.getElementById("yr").textContent = new Date().getFullYear();
 document.querySelectorAll(".toc a").forEach(a => a.classList.toggle("on", a.dataset.s === "{{SLUG}}"));
 </script>
+
+<style>
+/* MONOCHROME */
+form button, .cform button, .nl .cta, #watch { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #070b10 !important; }
+.nl .cta:hover { background: #fff !important; }
+.kick, .toc a.on { color: #fff !important; } .kick::before { background: #fff !important; }
+.toc a.on { border-color: rgba(255,255,255,.4) !important; background: rgba(255,255,255,.06) !important; }
+article a, .cbox a { color: #fff !important; text-decoration: underline !important; text-underline-offset: 3px; }
+footer b { color: #fff !important; }
+header.ph { background: radial-gradient(ellipse at 20% 0%, rgba(255,255,255,.06), transparent 55%) !important; }
+h1 em, .pitch h1 em { color: #fff !important; -webkit-text-fill-color: #fff !important; } h2 em { color: #fff !important; }
+input:focus, .cform input:focus, .cform textarea:focus, .cform select:focus { border-color: #fff !important; box-shadow: 0 0 0 3px rgba(255,255,255,.12) !important; }
+h2 em { color: #9fb0c2 !important; }
+.tk-back:hover { border-color: #fff !important; }
+</style>
 </body>
 </html>

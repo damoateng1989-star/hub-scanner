@@ -1050,5 +1050,37 @@ fetch("/api/board").then(r => r.json()).then(b => {
 @media (max-width: 600px) { .ab-in { border-radius: 22px; padding: 8px 8px 8px 10px; } .ab-bot { width: 38px; height: 38px; } .askbox input { font-size: 16px !important; height: 46px; } .ab-go { width: 44px; height: 44px; } }
 @media (prefers-reduced-motion: reduce) { .hero::before, .g-card.sk { animation: none; } }
 </style>
+
+<style>
+/* ================= MONOCHROME landing: black & white, one green brand moment, colour only for signals ================= */
+.btn.solid, .primary, .ab-go, .cform button, .ribbon, .mf-k { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #070b10 !important; box-shadow: 0 8px 30px rgba(255,255,255,.08) !important; }
+.btn.solid:hover, .ab-go:hover { background: #fff !important; }
+.hero::before { background:
+    radial-gradient(closest-side at 34% 58%, rgba(255,255,255,.16), transparent 72%),
+    radial-gradient(closest-side at 66% 60%, rgba(160,176,196,.16), transparent 72%),
+    radial-gradient(closest-side at 50% 45%, rgba(61,214,140,.10), transparent 72%) !important; }
+.eyebrow { border-color: rgba(255,255,255,.18) !important; background: rgba(255,255,255,.05) !important; color: #e8eef5 !important; }
+.hero h1 .l2::after { border-top-color: rgba(255,255,255,.28) !important; }
+.kicker, .kick { color: #9fb0c2 !important; }
+h2 em { color: #7d8b9b !important; }
+.num { background: rgba(255,255,255,.07) !important; color: #fff !important; }
+.tier.pro { border-color: rgba(255,255,255,.45) !important; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.4) !important; }
+.tier.pro .num { background: rgba(255,255,255,.12) !important; color: #fff !important; }
+.tier li::before { color: #fff !important; }
+.icon { color: #fff !important; background: rgba(255,255,255,.06) !important; border-color: rgba(255,255,255,.14) !important; }
+.pro-badge { color: #fff !important; border-color: rgba(255,255,255,.35) !important; }
+.trust svg { color: #c9d3df !important; }
+.ab-in:focus-within { border-color: rgba(255,255,255,.5) !important; box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 4px rgba(255,255,255,.08) !important; }
+.ab-chips button:hover { border-color: #fff !important; }
+.ab-bot circle { fill: #fff; }
+.mf-h span { background: linear-gradient(180deg, #ffffff 20%, #8d9aaa) !important; -webkit-background-clip: text !important; background-clip: text !important; }
+.manifesto { background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.06), transparent 60%), linear-gradient(180deg, #0a0e14, #070b10) !important; }
+.final { background: radial-gradient(ellipse at 30% 0%, rgba(255,255,255,.08), transparent 55%), #0d1117 !important; }
+.wdot { background: #c9d3df !important; box-shadow: none !important; }
+footer b, .g-note a, .alt a { color: #fff !important; }
+details summary::after { color: #fff !important; }
+.join input[type=email]:focus { border-color: #fff !important; box-shadow: 0 0 0 3px rgba(255,255,255,.12) !important; }
+.jmsg.ok { color: #3DD68C !important; }
+</style>
 </body>
 </html>

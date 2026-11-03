@@ -2755,5 +2755,50 @@ window.addEventListener("online", () => { netbar(); loadTickers(); loadAlerts();
 boot(); setTimeout(pollAgent, 1500); setTimeout(pollLive, 2500);
 setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
+
+<style>
+/* ================= MONOCHROME: black & white interface, colour only for market signals ================= */
+:root { --shelf: #F4F6F9; --accent: #F4F6F9; --mono-w: #F4F6F9; }
+/* buttons */
+button.primary, .btnx.primary, .primary, .sp-go, #addBtn { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #070b10 !important; }
+button.primary:hover, .sp-go:hover { background: #fff !important; box-shadow: 0 0 0 3px rgba(255,255,255,.12) !important; filter: none !important; }
+/* sidebar & nav */
+.sb-item.on svg { color: #fff !important; }
+.sb-item.on::after { background: linear-gradient(90deg, #fff, transparent 70%) !important; }
+.sb-plan b, .sb-label a:hover, .sb-plan a { color: #fff !important; }
+.sb-motto { border-left-color: #fff !important; }
+/* Rule #1 banner: neutral */
+.rule1 { background: linear-gradient(90deg, rgba(255,255,255,.05), rgba(255,255,255,.015) 60%, transparent) !important; border-color: #263446 !important; }
+.r1-k { color: #9fb0c2 !important; }
+/* tabs, pickers, chips */
+.setup-tabs button.on, .rec-tabs button.on { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #070b10 !important; }
+.setup-tabs button.on svg, .setup-tabs button.on small, .rec-tabs button.on b { color: #070b10 !important; }
+.setup-tabs button.on small { background: rgba(0,0,0,.08) !important; } .rec-tabs button.on small { color: #3a4656 !important; }
+.style-opt:has(input:checked) { border-color: rgba(255,255,255,.45) !important; background: rgba(255,255,255,.04) !important; }
+.style-opt:has(input:checked) .so-ic { color: #fff !important; }
+.style-opt em.core { background: rgba(255,255,255,.1) !important; color: #fff !important; }
+.style-opt input, .brief-sw input, .ng-snooze input { accent-color: #f4f6f9 !important; }
+.bf-seg button.on { background: #F4F6F9 !important; color: #070b10 !important; }
+/* links that were green */
+.bf-foot a, .mb-lock a, .mb-f a, .upsell, .ox-lock a { color: #fff !important; }
+.bf-foot a + a { color: #8a9aae !important; }
+/* Scout: monochrome robot, green only means "scanning" */
+.scout-fab::before { background: conic-gradient(from var(--sf-a, 0deg), #ffffff, #5d6d80, #ffffff, #5d6d80, #ffffff) !important; }
+.scout-fab { box-shadow: 0 16px 44px rgba(0,0,0,.55), 0 0 28px rgba(255,255,255,.12) !important; }
+.scout-fab:hover { box-shadow: 0 20px 50px rgba(0,0,0,.6), 0 0 40px rgba(255,255,255,.2) !important; }
+.sf-halo { background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%) !important; }
+.scout-fab .ag-eyes circle { fill: #ffffff !important; filter: drop-shadow(0 0 3px rgba(255,255,255,.8)) !important; }
+.scout-fab .ag-ant { fill: #9fb0c2 !important; } .scout-fab.run .ag-ant { fill: #3DD68C !important; }
+.sf-name, .sf-hello, .sf-badge { background: #F4F6F9 !important; color: #070b10 !important; }
+.sf-radar { border-color: rgba(255,255,255,.5) !important; }
+.agent.run .ag-state, .scout-pop.run .sp-head small { color: #fff !important; border-color: rgba(255,255,255,.4) !important; background: rgba(255,255,255,.06) !important; }
+.ag-bar i { background: linear-gradient(90deg, #5d6d80, #fff) !important; }
+.ag-line .cur::after { color: #fff !important; }
+/* misc accents */
+.msgi { border-left-color: #fff !important; }
+.lesson .lacct b { color: #fff !important; }
+.kick { color: #9fb0c2 !important; }
+.ox-beta, .storage-warn code { background: #1e2a3a !important; }
+</style>
 </body>
 </html>
