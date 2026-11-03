@@ -732,7 +732,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
     <div class="fl-stage">
       <div class="fl-chart">
         <div class="fl-top"><span class="fl-sym"><b>AMD</b> 4-hour</span><span class="fl-clock" id="flClock"><i></i><span>After every 4H close</span></span></div>
-        <svg viewBox="0 0 600 330" preserveAspectRatio="xMidYMid meet" aria-hidden="true" id="flSvg"></svg>
+        <svg viewBox="0 10 600 305" preserveAspectRatio="xMidYMid meet" aria-hidden="true" id="flSvg"></svg>
       </div>
       <div class="fl-phone" aria-hidden="true">
         <div class="fl-notch"></div>
@@ -1926,6 +1926,23 @@ svg.viz { background: #0f1218 !important; }
 html[data-theme="light"] .eyebrow .tl b:last-child { color: #16a34a; }
 .eyebrow .tl em { font-style: normal; opacity: .45; letter-spacing: 0; }
 @media (max-width: 520px) { .eyebrow svg { display: none; } .eyebrow .tl { gap: 7px; font-size: 10.5px; letter-spacing: .08em; } }
+</style>
+<style>
+/* walkthrough: a bit more compact */
+.flow { max-width: 940px; margin-left: auto; margin-right: auto; padding: 14px; border-radius: 22px; }
+.fl-stage { grid-template-columns: minmax(0, 1fr) 232px; gap: 14px; }
+.fl-chart { padding: 12px 12px 4px; border-radius: 16px; }
+.fl-phone { min-height: 0; padding: 28px 10px 12px; border-radius: 30px; border-width: 5px; }
+.fl-notch { width: 70px; height: 16px; margin-left: -35px; top: 7px; }
+.fl-time { font-size: 34px; } .fl-date { font-size: 11px; margin-bottom: 10px; }
+.fl-stack { gap: 6px; }
+.fl-note { padding: 8px 9px; border-radius: 13px; }
+.fl-nh { font-size: 9.5px; } .fl-nt { font-size: 12px; } .fl-nb { font-size: 11px; }
+.fl-stack .fl-note:nth-last-child(3) .fl-nb { display: none; }
+.fl-steps { margin-top: 12px; gap: 6px; }
+.fl-steps li { padding: 10px 10px 12px; border-radius: 12px; }
+.fl-steps li small { font-size: 10px; } .fl-steps li b { font-size: 13px; } .fl-steps li p { font-size: 11.5px; }
+@media (max-width: 860px) { .fl-stage { grid-template-columns: 1fr; } }
 </style>
 </body>
 </html>
