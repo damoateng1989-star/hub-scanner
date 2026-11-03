@@ -70,7 +70,15 @@ def build(u: dict | None) -> dict:
             if st.get("state") in ("breakout_up", "breakdown", "forming", "watching"):
                 mine.append(dict(symbol=sym, state=st["state"], low=(st.get("hub") or {}).get("low"),
                                  high=(st.get("hub") or {}).get("high"), target=st.get("target"), earn=_earn(sym)))
-    return dict(date=today.strftime("%a %b %-d"), pro=pro, universe=b["universe"], new_count=len(new), held_count=len(held),
+    upd = None
+    try:
+        upd = pd.Timestamp(b.get("updated")).tz_localize("UTC").tz_convert(engine.NY) if b.get("updated") else None
+    except Exception:
+        upd = None
+    fresh = bool(upd is not None and upd.date() == today.date() and upd.hour * 60 + upd.minute >= 16 * 60)
+    return dict(swept_at=upd.strftime("%-I:%M %p").replace("AM", "AM").lstrip("0") if upd is not None else None,
+                swept_day=upd.strftime("%a %b %-d") if upd is not None else None, fresh=fresh,
+                date=today.strftime("%a %b %-d"), pro=pro, universe=b["universe"], new_count=len(new), held_count=len(held),
                 near_count=len(b["near"]), new=new_rows if pro else [], near=near_rows if pro else [],
                 events=events[:8], mine=mine[:10], watching=len(db.user_symbols(u["id"])) if u else 0)
 
@@ -90,8 +98,14 @@ def _mine_line(m: dict) -> str:
 
 
 def text(d: dict) -> str:
+    when = d.get("swept_at") or "?"
+    if d.get("swept_day") and d["swept_day"] != d["date"]:
+        when = f"{d['swept_day']} {when}"
     L = [f"🌙 NextShelf evening recap · {d['date']}",
-         f"Today's sweep: {d['universe']} stocks · {_n(d['new_count'], 'new breakout')} · {d['near_count']} at the edge going into tomorrow", ""]
+         f"Sweep at {when}: {d['universe']} stocks · {_n(d['new_count'], 'new breakout')} · {d['near_count']} at the edge going into tomorrow"]
+    if not d.get("fresh"):
+        L.append("⚠️ Today's after-the-close sweep hasn't finished, so this uses the earlier one. Check the app for the final 4:00 PM closes.")
+    L.append("")
     if d["pro"]:
         if d["new"]:
             L.append("🚀 Broke out today (confirmed on the close)")
