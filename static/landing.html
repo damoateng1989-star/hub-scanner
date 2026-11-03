@@ -693,7 +693,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
   <div class="g-head"><div><div class="kicker">Live from the scanner</div><h2>What's setting up <em>right now.</em></h2></div>
     <a class="btn ghost" href="/app#discover">Browse all setups →</a></div>
   <div class="g-tabs" id="gTabs"></div>
-  <div class="g-grid" id="gGrid"><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div></div>
+  <div class="g-grid" id="gGrid"><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div></div>
   <p class="g-note" id="gNote">Educational, not financial advice. Updated after every 4-hour close.</p>
   <div class="g-more"><a class="btn ghost" href="/app#discover">Browse all setups →</a></div>
 </div></section>
@@ -1322,7 +1322,7 @@ fetch("/api/board").then(r => r.json()).then(b => {
   const names = {hubs: "Hubs", patterns: "Flags, triangles & more", levels: "Support & resistance"};
   let cur = "hubs";
   const show = (k) => { cur = k; tabs.querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.k === k));
-    const list = groups[k].slice(0, 9); grid.innerHTML = list.length ? list.join("") : `<div class="g-empty">Nothing here right now. Scout checks again after the next 4-hour close.</div>`; };
+    const list = groups[k].slice(0, 3); grid.innerHTML = list.length ? list.join("") : `<div class="g-empty">Nothing here right now. Scout checks again after the next 4-hour close.</div>`; };
   tabs.innerHTML = Object.keys(groups).filter(k => groups[k].length).map(k => `<button data-k="${k}">${names[k]} <small>${groups[k].length}</small></button>`).join("");
   tabs.querySelectorAll("button").forEach(x => x.onclick = () => show(x.dataset.k));
   show(groups.hubs.length ? "hubs" : Object.keys(groups).find(k => groups[k].length) || "hubs");
