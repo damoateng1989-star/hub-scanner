@@ -597,10 +597,11 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
 <header class="hero">
   <div class="shelves-bg" aria-hidden="true"><i style="top:18%"></i><i class="z" style="top:34%"></i><i style="top:57%"></i><i class="z dn" style="top:76%"></i></div>
   <div class="wrap" style="position:relative">
+<div class="hero-grid"><div class="hero-l">
     <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg><span class="tl"><b>Find the setup</b><em>→</em><b>Get the plan</b><em>→</em><b>Trade it</b></span></span>
-    <h1><span class="l1">Your Next Trade</span><span class="l2">Is Setting Up.</span></h1>
-    <p class="lede">We help you find stocks setting up for a breakout, with a plan for the next target zone and an alert when the breakout is confirmed.</p>
-    <p class="tagline"><span class="tl-who">Built for swing traders with day jobs.</span> We watch the setup while you go do other things.</p>
+    <h1><span class="l1">Built for traders</span><span class="l1">who don't have</span><span class="l2">time to watch.</span></h1>
+    <p class="lede">We find stocks setting up for a breakout, plan the next target zone, and alert you when the breakout is confirmed.</p>
+    <p class="tagline">We watch the setup while you go do other things.</p>
     <form class="askbox" id="askbox" autocomplete="off">
       <div class="ab-in">
         <span class="ab-bot" aria-hidden="true"><svg viewBox="0 0 64 64" width="30" height="30"><line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle cx="32" cy="5" r="3.4" fill="#3DD68C"/><rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2f4258" stroke-width="1.5"/><rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/><circle cx="25" cy="29.5" r="3.4" fill="#8ef0bf"/><circle cx="39" cy="29.5" r="3.4" fill="#8ef0bf"/></svg></span>
@@ -614,6 +615,30 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
     </form>
     <p class="alt"><span data-open-only>Free to try · <a href="/login#signup">create an account</a> · </span><span data-wl-only hidden>Invite-only beta · <a href="/app#discover">try the demo</a> · </span><a href="#join">get early access</a> · works as an app on phone and desktop</p>
 
+    </div>
+    <div class="hero-r" aria-hidden="true">
+      <div class="hc-stage">
+        <div class="hc hc-3"><div class="hc-top"><b>GOOGL</b><span class="hc-pill near">At the edge</span></div>
+          <div class="hc-row"><span>Hub top</span><b>$254.50</b></div><div class="hc-row"><span>Next shelf</span><b class="up">$257.49</b></div></div>
+        <div class="hc hc-2"><div class="hc-top"><b>NVDA</b><span class="hc-pill hub">In a hub</span></div>
+          <svg class="hc-spark" viewBox="0 0 200 54"><rect x="6" y="14" width="188" height="26" rx="4" fill="rgba(124,147,255,.12)" stroke="rgba(124,147,255,.6)" stroke-dasharray="3 3"/><polyline points="10,34 30,20 50,33 70,21 90,32 110,22 130,31 150,23 170,30 188,24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="188" cy="24" r="3.5" fill="#7C93FF"/></svg>
+          <div class="hc-row"><span>Hub</span><b>$57.72–$58.97</b></div><div class="hc-row"><span>Sessions</span><b>8</b></div></div>
+        <div class="hc hc-1">
+          <div class="hc-top"><div><b class="hc-sym">AMD</b><small>$179.76 · last 4-hour close</small></div><span class="hc-pill up">Breakout ↑</span></div>
+          <div class="hc-k">Level map</div>
+          <div class="hc-lm">
+            <div class="hc-l shelf"><span><i></i>Next shelf</span><b>$186.10<small>+3.5%</small></b></div>
+            <div class="hc-l now"><span><i></i>Last 4-hour close</span><b>$179.76</b></div>
+            <div class="hc-l hub"><span><i></i>Hub top</span><b>$178.01</b></div>
+            <div class="hc-l hub"><span><i></i>Hub bottom</span><b>$176.80</b></div>
+          </div>
+          <div class="hc-k">Game plan</div>
+          <div class="hc-gp"><span>Aim</span><b>$186.10</b><span>Wrong if a 4H close is back below</span><b>$178.01</b></div>
+          <div class="hc-alert"><i>🚀</i><span><b>Alert sent 4:17 PM</b> · AMD closed above its hub</span></div>
+        </div>
+      </div>
+    </div>
+    </div>
     <div class="lesson-wrap">
   <div class="lesson" id="lesson">
     <div class="lh">
@@ -2067,6 +2092,73 @@ section .wrap > .kicker, #flow .kicker, #why .kicker, #live .kicker {
 #live .g-note { text-align: center; }
 #live .g-more { display: flex; justify-content: center; margin-top: 18px; }
 @media (max-width: 640px) { #live .g-tabs { justify-content: flex-start; } }
+</style>
+<style>
+/* ================= hero: promise on the left, the Shelf card on the right ================= */
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 48px; align-items: center; margin: 0 auto; max-width: 1240px; text-align: left; }
+html .hero .hero-l { text-align: left !important; display: flex; flex-direction: column; align-items: flex-start; }
+html .hero .hero-l .eyebrow { margin: 0 0 22px !important; align-self: flex-start !important; }
+html .hero .hero-l h1 { text-align: left !important; margin: 0 !important; font-size: clamp(44px, 5.6vw, 82px) !important; line-height: 1.0 !important; }
+html .hero .hero-l h1 .l1, html .hero .hero-l h1 .l2 { display: block; text-align: left !important; }
+html .hero .hero-l h1 .l2 { text-decoration: none !important; border: 0 !important; }
+html .hero .hero-l h1 .l2::after { display: none !important; }
+html .hero .hero-l .lede, html .hero .hero-l .tagline, html .hero .hero-l .alt { text-align: left !important; margin-left: 0 !important; margin-right: 0 !important; max-width: 560px; }
+html .hero .hero-l .lede { margin-top: 22px !important; }
+html .hero .hero-l .tagline { margin-top: 10px !important; }
+html .hero .hero-l .askbox { width: 100%; max-width: 560px; margin: 26px 0 0 !important; }
+html .hero .hero-l .ab-chips { justify-content: flex-start !important; }
+html .hero .hero-l .ab-msg { text-align: left !important; }
+/* card stack */
+.hero-r { position: relative; min-height: 520px; perspective: 1600px; }
+.hc-stage { position: absolute; inset: 0; transform-style: preserve-3d; transform: rotateY(-16deg) rotateX(8deg) rotateZ(-3deg); animation: hcFloat 7s ease-in-out infinite; }
+@keyframes hcFloat { 50% { transform: rotateY(-12deg) rotateX(6deg) rotateZ(-2deg) translateY(-8px); } }
+.hc { position: absolute; width: 360px; padding: 18px; border-radius: 22px; font-family: var(--sans, "DM Sans", sans-serif);
+  background: linear-gradient(180deg, #16202e, #0b1119); color: #eef2f7; border: 1px solid rgba(255,255,255,.08);
+  box-shadow: 0 40px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06); }
+.hc-1 { left: 12%; top: 12%; transform: translateZ(60px); box-shadow: 0 50px 100px rgba(0,0,0,.5), 0 0 0 1px rgba(61,214,140,.25), 0 0 60px rgba(61,214,140,.12); }
+.hc-2 { left: 34%; top: 2%; width: 300px; transform: translateZ(-40px) rotateZ(5deg); opacity: .9; }
+.hc-3 { left: 40%; top: 64%; width: 280px; transform: translateZ(-80px) rotateZ(8deg); opacity: .8; }
+.hc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.hc-top b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.hc-sym { font-size: 26px !important; display: block; }
+.hc-top small { display: block; margin-top: 2px; color: #8a9aae; font-size: 12px; }
+.hc-pill { padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.hc-pill.up { color: #7ee2ad; background: rgba(61,214,140,.14); } .hc-pill.hub { color: #b4c3ff; background: rgba(124,147,255,.14); } .hc-pill.near { color: #f2cf7a; background: rgba(242,193,78,.14); }
+.hc-k { margin: 14px 0 7px; font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #8a9aae; }
+.hc-lm { border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,.06); }
+.hc-l { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; font-size: 13.5px; border-top: 1px dashed rgba(255,255,255,.07); }
+.hc-l:first-child { border-top: 0; }
+.hc-l span { display: inline-flex; align-items: center; gap: 9px; color: #c9d3df; } .hc-l i { width: 7px; height: 7px; border-radius: 50%; }
+.hc-l b { font-variant-numeric: tabular-nums; font-size: 15px; text-align: right; } .hc-l b small { display: block; font-size: 11px; font-weight: 500; color: #8a9aae; }
+.hc-l.shelf { background: linear-gradient(90deg, rgba(61,214,140,.14), transparent); } .hc-l.shelf i { background: #3DD68C; } .hc-l.shelf b { color: #7ee2ad; }
+.hc-l.now i { background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.15); } .hc-l.now span { color: #fff; font-weight: 700; }
+.hc-l.hub { background: rgba(124,147,255,.07); } .hc-l.hub i { background: #7C93FF; } .hc-l.hub b { color: #b4c3ff; }
+.hc-gp { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 13px; color: #a9b6c6; } .hc-gp b { color: #fff; font-variant-numeric: tabular-nums; text-align: right; }
+.hc-alert { display: flex; gap: 9px; align-items: center; margin-top: 14px; padding: 10px 12px; border-radius: 12px; font-size: 12.5px; color: #c9d3df; background: rgba(61,214,140,.08); border: 1px solid rgba(61,214,140,.25); }
+.hc-alert i { font-style: normal; } .hc-alert b { color: #fff; }
+.hc-row { display: flex; justify-content: space-between; margin-top: 10px; font-size: 13px; color: #a9b6c6; } .hc-row b { color: #fff; font-size: 14px; } .hc-row b.up { color: #7ee2ad; }
+.hc-spark { width: 100%; height: 54px; margin-top: 12px; color: #c9d3df; }
+/* light theme: white cards */
+html[data-theme="light"] .hc { background: linear-gradient(180deg, #ffffff, #f6f7f9); color: #0d1117; border-color: rgba(15,23,42,.08); box-shadow: 0 40px 80px rgba(15,23,42,.14), inset 0 1px 0 #fff; }
+html[data-theme="light"] .hc-1 { box-shadow: 0 50px 100px rgba(15,23,42,.18), 0 0 0 1px rgba(22,163,74,.25), 0 0 60px rgba(22,163,74,.10); }
+html[data-theme="light"] .hc-top small, html[data-theme="light"] .hc-k, html[data-theme="light"] .hc-l b small { color: #6b7280; }
+html[data-theme="light"] .hc-l span, html[data-theme="light"] .hc-gp, html[data-theme="light"] .hc-row, html[data-theme="light"] .hc-alert { color: #4b5563; }
+html[data-theme="light"] .hc-l.now span, html[data-theme="light"] .hc-gp b, html[data-theme="light"] .hc-row b, html[data-theme="light"] .hc-alert b { color: #0d1117; }
+html[data-theme="light"] .hc-l.now i { background: #0d1117; box-shadow: 0 0 0 3px rgba(13,17,23,.12); }
+html[data-theme="light"] .hc-lm, html[data-theme="light"] .hc-l { border-color: rgba(15,23,42,.08); }
+html[data-theme="light"] .hc-l.shelf b, html[data-theme="light"] .hc-row b.up { color: #15803d; } html[data-theme="light"] .hc-l.hub b { color: #4338ca; }
+html[data-theme="light"] .hc-pill.up { color: #166534; background: #dcfce7; } html[data-theme="light"] .hc-pill.hub { color: #3730a3; background: #e0e7ff; } html[data-theme="light"] .hc-pill.near { color: #92400e; background: #fef3c7; }
+html[data-theme="light"] .hc-spark { color: #4b5563; }
+@media (max-width: 1080px) { .hc { width: 320px; } .hc-1 { left: 4%; } }
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 28px; }
+  .hero-r { min-height: 560px; margin-bottom: 10px; }
+  .hc-1 { top: 30px !important; }
+  .hc-stage { transform: rotateY(-8deg) rotateX(6deg) rotateZ(-2deg); }
+  .hc-1 { left: 50%; margin-left: -165px; width: 330px; } .hc-2 { left: auto; right: -30px; top: 0; } .hc-3 { display: none; }
+}
+@media (max-width: 420px) { .hc-1 { width: 300px; margin-left: -150px; } .hc-2 { display: none; } }
+@media (prefers-reduced-motion: reduce) { .hc-stage { animation: none; } }
 </style>
 </body>
 </html>
