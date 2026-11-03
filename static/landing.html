@@ -600,6 +600,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
     <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg><span class="tl"><b>Find the setup</b><em>→</em><b>Get the plan</b><em>→</em><b>Trade it</b></span></span>
     <h1><span class="l1">Your Next Trade</span><span class="l2">Is Setting Up.</span></h1>
     <p class="lede">We help you find stocks setting up for a breakout, with a plan for the next target zone and an alert when the breakout is confirmed.</p>
+    <p class="tagline">We watch the setup while you go do other things.</p>
     <form class="askbox" id="askbox" autocomplete="off">
       <div class="ab-in">
         <span class="ab-bot" aria-hidden="true"><svg viewBox="0 0 64 64" width="30" height="30"><line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle cx="32" cy="5" r="3.4" fill="#3DD68C"/><rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2f4258" stroke-width="1.5"/><rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/><circle cx="25" cy="29.5" r="3.4" fill="#8ef0bf"/><circle cx="39" cy="29.5" r="3.4" fill="#8ef0bf"/></svg></span>
@@ -910,6 +911,23 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
 })();
 </script>
 
+<section class="block why-sec" id="why"><div class="wrap">
+  <div class="kicker">Why NextShelf</div>
+  <h2>Alerts aren't new. <em>Watching the right setup is.</em></h2>
+  <p class="sub">Your phone can already ping you. The problem is what it pings you about.</p>
+  <div class="why">
+    <div class="why-c"><b>Do-it-yourself alerts</b><p>You draw the levels and build each alert yourself, one ticker at a time. Nobody does that for 540 stocks, and a price line can't tell a real close from a wick.</p></div>
+    <div class="why-c"><b>Generic scanners</b><p>They watch their own long list of patterns, mostly for day traders at the screen all day. You end up adapting to the tool.</p></div>
+    <div class="why-c"><b>Breakout chat rooms</b><p>Every pump, all day. No rules, no earnings check, and no record of how the calls actually did.</p></div>
+    <div class="why-c why-us"><b>NextShelf</b><ul>
+      <li>Scans the whole board after every 4-hour close, with no setup on your part</li>
+      <li>Counts the close, not the wick</li>
+      <li>Won't ring you for a breakout that already reached its target</li>
+      <li>Flags earnings before you get caught by a gap</li>
+      <li>Logs every signal, wins and losses, in a track record you can check</li></ul></div>
+  </div>
+  <p class="why-line">We watch the setup while you go do other things.</p>
+</div></section>
 <section class="block" id="features"><div class="wrap">
   <div class="kicker">Features</div>
   <h2>Everything for the setup. <em>Nothing extra.</em></h2>
@@ -2001,6 +2019,28 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
 
 .sp-head small.live-pill { margin-left: 8px; }
 .fl-pill { margin-left: 6px; padding: 2px 8px 2px 7px !important; font-size: 9.5px !important; vertical-align: 1px; }
+</style>
+<style>
+.hero .tagline { margin: 14px auto 0; font-weight: 700; font-size: clamp(16px, 1.6vw, 19px); letter-spacing: -.01em; color: var(--ink, #eef2f7); }
+html[data-theme="light"] .hero .tagline { color: #0d1117; }
+.why { display: grid; grid-template-columns: repeat(3, 1fr) 1.35fr; gap: 14px; margin-top: 34px; text-align: left; }
+.why-c { padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); }
+.why-c b { display: block; font-size: 15.5px; margin-bottom: 8px; color: var(--ink, #eef2f7); }
+.why-c p { margin: 0; color: var(--muted, #8a9aae); font-size: 14px; line-height: 1.55; }
+.why-us { border-color: rgba(61,214,140,.45); background: linear-gradient(180deg, rgba(61,214,140,.08), rgba(61,214,140,.02)); box-shadow: 0 0 0 1px rgba(61,214,140,.1), 0 24px 60px rgba(61,214,140,.06); }
+.why-us b { color: #3DD68C; }
+.why-us ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.why-us li { display: flex; gap: 9px; font-size: 14px; line-height: 1.45; color: var(--ink, #eef2f7); }
+.why-us li::before { content: "✓"; color: #3DD68C; font-weight: 800; }
+.why-us em { font-style: normal; text-decoration: underline; text-underline-offset: 3px; }
+.why-line { margin: 26px 0 0; text-align: center; font-weight: 700; font-size: clamp(18px, 2vw, 22px); letter-spacing: -.015em; color: var(--ink, #eef2f7); }
+html[data-theme="light"] .why-c { background: rgba(255,255,255,.75); border-color: rgba(15,23,42,.08); }
+html[data-theme="light"] .why-c b, html[data-theme="light"] .why-us li, html[data-theme="light"] .why-line { color: #0d1117; }
+html[data-theme="light"] .why-c p { color: #5f6b7a; }
+html[data-theme="light"] .why-us { border-color: rgba(22,163,74,.4); background: linear-gradient(180deg, #f0fdf4, #fff); }
+html[data-theme="light"] .why-us b, html[data-theme="light"] .why-us li::before { color: #15803d; }
+@media (max-width: 980px) { .why { grid-template-columns: 1fr 1fr; } .why-us { grid-column: 1 / -1; } }
+@media (max-width: 560px) { .why { grid-template-columns: 1fr; } }
 </style>
 </body>
 </html>
