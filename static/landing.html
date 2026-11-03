@@ -648,7 +648,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
       </div>
       <div class="win w-mid">
         <div class="bar"><span class="wdot" style="--c:#7C93FF"></span><b>Chart · 4-hour</b><small>NextShelf</small></div>
-        <div class="chartwrap"><svg id="demoChart" viewBox="0 0 800 280" preserveAspectRatio="none" role="img" aria-label="Example: a hub, a breakout and the next shelf"></svg></div>
+        <div class="chartwrap"><svg id="demoChart" viewBox="0 0 800 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Example: a hub, a breakout and the next shelf"></svg></div>
         <div class="legend">
           <span style="--c:var(--hub)"><em></em>Hub</span><span style="--c:var(--up)"><em></em>Next shelf above</span>
           <span style="--c:var(--down)"><em></em>Shelf below</span><span>Illustration</span>
@@ -981,19 +981,36 @@ fetch("/api/board").then(r => r.json()).then(b => {
     pts.push(p);
   }
   const lo = 80, hi = 140, y = v => H - 16 - (v - lo) / (hi - lo) * (H - 32), x = i => 10 + i * (W - 20) / (pts.length - 1);
-  let out = "";
-  out += `<rect x="${x(28)}" y="${y(126)}" width="${W - 10 - x(28)}" height="${y(121) - y(126)}" fill="var(--up)" opacity=".12"/>`;
-  out += `<line x1="${x(28)}" x2="${W - 10}" y1="${y(121)}" y2="${y(121)}" stroke="var(--up)" stroke-dasharray="5 6"/>`;
-  out += `<rect x="0" y="${y(86)}" width="${W}" height="${y(82) - y(86)}" fill="var(--down)" opacity=".10"/>`;
-  out += `<line x1="0" x2="${W}" y1="${y(86)}" y2="${y(86)}" stroke="var(--down)" stroke-dasharray="5 6"/>`;
-  out += `<rect x="${x(18)}" y="${y(100.2)}" width="${x(46) - x(18)}" height="${y(91.8) - y(100.2)}" rx="4" fill="var(--hub)" opacity=".16" stroke="var(--hub)" stroke-opacity=".6"/>`;
+  let out = `<defs>
+    <linearGradient id="dcShelfUp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3DD68C" stop-opacity=".28"/><stop offset="1" stop-color="#3DD68C" stop-opacity=".02"/></linearGradient>
+    <linearGradient id="dcShelfDn" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a6e" stop-opacity=".02"/><stop offset="1" stop-color="#ff5a6e" stop-opacity=".22"/></linearGradient>
+    <linearGradient id="dcHub" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".16"/><stop offset="1" stop-color="#8b7bff" stop-opacity=".10"/></linearGradient>
+    <linearGradient id="dcArc" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4f8cff"/><stop offset=".6" stop-color="#c9b8ff"/><stop offset="1" stop-color="#3DD68C"/></linearGradient>
+    <filter id="dcGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="dcSoft" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="2.5"/></filter></defs>`;
+  out += `<rect x="${x(28)}" y="${y(126)}" width="${W - 10 - x(28)}" height="${y(121) - y(126)}" rx="6" fill="url(#dcShelfUp)"/>`;
+  out += `<line x1="${x(28)}" x2="${W - 10}" y1="${y(121)}" y2="${y(121)}" stroke="#3DD68C" stroke-width="4" opacity=".35" filter="url(#dcSoft)"/>`;
+  out += `<line x1="${x(28)}" x2="${W - 10}" y1="${y(121)}" y2="${y(121)}" stroke="#3DD68C" stroke-dasharray="5 6" stroke-width="1.2"/>`;
+  out += `<rect x="0" y="${y(86)}" width="${W}" height="${y(82) - y(86)}" rx="6" fill="url(#dcShelfDn)"/>`;
+  out += `<line x1="0" x2="${W}" y1="${y(86)}" y2="${y(86)}" stroke="#ff5a6e" stroke-dasharray="5 6" stroke-width="1.1" opacity=".9"/>`;
+  out += `<rect x="${x(18)}" y="${y(100.2)}" width="${x(46) - x(18)}" height="${y(91.8) - y(100.2)}" rx="8" fill="url(#dcHub)" stroke="rgba(255,255,255,.42)" stroke-width="1"/>`;
+  out += `<line x1="${x(18) + 8}" x2="${x(46) - 8}" y1="${y(100.2) + 1}" y2="${y(100.2) + 1}" stroke="rgba(255,255,255,.55)" stroke-width="1"/>`;
+  out += `<text x="${x(18) + 10}" y="${y(100.2) - 8}" fill="rgba(255,255,255,.6)" font-size="10" font-family="Geist Mono, ui-monospace, monospace" letter-spacing="1.2">HUB · 4+ SESSIONS</text>`;
+  out += `<text x="${W - 14}" y="${y(126) - 8}" fill="#3DD68C" font-size="10" font-family="Geist Mono, ui-monospace, monospace" letter-spacing="1.2" text-anchor="end">NEXT SHELF</text>`;
   pts.forEach((v, i) => {   // candles
     const o = i ? pts[i - 1] : v, c = v, up = c >= o, top = Math.max(o, c), bot = Math.min(o, c);
-    const col = up ? "var(--up)" : "var(--down)";
+    const col = up ? "#3DD68C" : "#ff5a6e";
     out += `<line x1="${x(i)}" x2="${x(i)}" y1="${y(top + 1.6)}" y2="${y(bot - 1.6)}" stroke="${col}" stroke-width="1.2" opacity=".85"/>`;
-    out += `<rect x="${x(i) - 3.5}" y="${y(top)}" width="7" height="${Math.max(1.5, y(bot) - y(top))}" fill="${col}" rx="1"/>`;
+    out += `<rect x="${x(i) - 3.5}" y="${y(top)}" width="7" height="${Math.max(1.5, y(bot) - y(top))}" fill="${col}" rx="1.5"/>`;
   });
-  out += `<circle cx="${x(47)}" cy="${y(pts[47])}" r="7" fill="none" stroke="var(--up)" stroke-width="2"/>`;
+  // breakout: gradient arc from the hub edge through the breakout close, ringed glowing node
+  const bx = x(47), by = y(pts[47]), sx = x(45), sy = y(100.2);
+  const arcD = `M${sx} ${sy} C ${sx + 30} ${sy - 4}, ${bx - 10} ${by + 18}, ${bx} ${by}`;
+  out += `<path d="${arcD}" fill="none" stroke="url(#dcArc)" stroke-width="5" opacity=".4" filter="url(#dcSoft)" stroke-linecap="round"/>`;
+  out += `<path d="${arcD}" fill="none" stroke="url(#dcArc)" stroke-width="2.2" stroke-linecap="round"/>`;
+  out += `<circle cx="${bx}" cy="${by}" r="14" fill="#3DD68C" opacity=".5" filter="url(#dcGlow)"/>`;
+  out += `<circle cx="${bx}" cy="${by}" r="6.5" fill="#fff" stroke="#3DD68C" stroke-width="3"/>`;
+  out += `<circle cx="${sx}" cy="${sy}" r="4" fill="#fff" stroke="#4f8cff" stroke-width="2.4"/>`;
   svg.innerHTML = out;
 })();
 </script>
@@ -1348,6 +1365,43 @@ svg.viz { display: block; width: 100%; height: auto; border-radius: 16px; backgr
 .g-viz { height: 92px !important; background: #0f1218 !important; border: 0 !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
 html[data-theme="light"] .g-viz { background: #0f1218 !important; }
 html[data-theme="light"] .g-viz path, html[data-theme="light"] .g-viz polyline { stroke: rgba(255,255,255,.5) !important; }
+</style>
+
+<style>
+/* ================= glass product windows (chart, board, alerts) ================= */
+.stage { isolation: isolate; }
+.stage::before { content: ""; position: absolute; left: 10%; right: 10%; top: 20%; bottom: -10%; z-index: -1; pointer-events: none; filter: blur(60px);
+  background: radial-gradient(closest-side at 30% 60%, rgba(61,214,140,.35), transparent), radial-gradient(closest-side at 70% 50%, rgba(124,147,255,.45), transparent),
+    radial-gradient(closest-side at 50% 90%, rgba(255,79,163,.18), transparent); }
+.win { background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.035)) !important;
+  border: 1px solid rgba(255,255,255,.16) !important; border-radius: 22px !important;
+  backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.22), inset 0 -1px 0 rgba(255,255,255,.04) !important; }
+.win::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(125deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.03) 28%, transparent 45%); }
+.win .bar { background: rgba(255,255,255,.05) !important; border-bottom: 1px solid rgba(255,255,255,.10) !important; }
+.win .bar b { color: #fff !important; } .win .bar small { color: rgba(255,255,255,.55) !important; }
+.win .legend { color: rgba(255,255,255,.7) !important; }
+.win .msg { background: rgba(255,255,255,.07) !important; border-color: rgba(255,255,255,.12) !important; color: rgba(255,255,255,.72) !important; }
+.win .msg b { color: #fff !important; }
+.win .r { border-bottom-color: rgba(255,255,255,.08) !important; } .win .r .s { color: #fff; } .win .r .d { color: rgba(255,255,255,.62) !important; }
+#demoChart rect[fill="#15151A"], #demoChart rect[fill="#16161A"] { fill: rgba(255,255,255,.06); }
+/* light theme: frosted milky glass, chart stays legible */
+html[data-theme="light"] .stage::before { opacity: .55; }
+html[data-theme="light"] .win { background: linear-gradient(180deg, rgba(20,26,38,.78), rgba(14,18,26,.70)) !important;
+  border-color: rgba(255,255,255,.55) !important; box-shadow: 0 30px 70px rgba(15,23,42,.22), inset 0 1px 0 rgba(255,255,255,.25) !important; }
+</style>
+
+<style>
+/* front window: frosted enough that the cards behind it don't show through as text */
+.win.w-mid { background: linear-gradient(180deg, rgba(30,38,52,.93), rgba(16,20,28,.94)) !important;
+  backdrop-filter: blur(34px) saturate(1.6); -webkit-backdrop-filter: blur(34px) saturate(1.6); }
+.win.w-mid::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 0;
+  background: radial-gradient(60% 70% at 15% 85%, rgba(61,214,140,.16), transparent 70%), radial-gradient(55% 70% at 85% 80%, rgba(124,147,255,.22), transparent 70%); }
+.win.w-mid > * { position: relative; z-index: 1; }
+.win.w-left, .win.w-right { background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)) !important; }
+html[data-theme="light"] .win.w-mid { background: linear-gradient(180deg, rgba(34,42,58,.95), rgba(20,25,35,.96)) !important; }
+html[data-theme="light"] .win.w-left, html[data-theme="light"] .win.w-right { background: linear-gradient(180deg, rgba(40,48,64,.72), rgba(26,32,44,.70)) !important; }
 </style>
 </body>
 </html>
