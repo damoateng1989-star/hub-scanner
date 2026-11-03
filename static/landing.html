@@ -1502,5 +1502,30 @@ html[data-theme="light"] .win.w-left, html[data-theme="light"] .win.w-right { op
 html[data-theme="light"] .win .bar b, html[data-theme="light"] .win .r .s { color: #0d1117 !important; opacity: 1 !important; }
 html[data-theme="light"] .nf-ic { filter: none !important; }
 </style>
+
+<style>
+/* ================= light mode lesson: white glass card, black & white candles ================= */
+html[data-theme="light"] .lesson { background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.76)) !important; border: 1px solid rgba(255,255,255,.95) !important;
+  box-shadow: 0 1px 0 rgba(15,23,42,.04), 0 24px 60px rgba(15,23,42,.12), inset 0 1px 0 #fff !important; color: #0d1117; }
+html[data-theme="light"] .lesson::before { background: linear-gradient(125deg, rgba(255,255,255,.7), transparent 35%), radial-gradient(60% 60% at 10% 100%, rgba(61,214,140,.10), transparent 70%), radial-gradient(60% 70% at 95% 100%, rgba(124,147,255,.14), transparent 70%) !important; }
+html[data-theme="light"] .lesson .kick { color: #6b7280 !important; }
+html[data-theme="light"] .lesson .lh h2, html[data-theme="light"] .lesson #lsTitle { color: #0d1117 !important; }
+html[data-theme="light"] .lesson .lacct span { color: #6b7280 !important; } html[data-theme="light"] .lesson .lacct b { color: #15803d !important; } html[data-theme="light"] .lesson .lacct.down b { color: #dc2626 !important; }
+html[data-theme="light"] .lesson .lsteps button { background: rgba(255,255,255,.8) !important; border-color: rgba(15,23,42,.12) !important; color: #4b5563 !important; }
+html[data-theme="light"] .lesson .lsteps button.on { background: #0d1117 !important; color: #fff !important; border-color: #0d1117 !important; }
+html[data-theme="light"] .lesson .lctl button { background: #fff !important; border-color: rgba(15,23,42,.14) !important; color: #0d1117 !important; }
+html[data-theme="light"] .lesson #lsCap, html[data-theme="light"] .lesson .lfoot p { color: #374151 !important; }
+/* candles: up = white with a black outline, down = solid black */
+html[data-theme="light"] #lsSvg line[stroke="var(--up)"], html[data-theme="light"] #lsSvg line[stroke="var(--down)"] { stroke: #0d1117; }
+html[data-theme="light"] #lsSvg rect[fill="var(--up)"] { fill: #ffffff; stroke: #0d1117; stroke-width: 1.1; }
+html[data-theme="light"] #lsSvg rect[fill="var(--down)"] { fill: #0d1117; }
+/* hub, shelf and labels for a white surface */
+html[data-theme="light"] #lsSvg rect[fill="url(#lsHubG)"] { fill: rgba(15,23,42,.04); stroke: rgba(15,23,42,.35); }
+html[data-theme="light"] #lsSvg line[stroke="rgba(255,255,255,.5)"] { stroke: rgba(15,23,42,.18); }
+html[data-theme="light"] #lsSvg text[fill="rgba(255,255,255,.62)"] { fill: #4b5563; }
+html[data-theme="light"] #lsSvg line[stroke="#3DD68C"] { stroke: #16a34a; } html[data-theme="light"] #lsSvg text[fill="#3DD68C"] { fill: #15803d; }
+html[data-theme="light"] #lsSvg circle[fill="#141b26"] { fill: #ffffff; }
+html[data-theme="light"] #lsSvg circle[fill="#3DD68C"] { fill: #16a34a; opacity: .35; } html[data-theme="light"] #lsSvg circle[stroke="#3DD68C"] { stroke: #16a34a; }
+</style>
 </body>
 </html>
