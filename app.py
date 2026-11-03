@@ -230,6 +230,26 @@ def fonts(name: str):
                         headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
+@app.get("/manifest.webmanifest")
+def manifest():
+    return FileResponse(STATIC / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+def service_worker():
+    """At the site root so it can control every page; never cached so updates roll out right away."""
+    return FileResponse(STATIC / "sw.js", media_type="application/javascript",
+                        headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
+
+
+@app.get("/icon-{name}.png")
+def pwa_icon(name: str):
+    if name not in ("192", "512", "maskable-512"):
+        raise HTTPException(404)
+    return FileResponse(STATIC / f"icon-{name}.png", media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=604800"})
+
+
 @app.get("/vendor/lightweight-charts.js")
 def lwc():
     return FileResponse(STATIC / "vendor" / "lightweight-charts.js", media_type="application/javascript")

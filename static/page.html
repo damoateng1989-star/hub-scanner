@@ -24,6 +24,12 @@
 </script>
 <meta name="theme-color" content="#070b10">
 <title>{{TITLE}} · NextShelf</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NextShelf">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>

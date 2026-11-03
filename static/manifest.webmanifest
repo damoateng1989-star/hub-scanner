@@ -1,0 +1,22 @@
+{
+  "name": "NextShelf",
+  "short_name": "NextShelf",
+  "description": "Find the hub. Catch the break. Breakout alerts with a next-shelf target.",
+  "id": "/app",
+  "start_url": "/app#today",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070b10",
+  "theme_color": "#070b10",
+  "orientation": "any",
+  "categories": ["finance", "education"],
+  "icons": [
+    {"src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ],
+  "shortcuts": [
+    {"name": "Watchlist", "url": "/app#list", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]},
+    {"name": "Browse setups", "url": "/app#discover", "icons": [{"src": "/icon-192.png", "sizes": "192x192"}]}
+  ]
+}

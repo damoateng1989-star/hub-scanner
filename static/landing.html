@@ -25,6 +25,12 @@
 <meta name="theme-color" content="#070b10">
 <title>NextShelf · Find the hub. Catch the break.</title>
 <meta name="description" content="NextShelf checks 540+ stocks and ETFs (S&P 500, Nasdaq-100) after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NextShelf">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
@@ -605,7 +611,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
         <button type="button" data-s="TSLA">TSLA</button><button type="button" data-s="SPY">SPY</button></div>
       <p class="ab-msg" id="abMsg"></p>
     </form>
-    <p class="alt">Free to try · <a href="/login#signup">create an account</a> · <a href="#join">get early access</a></p>
+    <p class="alt">Free to try · <a href="/login#signup">create an account</a> · <a href="#join">get early access</a> · works as an app on phone and desktop</p>
 
     <div class="lesson-wrap">
   <div class="lesson" id="lesson">

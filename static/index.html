@@ -24,6 +24,12 @@
 </script>
 <meta name="theme-color" content="#0B0B0D">
 <title>NextShelf</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="NextShelf">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script>if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
@@ -1025,6 +1031,9 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     <h1 id="hello">Welcome</h1>
     <div id="mkt"></div>
   </div>
+  <div class="install-banner" id="installBanner" hidden><img src="/icon-192.png" alt="" width="40" height="40">
+    <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
+    <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div class="rule1" id="rule1"></div>
   <div class="mbrief" id="mbrief" hidden></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
@@ -1663,6 +1672,8 @@ async function loadAccount() {
 
     <div class="acct"><h3>Appearance</h3><p>Light, dark, or match your device.</p>
       <div class="theme-seg"><button data-theme-opt="system" onclick="nsSetTheme('system')">Auto</button><button data-theme-opt="light" onclick="nsSetTheme('light')">☀️ Light</button><button data-theme-opt="dark" onclick="nsSetTheme('dark')">🌙 Dark</button></div></div>
+
+    ${installCard()}
 
     ${styleCard()}
 
@@ -2611,6 +2622,33 @@ function paintBriefLive() {
   const v = liveVsHub(st, LIVE[BRIEF_SYM].price);
   $("bfLive").innerHTML = liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
 }
+
+// ---------------------------------------------------------------- install as an app (PWA)
+let INSTALL_EVT = null;
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); INSTALL_EVT = e; paintInstall(); });
+addEventListener("appinstalled", () => { INSTALL_EVT = null; toast("NextShelf is installed. Open it from your home screen."); paintInstall(); });
+function installCard() {
+  if (isStandalone()) return `<div class="acct"><h3>NextShelf app</h3><p>✓ You're using the installed app.</p></div>`;
+  return `<div class="acct"><h3>Get the app</h3><p>Install NextShelf on your phone or computer: its own icon, full screen, no browser bars, opens straight to Today.</p>
+    <button class="primary install-btn" onclick="installApp()">⬇ Install NextShelf</button></div>`;
+}
+async function installApp() {
+  if (INSTALL_EVT) { INSTALL_EVT.prompt(); const r = await INSTALL_EVT.userChoice.catch(() => null); INSTALL_EVT = null; if (r && r.outcome === "accepted") return; paintInstall(); return; }
+  showSheet(isIOS() ? `<div class="inst"><h3>Add to your Home Screen</h3>
+      <ol><li>Tap the <b>Share</b> button <span class="kbd">⬆︎</span> at the bottom of Safari.</li><li>Scroll and tap <b>Add to Home Screen</b> <span class="kbd">＋</span>.</li><li>Tap <b>Add</b>. NextShelf now opens like an app.</li></ol>
+      <p class="note">Use Safari. Other iPhone browsers may not show this option.</p></div>`
+    : `<div class="inst"><h3>Install NextShelf</h3><ol><li>In Chrome or Edge, click the <b>install icon</b> <span class="kbd">⊕</span> at the right of the address bar,</li>
+      <li>or open the browser menu <span class="kbd">⋮</span> and choose <b>Install NextShelf</b> (on Android: <b>Add to Home screen</b>).</li></ol>
+      <p class="note">On a Mac in Safari: File → Add to Dock.</p></div>`);
+}
+function paintInstall() {
+  const b = $("installBanner"); if (!b) return;
+  let off = false; try { off = !!localStorage.getItem("ns_install_off"); } catch (e) {}
+  b.hidden = isStandalone() || off || !(INSTALL_EVT || (isIOS() && innerWidth < 900));
+}
+function hideInstall() { try { localStorage.setItem("ns_install_off", "1"); } catch (e) {} paintInstall(); }
 // ---------------------------------------------------------------- Scout floating robot
 const ROBOT_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
   <line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle class="ag-ant" cx="32" cy="5" r="3.4" fill="#3DD68C"/>
@@ -2794,7 +2832,7 @@ function netbar() {
 }
 window.addEventListener("offline", netbar);
 window.addEventListener("online", () => { netbar(); loadTickers(); loadAlerts(); showTab(); });
-boot(); setTimeout(pollAgent, 1500); setTimeout(pollLive, 2500);
+boot(); setTimeout(pollAgent, 1500); setTimeout(paintInstall, 1200); setTimeout(pollLive, 2500);
 setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
 
@@ -3020,6 +3058,26 @@ html[data-theme="light"] #lsSvg circle[fill="#3DD68C"] { fill: #16a34a; opacity:
 html[data-theme="light"] .lrow { background: #ffffff !important; border: 1px solid rgba(15,23,42,.12) !important; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 6px 18px rgba(15,23,42,.05) !important; }
 html[data-theme="light"] .lrow:hover { border-color: rgba(15,23,42,.24) !important; box-shadow: 0 2px 4px rgba(15,23,42,.05), 0 10px 26px rgba(15,23,42,.08) !important; }
 html[data-theme="light"] .lrow[open] { border-color: #0d1117 !important; }
+</style>
+
+<style>
+.install-banner { display: flex; align-items: center; gap: 12px; margin: 10px 0 14px; padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05); }
+.install-banner[hidden] { display: none !important; }
+.install-banner img { border-radius: 11px; flex: none; }
+.install-banner div { flex: 1; min-width: 0; } .install-banner b { display: block; font: 700 15px var(--sans); }
+.install-banner small { color: var(--muted, #91a0b2); font-size: 13px; }
+.install-banner .primary { padding: 9px 16px !important; border-radius: 999px !important; flex: none; }
+.ib-x { background: transparent !important; border: 0 !important; color: var(--muted, #91a0b2) !important; font-size: 15px; padding: 6px !important; cursor: pointer; }
+html[data-theme="light"] .install-banner { background: #fff; border-color: rgba(15,23,42,.12); box-shadow: 0 6px 18px rgba(15,23,42,.06); }
+.install-btn { border-radius: 999px !important; padding: 10px 18px !important; margin-top: 4px; }
+.inst h3 { margin: 0 0 10px; padding-right: 40px; font: 800 20px var(--sans); } .inst ol { padding-left: 20px; line-height: 1.7; } .inst li { margin: 6px 0; }
+.kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
+/* installed app: respect the notch and home bar */
+@media (display-mode: standalone) {
+  body { padding-top: env(safe-area-inset-top); }
+  nav.bottom, .bottom { padding-bottom: calc(8px + env(safe-area-inset-bottom)) !important; }
+}
 </style>
 </body>
 </html>
