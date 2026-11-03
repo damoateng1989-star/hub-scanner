@@ -829,7 +829,7 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
   const root = document.getElementById("flowDemo"); if (!root) return;
   const svg = document.getElementById("flSvg");
   const STEPS = [
-    {t: "After every 4H close", k: "Scout sweeps", h: "543 stocks checked", p: "After each 4-hour close, Scout scans the S&P 500, Nasdaq-100 and major ETFs.", ph: "1:47"},
+    {t: "After every 4H close", k: "Scout sweeps", pill: true, h: "543 stocks checked", p: "After each 4-hour close, Scout scans the S&P 500, Nasdaq-100 and major ETFs.", ph: "1:47"},
     {t: "Day 1–3", k: "A hub forms", h: "Price coils in a tight range", p: "4H closes hold inside one zone for 4+ sessions. You get a heads-up that a hub formed.", ph: "4:17"},
     {t: "3:45 PM", k: "15 minutes to the close", h: "Warning before the candle prints", p: "Price is trading above the hub with 15 minutes left. You have time to get ready.", ph: "3:45"},
     {t: "4:00 PM", k: "The candle closes", h: "Breakout confirmed", p: "The 4H candle closes above the hub. That's the signal, with the next shelf as the target.", ph: "4:00"},
@@ -884,7 +884,7 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
 
   // ---- steps + phone
   const list = document.getElementById("flSteps"), stack = document.getElementById("flStack");
-  list.innerHTML = STEPS.map((s, i) => `<li data-n="${i + 1}"><small>${s.t}</small><b>${s.k}</b><p>${s.h}. ${s.p}</p><i></i></li>`).join("");
+  list.innerHTML = STEPS.map((s, i) => `<li data-n="${i + 1}"><small>${s.t}</small><b>${s.k}${s.pill ? ' <span class="live-pill run fl-pill">Live</span>' : ""}</b><p>${s.h}. ${s.p}</p><i></i></li>`).join("");
   const DUR = 4200; root.style.setProperty("--fl-dur", DUR + "ms");
   let cur = 1, timer = null, playing = false;
   const esc = (t) => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -1785,7 +1785,7 @@ html.waitlist [data-wl-only] { display: inline !important; }
 </button>
 <div class="sf-hello" id="sfHello" hidden>Hi, I'm Scout 👋<small>Want to see what's setting up today?</small></div>
 <div class="scout-pop" id="scoutPop" hidden role="dialog" aria-label="Scout">
-  <div class="sp-head"><div><b>Scout</b><small id="spState">Your setup finder</small></div><button class="sp-x" id="spX" aria-label="Close">✕</button></div>
+  <div class="sp-head"><div><b>Scout</b><small id="spState" class="live-pill">Scanning</small></div><button class="sp-x" id="spX" aria-label="Close">✕</button></div>
   <p class="sp-line" id="spLine">Checking the board…</p>
   <form class="sp-ask" id="spAsk" autocomplete="off"><input id="spSym" placeholder="Ask me about a stock… NVDA" maxlength="10" autocapitalize="characters" spellcheck="false" aria-label="Ticker"><button aria-label="Ask Scout">→</button></form>
   <p class="sp-k" id="spK" hidden>Resting in a hub right now</p>
@@ -1978,6 +1978,29 @@ html[data-theme="light"] .btn.solid:hover { background: #fff !important; border-
 .pr-was { margin-left: 6px; font-size: 22px; font-weight: 500; color: var(--muted, #8a9aae); text-decoration-thickness: 2px; letter-spacing: 0; }
 .pr-note { margin: 18px 0 0; color: var(--muted, #8a9aae); font-size: 13.5px; }
 #pricing .sub { max-width: 640px; }
+</style>
+<style>
+/* ================= Scout status: animated live pill ================= */
+@keyframes nsPulse { 0% { box-shadow: 0 0 0 0 rgba(61,214,140,.6); } 70% { box-shadow: 0 0 0 7px rgba(61,214,140,0); } 100% { box-shadow: 0 0 0 0 rgba(61,214,140,0); } }
+@keyframes nsShine { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
+html .live-pill { position: relative; display: inline-flex !important; align-items: center; gap: 7px; overflow: hidden; isolation: isolate;
+  padding: 4px 11px 4px 9px !important; border-radius: 999px !important; vertical-align: 2px;
+  font: 700 11px/1.3 var(--sans, "DM Sans", sans-serif) !important; letter-spacing: .12em !important; text-transform: uppercase;
+  color: #3DD68C !important; border: 1px solid rgba(61,214,140,.45) !important; background: rgba(61,214,140,.10) !important; }
+html .live-pill::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; animation: nsPulse 1.8s ease-out infinite; }
+html .live-pill::after { content: ""; position: absolute; inset: 0; z-index: -1; width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(61,214,140,.35), transparent); animation: nsShine 2.6s ease-in-out infinite; }
+html .run .live-pill, html .live-pill.run { color: #04140b !important; background: #3DD68C !important; border-color: #3DD68C !important; }
+html .run .live-pill::before, html .live-pill.run::before { background: #04140b; animation-duration: .9s; }
+html .run .live-pill::after, html .live-pill.run::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent); animation-duration: 1.1s; }
+html[data-theme="light"] .live-pill { color: #15803d !important; border-color: rgba(22,163,74,.35) !important; background: rgba(22,163,74,.08) !important; }
+html[data-theme="light"] .live-pill::before { background: #16a34a; }
+html[data-theme="light"] .run .live-pill, html[data-theme="light"] .live-pill.run { color: #fff !important; background: #16a34a !important; border-color: #16a34a !important; }
+html[data-theme="light"] .run .live-pill::before { background: #fff; }
+@media (prefers-reduced-motion: reduce) { .live-pill::before, .live-pill::after { animation: none !important; } }
+
+.sp-head small.live-pill { margin-left: 8px; }
+.fl-pill { margin-left: 6px; padding: 2px 8px 2px 7px !important; font-size: 9.5px !important; vertical-align: 1px; }
 </style>
 </body>
 </html>
