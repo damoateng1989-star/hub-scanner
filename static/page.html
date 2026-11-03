@@ -221,5 +221,10 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   }).catch(() => {});
 })();
 </script>
+<style>
+/* footer links: plain row, not a glass bar */
+html footer nav, html[data-theme="light"] footer nav { position: static !important; background: none !important; border: 0 !important; box-shadow: none !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; height: auto !important; }
+</style>
 </body>
 </html>
