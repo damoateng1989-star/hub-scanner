@@ -478,7 +478,7 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME,
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, quiet=u.get("quiet") or "",
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
                 style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
@@ -508,6 +508,22 @@ def set_brief(body: OnBody, u: dict = User):
 def set_recap(body: OnBody, u: dict = User):
     db.update_user(u["id"], recap=1 if body.on else 0)
     return {"recap": body.on}
+
+
+class QuietBody(BaseModel):
+    on: bool
+    start: str = "09:30"
+    end: str = "16:00"
+
+
+@app.post("/api/me/quiet")
+def set_quiet(body: QuietBody, u: dict = User):
+    import re as _re
+    ok = lambda t: bool(_re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", t))
+    if body.on and not (ok(body.start) and ok(body.end) and body.start != body.end):
+        raise HTTPException(400, "Pick a start and end time, like 09:30 and 16:00")
+    db.update_user(u["id"], quiet=f"{body.start}-{body.end}" if body.on else None)
+    return {"quiet": f"{body.start}-{body.end}" if body.on else ""}
 
 
 @app.post("/api/recap/test")

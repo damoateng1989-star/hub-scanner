@@ -93,6 +93,11 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    try:   # added later: quiet hours "HH:MM-HH:MM" New York time (no calls, silent Telegram); NULL = off
+        _conn.execute("ALTER TABLE users ADD COLUMN quiet TEXT")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     try:   # added later: evening recap on/off (on by default)
         _conn.execute("ALTER TABLE users ADD COLUMN recap INTEGER DEFAULT 1")
         _conn.commit()
@@ -207,7 +212,7 @@ def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
 
 
 # --- users
-USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap")
+USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet")
 
 
 def create_user(**f) -> int:

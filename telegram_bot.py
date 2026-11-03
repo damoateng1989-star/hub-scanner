@@ -34,7 +34,7 @@ def bot_username() -> str | None:
     return _username
 
 
-def send(text: str, chat_id: str | None = None):
+def send(text: str, chat_id: str | None = None, silent: bool = False):
     if not enabled():
         log.info("Telegram disabled, alert not sent: %s", text.splitlines()[0])
         return
@@ -43,7 +43,8 @@ def send(text: str, chat_id: str | None = None):
         return
     try:
         r = requests.post(f"{API}/sendMessage", timeout=15,
-                          json={"chat_id": chat, "text": text, "disable_web_page_preview": True})
+                          json={"chat_id": chat, "text": text, "disable_web_page_preview": True,
+                                "disable_notification": bool(silent)})
         if r.status_code != 200:
             log.warning("Telegram send failed: %s", r.text[:200])
     except requests.RequestException as e:

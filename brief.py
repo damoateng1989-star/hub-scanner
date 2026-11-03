@@ -31,6 +31,19 @@ def _n(k: int, word: str) -> str:
     return f"{k} {word}" + ("" if k == 1 else "s")
 
 
+def order_plan(low: float, high: float, d: int, shelf: float | None) -> dict | None:
+    """'Set it before work': stop entry just past the hub edge, stop-loss at the hub's middle, target at the next shelf."""
+    if shelf is None:
+        return None
+    height = high - low
+    buf = max(height * 0.1, (high + low) / 2 * 0.0015)
+    entry = round(high + buf if d == 1 else low - buf, 2)
+    stop, target = round((high + low) / 2, 2), round(shelf, 2)
+    if (target - entry) * d <= 0:
+        return None
+    return dict(entry=entry, stop=stop, target=target, rr=round(abs(target - entry) / abs(entry - stop), 1))
+
+
 def _edge_dist(r: dict) -> float:
     return abs(r["to_high_pct"] if r.get("near_edge") == "up" else r["to_low_pct"])
 
@@ -87,6 +100,12 @@ def text(d: dict) -> str:
                 L.append(f"• {c['symbol']} at the {'top' if c['side'] == 'up' else 'bottom'} of its hub {_money(c['low'])}–{_money(c['high'])}"
                          + (" · right at the edge" if c['dist'] < 0.05 else f" · {c['dist']}% to a {'breakout' if c['side'] == 'up' else 'breakdown'}")
                          + (f" · next shelf {_money(c['shelf'])}" if c.get("shelf") else ""))
+                op = order_plan(c["low"], c["high"], 1 if c["side"] == "up" else -1, c.get("shelf"))
+                if op:
+                    L.append(f"   Before-work plan: {'buy' if c['side'] == 'up' else 'sell short'} stop {_money(op['entry'])} · "
+                             f"stop-loss {_money(op['stop'])} · target {_money(op['target'])} ({op['rr']}:1"
+                             + (", risk is bigger than the reward" if op["rr"] < 1 else "") + ")")
+            L.append("(Stop orders fire on a touch, not a 4H close: see 'Set it before work' in the app.)")
             L.append("")
         if d["in_play"]:
             L.append("🚀 Breakouts still in play")

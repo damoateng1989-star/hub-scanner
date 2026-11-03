@@ -15,6 +15,21 @@ def _pro(u: dict) -> bool:
     return u["plan"] == "pro" or bool(u["is_admin"])
 
 
+def quiet_now(u: dict, now=None) -> bool:
+    """Inside the member's quiet hours (New York time)? Then no phone calls, and Telegram arrives without a sound."""
+    q = (u.get("quiet") or "").strip()
+    if not q or "-" not in q:
+        return False
+    try:
+        import pandas as pd
+        t = (now or pd.Timestamp.now(tz="America/New_York"))
+        cur = t.hour * 60 + t.minute
+        a, b = [int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in q.split("-")]
+    except Exception:
+        return False
+    return a <= cur < b if a < b else (cur >= a or cur < b)
+
+
 def styles_of(u: dict) -> set[str]:
     """Setups a member wants alerts for. Hubs by default; extra setups (triangles, channels, S/R) are Pro."""
     picked = {x for x in (u.get("styles") or "hub").split(",") if x}
@@ -31,6 +46,7 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
             continue
         if style not in styles_of(u):
             continue
+        quiet = quiet_now(u)
         if u["telegram_chat"]:
             msg = text
             if pro_extra and _pro(u):
@@ -41,8 +57,8 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
                         extra_cache["v"] = None
                 if extra_cache["v"]:
                     msg = f"{text}\n{extra_cache['v']}"
-            telegram_bot.send(msg, u["telegram_chat"])
-        if speech and _pro(u) and u["phone"] and phone.wants(alert_type):
+            telegram_bot.send(msg, u["telegram_chat"], silent=quiet)
+        if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
             phone.safe_call(speech, to=u["phone"])
 
 

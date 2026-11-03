@@ -2124,6 +2124,7 @@ function briefHTML(sym, st, chart) {
     if (up || dn) steps.push(["#9fb3ff", `Shelves to keep in mind: ${[up && `<b>${money(up.level)}</b> above`, dn && `<b>${money(dn.level)}</b> below`].filter(Boolean).join(" and ")}.`]);
   }
   const plan = `<div class="gp">${steps.map(([c, t], i) => `<div data-n="${i + 1}" style="--c:${c}"><span>${t}</span></div>`).join("")}</div>`;
+  const plan2 = plan + beforeWorkHTML(st);
   // ---- track record
   let rec;
   if (chart) {
@@ -2149,10 +2150,39 @@ function briefHTML(sym, st, chart) {
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
   return `<div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
-    <div class="bf-h" id="bf-setup">Game plan</div>${plan}
+    <div class="bf-h" id="bf-setup">Game plan</div>${plan2}
     <div class="bf-h" id="bf-options">Options swing <span class="ox-beta">educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>
     <div class="bf-h" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}
     <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
+}
+// ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
+function orderPlan(h, dir, shelf) {
+  const height = h.high - h.low, buf = Math.max(height * 0.1, (h.high + h.low) / 2 * 0.0015), mid = (h.high + h.low) / 2;
+  const r2 = (x) => Math.round(x * 100) / 100;
+  const entry = r2(dir === 1 ? h.high + buf : h.low - buf), stop = r2(mid), target = shelf ? r2(shelf.level) : null;
+  if (target == null || (target - entry) * dir <= 0) return null;
+  const risk = Math.abs(entry - stop), reward = Math.abs(target - entry);
+  return {dir, entry, stop, target, rr: reward / risk};
+}
+function beforeWorkHTML(st) {
+  const h = st.hub, key = st.state; if (!h) return "";
+  let plans = [], intro = "";
+  if (key === "forming" || key === "watching") {
+    const sides = st.near_edge ? [st.near_edge === "up" ? 1 : -1] : [1, -1];
+    plans = sides.map(d => orderPlan(h, d, d === 1 ? st.shelf_up : st.shelf_down)).filter(Boolean);
+    intro = "Can't watch the 1:30 or 4:00 PM close? You can place this before work and let your broker handle it.";
+  } else if (key === "breakout_up" || key === "breakdown") {
+    const d = key === "breakout_up" ? 1 : -1, edge = d === 1 ? h.high : h.low, half = edge + (st.target - edge) / 2;
+    return `<div class="bw"><div class="bw-h">Missed the close?</div><p>Only take it tomorrow if price is still between <b>${money(edge)}</b> and <b>${money(half)}</b>, the first half of the move. Past that, most of the reward is gone: skip it, don't chase.</p></div>`;
+  }
+  if (!plans.length) return "";
+  const rows = plans.map(p => `<div class="bw-t" style="--c:${p.dir === 1 ? "#3DD68C" : "#FF6B5E"}">
+      <div class="bw-side">${p.dir === 1 ? "Long" : "Short"} if it breaks ${p.dir === 1 ? "up" : "down"}</div>
+      <div class="bw-grid"><div><small>${p.dir === 1 ? "Buy" : "Sell short"} stop</small><b>${money(p.entry)}</b></div><div><small>Stop-loss</small><b>${money(p.stop)}</b><i>middle of the hub</i></div>
+        <div><small>Target</small><b>${money(p.target)}</b><i>next shelf</i></div><div><small>Reward : risk</small><b${p.rr < 1 ? ' class="u-down2"' : ""}>${p.rr.toFixed(1)} : 1</b>${p.rr < 1 ? "<i>risk is bigger than the reward</i>" : ""}</div></div></div>`).join("");
+  return `<details class="bw"><summary><span class="bw-h">Set it before work</span><span class="bw-sub">Order plan for when you can't watch</span></summary>
+    <p>${intro} Most brokers call this a <b>bracket order</b> (one entry, with the stop-loss and target attached).${plans.length > 1 ? " Both sides are shown: pick one, or ask your broker for a <b>one-cancels-other (OCO)</b> order so only one can fill." : ""}</p>${rows}
+    <p class="bw-warn"><b>The trade-off:</b> a stop order fires the moment price touches it, even on a wick that closes back inside the hub. NextShelf's signal waits for the 4-hour <i>close</i>, so this version will catch some false breakouts the alert would skip. Use a day order and set it again each morning, so it never sits there after the setup changes.</p></details>`;
 }
 // ---------------------------------------------------------------- today
 let INFO = null, BOARD = null;
@@ -2594,7 +2624,25 @@ function briefCard() {
       <button class="btnx sm" onclick="testBrief(this)">Send one now</button></div></div>
   <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
-      <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>`;
+      <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>
+  ${quietCard()}`;
+}
+function quietCard() {
+  const [a, b] = (ME.quiet || "09:30-16:00").split("-"), on = !!ME.quiet;
+  const opts = (sel) => Array.from({length: 48}, (_, i) => { const t = String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00");
+    return `<option value="${t}"${t === sel ? " selected" : ""}>${fmtET(t)}</option>`; }).join("");
+  return `<div class="acct" id="quietCard"><h3>Quiet hours</h3><p>In a meeting or asleep? During quiet hours NextShelf won't phone you, and Telegram alerts arrive without a sound. You still get every alert, and the evening recap sums up the day.</p>
+    <div class="row quiet-row"><label class="brief-sw"><input type="checkbox" id="qOn" ${on ? "checked" : ""} onchange="saveQuiet()"> Quiet from</label>
+      <select id="qStart" onchange="saveQuiet()" aria-label="Quiet hours start">${opts(a)}</select><span>to</span>
+      <select id="qEnd" onchange="saveQuiet()" aria-label="Quiet hours end">${opts(b)}</select><span class="note" style="margin:0">ET</span></div>
+    <div class="row" style="margin-top:8px;gap:6px"><button class="chip" onclick="quietPreset('09:30','16:00')">Work hours</button><button class="chip" onclick="quietPreset('22:00','07:00')">Overnight</button></div></div>`;
+}
+function quietPreset(a, b) { $("qStart").value = a; $("qEnd").value = b; $("qOn").checked = true; saveQuiet(); }
+async function saveQuiet() {
+  const on = $("qOn").checked, start = $("qStart").value, end = $("qEnd").value;
+  try { const r = await api("/api/me/quiet", {method: "POST", body: JSON.stringify({on, start, end})}); ME.quiet = r.quiet;
+    toast(on ? `Quiet hours: ${fmtET(start)} to ${fmtET(end)} ET` : "Quiet hours are off"); }
+  catch (e) { toast(friendly(e)); }
 }
 function fmtET(t) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; }
 async function setRecapOn(on) {
@@ -3354,6 +3402,29 @@ html[data-theme="light"] .earn-tag.board-state { color: #7c3aed !important; back
 .bf-earn b, .ox-earn b { color: #c4a8ff !important; }
 html[data-theme="light"] .bf-earn, html[data-theme="light"] .ox-earn { color: #4c1d95 !important; background: #f5f3ff !important; border-color: #ddd6fe !important; }
 html[data-theme="light"] .bf-earn b, html[data-theme="light"] .ox-earn b { color: #6d28d9 !important; }
+</style>
+<style>
+.quiet-row { align-items: center; gap: 8px; flex-wrap: wrap; }
+.quiet-row select { padding: 7px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--sunk, #0f1720); color: var(--ink); font: 500 14px var(--sans); }
+</style>
+<style>
+.bw { margin: 12px 0 0; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink, #fff) 3%, transparent); }
+.bw > summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.bw > summary::-webkit-details-marker { display: none; }
+.bw > summary::after { content: "Show the plan ↓"; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.bw[open] > summary::after { content: "Hide ↑"; }
+.bw-h { font-weight: 800; font-size: 15px; color: var(--ink); }
+.bw-sub { font-size: 13px; color: var(--muted); }
+.bw p { margin: 10px 0 0; font-size: 13.5px; line-height: 1.5; color: var(--muted); } .bw p b { color: var(--ink); }
+.bw-t { margin-top: 10px; padding: 12px; border-radius: 12px; border: 1px solid color-mix(in srgb, var(--c) 35%, transparent); background: color-mix(in srgb, var(--c) 6%, transparent); }
+.bw-side { font: 700 11px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--c); }
+.bw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+.bw-grid small { display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.bw-grid b { display: block; margin-top: 2px; font-size: 15px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.bw-grid i { display: block; font-style: normal; font-size: 11px; color: var(--muted); }
+.bw-warn { padding: 10px 12px; border-radius: 10px; background: rgba(242,193,78,.08); border: 1px solid rgba(242,193,78,.3); }
+html[data-theme="light"] .bw-warn { background: #fffbeb; border-color: #fcd34d; color: #78350f; } html[data-theme="light"] .bw-warn b { color: #92400e; }
+@media (max-width: 560px) { .bw-grid { grid-template-columns: 1fr 1fr; } }
 </style>
 </body>
 </html>
