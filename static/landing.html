@@ -640,10 +640,10 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
       </div>
       <div class="win w-right">
         <div class="bar"><span class="wdot" style="--c:#F2C14E"></span><b>Alerts</b><small>NextShelf</small></div>
-        <div class="msgs">
-          <div class="msg"><b>⚠️ Trading above hub, ~15 min to the 4H close</b>If the candle closes above the hub edge, that's the breakout. Plan: entry near the close, target the next shelf.</div>
-          <div class="msg"><b>🚀 4H close above hub</b>Close outside the range after 6 sessions. Next shelf +2.4% away. Snap-back if a close comes back inside.</div>
-          <div class="msg"><b>✅ Follow-through</b>Reached the next shelf 3 candles after the breakout.</div>
+        <div class="msgs nf">
+          <div class="nfi" style="--c:#F2C14E"><span class="nf-ic">!</span><div><div class="nf-t"><b>NVDA · above the hub</b><time>15 min to close</time></div><p>If this 4-hour candle closes above $82.04, that's the breakout.</p></div></div>
+          <div class="nfi" style="--c:#3DD68C"><span class="nf-ic">↑</span><div><div class="nf-t"><b>NVDA · breakout close</b><time>1:30 PM</time></div><p>Closed above the hub after 6 sessions. Next shelf $84.30 (+2.4%).</p></div></div>
+          <div class="nfi" style="--c:#2FD4C0"><span class="nf-ic">✓</span><div><div class="nf-t"><b>NVDA · reached the shelf</b><time>3 candles later</time></div><p>Hit the target $84.30. Plan complete.</p></div></div>
         </div>
       </div>
       <div class="win w-mid">
@@ -965,16 +965,20 @@ document.querySelectorAll("form.join input[type=email]").forEach(i => i.addEvent
   const m = i.form.querySelector(".jmsg"); if (m.classList.contains("err")) { m.textContent = ""; m.className = "jmsg"; }
 }));
 
-// live board preview (falls back quietly)
+// live board preview (falls back to example rows)
+const SAMPLE_ROWS = `<div class="r"><span class="s">NVDA</span><span class="d">$79.43–82.04 · 8 sessions</span><span class="tag" style="--c:#8b7bff">In hub</span></div>
+    <div class="r"><span class="s">AMD</span><span class="d">Closed above $178.01</span><span class="tag" style="--c:#3DD68C">Breakout</span></div>
+    <div class="r"><span class="s">AVGO</span><span class="d">0.1% from the hub top</span><span class="tag" style="--c:#F2C14E">At edge</span></div>
+    <div class="r"><span class="s">GOOGL</span><span class="d">$94.75–96.41 · 6 sessions</span><span class="tag" style="--c:#8b7bff">In hub</span></div>`;
 fetch("/api/board").then(r => r.json()).then(b => {
   const rows = [...(b.forming || [])].slice(0, 6);
-  if (!rows.length) return;
+  if (!rows.length) { document.getElementById("boardRows").innerHTML = SAMPLE_ROWS; return; }
   document.getElementById("boardRows").innerHTML = rows.map(r =>
     `<div class="r"><span class="s">${esc(r.symbol)}</span><span class="d">${money(r.hub.low)}–${money(r.hub.high).slice(1)} · ${r.hub.sessions} sessions</span>
-     <span class="tag" style="--c:var(--hub)">Inside hub</span></div>`).join("") +
-    (b.locked ? `<div class="r"><span class="s" style="color:var(--violet)">PRO</span><span class="d">${b.live_count} breaking out now · ${b.near_count} at the edge</span><span></span></div>` : "");
+     <span class="tag" style="--c:#8b7bff">In hub</span></div>`).join("") +
+    (b.locked ? `<div class="r r-pro"><span class="s">🔒</span><span class="d">${b.live_count} breaking out · ${b.near_count} at the edge</span><span class="tag" style="--c:#fff">Pro</span></div>` : "");
 }).catch(() => {
-  document.getElementById("boardRows").innerHTML = `<div class="r"><span class="s">—</span><span class="d">Open the Hub Board to see today's setups</span><span></span></div>`;
+  document.getElementById("boardRows").innerHTML = SAMPLE_ROWS;
 });
 
 // illustrative chart: drift down, hub, breakout, run to the next shelf
@@ -1431,6 +1435,33 @@ html[data-theme="light"] .win.w-left, html[data-theme="light"] .win.w-right { ba
 .lesson .lctl button { background: rgba(255,255,255,.08) !important; border: 1px solid rgba(255,255,255,.16) !important; color: #fff !important; }
 .lesson #lsCap, .lesson .lfoot p { color: rgba(255,255,255,.85) !important; }
 html[data-theme="light"] .lesson { background: linear-gradient(180deg, rgba(34,42,58,.95), rgba(18,23,32,.96)) !important; box-shadow: 0 30px 70px rgba(15,23,42,.22), inset 0 1px 0 rgba(255,255,255,.22) !important; }
+</style>
+
+<style>
+/* tidy product windows: left-aligned rows, notification-style alerts, consistent dark glass */
+.win .rows { padding: 6px 14px 10px !important; }
+.win .r { display: grid !important; grid-template-columns: 64px 1fr auto !important; gap: 12px !important; align-items: center; padding: 12px 4px !important; text-align: left !important; }
+.win .r .s { font: 700 14px var(--sans) !important; color: #fff !important; letter-spacing: 0 !important; }
+.win .r .d { font-size: 13.5px !important; color: rgba(255,255,255,.62) !important; text-align: left !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.win .tag { padding: 4px 10px !important; border-radius: 999px !important; font: 700 12px var(--sans) !important; color: var(--c) !important;
+  background: color-mix(in srgb, var(--c) 16%, transparent) !important; filter: none !important; white-space: nowrap; }
+.win .r-pro .d { color: rgba(255,255,255,.75) !important; }
+.msgs.nf { padding: 10px 12px 12px !important; display: grid !important; gap: 8px !important; }
+.nfi { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; padding: 12px 14px; border-radius: 16px; text-align: left;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); }
+.nf-ic { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; font: 800 15px var(--sans); color: #0b0f15;
+  background: var(--c); box-shadow: 0 0 18px color-mix(in srgb, var(--c) 45%, transparent); }
+.nf-t { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.nf-t b { font: 700 14px var(--sans); color: #fff; } .nf-t time { font: 500 12px var(--sans); color: rgba(255,255,255,.45); white-space: nowrap; }
+.nfi p { margin: 3px 0 0 !important; font-size: 13.5px !important; line-height: 1.45; color: rgba(255,255,255,.66) !important; text-align: left !important; }
+.win.w-left, .win.w-right { background: linear-gradient(180deg, rgba(30,38,52,.86), rgba(16,20,28,.9)) !important; }
+html[data-theme="light"] .win.w-left, html[data-theme="light"] .win.w-right { background: linear-gradient(180deg, rgba(30,38,52,.92), rgba(18,23,32,.94)) !important; }
+@media (max-width: 900px) { .win .r { grid-template-columns: 56px 1fr auto !important; } .nf-t { flex-direction: column; gap: 1px; } }
+</style>
+
+<style>
+.chartwrap svg { height: auto !important; aspect-ratio: 800 / 280; }
+@media (min-width: 901px) { .win.w-mid .chartwrap { padding-top: 30px !important; padding-bottom: 22px !important; } }
 </style>
 </body>
 </html>
