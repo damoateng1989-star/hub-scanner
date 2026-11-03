@@ -174,5 +174,26 @@ html[data-theme="light"] .theme-btn { color: #0d1117 !important; background: rgb
 html[data-theme="dark"] .theme-btn { color: #e8eef5 !important; }
 html[data-theme="light"] #signin a, html[data-theme="light"] nav #signin a { color: #0d1117 !important; }
 </style>
+<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* ================= Typeface: DM Sans (SIL OFL) + tracked uppercase labels + tabular numbers ================= */
+@font-face { font-family: "DM Sans"; src: url("/fonts/DMSans.woff2") format("woff2"); font-weight: 100 1000; font-style: normal; font-display: swap; }
+:root { --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif !important; }
+html, body, button, input, select, textarea, .btn, .btnx { font-family: var(--sans) !important; }
+h1, h2, h3, .vh h1, #hello, .bf-head h3, .hero h1, .hero h1 .l1, .hero h1 .l2, section h2, .final h2, .mf-h, .g-head h2, .brand, .sb-brand {
+  font-family: "DM Sans", -apple-system, sans-serif !important; font-style: normal !important; letter-spacing: -0.035em !important; }
+h2 em, section h2 em, .g-head h2 em, .final h2 em, .mf-h span { font-family: "DM Sans", sans-serif !important; font-style: normal !important; }
+/* the "terminal" label look: small, uppercase, widely spaced */
+th, .board-table th, .board-caption span, .kick, .kicker, .sb-label, .mb-k, .r1-k, .lm-k, .tiles span, .ox-grid small, .ox-chips small,
+.cbox small, .legend .muted, .bf-h, .g-tabs small {
+  font-family: "DM Sans", sans-serif !important; text-transform: uppercase !important; letter-spacing: .14em !important; font-weight: 600 !important; font-size: 11px !important; }
+.kicker::before { display: none !important; }
+.bf-h { font-size: 11.5px !important; color: var(--muted, #8a9aae) !important; }
+/* numbers line up in columns */
+td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, .mb-chip small, .lrow .s small, .price, .px {
+  font-variant-numeric: tabular-nums !important; font-feature-settings: "tnum" 1 !important; }
+.board-table td, .lrow .s, .r .s, .board-symbol a { font-family: "DM Sans", sans-serif !important; letter-spacing: .01em; }
+.board-symbol a, .lrow summary .s, .r .s { font-weight: 700 !important; }
+</style>
 </body>
 </html>
