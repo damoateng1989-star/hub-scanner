@@ -930,19 +930,21 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
 </div></section>
 
 <section class="block" id="pricing"><div class="wrap">
-  <div class="kicker">Pricing</div>
-  <h2>Start free. <em>Upgrade when it earns it.</em></h2>
+  <div class="kicker">Early access pricing</div>
+  <h2>Free during the beta. <em>Founding members pay less, for life.</em></h2>
+  <p class="sub">No card needed now. Join the waitlist and you'll get in as spots open. Everyone who joins before launch can lock in the founding price.</p>
   <div class="tiers">
-    <div class="card tier"><div class="num">Free</div><div class="price">$0</div>
+    <div class="card tier"><div class="num">Beta</div><div class="price">$0</div><div class="pr-sub">Free while we test, then a free plan stays</div>
       <ul><li>Watch up to 3 tickers</li><li>Telegram alerts after each breakout</li><li>Hub Board: stocks inside a hub</li><li>Charts and the full track record</li></ul>
       <a class="btn ghost" href="/login#signup">Create a free account</a></div>
-    <div class="card tier pro"><span class="ribbon">Most useful</span><div class="num">Pro</div>
-      <div class="price">$29<small> / month</small></div><div style="color:var(--muted);font-size:14px">or $290 a year, two months free</div>
+    <div class="card tier pro"><span class="ribbon">Founding member</span><div class="num">Pro</div>
+      <div class="price">$19<small> / month</small> <s class="pr-was">$29</s></div><div class="pr-sub">Locked in for life when you join before launch. Regular price $29/month.</div>
       <ul><li>Unlimited watchlist</li><li>Pre-close warnings, 15 min before the close</li><li>Full Hub Board: live breakouts and stocks at the edge</li>
         <li>Phone-call alerts</li><li>Options swing plans: calls or puts, expiry, and what the contract may be worth at the shelf</li>
-<li>Backtests on any ticker</li></ul>
+        <li>Backtests on any ticker</li></ul>
       <a class="btn solid" href="/login#signup">Get started</a></div>
   </div>
+  <p class="pr-note">Nothing to pay today. We'll email you before Pro billing starts, and you can stay on the free plan.</p>
 </div></section>
 
 <section class="block" id="faq"><div class="wrap">
@@ -1970,6 +1972,12 @@ html[data-theme="light"] .btn.solid, html[data-theme="light"] .join .btn.solid {
   background: linear-gradient(180deg, #ffffff 0%, #f6f7f9 60%, #eceff3 100%) !important; color: #0d1117 !important; border: 1px solid rgba(15,23,42,.12) !important;
   box-shadow: inset 0 1px 0 #fff, inset 0 -2px 4px rgba(15,23,42,.06), 0 8px 22px rgba(15,23,42,.12) !important; }
 html[data-theme="light"] .btn.solid:hover { background: #fff !important; border-color: rgba(15,23,42,.22) !important; }
+</style>
+<style>
+.pr-sub { margin-top: 6px; color: var(--muted, #8a9aae); font-size: 14px; line-height: 1.45; }
+.pr-was { margin-left: 6px; font-size: 22px; font-weight: 500; color: var(--muted, #8a9aae); text-decoration-thickness: 2px; letter-spacing: 0; }
+.pr-note { margin: 18px 0 0; color: var(--muted, #8a9aae); font-size: 13.5px; }
+#pricing .sub { max-width: 640px; }
 </style>
 </body>
 </html>
