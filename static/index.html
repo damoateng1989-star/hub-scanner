@@ -3008,5 +3008,18 @@ html[data-theme="light"] #lsSvg line[stroke="#3DD68C"] { stroke: #16a34a; } html
 html[data-theme="light"] #lsSvg circle[fill="#141b26"] { fill: #ffffff; }
 html[data-theme="light"] #lsSvg circle[fill="#3DD68C"] { fill: #16a34a; opacity: .35; } html[data-theme="light"] #lsSvg circle[stroke="#3DD68C"] { stroke: #16a34a; }
 </style>
+
+<style>
+/* watchlist: each ticker is its own bordered card */
+.lrows { background: transparent !important; border: 0 !important; box-shadow: none !important; overflow: visible !important; display: grid; gap: 10px;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.lrow { border: 1px solid rgba(255,255,255,.12) !important; border-radius: 16px !important; background: rgba(255,255,255,.035) !important; overflow: hidden;
+  transition: border-color .15s, box-shadow .15s; }
+.lrow:hover { border-color: rgba(255,255,255,.24) !important; }
+.lrow[open] { border-color: rgba(255,255,255,.28) !important; }
+html[data-theme="light"] .lrow { background: #ffffff !important; border: 1px solid rgba(15,23,42,.12) !important; box-shadow: 0 1px 2px rgba(15,23,42,.04), 0 6px 18px rgba(15,23,42,.05) !important; }
+html[data-theme="light"] .lrow:hover { border-color: rgba(15,23,42,.24) !important; box-shadow: 0 2px 4px rgba(15,23,42,.05), 0 10px 26px rgba(15,23,42,.08) !important; }
+html[data-theme="light"] .lrow[open] { border-color: #0d1117 !important; }
+</style>
 </body>
 </html>
