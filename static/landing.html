@@ -2159,5 +2159,18 @@ html[data-theme="light"] .hc-spark { color: #4b5563; }
 @media (max-width: 420px) { .hc-1 { width: 300px; margin-left: -150px; } .hc-2 { display: none; } }
 @media (prefers-reduced-motion: reduce) { .hc-stage { animation: none; } }
 </style>
+<style>
+/* pricing buttons: clearly buttons in both themes */
+html #pricing .tier .btn { min-height: 48px; font-weight: 700 !important; }
+html[data-theme="light"] #pricing .tier .btn.ghost {
+  background: #fff !important; color: #0d1117 !important; border: 1.5px solid rgba(15,23,42,.22) !important;
+  box-shadow: 0 6px 16px rgba(15,23,42,.08), inset 0 1px 0 #fff !important; }
+html[data-theme="light"] #pricing .tier .btn.ghost:hover { border-color: rgba(15,23,42,.45) !important; }
+html[data-theme="light"] #pricing .tier .btn.solid {
+  background: #0d1117 !important; color: #fff !important; border: 1.5px solid #0d1117 !important;
+  box-shadow: 0 10px 24px rgba(13,17,23,.22), inset 0 1px 0 rgba(255,255,255,.15) !important; }
+html[data-theme="light"] #pricing .tier .btn.solid:hover { background: #1f2937 !important; }
+html #pricing .tier .btn.ghost { border: 1.5px solid rgba(255,255,255,.28) !important; }
+</style>
 </body>
 </html>
