@@ -3283,7 +3283,7 @@ function earnAsk(sym) {
     earnPaint(document);
   }, 200);
 }
-function earnShort(e) { return e.days === 0 ? "Earnings today" : e.days === 1 ? "Earnings tmrw" : `Earnings ${e.days}d`; }
+function earnShort(e) { const d = new Date(e.date + "T12:00:00"); return e.days === 0 ? "Earnings today" : e.days === 1 ? "Earnings tomorrow" : "Earnings " + d.toLocaleDateString(undefined, {month: "short", day: "numeric"}); }
 function earnPaint(root) {
   root.querySelectorAll("[data-earn]").forEach(el => {
     const e = EARN[el.dataset.earn]; const old = el.querySelector(":scope > .earn-tag, :scope > .bf-earn"); if (old) old.remove();
@@ -3291,7 +3291,7 @@ function earnPaint(root) {
     if (el.id === "bfHead") {
       el.insertAdjacentHTML("beforeend", `<p class="bf-earn"><i>📅</i><span><b>Earnings ${esc(e.label)}.</b> Expect a gap: price can jump past the hub and the shelf overnight. Holding through it is a separate bet.</span></p>`);
     } else {
-      const t = document.createElement("span"); t.className = "earn-tag" + (e.days <= 3 ? " soon" : ""); t.textContent = earnShort(e);
+      const t = document.createElement("span"); t.className = "earn-tag board-state earn"; t.textContent = earnShort(e);
       t.title = "Earnings " + e.label; el.appendChild(t);
     }
   });
@@ -3325,6 +3325,22 @@ html[data-theme="light"] .earn-tag { color: #92400e; background: rgba(217,119,6,
 html[data-theme="light"] .earn-tag.soon { color: #fff; background: #d97706; border-color: #d97706; }
 html[data-theme="light"] .bf-earn, html[data-theme="light"] .ox-earn { color: #78350f; background: #fffbeb; border-color: #fcd34d; }
 html[data-theme="light"] .bf-earn b, html[data-theme="light"] .ox-earn b { color: #92400e; }
+</style>
+<style>
+/* earnings: same pill as the setup states (Breakout, At the edge, Inside hub), in its own violet */
+html .earn-tag.board-state { margin: 0 0 0 8px !important; padding: 4px 7px !important; border: 0 !important; border-radius: 4px !important;
+  font: 650 10px/1.2 var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; white-space: nowrap;
+  color: #c4a8ff !important; background: #241c3a !important; vertical-align: 1px; }
+html .earn-tag.board-state::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+html[data-theme="light"] .earn-tag.board-state { color: #7c3aed !important; background: rgba(124,58,237,.08) !important; }
+@media (max-width: 760px) { html .earn-tag.board-state { font-size: 12px !important; } }
+.lrow > summary .s .earn-tag.board-state { display: inline-flex; margin: 4px 0 0 !important; }
+.board-symbol .earn-tag.board-state { margin-top: 3px !important; }
+/* Shelf card + options notes in the same violet */
+.bf-earn, .ox-earn { color: #d9cbff !important; background: rgba(124,58,237,.10) !important; border-color: rgba(196,168,255,.35) !important; }
+.bf-earn b, .ox-earn b { color: #c4a8ff !important; }
+html[data-theme="light"] .bf-earn, html[data-theme="light"] .ox-earn { color: #4c1d95 !important; background: #f5f3ff !important; border-color: #ddd6fe !important; }
+html[data-theme="light"] .bf-earn b, html[data-theme="light"] .ox-earn b { color: #6d28d9 !important; }
 </style>
 </body>
 </html>
