@@ -856,11 +856,11 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
   const root = document.getElementById("flowDemo"); if (!root) return;
   const svg = document.getElementById("flSvg");
   const STEPS = [
-    {t: "After every 4H close", k: "Scout sweeps", pill: true, h: "543 stocks checked", p: "After each 4-hour close, Scout scans the S&P 500, Nasdaq-100 and major ETFs.", ph: "1:47"},
-    {t: "Day 1–3", k: "A hub forms", h: "Price coils in a tight range", p: "4H closes hold inside one zone for 4+ sessions. You get a heads-up that a hub formed.", ph: "4:17"},
-    {t: "3:45 PM", k: "15 minutes to the close", h: "Warning before the candle prints", p: "Price is trading above the hub with 15 minutes left. You have time to get ready.", ph: "3:45"},
-    {t: "4:00 PM", k: "The candle closes", h: "Breakout confirmed", p: "The 4H candle closes above the hub. That's the signal, with the next shelf as the target.", ph: "4:00"},
-    {t: "Next sessions", k: "Next shelf", h: "Target reached", p: "Price travels to the next shelf and you get the result. Every signal is logged in the track record.", ph: "11:31"},
+    {t: "After every 4H close", k: "Scout sweeps", pill: true, p: "543 stocks checked after every 4-hour close.", ph: "1:47"},
+    {t: "Day 1–3", k: "A hub forms", p: "Price coils in a tight range for 4+ sessions.", ph: "4:17"},
+    {t: "3:45 PM", k: "15 minutes to the close", p: "Price is outside the hub. You get a heads-up.", ph: "3:45"},
+    {t: "4:00 PM", k: "The candle closes", p: "Breakout confirmed, aiming for the next shelf.", ph: "4:00"},
+    {t: "Next sessions", k: "Next shelf", p: "Target reached, and logged in the track record.", ph: "11:31"},
   ];
   const NOTES = [
     {h: "Scout", t: "Swept 543 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs."},
@@ -911,7 +911,7 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
 
   // ---- steps + phone
   const list = document.getElementById("flSteps"), stack = document.getElementById("flStack");
-  list.innerHTML = STEPS.map((s, i) => `<li data-n="${i + 1}"><small>${s.t}</small><b>${s.k}${s.pill ? ' <span class="live-pill run fl-pill">Live</span>' : ""}</b><p>${s.h}. ${s.p}</p><i></i></li>`).join("");
+  list.innerHTML = STEPS.map((s, i) => `<li data-n="${i + 1}"><small>${s.t}</small><b>${s.k}${s.pill ? ' <span class="live-pill run fl-pill">Live</span>' : ""}</b><p>${s.p}</p><i></i></li>`).join("");
   const DUR = 4200; root.style.setProperty("--fl-dur", DUR + "ms");
   let cur = 1, timer = null, playing = false;
   const esc = (t) => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
@@ -942,15 +942,15 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
   <h2>Alerts aren't new. <em>Watching the right setup is.</em></h2>
   <p class="sub">Your phone can already ping you. The problem is what it pings you about.</p>
   <div class="why">
-    <div class="why-c"><b>Do-it-yourself alerts</b><p>You draw the levels and build each alert yourself, one ticker at a time. Nobody does that for 540 stocks, and a price line can't tell a real close from a wick.</p></div>
-    <div class="why-c"><b>Generic scanners</b><p>They watch their own long list of patterns, mostly for day traders at the screen all day. You end up adapting to the tool.</p></div>
-    <div class="why-c"><b>Breakout chat rooms</b><p>Every pump, all day. No rules, no earnings check, and no record of how the calls actually did.</p></div>
+    <div class="why-c"><b>Do-it-yourself alerts</b><p>You build every alert by hand, and a price line can't tell a close from a wick.</p></div>
+    <div class="why-c"><b>Generic scanners</b><p>Their patterns, built for day traders watching the screen all day.</p></div>
+    <div class="why-c"><b>Breakout chat rooms</b><p>Every pump, all day, with no rules and no record.</p></div>
     <div class="why-c why-us"><b>NextShelf</b><ul>
-      <li>Scans the whole board after every 4-hour close, with no setup on your part</li>
+      <li>Scans the whole board after every 4-hour close</li>
       <li>Counts the close, not the wick</li>
-      <li>Won't ring you for a breakout that already reached its target</li>
-      <li>Flags earnings before you get caught by a gap</li>
-      <li>Logs every signal, wins and losses, in a track record you can check</li></ul></div>
+      <li>Skips breakouts that already hit their target</li>
+      <li>Flags earnings before a gap catches you</li>
+      <li>Logs every signal, wins and losses</li></ul></div>
   </div>
   <p class="why-line">NextShelf watches the setup while you go do other things.</p>
 </div></section>
@@ -2050,7 +2050,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
 <style>
 .hero .tagline { margin: 14px auto 0; font-weight: 700; font-size: clamp(16px, 1.6vw, 19px); letter-spacing: -.01em; color: var(--ink, #eef2f7); }
 html[data-theme="light"] .hero .tagline { color: #0d1117; }
-.why { display: grid; grid-template-columns: repeat(3, 1fr) 1.35fr; gap: 14px; margin-top: 34px; text-align: left; }
+.why { display: grid; grid-template-columns: repeat(3, 1fr) 1.35fr; gap: 14px; margin-top: 34px; text-align: left; align-items: start; }
 .why-c { padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); }
 .why-c b { display: block; font-size: 15.5px; margin-bottom: 8px; color: var(--ink, #eef2f7); }
 .why-c p { margin: 0; color: var(--muted, #8a9aae); font-size: 14px; line-height: 1.55; }
