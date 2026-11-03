@@ -3185,7 +3185,7 @@ html[data-theme="light"] .ox-closed { color: #55606e; background: #f4f5f7; borde
   const LAND = false;
   const swap = (t) => {
     const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
-    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join waitlist" : "Join the waitlist") + arrow;
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join the waitlist" : "Join the waitlist") + arrow;
     if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
     return null;
   };
@@ -3210,6 +3210,30 @@ html[data-theme="light"] .ox-closed { color: #55606e; background: #f4f5f7; borde
 .inv-form input { flex: 1 1 200px; } .inv-form select { flex: 0 0 auto; }
 .inv-msg { min-height: 0; margin: 4px 0 8px; font-size: 13px; color: var(--muted); word-break: break-all; }
 #invitesBox code { font-size: 12.5px; padding: 1px 5px; border-radius: 5px; background: color-mix(in srgb, var(--muted, #8a9aae) 14%, transparent); }
+</style>
+<style>
+/* ================= phone tab bar: floating glass pill ================= */
+@media (max-width: 760px) {
+  body { padding-bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+  nav.bottom { left: 12px !important; right: 12px !important; bottom: calc(10px + env(safe-area-inset-bottom)) !important; gap: 2px;
+    padding: 6px !important; border-radius: 999px !important; border: 1px solid rgba(255,255,255,.14) !important;
+    background: linear-gradient(180deg, rgba(46,56,72,.62), rgba(20,26,36,.62)) !important;
+    -webkit-backdrop-filter: blur(26px) saturate(1.7) !important; backdrop-filter: blur(26px) saturate(1.7) !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(0,0,0,.25) !important; }
+  nav.bottom a { border-radius: 999px; padding: 7px 0 6px !important; color: rgba(232,238,245,.62) !important; transition: background .2s, color .2s; }
+  nav.bottom a.on { color: #fff !important; background: linear-gradient(180deg, rgba(255,255,255,.2), rgba(255,255,255,.08));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(0,0,0,.18); }
+  html[data-theme="light"] nav.bottom { border-color: rgba(255,255,255,.95) !important;
+    background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(240,242,245,.68)) !important;
+    box-shadow: 0 12px 30px rgba(15,23,42,.14), inset 0 1px 0 #fff, inset 0 -1px 0 rgba(15,23,42,.05) !important; }
+  html[data-theme="light"] nav.bottom a { color: #5f6b7a !important; }
+  html[data-theme="light"] nav.bottom a.on { color: #0d1117 !important; background: linear-gradient(180deg, rgba(15,23,42,.09), rgba(15,23,42,.05));
+    box-shadow: inset 0 1px 1px rgba(15,23,42,.08); }
+  .scout-fab { bottom: calc(96px + env(safe-area-inset-bottom)) !important; }
+  .sf-hello { bottom: calc(108px + env(safe-area-inset-bottom)) !important; }
+  .scout-pop { bottom: calc(176px + env(safe-area-inset-bottom)) !important; }
+}
+@media (max-width: 760px) and (display-mode: standalone) { nav.bottom, .bottom { padding-bottom: 6px !important; } }
 </style>
 </body>
 </html>

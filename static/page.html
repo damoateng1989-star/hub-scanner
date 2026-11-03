@@ -201,7 +201,7 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   const LAND = false;
   const swap = (t) => {
     const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
-    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join waitlist" : "Join the waitlist") + arrow;
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join the waitlist" : "Join the waitlist") + arrow;
     if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
     return null;
   };

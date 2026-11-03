@@ -1746,7 +1746,7 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   const LAND = true;
   const swap = (t) => {
     const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
-    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join waitlist" : "Join the waitlist") + arrow;
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join the waitlist" : "Join the waitlist") + arrow;
     if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
     return null;
   };
@@ -1943,6 +1943,26 @@ html[data-theme="light"] .eyebrow .tl b:last-child { color: #16a34a; }
 .fl-steps li { padding: 10px 10px 12px; border-radius: 12px; }
 .fl-steps li small { font-size: 10.5px; } .fl-steps li b { font-size: 13.5px; } .fl-steps li p { font-size: 12px; }
 @media (max-width: 860px) { .fl-stage { grid-template-columns: 1fr; } }
+</style>
+<style>
+/* ================= glass buttons (matches the app's glass tab bar) ================= */
+html .btn.ghost, html .theme-btn, html .ab-chips button, html .join .btn.ghost {
+  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)) !important; border: 1px solid rgba(255,255,255,.16) !important; color: #eef2f7 !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18), inset 0 -1px 0 rgba(0,0,0,.25), 0 6px 18px rgba(0,0,0,.25) !important; }
+html .btn.ghost:hover, html .theme-btn:hover, html .ab-chips button:hover { background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.07)) !important; border-color: rgba(255,255,255,.28) !important; }
+html .btn.solid, html .ab-go, html .join .btn.solid {
+  background: linear-gradient(180deg, #ffffff 0%, #e9edf2 55%, #d9dfe7 100%) !important; border: 1px solid rgba(255,255,255,.9) !important; color: #070b10 !important;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -2px 4px rgba(15,23,42,.12), 0 10px 26px rgba(0,0,0,.35) !important; }
+html .btn.solid:hover, html .ab-go:hover { background: linear-gradient(180deg, #ffffff, #eef1f5 60%, #e2e7ee) !important; }
+html[data-theme="light"] .btn.ghost, html[data-theme="light"] .theme-btn, html[data-theme="light"] .ab-chips button, html[data-theme="light"] .join .btn.ghost {
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(240,242,245,.72)) !important; border: 1px solid rgba(255,255,255,.95) !important; color: #0d1117 !important;
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(15,23,42,.06), 0 6px 16px rgba(15,23,42,.10) !important; }
+html[data-theme="light"] .btn.ghost:hover, html[data-theme="light"] .theme-btn:hover, html[data-theme="light"] .ab-chips button:hover { background: linear-gradient(180deg, #fff, rgba(246,247,249,.9)) !important; }
+html[data-theme="light"] .btn.solid, html[data-theme="light"] .ab-go, html[data-theme="light"] .join .btn.solid {
+  background: linear-gradient(180deg, #3a4250 0%, #161b23 55%, #0b0f15 100%) !important; border: 1px solid rgba(255,255,255,.08) !important; color: #fff !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 4px rgba(0,0,0,.4), 0 10px 26px rgba(13,17,23,.25) !important; }
+html[data-theme="light"] .btn.solid:hover, html[data-theme="light"] .ab-go:hover { background: linear-gradient(180deg, #474f5e, #1d232d 55%, #10141b) !important; }
 </style>
 </body>
 </html>
