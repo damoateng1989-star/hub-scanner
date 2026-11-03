@@ -671,6 +671,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
   <div class="g-tabs" id="gTabs"></div>
   <div class="g-grid" id="gGrid"><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div><div class="g-card sk"></div></div>
   <p class="g-note" id="gNote">Educational, not financial advice. Updated after every 4-hour close.</p>
+  <div class="g-more"><a class="btn ghost" href="/app#discover">Browse all setups →</a></div>
 </div></section>
 
 <section class="manifesto" id="rule"><div class="wrap">
@@ -2053,6 +2054,19 @@ html[data-theme="light"] .hero .tagline .tl-who { color: #15803d; }
 #why .wrap > .kicker, #why .wrap > h2, #why .wrap > .sub { text-align: center; margin-left: auto !important; margin-right: auto !important; }
 #flow .wrap > .sub, #why .wrap > .sub { max-width: 720px; }
 #flow .wrap > .kicker, #why .wrap > .kicker { display: block; }
+</style>
+<style>
+/* one alignment for every section: centered small label, heading, intro */
+section .wrap > .kicker, #flow .kicker, #why .kicker, #live .kicker {
+  display: flex !important; justify-content: center !important; text-align: center; width: 100%; margin-left: auto !important; margin-right: auto !important; }
+/* live setups: centered header, tabs and footer like the rest of the page */
+#live .g-head { display: block !important; text-align: center; }
+#live .g-head > a.btn { display: none !important; }
+#live .g-head h2 { margin-left: auto !important; margin-right: auto !important; }
+#live .g-tabs { justify-content: center; }
+#live .g-note { text-align: center; }
+#live .g-more { display: flex; justify-content: center; margin-top: 18px; }
+@media (max-width: 640px) { #live .g-tabs { justify-content: flex-start; } }
 </style>
 </body>
 </html>
