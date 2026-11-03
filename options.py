@@ -248,6 +248,11 @@ def _plan(sym: str) -> dict:
     last = float(res["close"].iloc[-1])
     iv0 = _realized_iv(res["close"])
     out = dict(symbol=sym, price=round(last, 2), demo=data.provider() == "demo", plans=[], mode="none")
+    try:
+        import earnings
+        out["earnings"] = earnings.lookup(sym)
+    except Exception:
+        out["earnings"] = None
     rows = chain(sym, last, iv0)
     if not rows:
         out["message"] = "No listed options were found for this stock."

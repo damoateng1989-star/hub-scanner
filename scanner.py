@@ -10,6 +10,7 @@ import threading
 import pandas as pd
 
 import data
+import earnings
 import db
 import engine
 import options
@@ -195,6 +196,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         for e in res["events"]:
             if e["time"] > b:
                 msg = format_event(sym, e)
+                if e["type"] in ("breakout", "breakdown", "hub_formed"):
+                    msg += earnings.alert_line(sym)
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
                                 e["time"].isoformat(), msg):
                     # ring only for the newest candle (no burst of calls after downtime), and not for chases
@@ -218,6 +221,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 if e["time"] <= b or e["time"] != c4.index[-1]:
                     continue                 # only the newest candle: no burst of old breaks after downtime
                 msg = format_pattern_event(sym, e)
+                if e["type"] in ("breakout", "breakdown"):
+                    msg += earnings.alert_line(sym)
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
                     notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]])
                     sent.append(msg)
@@ -273,7 +278,7 @@ def preclose_all() -> list[str]:
                 sig = engine.preclose_check(res, data.latest_price(sym), SETTINGS)
                 if not sig:
                     continue
-                msg = format_preclose(sym, sig, minutes_left)
+                msg = format_preclose(sym, sig, minutes_left) + earnings.alert_line(sym)
                 if db.add_alert(f"{sym}|preclose|{start.isoformat()}", sym, "preclose", start.isoformat(), msg):
                     notify.symbol_alert(sym, "preclose", msg,
                                         None if sig["reached"] else speak_preclose(sym, sig, minutes_left))

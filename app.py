@@ -34,6 +34,7 @@ import patterns  # noqa: E402
 import board  # noqa: E402
 import brief  # noqa: E402
 import data  # noqa: E402
+import earnings  # noqa: E402
 import db  # noqa: E402
 import notify  # noqa: E402
 import paper  # noqa: E402
@@ -132,6 +133,8 @@ async def lifespan(_app: FastAPI):
         sched.add_job(paper.run_check, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                    timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1)
+    sched.add_job(earnings.refresh, CronTrigger(hour="6,12,18", minute=5, timezone="America/New_York"),
+                  kwargs={"force": True}, id="earnings", replace_existing=True)
     if brief.BRIEF_TIME:      # morning brief, weekdays before the open
         bh, bm = map(int, brief.BRIEF_TIME.split(":"))
         sched.add_job(brief.send_all, CronTrigger(day_of_week="mon-fri", hour=bh, minute=bm, timezone="America/New_York"),
@@ -575,6 +578,18 @@ def info(u: dict | None = Maybe):
                 entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
                 settings=dict(min_sessions=s.min_sessions, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
                               shelf_min_atr=s.shelf_min_atr))
+
+
+@app.get("/api/earnings")
+def earnings_dates(symbols: str = ""):
+    """Upcoming earnings (within 3 weeks) for up to 200 symbols: {SYM: {date, days, when, label}}."""
+    syms = []
+    for x in symbols.split(",")[:200]:
+        try:
+            syms.append(scanner.clean_symbol(x))
+        except Exception:
+            pass
+    return earnings.many(syms)
 
 
 @app.get("/api/live")

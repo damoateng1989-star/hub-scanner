@@ -2451,7 +2451,8 @@ function optionsHTML(o) {
   const sgn = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString(undefined, {month: "short", day: "numeric"});
   const closed = o.market_open === false ? `<p class="ox-closed"><i></i>Market closed. Prices as of the last close${o.session ? " (" + new Date(o.session + "T12:00:00").toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"}) + ")" : ""}. They stay put until the open.</p>` : "";
-  return (o.demo ? `<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>` : "") + closed + o.plans.map(p => {
+  const er = o.earnings && o.plans.some(p => o.earnings.date <= p.expiry) ? `<p class="ox-earn">📅 <b>Earnings ${esc(o.earnings.label)}</b>, before these contracts expire. Option prices usually drop right after earnings (the "IV crush"), even when the stock moves your way, and a gap can skip past your exit.</p>` : "";
+  return (o.demo ? `<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>` : "") + closed + er + o.plans.map(p => {
     const up = p.direction === 1, col = up ? "#3DD68C" : "#FF6B5E", side = up ? "Calls" : "Puts";
     const head = p.mode === "prep" ? `${side} <small>if a 4-hour candle closes ${up ? "above" : "below"} ${money(p.edge)}</small>`
       : `${side} <small>${esc(p.setup)} breakout is live</small>`;
@@ -3268,6 +3269,62 @@ html .sweep-btn:hover { box-shadow: 0 0 32px rgba(61,214,140,.45) !important; }
 html .sweep-btn:disabled { opacity: .7; }
 html[data-theme="light"] .sweep-btn, html[data-theme="light"] .sweep-btn::after { background: #fff !important; color: #0d1117 !important; }
 html[data-theme="light"] .sweep-btn { box-shadow: 0 6px 18px rgba(22,163,74,.18) !important; }
+</style>
+<script>
+// ---------------------------------------------------------------- earnings soon: tag next to tickers, warning in the Shelf card
+const EARN = {}, EARN_ASKED = new Set(); let EARN_Q = new Set(), EARN_T = null;
+function earnAsk(sym) {
+  if (!sym || EARN_ASKED.has(sym)) return; EARN_ASKED.add(sym); EARN_Q.add(sym);
+  clearTimeout(EARN_T); EARN_T = setTimeout(async () => {
+    const list = [...EARN_Q]; EARN_Q = new Set();
+    for (let i = 0; i < list.length; i += 150) {
+      try { Object.assign(EARN, await api("/api/earnings?symbols=" + encodeURIComponent(list.slice(i, i + 150).join(",")))); } catch (e) {}
+    }
+    earnPaint(document);
+  }, 200);
+}
+function earnShort(e) { return e.days === 0 ? "Earnings today" : e.days === 1 ? "Earnings tmrw" : `Earnings ${e.days}d`; }
+function earnPaint(root) {
+  root.querySelectorAll("[data-earn]").forEach(el => {
+    const e = EARN[el.dataset.earn]; const old = el.querySelector(":scope > .earn-tag, :scope > .bf-earn"); if (old) old.remove();
+    if (!e || e.days > 14) return;
+    if (el.id === "bfHead") {
+      el.insertAdjacentHTML("beforeend", `<p class="bf-earn"><i>📅</i><span><b>Earnings ${esc(e.label)}.</b> Expect a gap: price can jump past the hub and the shelf overnight. Holding through it is a separate bet.</span></p>`);
+    } else {
+      const t = document.createElement("span"); t.className = "earn-tag" + (e.days <= 3 ? " soon" : ""); t.textContent = earnShort(e);
+      t.title = "Earnings " + e.label; el.appendChild(t);
+    }
+  });
+}
+function earnScan(root) {
+  root.querySelectorAll(".board-symbol:not([data-earn]), .lrow > summary .s:not([data-earn]), #bfHead").forEach(el => {
+    let sym = "";
+    if (el.id === "bfHead") { sym = (el.querySelector("h3") || {}).textContent || ""; if (el.dataset.earn === sym.trim() && el.querySelector(".bf-earn")) return; }
+    else sym = (el.querySelector("a") || el).firstChild?.textContent || "";
+    sym = sym.trim().toUpperCase(); if (!/^[A-Z][A-Z.\-]{0,9}$/.test(sym)) return;
+    el.dataset.earn = sym;
+    if (sym in EARN) earnPaint(el.parentNode || el); else earnAsk(sym);
+  });
+}
+new MutationObserver(ms => { if (ms.some(m => m.addedNodes.length)) earnScan(document); }).observe(document.body, {childList: true, subtree: true});
+earnScan(document);
+</script>
+<style>
+.earn-tag { display: inline-flex; align-items: center; margin-left: 7px; padding: 2px 7px; border-radius: 999px; white-space: nowrap; vertical-align: 1px;
+  font: 700 9.5px/1.4 var(--sans) !important; letter-spacing: .08em; text-transform: uppercase; font-variant-numeric: tabular-nums;
+  color: #F2C14E; background: rgba(242,193,78,.10); border: 1px solid rgba(242,193,78,.4); }
+.earn-tag.soon { color: #1a1405; background: #F2C14E; border-color: #F2C14E; }
+.board-symbol { flex-wrap: wrap; gap: 0; }
+.lrow > summary .s .earn-tag { margin: 3px 0 0; }
+.bf-earn { display: flex; gap: 9px; align-items: flex-start; margin: 10px 0 0; padding: 9px 12px; border-radius: 12px; font-size: 13px; line-height: 1.45;
+  color: #e9d9a6; background: rgba(242,193,78,.08); border: 1px solid rgba(242,193,78,.3); }
+.bf-earn b { color: #F2C14E; } .bf-earn i { font-style: normal; }
+.ox-earn { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #e9d9a6; background: rgba(242,193,78,.08); border: 1px solid rgba(242,193,78,.3); }
+.ox-earn b { color: #F2C14E; }
+html[data-theme="light"] .earn-tag { color: #92400e; background: rgba(217,119,6,.08); border-color: rgba(217,119,6,.35); }
+html[data-theme="light"] .earn-tag.soon { color: #fff; background: #d97706; border-color: #d97706; }
+html[data-theme="light"] .bf-earn, html[data-theme="light"] .ox-earn { color: #78350f; background: #fffbeb; border-color: #fcd34d; }
+html[data-theme="light"] .bf-earn b, html[data-theme="light"] .ox-earn b { color: #92400e; }
 </style>
 </body>
 </html>
