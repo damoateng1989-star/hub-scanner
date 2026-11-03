@@ -3426,5 +3426,29 @@ html[data-theme="light"] .bf-earn b, html[data-theme="light"] .ox-earn b { color
 html[data-theme="light"] .bw-warn { background: #fffbeb; border-color: #fcd34d; color: #78350f; } html[data-theme="light"] .bw-warn b { color: #92400e; }
 @media (max-width: 560px) { .bw-grid { grid-template-columns: 1fr 1fr; } }
 </style>
+<style>
+/* ================= light status pills (soft tint, no dot, regular weight) ================= */
+html .board-state, html .board-state.earn, html .earn-tag.board-state, html .bf-tag {
+  display: inline-flex !important; align-items: center; gap: 0 !important; padding: 3px 8px !important; border: 0 !important; border-radius: 4px !important;
+  font: 500 12px/1.35 var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; box-shadow: none !important; filter: none !important; }
+html .board-state::before, html .board-state:before, html .earn-tag.board-state::before, html .bf-tag::before { display: none !important; content: none !important; }
+html .bf-tag { margin-top: 10px; font-size: 13px !important; padding: 4px 10px !important; }
+/* dark */
+html .board-state.up { color: #7ee2ad !important; background: rgba(61,214,140,.12) !important; }
+html .board-state.down { color: #ff9a90 !important; background: rgba(255,107,94,.12) !important; }
+html .board-state.near { color: #f2cf7a !important; background: rgba(242,193,78,.12) !important; }
+html .board-state.hub { color: #b4c3ff !important; background: rgba(124,147,255,.13) !important; }
+html .board-state.neutral { color: #aab6c3 !important; background: rgba(160,174,190,.10) !important; }
+html .board-state.earn, html .earn-tag.board-state { color: #d2bcff !important; background: rgba(167,139,250,.13) !important; }
+/* light: like a price-tag sticker, pale fill + deep text */
+html[data-theme="light"] .board-state.up { color: #166534 !important; background: #dcfce7 !important; }
+html[data-theme="light"] .board-state.down { color: #991b1b !important; background: #fee2e2 !important; }
+html[data-theme="light"] .board-state.near { color: #92400e !important; background: #fef3c7 !important; }
+html[data-theme="light"] .board-state.hub { color: #3730a3 !important; background: #e0e7ff !important; }
+html[data-theme="light"] .board-state.neutral { color: #374151 !important; background: #f1f3f5 !important; }
+html[data-theme="light"] .board-state.earn, html[data-theme="light"] .earn-tag.board-state { color: #5b21b6 !important; background: #ede9fe !important; }
+html .bf-tag { background: color-mix(in srgb, var(--c) 13%, transparent) !important; color: color-mix(in srgb, var(--c) 75%, #fff) !important; }
+html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, #fff) !important; color: color-mix(in srgb, var(--c) 60%, #000) !important; }
+</style>
 </body>
 </html>
