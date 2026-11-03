@@ -230,7 +230,21 @@ def track_record(pattern: str = "hub") -> dict:
                    avg_loss=round(sum(r for r in rets if r <= 0) / max(1, len(rets) - len(wins)), 2)
                    if len(rets) > len(wins) else None,
                    by_outcome=by),
-        signals=sigs[:200], pattern=pattern, patterns=by_pattern())
+        signals=sigs[:200], pattern=pattern, patterns=by_pattern(), by_symbol=_by_symbol(closed))
+
+
+def _by_symbol(closed: list[dict]) -> list[dict]:
+    """Win rate per stock for one setup (completed signals only, chases excluded)."""
+    agg: dict[str, list[float]] = {}
+    for s_ in closed:
+        if s_["ret_pct"] is not None:
+            agg.setdefault(s_["symbol"], []).append(s_["ret_pct"])
+    out = []
+    for sym, rets in agg.items():
+        w = sum(1 for r in rets if r > 0)
+        out.append(dict(symbol=sym, n=len(rets), wins=w, win_rate=round(100 * w / len(rets), 1),
+                        avg_ret=round(sum(rets) / len(rets), 2)))
+    return out
 
 
 def _seg(p, idx, t, a, b, kind, live):

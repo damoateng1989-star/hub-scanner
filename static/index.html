@@ -2895,6 +2895,23 @@ async function pollAgent() {
 }
 
 // ---------------------------------------------------------------- track record
+let RANK_DIR = -1, RANK_MIN = 2, RANK_DATA = [];
+function winRankHTML(rows) {
+  RANK_DATA = rows;
+  const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const list = rows.filter(x => x.n >= RANK_MIN)
+    .sort((a, b) => RANK_DIR * (a.win_rate - b.win_rate) || RANK_DIR * (a.avg_ret - b.avg_ret) || b.n - a.n).slice(0, 15);
+  return `<div class="rank" id="winRank"><div class="rank-h"><div class="eyebrow" style="margin:0">Win rate by stock</div>
+    <div class="rank-ctl"><div class="seg"><button class="${RANK_DIR === -1 ? "on" : ""}" onclick="setRank(-1)">Highest</button><button class="${RANK_DIR === 1 ? "on" : ""}" onclick="setRank(1)">Lowest</button></div>
+      <label class="note" style="margin:0">min <select onchange="RANK_MIN=+this.value;setRank(RANK_DIR)">${[1, 2, 3, 5].map(n => `<option value="${n}"${n === RANK_MIN ? " selected" : ""}>${n}</option>`).join("")}</select> signals</label></div></div>
+    ${list.length ? `<div class="tbl" style="margin-top:8px"><table><tr><th>#</th><th>Stock</th><th>Win rate</th><th>Wins</th><th>Avg per signal</th></tr>
+      ${list.map((x, i) => `<tr><td>${i + 1}</td><td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')"><b>${esc(x.symbol)}</b></a></td>
+        <td><span class="rank-bar" style="--w:${x.win_rate}%;--c:var(${x.win_rate >= 50 ? "--up" : "--down"})"><i></i>${x.win_rate}%</span></td><td>${x.wins} of ${x.n}</td>
+        <td style="color:var(${x.avg_ret > 0 ? "--up" : "--down"})">${sign(x.avg_ret)}</td></tr>`).join("")}</table></div>`
+      : `<div class="empty" style="margin-top:8px">No stock has ${RANK_MIN}+ completed signals for this setup yet.</div>`}
+    <p class="note" style="margin-top:6px">Small samples swing a lot: a stock with 2 signals can show 100% or 0% by luck.</p></div>`;
+}
+function setRank(dir) { RANK_DIR = dir; const el = $("winRank"); if (el) el.outerHTML = winRankHTML(RANK_DATA); }
 async function loadRecord() {
   let r;
   if (ME && ME.guest) { $("record").innerHTML = joinBox("Members only", "Every breakout the board finds is logged with its result. Create a free account to see the full track record."); return; }
@@ -2915,7 +2932,8 @@ async function loadRecord() {
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
     ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}</div>` : ""}
-    ${r.signals.length ? `<div class="tbl" style="margin-top:14px"><table>
+    ${winRankHTML(r.by_symbol || [])}
+    ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every signal</div><div class="tbl" style="margin-top:0"><table>
       <tr><th>Breakout</th><th>Stock</th><th></th><th>Entry</th><th>Target</th><th>Result</th><th>Return</th></tr>
       ${r.signals.map(x => { const [w, c] = x.chase ? ["skipped", "--faint"] : res[x.outcome] || [x.outcome, "--idle"];
         return `<tr><td>${new Date(x.breakout_time).toLocaleDateString(undefined, {month: "short", day: "numeric"})}</td>
@@ -3455,6 +3473,16 @@ html[data-theme="light"] .board-state.neutral { color: #374151 !important; backg
 html[data-theme="light"] .board-state.earn, html[data-theme="light"] .earn-tag.board-state { color: #5b21b6 !important; background: #ede9fe !important; }
 html .bf-tag { background: color-mix(in srgb, var(--c) 13%, transparent) !important; color: color-mix(in srgb, var(--c) 75%, #fff) !important; }
 html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, #fff) !important; color: color-mix(in srgb, var(--c) 60%, #000) !important; }
+</style>
+<style>
+.rank { margin-top: 18px; } .rank-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rank-ctl { display: flex; align-items: center; gap: 12px; }
+.rank .seg { display: inline-flex; padding: 3px; border-radius: 10px; border: 1px solid var(--line); }
+.rank .seg button { padding: 6px 12px; border: 0; border-radius: 8px; background: none; color: var(--muted); font: 600 13px var(--sans); cursor: pointer; }
+.rank .seg button.on { background: var(--ink); color: var(--bg); }
+.rank select { padding: 3px 6px; border-radius: 7px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
+.rank-bar { position: relative; display: inline-flex; align-items: center; min-width: 110px; padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; overflow: hidden; }
+.rank-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); background: color-mix(in srgb, var(--c) 16%, transparent); }
 </style>
 </body>
 </html>
