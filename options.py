@@ -202,7 +202,40 @@ def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: 
                 days_to_target=need, fail_px=round(fail_px, 2))
 
 
+_FROZEN: dict[str, tuple[str, dict]] = {}   # symbol -> (session, plan) kept while the market is closed
+
+
+def _session_key(now: pd.Timestamp | None = None) -> str:
+    """The trading session whose close prices we're showing: today after the open on a weekday, else the last weekday."""
+    t = (now or pd.Timestamp.now(tz="UTC")).tz_convert("America/New_York")
+    d = t.normalize()
+    if t.weekday() >= 5 or t.hour * 60 + t.minute < 9 * 60 + 30:
+        d -= pd.Timedelta(days=1)
+        while d.weekday() >= 5:
+            d -= pd.Timedelta(days=1)
+    return d.strftime("%Y-%m-%d")
+
+
 def plan(sym: str) -> dict:
+    """While the market is closed the plan is frozen at the last close: quotes don't move, so the numbers shouldn't either."""
+    import scanner
+    sym = scanner.clean_symbol(sym)
+    if data.market_open():
+        _FROZEN.pop(sym, None)
+        out = _plan(sym)
+        out.update(market_open=True, as_of=pd.Timestamp.now(tz="UTC").isoformat())
+        return out
+    key = _session_key()
+    hit = _FROZEN.get(sym)
+    if hit and hit[0] == key:
+        return hit[1]
+    out = _plan(sym)
+    out.update(market_open=False, as_of=pd.Timestamp.now(tz="UTC").isoformat(), session=key)
+    _FROZEN[sym] = (key, out)
+    return out
+
+
+def _plan(sym: str) -> dict:
     import patterns
     import scanner
     sym = scanner.clean_symbol(sym)
