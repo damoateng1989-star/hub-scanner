@@ -33,6 +33,7 @@ import options  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
 import brief  # noqa: E402
+import recap  # noqa: E402
 import data  # noqa: E402
 import earnings  # noqa: E402
 import db  # noqa: E402
@@ -139,6 +140,10 @@ async def lifespan(_app: FastAPI):
         bh, bm = map(int, brief.BRIEF_TIME.split(":"))
         sched.add_job(brief.send_all, CronTrigger(day_of_week="mon-fri", hour=bh, minute=bm, timezone="America/New_York"),
                       id="brief", replace_existing=True)
+    if recap.RECAP_TIME:      # evening recap, weekdays after the close
+        rh, rm = map(int, recap.RECAP_TIME.split(":"))
+        sched.add_job(recap.send_all, CronTrigger(day_of_week="mon-fri", hour=rh, minute=rm, timezone="America/New_York"),
+                      id="recap", replace_existing=True)
     for t in BOARD_TIMES:
         h, m = t.split(":")
         sched.add_job(board.scan_board, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
@@ -473,7 +478,7 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), brief=u.get("brief", 1) != 0,
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME,
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
                 style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
@@ -497,6 +502,21 @@ class OnBody(BaseModel):
 def set_brief(body: OnBody, u: dict = User):
     db.update_user(u["id"], brief=1 if body.on else 0)
     return {"brief": body.on}
+
+
+@app.post("/api/me/recap")
+def set_recap(body: OnBody, u: dict = User):
+    db.update_user(u["id"], recap=1 if body.on else 0)
+    return {"recap": body.on}
+
+
+@app.post("/api/recap/test")
+def recap_test(request: Request, u: dict = User):
+    auth.throttle(f"recap:{u['id']}", limit=3, window=3600)
+    sent = recap.send_to(u)
+    if not (sent["telegram"] or sent["email"]):
+        raise HTTPException(400, "Connect Telegram (or ask the site owner to turn on email) to receive the recap.")
+    return sent
 
 
 @app.post("/api/brief/test")

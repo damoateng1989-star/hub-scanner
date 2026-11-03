@@ -24,7 +24,7 @@
 </script>
 <meta name="theme-color" content="#070b10">
 <title>NextShelf · Find the setup. Get the plan. Trade it.</title>
-<meta name="description" content="Find the setup. Get the plan. Trade it. NextShelf checks 540+ stocks and ETFs (S&P 500, Nasdaq-100) after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
+<meta name="description" content="Built for swing traders with day jobs. NextShelf checks 540+ stocks and ETFs (S&P 500, Nasdaq-100) after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -600,7 +600,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
     <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg><span class="tl"><b>Find the setup</b><em>→</em><b>Get the plan</b><em>→</em><b>Trade it</b></span></span>
     <h1><span class="l1">Your Next Trade</span><span class="l2">Is Setting Up.</span></h1>
     <p class="lede">We help you find stocks setting up for a breakout, with a plan for the next target zone and an alert when the breakout is confirmed.</p>
-    <p class="tagline">We watch the setup while you go do other things.</p>
+    <p class="tagline"><span class="tl-who">Built for swing traders with day jobs.</span> We watch the setup while you go do other things.</p>
     <form class="askbox" id="askbox" autocomplete="off">
       <div class="ab-in">
         <span class="ab-bot" aria-hidden="true"><svg viewBox="0 0 64 64" width="30" height="30"><line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle cx="32" cy="5" r="3.4" fill="#3DD68C"/><rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2f4258" stroke-width="1.5"/><rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/><circle cx="25" cy="29.5" r="3.4" fill="#8ef0bf"/><circle cx="39" cy="29.5" r="3.4" fill="#8ef0bf"/></svg></span>
@@ -974,6 +974,7 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
     <details><summary>When do alerts arrive?</summary><p>Pre-close warnings (Pro) come about 15 minutes before each 4H close, at 1:15 and 3:45 PM ET. Breakout alerts follow shortly after the candle closes. Regular trading hours only.</p></details>
     <details><summary>Which setups does NextShelf find?</summary><p>Hubs are the core setup. For other trading styles, NextShelf also finds bull and bear flags, double tops and bottoms, symmetrical triangles, ascending and descending channels, and support and resistance levels tested 3 or more times. They follow the same rules: act on a 4-hour close outside the pattern and aim for the next shelf. Pick the ones you trade in Settings, and each setup keeps its own public track record so you can see which actually works.</p></details>
     <details><summary>Which stocks are covered?</summary><p>The board scans every S&amp;P 500 and Nasdaq-100 stock plus major ETFs (SPY, QQQ, sector funds and more), over 540 in all. You can also add any US-listed ticker to your own watchlist.</p></details>
+    <details><summary>I have a job. Can I really use this?</summary><p>That's who it's for. The 4-hour candles close at 1:30 PM and 4:00 PM ET, so there are only two decision points a day. You get a morning brief before work, alerts on your phone only when a candle closes outside a hub, and an evening recap after the close with each breakout's target and exit level.</p></details>
     <details><summary>Is this financial advice?</summary><p>No. NextShelf is an educational tool that describes past price behaviour. Signals can and do fail. Do your own research and never risk money you can't afford to lose.</p></details>
   </div>
 
@@ -2041,6 +2042,10 @@ html[data-theme="light"] .why-us { border-color: rgba(22,163,74,.4); background:
 html[data-theme="light"] .why-us b, html[data-theme="light"] .why-us li::before { color: #15803d; }
 @media (max-width: 980px) { .why { grid-template-columns: 1fr 1fr; } .why-us { grid-column: 1 / -1; } }
 @media (max-width: 560px) { .why { grid-template-columns: 1fr; } }
+</style>
+<style>
+.hero .tagline .tl-who { display: block; margin-bottom: 4px; font-weight: 600; font-size: .78em; letter-spacing: .12em; text-transform: uppercase; color: #3DD68C; }
+html[data-theme="light"] .hero .tagline .tl-who { color: #15803d; }
 </style>
 </body>
 </html>

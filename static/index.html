@@ -2591,7 +2591,20 @@ function briefCard() {
   const where = [tg && "Telegram", ME.email_on && "email"].filter(Boolean).join(" and ");
   return `<div class="acct"><h3>Morning brief</h3><p>Every weekday at ${esc((ME.brief_time || "08:45").replace(/^0/, ""))} AM ET: the stocks closest to a breakout, breakouts still in play, and your watchlist.${where ? ` Sent by ${where}.` : " Connect Telegram below to receive it."}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.brief ? "checked" : ""} onchange="setBriefOn(this.checked)"> Send me the morning brief</label>
-      <button class="btnx sm" onclick="testBrief(this)">Send one now</button></div></div>`;
+      <button class="btnx sm" onclick="testBrief(this)">Send one now</button></div></div>
+  <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
+    <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
+      <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>`;
+}
+function fmtET(t) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; }
+async function setRecapOn(on) {
+  try { await api("/api/me/recap", {method: "POST", body: JSON.stringify({on})}); ME.recap = on; toast(on ? "Evening recap is on" : "Evening recap is off"); }
+  catch (e) { toast(friendly(e)); }
+}
+async function testRecap(btn) {
+  btn.disabled = true;
+  try { await api("/api/recap/test", {method: "POST"}); toast("Evening recap sent"); } catch (e) { toast(friendly(e)); }
+  btn.disabled = false;
 }
 async function setBriefOn(on) {
   try { await api("/api/me/brief", {method: "POST", body: JSON.stringify({on})}); ME.brief = on; toast(on ? "Morning brief is on" : "Morning brief is off"); }
