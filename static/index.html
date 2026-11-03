@@ -1253,7 +1253,7 @@ async function loadInfo() {
         which is why members get signed out. Fix: in Render, add a <b>Disk</b> (mount path <code>/data</code>) and set <code>DATA_DIR=/data</code>. Only admins see this.`;
       document.querySelector("main").prepend(w);
     }
-    $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "Pre-close checks " + i.preclose_times.join(" & ") + " · " : ""}Scans ${i.scan_times.join(" & ")} ET on weekdays · ${i.settings.horizon}-candle limit`;
+    $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "15-min warnings " + i.preclose_times.map(fmtT).join(" & ") + " · " : ""}Closing checks ${i.scan_times.map(fmtT).join(" & ")} ET on weekdays (they confirm the ${i.scan_times.map(closeOf).filter(Boolean).join(" & ")} candles; market data arrives ~15 min after the close) · ${i.settings.horizon}-candle limit`;
   } catch (e) {}
 }
 
@@ -2192,14 +2192,15 @@ function marketChip() {
   const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
   const weekday = wd >= 1 && wd <= 5, open = weekday && mins >= 570 && mins < 960;
   const events = [];
-  ((INFO && INFO.preclose_times) || []).forEach(t => events.push([t, "pre-close check"]));
-  ((INFO && INFO.scan_times) || ["13:47", "16:17"]).forEach(t => events.push([t, "scan"]));
+  ((INFO && INFO.preclose_times) || []).forEach(t => events.push([t, "15-min warning"]));
+  ((INFO && INFO.scan_times) || ["13:47", "16:17"]).forEach(t => events.push([t, "closing check"]));
   events.sort();
   const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
   let next = weekday ? events.find(([t]) => toMin(t) > mins) : null, label;
   if (next) {
     const d = toMin(next[0]) - mins;
-    label = `Next ${next[1]} <b>${fmtT(next[0])}</b> · in ${d >= 60 ? Math.floor(d / 60) + "h " : ""}${d % 60}m`;
+    const c = next[1] === "closing check" ? closeOf(next[0]) : null;
+    label = `Next ${next[1]} <b>${fmtT(next[0])}</b>${c ? ` (confirms the ${c} candle)` : ""} · in ${d >= 60 ? Math.floor(d / 60) + "h " : ""}${d % 60}m`;
   } else {
     const days = wd === 5 ? 3 : wd === 6 ? 2 : 1;
     const dayName = new Date(n.getTime() + days * 864e5).toLocaleDateString("en-US", {weekday: "long"});
@@ -2838,6 +2839,11 @@ async function scoutSweep() {
 let AGENT_T = null, AGENT_WAS_RUNNING = false, AGENT_NEXT = null;
 const FIND_C = { breakout: "#3DD68C", breakdown: "#FF6B5E", "at edge": "#F2C14E", "in hub": "#7C93FF" };
 function agTime(iso) { return iso ? new Date(iso).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) : ""; }
+function closeOf(hm) {          // "16:17" -> "4:00 PM": the 4-hour candle a check reads
+  const [h, m] = hm.split(":").map(Number), t = h * 60 + m;
+  return t >= 960 ? "4:00 PM" : t >= 810 ? "1:30 PM" : null;
+}
+function etHM(iso) { const d = new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/New_York"})); return d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); }
 function agDay(iso) {
   if (!iso) return ""; const d = new Date(iso), t = new Date();
   const same = d.toDateString() === t.toDateString();
@@ -2874,7 +2880,7 @@ function renderAgent(sc) {
     const total = BOARD && BOARD.universe;
     $("agLine").innerHTML = !BOARD || !total ? `Waiting for the first sweep of the market.`
       : `Swept <b>${total}</b> stocks${last ? " " + agDay(last) : ""}: <b style="color:#3DD68C">${live}</b> breakout${live === 1 ? "" : "s"}, <b style="color:#F2C14E">${near}</b> at the edge.`
-        + (sc.next ? ` Next sweep ${agDay(sc.next)}.` : "");
+        + (sc.next ? (() => { const c = closeOf(etHM(sc.next)); return ` Next closing check ${agDay(sc.next)}${c ? `, confirming the ${c} candle` : ""}.`; })() : "");
     $("agFinds").innerHTML = boardFinds();
   }
 }
