@@ -781,7 +781,7 @@ html[data-theme="light"] .flow { --fl-bg: rgba(255,255,255,.78); --fl-line: rgba
 .flow[data-step="5"] .fl-runc { opacity: 1; }
 /* phone */
 .fl-phone { position: relative; padding: 34px 12px 14px; border-radius: 34px; overflow: hidden; min-height: 330px;
-  background: radial-gradient(120% 70% at 50% 0%, #253a5a, #0b1220 70%); border: 6px solid #0a0f17; box-shadow: 0 20px 50px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06); }
+  background: radial-gradient(120% 70% at 50% 0%, #253a5a, #0b1220 70%); border: 6px solid #0a0f17; box-shadow: 0 8px 18px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.06); }
 html[data-theme="light"] .fl-phone { background: radial-gradient(120% 70% at 50% 0%, #cfe0f7, #eef3fa 70%); border-color: #111827; }
 .fl-notch { position: absolute; top: 8px; left: 50%; width: 84px; height: 20px; margin-left: -42px; border-radius: 12px; background: #05080d; }
 .fl-time { text-align: center; color: #fff; font-size: 44px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -899,14 +899,14 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
   }
   function tick() { clearTimeout(timer); if (!playing) return; timer = setTimeout(() => { show(cur % 5 + 1); tick(); }, cur === 5 ? DUR + 1200 : DUR); }
   list.addEventListener("click", (e) => { const li = e.target.closest("li"); if (!li) return; show(+li.dataset.n); tick(); });
-  root.addEventListener("mouseenter", () => { playing = false; clearTimeout(timer); root.classList.add("paused"); });
-  root.addEventListener("mouseleave", () => { root.classList.remove("paused"); if (vis) { playing = true; tick(); } });
+
   let vis = false;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   show(1);
   if ("IntersectionObserver" in window && !reduce) new IntersectionObserver((es) => es.forEach(e => {
-    vis = e.isIntersecting; if (vis && !root.classList.contains("paused")) { if (!playing) { playing = true; tick(); } } else { playing = false; clearTimeout(timer); }
-  }), {threshold: .35}).observe(root);
+    vis = e.isIntersecting; if (vis) { if (!playing) { playing = true; tick(); } } else { playing = false; clearTimeout(timer); }
+  }), {threshold: .2}).observe(root);
+  else if (!reduce) { playing = true; tick(); }
 })();
 </script>
 
