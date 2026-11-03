@@ -839,18 +839,25 @@ const LESSON = (() => {
 
   function draw(k, trapN, scn) {
     const css = (v) => `var(${v})`;
-    let s = "";
+    let s = `<defs><linearGradient id="lsShelfG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3DD68C" stop-opacity=".30"/><stop offset="1" stop-color="#3DD68C" stop-opacity=".03"/></linearGradient>
+      <linearGradient id="lsHubG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff" stop-opacity=".16"/><stop offset="1" stop-color="#8b7bff" stop-opacity=".10"/></linearGradient>
+      <radialGradient id="lsGlowBg" cx="50%" cy="120%" r="80%"><stop offset="0" stop-color="#8ea2ff" stop-opacity=".35"/><stop offset=".5" stop-color="#3d58b8" stop-opacity=".14"/><stop offset="1" stop-color="#0f1218" stop-opacity="0"/></radialGradient>
+      <filter id="lsGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="4"/></filter>
+      <filter id="lsSoft" x="-10%" y="-60%" width="120%" height="220%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>
+`;
     // shelf (always visible, faint until scene 4)
-    s += `<rect x="${x(HUB.from)}" y="${y(SHELF.hi)}" width="${W - PADR - x(HUB.from)}" height="${y(SHELF.lo) - y(SHELF.hi)}" fill="${css("--up")}" opacity="${scn === 3 && k >= C.length - 2 ? .32 : .1}" ${scn === 3 && k >= C.length - 2 ? 'style="animation:flash 1s 3"' : ""}/>`;
-    s += `<line x1="${x(HUB.from)}" x2="${W - PADR}" y1="${y(SHELF.lo)}" y2="${y(SHELF.lo)}" stroke="${css("--up")}" stroke-dasharray="4 5" opacity=".8"/>`;
-    s += `<text x="${W - PADR + 5}" y="${y(SHELF.lo) + 4}" font-size="12" fill="${css("--up")}" font-family="var(--mono)">shelf</text>`;
+    s += `<rect x="${x(HUB.from)}" y="${y(SHELF.hi)}" width="${W - PADR - x(HUB.from)}" height="${y(SHELF.lo) - y(SHELF.hi)}" rx="6" fill="url(#lsShelfG)" opacity="${scn === 3 && k >= C.length - 2 ? 1 : .55}" ${scn === 3 && k >= C.length - 2 ? 'style="animation:flash 1s 3"' : ""}/>`;
+    s += `<line x1="${x(HUB.from)}" x2="${W - PADR}" y1="${y(SHELF.lo)}" y2="${y(SHELF.lo)}" stroke="#3DD68C" stroke-width="4" opacity=".3" filter="url(#lsSoft)"/>`;
+    s += `<line x1="${x(HUB.from)}" x2="${W - PADR}" y1="${y(SHELF.lo)}" y2="${y(SHELF.lo)}" stroke="#3DD68C" stroke-dasharray="4 5" opacity=".9"/>`;
+    s += `<text x="${W - PADR + 5}" y="${y(SHELF.lo) + 4}" font-size="11" fill="#3DD68C" letter-spacing="1.2" font-family="Geist Mono, ui-monospace, monospace">SHELF</text>`;
     // hub box grows with the candles
     if (k > HUB.from + 3) {
       const end = Math.min(k, HUB.to);
       const days = Math.min(4, Math.floor((end - HUB.from) / 2) / 1);
       const hubOp = k >= HUB.from + 8 ? .2 : .1;
-      s += `<rect x="${x(HUB.from) - 4}" y="${y(HUB.hi)}" width="${x(end) - x(HUB.from) + 8}" height="${y(HUB.lo) - y(HUB.hi)}" rx="5" fill="${css("--hub")}" opacity="${hubOp}" stroke="${css("--hub")}" stroke-opacity=".7"/>`;
-      s += `<text x="${x(HUB.from)}" y="${y(HUB.hi) - 8}" font-size="12" font-weight="600" fill="${css("--hub")}" font-family="var(--mono)">${k >= HUB.from + 8 ? "HUB · " + Math.min(13, Math.floor((end - HUB.from) / 2)) + " days" : "day " + Math.max(1, Math.ceil(days))}</text>`;
+      s += `<rect x="${x(HUB.from) - 4}" y="${y(HUB.hi)}" width="${x(end) - x(HUB.from) + 8}" height="${y(HUB.lo) - y(HUB.hi)}" rx="8" fill="url(#lsHubG)" opacity="${hubOp * 5}" stroke="rgba(255,255,255,.42)" stroke-width="1"/>`;
+      s += `<line x1="${x(HUB.from) + 4}" x2="${x(end) - 0}" y1="${y(HUB.hi) + 1}" y2="${y(HUB.hi) + 1}" stroke="rgba(255,255,255,.5)" stroke-width="1"/>`;
+      s += `<text x="${x(HUB.from)}" y="${y(HUB.hi) - 8}" font-size="11" font-weight="500" letter-spacing="1.2" fill="rgba(255,255,255,.62)" font-family="Geist Mono, ui-monospace, monospace">${k >= HUB.from + 8 ? "HUB · " + Math.min(13, Math.floor((end - HUB.from) / 2)) + " days" : "day " + Math.max(1, Math.ceil(days))}</text>`;
     }
     // candles
     for (let i = 0; i <= Math.min(k, C.length - 1); i++) {
@@ -863,17 +870,19 @@ const LESSON = (() => {
     TRAPS.slice(0, trapN).forEach((tr, n) => {
       const bx = x(tr.i), by = y(tr.at), ox = x(tr.out), oy = y(tr.px);
       s += `<line x1="${bx}" y1="${by}" x2="${ox}" y2="${oy}" stroke="${css("--down")}" stroke-width="1.5" stroke-dasharray="3 3"/>`;
-      s += `<circle cx="${bx}" cy="${by}" r="8" fill="${css("--surface")}" stroke="${css(tr.side === "buy" ? "--up" : "--down")}" stroke-width="2"/>`;
+      s += `<circle cx="${bx}" cy="${by}" r="8" fill="#141b26" stroke="${css(tr.side === "buy" ? "--up" : "--down")}" stroke-width="2"/>`;
       s += `<text x="${bx}" y="${by + 4}" font-size="10" font-weight="700" text-anchor="middle" fill="${css(tr.side === "buy" ? "--up" : "--down")}" font-family="var(--sans)">${tr.side === "buy" ? "B" : "S"}</text>`;
       s += `<text x="${ox}" y="${oy + (tr.side === "buy" ? 20 : -11)}" font-size="15" text-anchor="middle" fill="${css("--down")}" font-weight="700">✕</text>`;
     });
     // fake-out + breakout labels
     if (scn >= 2 && k >= 38) s += `<text x="${x(38) - 6}" y="${y(C[38].h) - 4}" font-size="12" text-anchor="end" fill="${css("--snap")}" font-family="var(--mono)">wick only</text>`;
     if (scn >= 2 && k >= 40) {
-      s += `<circle cx="${x(40)}" cy="${y(C[40].c)}" r="9" fill="none" stroke="${css("--up")}" stroke-width="2"/>`;
-      s += `<text x="${x(40) + 6}" y="${y(C[40].c) + 26}" font-size="12" font-weight="600" fill="${css("--up")}" font-family="var(--mono)">breakout close</text>`;
+      s += `<circle cx="${x(40)}" cy="${y(C[40].c)}" r="15" fill="#3DD68C" opacity=".5" filter="url(#lsGlow)"/>`;
+      s += `<circle cx="${x(40)}" cy="${y(C[40].c)}" r="6.5" fill="#fff" stroke="#3DD68C" stroke-width="3"/>`;
+      s += `<text x="${x(40) + 6}" y="${y(C[40].c) + 26}" font-size="12" font-weight="600" fill="#3DD68C" letter-spacing="1" font-family="Geist Mono, ui-monospace, monospace">BREAKOUT CLOSE</text>`;
     }
-    if (scn === 3 && k >= C.length - 1) s += `<text x="${x(C.length - 1)}" y="${y(SHELF.hi) - 8}" font-size="12" text-anchor="end" fill="${css("--up")}" font-weight="700">✓ target</text>`;
+    if (scn === 3 && k >= C.length - 1) { s += `<text x="${x(C.length - 1)}" y="${y(SHELF.hi) - 8}" font-size="11" text-anchor="end" fill="#3DD68C" letter-spacing="1.2" font-family="Geist Mono, ui-monospace, monospace">✓ TARGET</text>`;
+      s += `<circle cx="${x(C.length - 1)}" cy="${y(C[C.length - 1].c)}" r="15" fill="#3DD68C" opacity=".5" filter="url(#lsGlow)"/><circle cx="${x(C.length - 1)}" cy="${y(C[C.length - 1].c)}" r="6" fill="#fff" stroke="#3DD68C" stroke-width="3"/>`; }
     el("lsSvg").innerHTML = s;
   }
   function setBal(v, mood) {
@@ -1402,6 +1411,26 @@ html[data-theme="light"] .win { background: linear-gradient(180deg, rgba(20,26,3
 .win.w-left, .win.w-right { background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03)) !important; }
 html[data-theme="light"] .win.w-mid { background: linear-gradient(180deg, rgba(34,42,58,.95), rgba(20,25,35,.96)) !important; }
 html[data-theme="light"] .win.w-left, html[data-theme="light"] .win.w-right { background: linear-gradient(180deg, rgba(40,48,64,.72), rgba(26,32,44,.70)) !important; }
+</style>
+
+<style>
+/* glass lesson card */
+.lesson { position: relative; overflow: hidden; background: linear-gradient(180deg, rgba(30,38,52,.92), rgba(14,18,26,.94)) !important;
+  border: 1px solid rgba(255,255,255,.14) !important; border-radius: 24px !important;
+  backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: 0 30px 80px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.2) !important; }
+.lesson::before { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(125deg, rgba(255,255,255,.10), transparent 35%), radial-gradient(60% 60% at 10% 100%, rgba(61,214,140,.14), transparent 70%), radial-gradient(60% 70% at 95% 100%, rgba(124,147,255,.2), transparent 70%); }
+.lesson > * { position: relative; }
+.lesson .kick { color: rgba(255,255,255,.6) !important; letter-spacing: .08em; }
+.lesson .lh h2, .lesson #lsTitle { color: #fff !important; }
+.lesson .lacct span { color: rgba(255,255,255,.6) !important; } .lesson .lacct b { color: #3DD68C !important; }
+.lesson .lacct.down b { color: #ff5a6e !important; }
+.lesson .lsteps button { background: rgba(255,255,255,.06) !important; border: 1px solid rgba(255,255,255,.14) !important; color: rgba(255,255,255,.72) !important; backdrop-filter: blur(8px); }
+.lesson .lsteps button.on { background: #fff !important; color: #0b0f15 !important; border-color: #fff !important; }
+.lesson .lctl button { background: rgba(255,255,255,.08) !important; border: 1px solid rgba(255,255,255,.16) !important; color: #fff !important; }
+.lesson #lsCap, .lesson .lfoot p { color: rgba(255,255,255,.85) !important; }
+html[data-theme="light"] .lesson { background: linear-gradient(180deg, rgba(34,42,58,.95), rgba(18,23,32,.96)) !important; box-shadow: 0 30px 70px rgba(15,23,42,.22), inset 0 1px 0 rgba(255,255,255,.22) !important; }
 </style>
 </body>
 </html>
