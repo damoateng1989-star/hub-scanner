@@ -156,7 +156,26 @@ def clean_email(email: str) -> str:
     return email
 
 
-def signup(email: str, password: str, name: str = "") -> int:
+def signups_open() -> bool:
+    """SIGNUPS_OPEN=true on the server opens sign-up to everyone. Anything else = waitlist mode (invite code needed).
+    The very first account (the owner) can always be created."""
+    return os.getenv("SIGNUPS_OPEN", "false").strip().lower() in ("1", "true", "yes", "on") or db.user_count() == 0
+
+
+CLOSED_MSG = "Sign-ups are invite-only while NextShelf is in early access. Join the waitlist and we'll email you when it opens."
+
+
+def check_invite(code: str):
+    """Raise unless sign-up is open or the invite code is valid."""
+    if signups_open():
+        return
+    if not (code or "").strip():
+        raise HTTPException(403, CLOSED_MSG)
+    if not db.invite_ok(code):
+        raise HTTPException(403, "That invite code isn't valid or has been used up. Join the waitlist instead.")
+
+
+def signup(email: str, password: str, name: str = "", invite: str = "") -> int:
     email = clean_email(email)
     if len(password or "") < 8:
         raise HTTPException(400, "Use at least 8 characters for your password")
@@ -165,7 +184,12 @@ def signup(email: str, password: str, name: str = "") -> int:
         if existing["password_hash"] is None and existing["google_sub"]:
             raise HTTPException(400, "This email signs in with Google. Use the Google button.")
         raise HTTPException(400, "An account with this email already exists. Sign in instead.")
-    return _new_user(email, name.strip()[:80], password_hash=hash_password(password))
+    gated = not signups_open()
+    check_invite(invite)
+    uid = _new_user(email, name.strip()[:80], password_hash=hash_password(password))
+    if gated:
+        db.use_invite(invite)
+    return uid
 
 
 def login(email: str, password: str) -> int:
@@ -263,4 +287,10 @@ def google_finish(request: Request, code: str, state: str) -> int:
         if not u["google_sub"]:
             db.update_user(u["id"], google_sub=sub)      # link Google to an existing email account
         return u["id"]
-    return _new_user(email, info.get("name", ""), google_sub=sub)
+    invite = request.cookies.get("hs_invite", "")
+    gated = not signups_open()
+    check_invite(invite)                                  # existing members always get in; new ones need a code
+    uid = _new_user(email, info.get("name", ""), google_sub=sub)
+    if gated:
+        db.use_invite(invite)
+    return uid

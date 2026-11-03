@@ -1699,7 +1699,8 @@ async function loadAccount() {
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
       ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>
-    ${admin}${m.is_admin ? `<div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>` : ""}`;
+    ${admin}${m.is_admin ? `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>` : ""}${m.is_admin ? `<div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>` : ""}`;
+  if (m.is_admin) loadInvites();
   if (m.is_admin) api("/api/admin/subscribers").then(d => {
     $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
       <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
@@ -1712,6 +1713,40 @@ async function loadAccount() {
     try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }
     catch (err) { $("phoneMsg").textContent = err.message; }
   });
+}
+// ---------------------------------------------------------------- early access: invite codes (admin)
+async function loadInvites() {
+  const box = $("invitesBox"); if (!box) return;
+  let d; try { d = await api("/api/admin/invites"); } catch (e) { box.innerHTML = failedHTML("invites", e, "loadInvites()"); return; }
+  const link = (c) => location.origin + "/login?invite=" + encodeURIComponent(c) + "#signup";
+  box.innerHTML = `<h3>Early access</h3>
+    <p>Sign-ups are <b>${d.signups_open ? "open to everyone" : "invite-only"}</b>. ${d.signups_open
+      ? "To go back to a waitlist, set <code>SIGNUPS_OPEN</code> to <code>false</code> on Render."
+      : "Visitors see “Join the waitlist”. People with a code can create an account. To open sign-ups for everyone, set <code>SIGNUPS_OPEN=true</code> on Render."}</p>
+    <form id="invForm" class="inv-form"><input id="invNote" placeholder="Who is it for? (optional)" maxlength="80">
+      <select id="invUses" aria-label="How many people can use it"><option value="1">1 person</option><option value="5">5 people</option><option value="25">25 people</option><option value="100">100 people</option></select>
+      <button class="btnx sm">Create invite</button></form>
+    <p id="invMsg" class="inv-msg"></p>
+    ${d.invites.length ? `<div class="tbl"><table><tr><th>Code</th><th>For</th><th>Used</th><th></th></tr>
+      ${d.invites.map(x => { const done = !x.active || x.uses >= x.max_uses; return `<tr${done ? ' style="opacity:.5"' : ""}>
+        <td><b>${esc(x.code)}</b></td><td>${esc(x.note || "–")}</td><td>${x.uses} / ${x.max_uses}</td>
+        <td style="white-space:nowrap;text-align:right">${done ? (x.active ? "Used up" : `<a href="#" onclick="toggleInvite('${esc(x.code)}', true);return false">Turn on</a>`)
+          : `<a href="#" onclick="copyInvite('${esc(x.code)}');return false">Copy link</a> · <a href="#" onclick="toggleInvite('${esc(x.code)}', false);return false">Turn off</a>`}</td></tr>`; }).join("")}</table></div>`
+      : `<p>No invite codes yet. Create one and send the link to a tester.</p>`}`;
+  $("invForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api("/api/admin/invites", {method: "POST", body: JSON.stringify({note: $("invNote").value, max_uses: +$("invUses").value})});
+      await loadInvites(); copyInvite(r.code);
+    } catch (err) { $("invMsg").textContent = friendly(err); }
+  });
+  window.copyInvite = async (c) => {
+    try { await navigator.clipboard.writeText(link(c)); toast("Invite link copied: " + c); }
+    catch (e) { if ($("invMsg")) $("invMsg").innerHTML = `Invite link: <code>${esc(link(c))}</code>`; }
+  };
+}
+async function toggleInvite(code, on) {
+  try { await api(`/api/admin/invites/${encodeURIComponent(code)}`, {method: "POST", body: JSON.stringify({on})}); loadInvites(); } catch (e) { toast(friendly(e)); }
 }
 async function signOut() { await fetch("/auth/logout", {method: "POST"}); location.href = "/"; }
 async function unlinkTg() { await api("/api/me/telegram", {method: "DELETE"}); await loadMe(); loadAccount(); }
@@ -3143,6 +3178,38 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   background: color-mix(in srgb, #8a9aae 8%, transparent); color: #9fb0c3; font: 500 12.5px/1.4 var(--sans); }
 .ox-closed i { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #8a9aae; }
 html[data-theme="light"] .ox-closed { color: #55606e; background: #f4f5f7; border-color: #e3e6ea; }
+</style>
+<script>
+// ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
+(function () {
+  const LAND = false;
+  const swap = (t) => {
+    const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join waitlist" : "Join the waitlist") + arrow;
+    if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
+    return null;
+  };
+  function fix(root) {
+    (root.querySelectorAll ? root : document).querySelectorAll('a[href="/login#signup"]').forEach(a => {
+      if (a.dataset.wl) return; a.dataset.wl = 1;
+      if (LAND) a.href = "#join";
+      const n = [...a.childNodes].find(x => x.nodeType === 3 && x.textContent.trim());
+      const t = n ? swap(n.textContent) : null; if (t) n.textContent = t + (n.textContent.endsWith(" ") ? " " : "");
+    });
+  }
+  Promise.all([fetch("/auth/config").then(r => r.json()), fetch("/api/me").then(r => r.json()).catch(() => null)]).then(([c, me]) => {
+    if (c.signups_open !== false || (me && !me.guest)) return;
+    window.NS_WAITLIST = true; document.documentElement.classList.add("waitlist");
+    fix(document);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => x.nodeType === 1 && fix(x.parentNode || x)))).observe(document.body, {childList: true, subtree: true});
+  }).catch(() => {});
+})();
+</script>
+<style>
+.inv-form { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 6px; }
+.inv-form input { flex: 1 1 200px; } .inv-form select { flex: 0 0 auto; }
+.inv-msg { min-height: 0; margin: 4px 0 8px; font-size: 13px; color: var(--muted); word-break: break-all; }
+#invitesBox code { font-size: 12.5px; padding: 1px 5px; border-radius: 5px; background: color-mix(in srgb, var(--muted, #8a9aae) 14%, transparent); }
 </style>
 </body>
 </html>

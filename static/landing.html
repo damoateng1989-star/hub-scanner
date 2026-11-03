@@ -611,7 +611,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
         <button type="button" data-s="TSLA">TSLA</button><button type="button" data-s="SPY">SPY</button></div>
       <p class="ab-msg" id="abMsg"></p>
     </form>
-    <p class="alt">Free to try · <a href="/login#signup">create an account</a> · <a href="#join">get early access</a> · works as an app on phone and desktop</p>
+    <p class="alt"><span data-open-only>Free to try · <a href="/login#signup">create an account</a> · </span><span data-wl-only hidden>Invite-only beta · <a href="/app#discover">try the demo</a> · </span><a href="#join">get early access</a> · works as an app on phone and desktop</p>
 
     <div class="lesson-wrap">
   <div class="lesson" id="lesson">
@@ -781,7 +781,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
       <button class="btn solid">Get early access →</button>
       <p class="jmsg" role="status"></p>
     </form>
-    <p class="alt" style="position:relative">Or <a href="/login#signup">try the free beta</a> today.</p>
+    <p class="alt" style="position:relative">Or <a href="/login#signup" data-open-only>try the free beta</a><a href="/app#discover" data-wl-only hidden>try the demo</a> today.</p>
   </div>
 </div></section>
 
@@ -1553,6 +1553,36 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   font-variant-numeric: tabular-nums !important; font-feature-settings: "tnum" 1 !important; }
 .board-table td, .lrow .s, .r .s, .board-symbol a { font-family: "DM Sans", sans-serif !important; letter-spacing: .01em; }
 .board-symbol a, .lrow summary .s, .r .s { font-weight: 700 !important; }
+</style>
+<script>
+// ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
+(function () {
+  const LAND = true;
+  const swap = (t) => {
+    const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join waitlist" : "Join the waitlist") + arrow;
+    if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
+    return null;
+  };
+  function fix(root) {
+    (root.querySelectorAll ? root : document).querySelectorAll('a[href="/login#signup"]').forEach(a => {
+      if (a.dataset.wl) return; a.dataset.wl = 1;
+      if (LAND) a.href = "#join";
+      const n = [...a.childNodes].find(x => x.nodeType === 3 && x.textContent.trim());
+      const t = n ? swap(n.textContent) : null; if (t) n.textContent = t + (n.textContent.endsWith(" ") ? " " : "");
+    });
+  }
+  Promise.all([fetch("/auth/config").then(r => r.json()), fetch("/api/me").then(r => r.json()).catch(() => null)]).then(([c, me]) => {
+    if (c.signups_open !== false || (me && !me.guest)) return;
+    window.NS_WAITLIST = true; document.documentElement.classList.add("waitlist");
+    fix(document);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => x.nodeType === 1 && fix(x.parentNode || x)))).observe(document.body, {childList: true, subtree: true});
+  }).catch(() => {});
+})();
+</script>
+<style>
+html.waitlist [data-open-only] { display: none !important; }
+html.waitlist [data-wl-only] { display: inline !important; }
 </style>
 </body>
 </html>

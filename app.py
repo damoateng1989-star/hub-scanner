@@ -169,6 +169,7 @@ class SignupBody(BaseModel):
     email: str
     password: str
     name: str = ""
+    invite: str = ""
 
 
 class LoginBody(BaseModel):
@@ -374,13 +375,20 @@ def admin_message_handled(mid: int, body: HandledBody, u: dict = Admin):
 # ---------------------------------------------------------------- auth
 @app.get("/auth/config")
 def auth_config():
-    return {"google": auth.google_enabled(), "free_limit": auth.FREE_TICKER_LIMIT}
+    return {"google": auth.google_enabled(), "free_limit": auth.FREE_TICKER_LIMIT, "signups_open": auth.signups_open()}
+
+
+@app.get("/auth/invite/{code}")
+def invite_check(code: str, request: Request):
+    """Lets the sign-up page tell someone their code works before they fill in the form."""
+    auth.throttle("invite:" + auth.client_ip(request), limit=30, window=3600)
+    return {"ok": auth.signups_open() or db.invite_ok(code)}
 
 
 @app.post("/auth/signup")
 def signup(body: SignupBody, request: Request):
     auth.throttle("signup:" + auth.client_ip(request), limit=10, window=3600)
-    uid = auth.signup(body.email, body.password, body.name)
+    uid = auth.signup(body.email, body.password, body.name, body.invite)
     resp = JSONResponse({"ok": True})
     auth.start_session(resp, request, uid)
     return resp
@@ -425,11 +433,14 @@ def reset(body: ResetBody, request: Request):
 
 
 @app.get("/auth/google")
-def google_start(request: Request):
+def google_start(request: Request, invite: str = ""):
     if not auth.google_enabled():
         return RedirectResponse("/login#error=Google+sign-in+isn't+set+up+yet", 302)
     resp = RedirectResponse("/", 302)
     resp.headers["location"] = auth.google_redirect(request, resp)
+    if invite:      # carried through Google's round trip so a new account can use it
+        resp.set_cookie("hs_invite", invite.strip().upper()[:40], max_age=900, httponly=True, samesite="lax",
+                        secure=auth._secure(request), path="/")
     return resp
 
 
@@ -443,6 +454,7 @@ def google_callback(request: Request, code: str = "", state: str = "", error: st
         return RedirectResponse(f"/login#error={e.detail.replace(' ', '+')}", 302)
     resp = RedirectResponse("/app", 302)
     resp.delete_cookie("hs_oauth_state", path="/")
+    resp.delete_cookie("hs_invite", path="/")
     auth.start_session(resp, request, uid)
     return resp
 
@@ -803,6 +815,37 @@ def unsubscribe_page(t: str = ""):
 <body style="font-family:Inter,-apple-system,sans-serif;background:#0B0B0D;color:#F4F4F6;display:grid;place-items:center;min-height:100vh;margin:0">
 <div style="max-width:440px;padding:24px;text-align:center"><h1 style="font-size:26px">You're unsubscribed</h1>
 <p style="color:#A1A1AA">{msg}</p><p><a href="/" style="color:#7AA2FF">Back to NextShelf</a></p></div></body></html>""")
+
+
+# ---------------------------------------------------------------- invite codes (early access)
+class InviteBody(BaseModel):
+    note: str = ""
+    max_uses: int = 1
+    code: str = ""
+
+
+@app.get("/api/admin/invites")
+def admin_invites(u: dict = Admin):
+    return dict(signups_open=auth.signups_open(), invites=db.invites())
+
+
+@app.post("/api/admin/invites")
+def admin_new_invite(body: InviteBody, u: dict = Admin):
+    import re as _re
+    code = _re.sub(r"[^A-Z0-9-]", "", (body.code or "").upper())[:24] or ("NS-" + secrets.token_hex(3).upper())
+    if len(code) < 4:
+        raise HTTPException(400, "Use at least 4 letters or numbers for the code")
+    try:
+        db.add_invite(code, body.note.strip()[:80], max(1, min(int(body.max_uses), 1000)))
+    except Exception:
+        raise HTTPException(400, "That code already exists")
+    return {"code": code}
+
+
+@app.post("/api/admin/invites/{code}")
+def admin_toggle_invite(code: str, body: ToggleBody, u: dict = Admin):
+    db.set_invite_active(code, body.on)
+    return {"ok": True}
 
 
 @app.get("/api/admin/subscribers")

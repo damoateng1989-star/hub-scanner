@@ -66,6 +66,10 @@ with _lock:
         outcome TEXT, outcome_time TEXT, ret_pct REAL, chase INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS invites (
+        code TEXT PRIMARY KEY, note TEXT, max_uses INTEGER DEFAULT 1, uses INTEGER DEFAULT 0,
+        active INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS paper_trades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT, direction INTEGER, qty INTEGER,
@@ -340,3 +344,25 @@ def unsubscribe(token: str) -> str | None:
 def subscribers() -> list[dict]:
     return [dict(r) for r in _run("SELECT email, source, status, created_at, unsubscribed_at FROM subscribers "
                                   "ORDER BY created_at DESC").fetchall()]
+
+
+# --- invite codes (while sign-ups are closed, only people with a code can create an account)
+def add_invite(code: str, note: str = "", max_uses: int = 1):
+    _run("INSERT INTO invites(code, note, max_uses) VALUES (?,?,?)", (code, note, max_uses))
+
+
+def invites() -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM invites ORDER BY created_at DESC").fetchall()]
+
+
+def invite_ok(code: str) -> bool:
+    r = _run("SELECT max_uses, uses, active FROM invites WHERE code=?", ((code or "").strip().upper(),)).fetchone()
+    return bool(r and r["active"] and r["uses"] < r["max_uses"])
+
+
+def use_invite(code: str):
+    _run("UPDATE invites SET uses = uses + 1 WHERE code=?", ((code or "").strip().upper(),))
+
+
+def set_invite_active(code: str, active: bool):
+    _run("UPDATE invites SET active=? WHERE code=?", (int(active), code.strip().upper()))

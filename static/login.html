@@ -253,7 +253,24 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
   </div>
 
   <div id="v-signup" hidden>
+    <div id="wl" hidden>
+      <span class="wl-pill"><i></i>Early access</span>
+      <h2>Join the <em>waitlist</em></h2>
+      <p class="sub">NextShelf is invite-only while we test it. Leave your email and we'll let you in as spots open, with early-member pricing.</p>
+      <form id="f-wait">
+        <label for="wl-email">Email</label><input id="wl-email" type="email" autocomplete="email" required>
+        <input type="text" id="wl-hp" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0">
+        <button>Join the waitlist</button>
+      </form>
+      <p class="fine" style="margin-top:12px">No spam. Unsubscribe anytime.</p>
+      <details class="wl-code"><summary>Have an invite code?</summary>
+        <form id="f-code"><input id="code-in" placeholder="NS-XXXXXX" autocapitalize="characters" spellcheck="false" aria-label="Invite code"><button>Continue</button></form>
+      </details>
+      <div class="links"><a href="#signin">I already have an account</a><a href="/app#discover">Try the demo</a></div>
+    </div>
+    <div id="acctForm">
     <h2>Create your <em>account</em></h2>
+    <p class="sub" id="inviteNote" hidden></p>
     <p class="sub">Free: watch up to <span id="limit">3</span> tickers with Telegram alerts. Upgrade anytime.</p>
     <a class="google" href="/auth/google" data-google hidden>
       <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>
@@ -268,6 +285,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     </form>
     <p class="fine" style="margin-top:14px">By creating an account you agree to the <a href="/terms" style="color:inherit;text-decoration:underline">Terms of Service</a> and <a href="/privacy" style="color:inherit;text-decoration:underline">Privacy Policy</a>, and you understand that NextShelf is an educational tool, not financial advice (<a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>).</p>
     <div class="links"><a href="#signin">I already have an account</a><a href="/app#board">Keep browsing</a></div>
+    </div>
   </div>
 
   <div id="v-forgot" hidden>
@@ -320,12 +338,37 @@ function form(id, fn) {
   });
 }
 form("f-signin", async (b) => { await post("/auth/login", {email: $("si-email").value, password: $("si-pw").value}, b); location.href = "/app"; });
-form("f-signup", async (b) => { await post("/auth/signup", {name: $("su-name").value, email: $("su-email").value, password: $("su-pw").value}, b); location.href = "/app#watch"; });
+form("f-signup", async (b) => { await post("/auth/signup", {name: $("su-name").value, email: $("su-email").value, password: $("su-pw").value, invite: INVITE}, b); try { localStorage.removeItem("ns_invite"); } catch (e) {} location.href = "/app#watch"; });
+// ---- early access: waitlist unless sign-ups are open or the visitor has a working invite code
+let OPEN = true, INVITE = "";
+try { INVITE = (new URLSearchParams(location.search).get("invite") || localStorage.getItem("ns_invite") || "").trim().toUpperCase(); } catch (e) {}
+function gate() {
+  const locked = !OPEN && !INVITE;
+  $("wl").hidden = !locked; $("acctForm").hidden = locked;
+  if (!OPEN && INVITE) { $("inviteNote").hidden = false; $("inviteNote").innerHTML = `You're invited. Code <b style="color:var(--ink)">${INVITE.replace(/[^A-Z0-9-]/g, "")}</b> unlocks your account.`; }
+  document.querySelectorAll("a.google").forEach(a => a.href = "/auth/google" + (INVITE ? "?invite=" + encodeURIComponent(INVITE) : ""));
+}
+async function tryCode(code, btn) {
+  code = (code || "").trim().toUpperCase();
+  if (!code) throw new Error("Enter your invite code");
+  const r = await fetch("/auth/invite/" + encodeURIComponent(code)).then(r => r.json()).catch(() => ({ok: false}));
+  if (!r.ok) throw new Error("That invite code isn't valid or has been used up.");
+  INVITE = code; try { localStorage.setItem("ns_invite", code); } catch (e) {}
+  gate(); say("");
+}
+form("f-code", async (b) => tryCode($("code-in").value, b));
+form("f-wait", async (b) => {
+  const d = await post("/api/subscribe", {email: $("wl-email").value, source: "waitlist", website: $("wl-hp").value}, b);
+  $("f-wait").innerHTML = `<p class="wl-done">${d.status === "exists" ? "You're already on the list" : "You're on the list"} ✓<small>We'll email ${$("wl-email").value.replace(/</g, "")} when your spot opens. Meanwhile, try the demo.</small></p>`;
+});
 form("f-forgot", async (b) => { await post("/auth/forgot", {email: $("fo-email").value}, b); say("If that email has an account, a reset link is on its way. Check your inbox (and spam)."); });
 form("f-reset", async (b) => { await post("/auth/reset", {token: resetToken, password: $("re-pw").value}, b); location.href = "/app"; });
 fetch("/auth/config").then(r => r.json()).then(c => {
   document.querySelectorAll("[data-google]").forEach(el => el.hidden = !c.google);
   $("limit").textContent = c.free_limit;
+  OPEN = c.signups_open !== false;
+  if (!OPEN && INVITE) fetch("/auth/invite/" + encodeURIComponent(INVITE)).then(r => r.json()).then(r => { if (!r.ok) { INVITE = ""; try { localStorage.removeItem("ns_invite"); } catch (e) {} say("That invite link has expired or been used up. You can join the waitlist below.", true); } gate(); }).catch(gate);
+  gate();
 }).catch(() => {});
 try {
   const p = localStorage.getItem("hs_pending_add");
@@ -395,6 +438,20 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   font-variant-numeric: tabular-nums !important; font-feature-settings: "tnum" 1 !important; }
 .board-table td, .lrow .s, .r .s, .board-symbol a { font-family: "DM Sans", sans-serif !important; letter-spacing: .01em; }
 .board-symbol a, .lrow summary .s, .r .s { font-weight: 700 !important; }
+</style>
+<style>
+.wl-pill { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 10px; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--line-2);
+  font: 600 11px var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.wl-pill i { width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px #3DD68C; }
+.wl-code { margin-top: 18px; border-top: 1px solid var(--line-2); padding-top: 14px; }
+.wl-code summary { cursor: pointer; font-size: 14px; color: var(--muted); list-style: none; }
+.wl-code summary::-webkit-details-marker { display: none; }
+.wl-code summary::after { content: " →"; }
+.wl-code form { display: flex; gap: 8px; margin-top: 10px; }
+.wl-code input { flex: 1; text-transform: uppercase; letter-spacing: .08em; }
+.wl-code button { width: auto !important; margin: 0 !important; padding: 0 18px !important; }
+.wl-done { margin: 14px 0 0; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--line-2); font-weight: 600; color: var(--ink, #fff); }
+.wl-done small { display: block; margin-top: 4px; font-weight: 400; color: var(--muted); font-size: 13.5px; }
 </style>
 </body>
 </html>
