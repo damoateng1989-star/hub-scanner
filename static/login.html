@@ -360,7 +360,7 @@ async function tryCode(code, btn) {
 form("f-code", async (b) => tryCode($("code-in").value, b));
 form("f-wait", async (b) => {
   const d = await post("/api/subscribe", {email: $("wl-email").value, source: "waitlist", website: $("wl-hp").value}, b);
-  $("f-wait").innerHTML = `<p class="wl-done">${d.status === "exists" ? "You're already on the list" : "You're on the list"} ✓<small>We'll email ${$("wl-email").value.replace(/</g, "")} when your spot opens. Meanwhile, try the demo.</small></p>`;
+  $("f-wait").innerHTML = `<p class="wl-done">${d.status === "exists" ? "You're already on the list" : "You're on the list"} ✓<small>Your first lesson is on its way to ${$("wl-email").value.replace(/</g, "")}, and we'll email you when your spot opens.</small></p>`;
 });
 form("f-forgot", async (b) => { await post("/auth/forgot", {email: $("fo-email").value}, b); say("If that email has an account, a reset link is on its way. Check your inbox (and spam)."); });
 form("f-reset", async (b) => { await post("/auth/reset", {token: resetToken, password: $("re-pw").value}, b); location.href = "/app"; });

@@ -12,6 +12,7 @@ load_dotenv()
 import json  # noqa: E402
 import logging  # noqa: E402
 import os  # noqa: E402
+import requests  # noqa: E402
 import secrets  # noqa: E402
 import threading  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
@@ -822,6 +823,28 @@ class SubscribeBody(BaseModel):
     website: str = ""          # honeypot: real people leave it empty
 
 
+def _forward_to_beehiiv(email: str, source: str):
+    """Also subscribe the email in Beehiiv, so the 5-day Hub Breakout Course starts.
+    Needs BEEHIIV_API_KEY and BEEHIIV_PUBLICATION_ID; without them this is skipped quietly.
+    Runs in the background so the sign-up form never waits on Beehiiv."""
+    key, pub = os.getenv("BEEHIIV_API_KEY", "").strip(), os.getenv("BEEHIIV_PUBLICATION_ID", "").strip()
+    if not key or not pub:
+        return
+
+    def go():
+        try:
+            r = requests.post(f"https://api.beehiiv.com/v2/publications/{pub}/subscriptions", timeout=15,
+                              headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                              json={"email": email, "reactivate_existing": True, "send_welcome_email": True,
+                                    "utm_source": "nextshelf", "utm_medium": source or "landing",
+                                    "referring_site": os.getenv("APP_URL", "")})
+            if r.status_code >= 300:
+                log.warning("beehiiv subscribe failed (%s): %s", r.status_code, r.text[:200])
+        except Exception as e:
+            log.warning("beehiiv subscribe failed: %s", e)
+    threading.Thread(target=go, daemon=True).start()
+
+
 def _welcome_html(unsub: str) -> str:
     return f"""<div style="font-family:Inter,Arial,sans-serif;max-width:520px;margin:auto;color:#111">
 <h2 style="margin:0 0 12px">You're on the NextShelf list</h2>
@@ -848,6 +871,7 @@ def subscribe(body: SubscribeBody, request: Request):
     token = secrets.token_urlsafe(18)
     status = db.add_subscriber(email, body.source[:40] or "landing", token)
     if status in ("new", "again"):
+        _forward_to_beehiiv(email, body.source[:40] or "landing")
         unsub = f"{auth.base_url(request)}/unsubscribe?t={db.subscriber_token(email)}"
         try:
             auth.send_email(email, "You're on the NextShelf list", _welcome_html(unsub))
