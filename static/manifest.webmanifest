@@ -1,7 +1,7 @@
 {
   "name": "NextShelf",
   "short_name": "NextShelf",
-  "description": "Find the hub. Catch the break. Breakout alerts with a next-shelf target.",
+  "description": "Find the setup. Get the plan. Trade it. Breakout trade alerts with a next-shelf target.",
   "id": "/app",
   "start_url": "/app#today",
   "scope": "/",

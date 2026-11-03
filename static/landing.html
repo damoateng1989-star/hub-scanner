@@ -23,8 +23,8 @@
 })();
 </script>
 <meta name="theme-color" content="#070b10">
-<title>NextShelf · Find the hub. Catch the break.</title>
-<meta name="description" content="NextShelf checks 540+ stocks and ETFs (S&P 500, Nasdaq-100) after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
+<title>NextShelf · Find the setup. Get the plan. Trade it.</title>
+<meta name="description" content="Find the setup. Get the plan. Trade it. NextShelf checks 540+ stocks and ETFs (S&P 500, Nasdaq-100) after each 4H close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -597,7 +597,7 @@ section h2 em, .g-head h2 em, .final h2 em { font-family: var(--display) !import
 <header class="hero">
   <div class="shelves-bg" aria-hidden="true"><i style="top:18%"></i><i class="z" style="top:34%"></i><i style="top:57%"></i><i class="z dn" style="top:76%"></i></div>
   <div class="wrap" style="position:relative">
-    <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg>Scanning the market for a hub setup</span>
+    <span class="eyebrow"><svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true"><rect x="1" y="7" width="18" height="6" rx="2" fill="rgba(124,147,255,.25)" stroke="rgba(124,147,255,.7)" stroke-width="1"/><path d="M2 11 L6 9 L9 11 L12 9 L15 10.5 L19 8 L25 4 L32 2.5" fill="none" stroke="#3DD68C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2.5 H33" stroke="#3DD68C" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/></svg><span class="tl"><b>Find the setup</b><em>→</em><b>Get the plan</b><em>→</em><b>Trade it</b></span></span>
     <h1><span class="l1">Your Next Trade</span><span class="l2">Is Setting Up.</span></h1>
     <p class="lede">NextShelf finds stocks coiling in tight ranges, warns you before a breakout candle closes, and gives every setup a target: the next shelf. From the first scan to your own decision, it all happens in one place.</p>
     <form class="askbox" id="askbox" autocomplete="off">
@@ -1918,6 +1918,14 @@ html[data-theme="light"] .sp-row span { color: #55606e; } html[data-theme="light
 /* illustrations: plain dark background (no mesh, no glow) */
 svg.viz > rect[fill^="url(#r"], svg.viz > g[stroke^="rgba(255,255,255,0.0"], svg.viz > g[fill="#fff"][opacity="0.55"] { display: none; }
 svg.viz { background: #0f1218 !important; }
+</style>
+<style>
+.eyebrow .tl { display: inline-flex; align-items: center; gap: 9px; font-family: var(--sans, "DM Sans", sans-serif); letter-spacing: .12em; }
+.eyebrow .tl b { font-weight: 600; }
+.eyebrow .tl b:last-child { color: var(--up, #3DD68C); }
+html[data-theme="light"] .eyebrow .tl b:last-child { color: #16a34a; }
+.eyebrow .tl em { font-style: normal; opacity: .45; letter-spacing: 0; }
+@media (max-width: 520px) { .eyebrow svg { display: none; } .eyebrow .tl { gap: 7px; font-size: 10.5px; letter-spacing: .08em; } }
 </style>
 </body>
 </html>

@@ -216,7 +216,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     NextShelf
   </a>
   <div>
-    <h1>Find the hub. <em>Catch the break.</em></h1>
+    <h1>Find the setup. Get the plan. <em>Trade it.</em></h1>
     <ul>
       <li><b>Hub Board:</b> 540+ stocks and ETFs scanned after each 4H close for tight ranges.</li>
       <li><b>Shelf targets:</b> know where a breakout is likely headed before you enter.</li>
@@ -344,6 +344,7 @@ let OPEN = true, INVITE = "";
 try { INVITE = (new URLSearchParams(location.search).get("invite") || localStorage.getItem("ns_invite") || "").trim().toUpperCase(); } catch (e) {}
 function gate() {
   const locked = !OPEN && !INVITE;
+  document.querySelectorAll('#v-signin a[href="#signup"]').forEach(a => a.textContent = !OPEN ? "Join the waitlist" : "Create an account");
   $("wl").hidden = !locked; $("acctForm").hidden = locked;
   if (!OPEN && INVITE) { $("inviteNote").hidden = false; $("inviteNote").innerHTML = `You're invited. Code <b style="color:var(--ink)">${INVITE.replace(/[^A-Z0-9-]/g, "")}</b> unlocks your account.`; }
   document.querySelectorAll("a.google").forEach(a => a.href = "/auth/google" + (INVITE ? "?invite=" + encodeURIComponent(INVITE) : ""));
