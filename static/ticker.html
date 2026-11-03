@@ -3,6 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+/* light/dark: "system" (default) follows the device; choice saved per browser */
+(function () {
+  var pick = "system"; try { pick = localStorage.getItem("ns_theme") || "system"; } catch (e) {}
+  var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
+  function apply(p) {
+    var t = p === "system" ? (mq && mq.matches ? "light" : "dark") : p;
+    document.documentElement.dataset.theme = t; document.documentElement.dataset.themePick = p;
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#f4f3ef" : "#070b10";
+    document.querySelectorAll("[data-theme-btn]").forEach(function (b) { b.setAttribute("aria-label", "Theme: " + p + " (switch)"); b.title = t === "light" ? "Switch to dark" : "Switch to light"; b.dataset.mode = t; });
+    document.querySelectorAll("[data-theme-opt]").forEach(function (b) { b.classList.toggle("on", b.dataset.themeOpt === p); });
+  }
+  window.nsSetTheme = function (p) { try { localStorage.setItem("ns_theme", p); } catch (e) {} pick = p; apply(p); };
+  window.nsToggleTheme = function () { nsSetTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"); };
+  if (mq && mq.addEventListener) mq.addEventListener("change", function () { if (pick === "system") apply("system"); });
+  apply(pick);
+  document.addEventListener("DOMContentLoaded", function () { apply(pick); });
+})();
+</script>
 <meta name="theme-color" content="#0B0B0D">
 <title>NextShelf</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -167,6 +186,13 @@ h1, h2, h3, .brand, .sb-brand { letter-spacing: -0.025em; }
 input, button, select, textarea { font-family: inherit; }
 td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b, .price { font-variant-numeric: tabular-nums; }
 </style>
+
+<style>
+.theme-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; border: 1px solid rgba(127,127,127,.25); background: transparent;
+  color: inherit; cursor: pointer; padding: 0; flex: none; }
+.theme-btn:hover { background: rgba(127,127,127,.12); }
+.theme-btn .ic-moon { display: none; } [data-theme="light"] .theme-btn .ic-sun { display: none; } [data-theme="light"] .theme-btn .ic-moon { display: block; }
+</style>
 </head>
 <body>
 <nav><div class="wrap">
@@ -176,6 +202,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
     NextShelf
   </a>
   <span class="tk-links"><a href="/app#discover">Browse setups</a> &nbsp;·&nbsp; <a href="/app#list">Watchlist</a><span id="signin"></span></span>
+<button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
   <a class="tk-x" href="/app#discover" onclick="return goBack(event)" aria-label="Close chart" title="Close (Esc)">✕</a>
 </div></nav>
 
@@ -400,6 +427,35 @@ h1 em, .pitch h1 em { color: #fff !important; -webkit-text-fill-color: #fff !imp
 input:focus, .cform input:focus, .cform textarea:focus, .cform select:focus { border-color: #fff !important; box-shadow: 0 0 0 3px rgba(255,255,255,.12) !important; }
 h2 em { color: #9fb0c2 !important; }
 .tk-back:hover { border-color: #fff !important; }
+</style>
+<style>
+html[data-theme="light"] { color-scheme: light; --bg: #f4f3ef; --panel: #ffffff; --surface: #ffffff; --sunk: #f2f3f5; --ink: #0d1117; --muted: #4b5563; --faint: #7b8494;
+  --line: rgba(15,23,42,.09); --line-2: rgba(15,23,42,.15); --accent: #0d1117; --up: #15803d; --down: #dc2626; --hub: #4f46e5; --ft: #0f766e; --snap: #c2410c; --stall: #a16207; --idle: #6b7280; }
+html[data-theme="light"], html[data-theme="light"] body { background: #f4f3ef !important; color: #0d1117 !important; }
+html[data-theme="light"] body::before { content: ""; position: fixed; inset: -10%; z-index: -1; pointer-events: none; filter: blur(30px);
+  background: radial-gradient(40% 35% at 15% 10%, rgba(214,226,240,.95), transparent 70%), radial-gradient(35% 30% at 85% 18%, rgba(226,232,222,.9), transparent 70%),
+    radial-gradient(45% 40% at 70% 70%, rgba(222,228,240,.85), transparent 70%), #f4f3ef; }
+html[data-theme="light"] nav { background: rgba(255,255,255,.72) !important; border-color: rgba(15,23,42,.07) !important; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
+html[data-theme="light"] .brand, html[data-theme="light"] nav .brand { color: #0d1117 !important; } html[data-theme="light"] .brand svg rect:first-child { fill: #0d1117; } html[data-theme="light"] .brand svg path { stroke: #fff; }
+html[data-theme="light"] input, html[data-theme="light"] select, html[data-theme="light"] textarea { background: rgba(255,255,255,.95) !important; color: #0d1117 !important; border-color: rgba(15,23,42,.15) !important; }
+html[data-theme="light"] form button, html[data-theme="light"] .cform button, html[data-theme="light"] .nl .cta, html[data-theme="light"] #watch { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
+html[data-theme="light"] .theme-btn { color: #0d1117; border-color: rgba(15,23,42,.15); }
+html[data-theme="light"] .card, html[data-theme="light"] .kv div { background: rgba(255,255,255,.8) !important; } html[data-theme="light"] .card { border-color: rgba(255,255,255,.95) !important; box-shadow: 0 16px 44px rgba(15,23,42,.07); }
+html[data-theme="light"] h1, html[data-theme="light"] h2, html[data-theme="light"] .kv b, html[data-theme="light"] .sum b { color: #0d1117 !important; } html[data-theme="light"] .sum, html[data-theme="light"] .note, html[data-theme="light"] .legend { color: #4b5563 !important; }
+html[data-theme="light"] .tk-back, html[data-theme="light"] .tk-x, html[data-theme="light"] .tvbtn { background: rgba(255,255,255,.85) !important; border-color: rgba(15,23,42,.12) !important; color: #0d1117 !important; }
+html[data-theme="light"] .pfoot { border-color: rgba(15,23,42,.08) !important; } html[data-theme="light"] .pfoot a { color: #4b5563 !important; }
+html[data-theme="light"] nav a { color: #4b5563; }
+</style>
+<script>
+/* the chart reads its colours when it draws: redraw after switching themes */
+(function () { var set = window.nsSetTheme; window.nsSetTheme = function (p) { set(p); location.reload(); }; })();
+</script>
+<style>
+.theme-btn { background: transparent !important; color: inherit !important; border: 1px solid rgba(127,127,127,.3) !important; border-radius: 12px !important;
+  width: 38px !important; height: 38px !important; padding: 0 !important; box-shadow: none !important; display: inline-grid !important; place-items: center; }
+html[data-theme="light"] .theme-btn { color: #0d1117 !important; background: rgba(255,255,255,.7) !important; }
+html[data-theme="dark"] .theme-btn { color: #e8eef5 !important; }
+html[data-theme="light"] #signin a, html[data-theme="light"] nav #signin a { color: #0d1117 !important; }
 </style>
 </body>
 </html>
