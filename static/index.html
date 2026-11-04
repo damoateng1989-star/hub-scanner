@@ -2582,7 +2582,7 @@ async function openBrief(sym) {
   loadOptions(sym);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); }
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); }
   } catch (e) {
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
@@ -3001,6 +3001,7 @@ function nudgeOpen(href) { nudgeSnoozeSave(); closeSheet(); window.open(href, "_
 
 // ---------------------------------------------------------------- options swing plan (Shelf card)
 const OPT_CACHE = {};
+const OPT_FETCHING = {};
 async function loadOptions(sym) {
   const put = (h) => { if (BRIEF_SYM === sym && $("bfOpt")) $("bfOpt").innerHTML = h; };
   if (!ME || ME.guest || !(isPro() || ME.options)) {
@@ -3010,10 +3011,12 @@ async function loadOptions(sym) {
   }
   const fresh = OPT_CACHE[sym] && (OPT_CACHE[sym].market_open === false && !LIVE_OPEN ? true : Date.now() - OPT_CACHE[sym]._t < 60000);
   if (fresh) { put(optionsHTML(OPT_CACHE[sym])); return; }
+  if (OPT_FETCHING[sym]) return;   // a fetch is already running; its put() lands on the fresh element
+  OPT_FETCHING[sym] = true;
   const slow = setTimeout(() => { if (BRIEF_SYM === sym && $("bfOpt") && !OPT_CACHE[sym]) $("bfOpt").innerHTML = loadingHTML("Still pricing. Fetching live option quotes can take a few seconds…"); }, 5000);
-  try { const o = await api(`/api/options/${encodeURIComponent(sym)}`, {timeout: 45000}); clearTimeout(slow); o._t = Date.now(); OPT_CACHE[sym] = o; put(optionsHTML(o)
+  try { const o = await api(`/api/options/${encodeURIComponent(sym)}`, {timeout: 45000}); clearTimeout(slow); delete OPT_FETCHING[sym]; o._t = Date.now(); OPT_CACHE[sym] = o; put(optionsHTML(o)
       + (ME && ME.is_admin && o.timing ? `<p class="bf-fine">Priced in ${o.timing.total}s · price history ${o.timing.history}s · analysis ${o.timing.analysis}s · option chain ${o.timing.chain}s</p>` : "")); }
-  catch (e) { clearTimeout(slow); put(`<p class="ox-note">Options prices aren't available right now (${esc(friendly(e))}).</p>`); }
+  catch (e) { clearTimeout(slow); delete OPT_FETCHING[sym]; put(`<p class="ox-note">Options prices aren't available right now (${esc(friendly(e))}).</p>`); }
 }
 function optionsHTML(o) {
   if (!o.plans || !o.plans.length) return `<p class="ox-note">${esc(o.message || "No options swing to plan right now.")}</p>`;
