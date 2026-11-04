@@ -234,6 +234,58 @@ html[data-theme="dark"] .alt a, html[data-theme="dark"] .honest a, html[data-the
 html[data-theme="dark"] em { color: #C3C7CF; }
 .navend { display: flex; align-items: center; gap: 14px; } .navend .btn { white-space: nowrap; }
 @media (max-width: 460px) { .wordmark em { display: none; } .navend { gap: 8px; } .navend .btn.sm { padding: 9px 13px; font-size: 13.5px; } nav.top .wrap { padding: 0 16px; } }
+
+/* ---------- sample Shelf card ---------- */
+#card { padding-top: 40px; }
+.sc-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 56px; align-items: center; }
+.sc-list { list-style: none; margin-top: 24px; }
+.sc-list li { padding: 11px 0; border-top: 1px solid var(--line); font-size: 15px; color: var(--ink2); }
+.sc-list li:first-child { border-top: 0; } .sc-list b { color: var(--ink); }
+.sc { --c0: #0E0F12; --c1: #15171C; --c2: #23262E; --t1: #E9EBEF; --t2: #9AA0AC; background: var(--c0); color: var(--t1); border-radius: 26px; padding: 14px; border: 1px solid #23262E;
+  box-shadow: 0 30px 80px rgba(20,20,18,.18); font-size: 14px; }
+.sc-hero, .sc-body { background: var(--c1); border: 1px solid var(--c2); border-radius: 20px; padding: 18px; }
+.sc-body { margin-top: 10px; min-height: 300px; }
+.sc-k { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.sc-hero .sc-k { margin-bottom: 6px; }
+.sc-sym { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; }
+.sc-pill { display: inline-block; margin-top: 8px; padding: 5px 12px; border: 1px solid #2E323B; border-radius: 99px; color: #C3C7CF; font-size: 13px; }
+.sc-px { margin-top: 10px; font-size: 13px; color: var(--t2); } .sc-px b { color: var(--t1); }
+.sc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.sc-stats small { display: block; font-size: 12px; color: var(--t2); }
+.sc-stats b { display: block; font-size: 20px; font-weight: 800; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.sc-stats i { display: block; font-style: normal; font-size: 12px; color: #C3C7CF; line-height: 1.35; }
+.sc .up { color: #3DD68C !important; } .sc .dn { color: #FF7D72 !important; }
+.sc-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 16px; padding: 4px; border-radius: 13px; background: var(--c0); border: 1px solid var(--c2); }
+.sc-tabs button { border: 0; background: none; color: var(--t2); font: 600 12.5px var(--sans); padding: 8px 2px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.sc-tabs button.on { background: #F2F3F5; color: #0E0F12; }
+.sc-pane { display: none; } .sc-pane.on { display: block; animation: scIn .35s ease; }
+@keyframes scIn { from { opacity: 0; transform: translateY(4px); } }
+.sc-lm { border-radius: 14px; border: 1px solid var(--c2); overflow: hidden; background: var(--c0); }
+.sc-lm > div { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px dashed #2A2D35; }
+.sc-lm > div:first-child { border-top: 0; }
+.sc-lm span { display: flex; flex-direction: column; } .sc-lm small { font-size: 11.5px; color: var(--t2); }
+.sc-lm b { font: 600 14px var(--mono); text-align: right; display: flex; flex-direction: column; } .sc-lm b small { font-family: var(--sans); }
+.sc-lm .up { background: linear-gradient(90deg, rgba(61,214,140,.10), transparent); } .sc-lm .up b, .sc-lm .up span { color: inherit; }
+.sc-lm .dn { background: linear-gradient(90deg, rgba(255,107,94,.10), transparent); }
+.sc-lm .hub { background: rgba(124,147,255,.06); } .sc-lm .hub b { color: #9FB3FF; }
+.sc-lm .now span { font-weight: 700; } .sc-lm .up span, .sc-lm .dn span { color: var(--t1) !important; }
+.sc-gp { list-style: none; counter-reset: g; display: grid; gap: 8px; }
+.sc-gp li { counter-increment: g; display: flex; gap: 12px; padding: 12px; border-radius: 12px; background: var(--c0); border: 1px solid var(--c2); color: #C3C7CF; line-height: 1.5; }
+.sc-gp li::before { content: counter(g); flex: none; width: 24px; height: 24px; border-radius: 7px; background: #1C1F26; color: var(--t1); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.sc-gp b { color: var(--t1); }
+.sc-edu { padding: 2px 8px; border-radius: 7px; border: 1px solid #8b7cf6; color: #a99bff; letter-spacing: .08em; }
+.sc-ct b { display: block; font-size: 17px; } .sc-ct small { display: block; color: var(--t2); font-size: 13px; margin: 2px 0 8px; }
+.sc-rows > div { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--c2); }
+.sc-rows span { color: var(--t2); } .sc-rows b { font-variant-numeric: tabular-nums; } .sc-rows em { font-family: var(--sans); font-style: normal; font-weight: 700; letter-spacing: 0; margin-left: 4px; }
+.sc-note { margin-top: 8px; font-size: 12px; color: #7A808C; }
+.sc-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sc-tiles div { padding: 14px; border-radius: 12px; background: var(--c0); border: 1px solid var(--c2); }
+.sc-tiles b { display: block; font-size: 22px; } .sc-tiles small { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+.sc-trs { margin-top: 10px; } .sc-trs div { display: flex; justify-content: space-between; padding: 9px 2px; border-top: 1px solid var(--c2); color: #C3C7CF; }
+.sc-trs i { font-style: normal; color: var(--t2); }
+html[data-theme="dark"] .sc { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-color: #2E323B; }
+@media (max-width: 860px) { .sc-wrap { grid-template-columns: 1fr; gap: 32px; } .sc { max-width: 460px; width: 100%; margin: 0 auto; } }
+@media (max-width: 420px) { .sc-stats b { font-size: 17px; } .sc-tabs button { font-size: 11.5px; } }
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
@@ -418,7 +470,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
 
 <nav class="top"><div class="wrap">
   <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf <em>beta</em></a>
-  <div class="navlinks"><a href="#why">Why NextShelf</a><a href="#how">How it works</a><a href="#record">Track record</a><a href="#pricing">Pricing</a><a href="/learn">University</a><a href="#faq">FAQ</a></div>
+  <div class="navlinks"><a href="#why">Why NextShelf</a><a href="#how">How it works</a><a href="#card">Shelf card</a><a href="#record">Track record</a><a href="#pricing">Pricing</a><a href="/learn">University</a><a href="#faq">FAQ</a></div>
   <div class="navend"><span id="themeSlot"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></span><span id="navEnd" class="navend"><a class="signin" href="/login">Sign in</a><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
@@ -537,6 +589,65 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     <ol class="fl-steps" id="flSteps"></ol>
   </div>
   <p class="stage-note">Example setup, for illustration.</p>
+</div></section>
+
+<section id="card"><div class="wrap sc-wrap">
+  <div class="sc-copy">
+    <div class="kicker">The Shelf card</div>
+    <h2>Every setup comes <em>with a plan.</em></h2>
+    <p class="sub">Tap Analyze on any stock and you get one card: where it triggers, where it's aiming, and where you're wrong. Decide before the candle closes, not after.</p>
+    <ul class="sc-list">
+      <li><b>Trigger, aim, wrong if.</b> The three numbers that matter, at the top.</li>
+      <li><b>Level map.</b> Hub edges and the shelves above and below, with the price slotted in.</li>
+      <li><b>Game plan.</b> The rules in plain words, plus an order plan you can set before work.</li>
+      <li><b>Options swing.</b> The contract, what it may be worth at the aim, and your max loss.</li>
+      <li><b>Track record.</b> How this stock's past breakouts actually turned out.</li>
+    </ul>
+    <p class="micro" style="margin-top:18px">Example card with sample numbers. Educational, not financial advice.</p>
+  </div>
+  <div class="sc" id="sampleCard" aria-label="Example Shelf card">
+    <div class="sc-hero">
+      <div class="sc-k">Shelf card · example</div>
+      <div class="sc-sym">ADBE</div>
+      <span class="sc-pill">Resting in a hub · no trade yet</span>
+      <p class="sc-px"><b>$251.47</b> last 4-hour close</p>
+      <div class="sc-stats">
+        <div><small>Trigger</small><b>$254.78</b><i>4H close above</i></div>
+        <div><small>Aim</small><b>$271.27</b><i class="up">+6.5% from trigger</i></div>
+        <div><small>Wrong if</small><b>$254.78</b><i>4H close back below</i></div>
+      </div>
+      <div class="sc-tabs" role="tablist"><button data-t="lv" class="on">Levels</button><button data-t="gp">Game plan</button><button data-t="ox">Options</button><button data-t="tr">Track record</button></div>
+    </div>
+    <div class="sc-body">
+      <div class="sc-pane on" data-p="lv"><div class="sc-k">Level map</div>
+        <div class="sc-lm">
+          <div class="up"><span>Next shelf above<small>zone $271.27–276.40</small></span><b>$271.27<small>+7.9%</small></b></div>
+          <div class="hub"><span>Hub top<small>close above = long setup</small></span><b>$254.78<small>+1.3%</small></b></div>
+          <div class="now"><span>Last 4-hour close</span><b>$251.47</b></div>
+          <div class="hub"><span>Hub bottom<small>close below = short setup</small></span><b>$247.13<small>−1.7%</small></b></div>
+          <div class="dn"><span>Next shelf below<small>zone $238.90–242.27</small></span><b>$242.27<small>−3.7%</small></b></div>
+        </div></div>
+      <div class="sc-pane" data-p="gp"><div class="sc-k">Game plan</div>
+        <ol class="sc-gp">
+          <li>It's been closing inside <b>$247.13–254.78</b> for 5 sessions. Inside the hub there's <b>no trade</b>.</li>
+          <li>A 4-hour <b>close above $254.78</b> starts a long setup, aiming for the shelf at <b>$271.27</b>.</li>
+          <li>A 4-hour <b>close below $247.13</b> starts a short setup, aiming for <b>$242.27</b>.</li>
+        </ol></div>
+      <div class="sc-pane" data-p="ox"><div class="sc-k">Options swing <span class="sc-edu">Educational</span></div>
+        <div class="sc-ct"><b>Nov 27 $255 calls</b><small>If a 4-hour candle closes above the hub top</small></div>
+        <div class="sc-rows">
+          <div><span>Est. cost at the breakout</span><b>≈ $13.69</b></div>
+          <div><span>If it reaches the aim</span><b>≈ $23.14 <em class="up">+69%</em></b></div>
+          <div><span>If the breakout fails</span><b>≈ $12.46 <em class="dn">−9%</em></b></div>
+          <div><span>Est. gain at the aim</span><b class="up">≈ +$945.00</b></div>
+          <div><span>Max loss</span><b>$1,369.00</b></div>
+        </div>
+        <p class="sc-note">Per contract. Reached the aim in 4 of 10 past setups.</p></div>
+      <div class="sc-pane" data-p="tr"><div class="sc-k">Track record</div>
+        <div class="sc-tiles"><div><b>10</b><small>breakouts in ~9 months</small></div><div><b>40%</b><small>reached the shelf</small></div></div>
+        <div class="sc-trs"><div><span>Oct 21 · Long</span><i class="up">Reached shelf</i></div><div><span>Sep 30 · Short</span><i class="dn">Failed</i></div><div><span>Sep 9 · Long</span><i class="up">Reached shelf</i></div><div><span>Aug 18 · Long</span><i>Timed out</i></div></div></div>
+    </div>
+  </div>
 </div></section>
 
 <section id="day"><div class="wrap">
@@ -830,6 +941,18 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   let seen = false; try { seen = !!sessionStorage.getItem("ns_scout_seen"); } catch (e) {}
   if (!seen) setTimeout(() => { if ($("scoutPop").hidden) { $("sfHello").hidden = false; load(); } setTimeout(() => $("sfHello").hidden = true, 9000); }, 5000);
   else load();
+})();
+</script>
+
+<script>
+(function () {
+  const card = document.getElementById("sampleCard"); if (!card) return;
+  const tabs = [...card.querySelectorAll(".sc-tabs button")], panes = [...card.querySelectorAll(".sc-pane")];
+  let i = 0, timer = null, user = false;
+  function show(k) { i = k; tabs.forEach((b, j) => b.classList.toggle("on", j === k)); panes.forEach((p, j) => p.classList.toggle("on", j === k)); }
+  tabs.forEach((b, k) => b.onclick = () => { user = true; clearInterval(timer); show(k); });
+  function play() { if (user) return; clearInterval(timer); timer = setInterval(() => show((i + 1) % tabs.length), 3500); }
+  if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? play() : clearInterval(timer)), {threshold: .4}).observe(card);
 })();
 </script>
 </body>
