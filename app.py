@@ -495,7 +495,7 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, quiet=u.get("quiet") or "",
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, quiet=u.get("quiet") or "",
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
                 style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
@@ -794,9 +794,18 @@ def record_data(pattern: str = "hub", u: dict = User):
     return board.track_record(pattern)
 
 
+def options_for(u: dict | None) -> bool:
+    """Options plans: Pro only, unless OPTIONS_FOR_ALL is on (beta: every signed-in member). Set it to false at launch."""
+    if not u:
+        return False
+    return auth.is_pro(u) or os.getenv("OPTIONS_FOR_ALL", "true").strip().lower() in ("1", "true", "yes", "on")
+
+
 @app.get("/api/options/{symbol}")
-async def options_plan(symbol: str, u: dict = Pro):
-    """Educational options swing plan for the current setup (Pro)."""
+async def options_plan(symbol: str, u: dict = User):
+    """Educational options swing plan for the current setup (Pro; every member while OPTIONS_FOR_ALL is on)."""
+    if not options_for(u):
+        raise HTTPException(403, "Options plans are a Pro feature")
     try:
         return await run_in_threadpool(options.plan, symbol)
     except Exception as e:

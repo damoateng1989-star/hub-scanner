@@ -2973,7 +2973,7 @@ function nudgeOpen(href) { nudgeSnoozeSave(); closeSheet(); window.open(href, "_
 const OPT_CACHE = {};
 async function loadOptions(sym) {
   const put = (h) => { if (BRIEF_SYM === sym && $("bfOpt")) $("bfOpt").innerHTML = h; };
-  if (!ME || ME.guest || !isPro()) {
+  if (!ME || ME.guest || !(isPro() || ME.options)) {
     put(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
       <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}" onclick="closeBrief()">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
     return;
