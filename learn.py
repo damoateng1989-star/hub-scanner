@@ -284,7 +284,7 @@ def lesson_body(slug: str) -> tuple[str, str] | None:
 
 
 STYLE = """<style>
-.lu-lede { font-size: 17px; line-height: 1.6; color: var(--muted); max-width: 680px; }
+.lu-lede { font-size: 17px; line-height: 1.6; color: var(--muted); }
 .lu-mod { margin-top: 34px; }
 .lu-mh small, .lu-take small, .lu-quiz small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--faint, #8a9aae); }
 .lu-mh h2 { margin: 4px 0 2px !important; font-size: 22px !important; } .lu-mh p { margin: 0 0 12px; color: var(--muted); }
