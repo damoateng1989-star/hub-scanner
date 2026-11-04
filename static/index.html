@@ -2071,9 +2071,20 @@ async function openBrief(sym) {
 function closeBrief() { document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
   renderStrip(); }
 function briefHead(sym, st) {
-  const k = st && st.state, c = stateColor(k === "follow-through" ? "breakout_up" : k);
-  $("bfHead").innerHTML = `<h3>${esc(sym)}</h3><p>${st && st.last_close ? money(st.last_close) + " · last 4-hour close" : "Loading…"}</p><div class="bf-live" id="bfLive"></div>
-    ${st ? `<span class="bf-tag" style="--c:${c}">${STATE_WORD[k] || "No setup right now"}</span>` : ""}`;
+  // headline = the setup that's in play now; a finished hub result is only context underneath
+  const k = st && st.state, hubLive = k === "breakout_up" || k === "breakdown";
+  const other = !hubLive && st && (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+  const hubNote = k === "forming" || k === "watching" ? `<p class="bf-prev">Hub: resting, no hub trade yet</p>` : "";
+  let tag = "";
+  if (st) {
+    if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">Hub ${k === "breakout_up" ? "breakout ↑ · bullish" : "breakdown ↓ · bearish"}</span>`;
+    else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)} ${other.state === "breakout_up" ? "breakout ↑ · bullish" : "breakdown ↓ · bearish"}</span>` + hubNote;
+    else if (k === "forming" || k === "watching") tag = `<span class="bf-tag" style="--c:${stateColor(k)}">${STATE_WORD[k]} · no trade yet</span>`;
+    else tag = `<span class="bf-tag" style="--c:#8a9aae">No setup in play</span>`;
+    if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
+  }
+  $("bfHead").innerHTML = `<h3>${esc(sym)}</h3><p>${st && st.last_close ? `<b class="bf-px">${money(st.last_close)}</b> last 4-hour close <span class="bf-pxn">· the plan uses this</span>` : "Loading…"}</p><div class="bf-live" id="bfLive"></div>
+    ${tag}`;
   paintBriefLive();
 }
 function setCmd(sec) {
@@ -2120,7 +2131,11 @@ function briefHTML(sym, st, chart) {
     steps.push(["#fff", `The aim is <b>${money(st.target)}</b> (${pctFrom(st.target, p)}), ${st.target_kind === "shelf" ? "the next shelf" : "an ATR-based target, since there's no shelf nearby"}.`]);
     steps.push(["#F2C14E", `It's wrong if a 4-hour candle <b>closes back ${isUp ? "below" : "above"} ${money(edge)}</b>.`]);
   } else {
-    steps.push(["#8a9aae", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 4+ sessions." : "The last breakout has played out. Waiting for a new hub to form."]);
+    const lv = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+    if (lv) { const u = lv.state === "breakout_up";
+      steps.push([u ? "#3DD68C" : "#FF6B5E", `The trade in play is the <b>${esc(lv.name)} ${u ? "breakout ↑" : "breakdown ↓"}</b> (${u ? "bullish" : "bearish"}): it closed ${u ? "above" : "below"} <b>${money(lv.edge)}</b>, aiming for <b>${money(lv.target)}</b>.`]);
+      steps.push(["#F2C14E", `It's wrong if a 4-hour candle <b>closes back ${u ? "below" : "above"} ${money(lv.edge)}</b>.`]); }
+    steps.push(["#8a9aae", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 4+ sessions." : "The last hub breakout has played out."]);
     if (up || dn) steps.push(["#9fb3ff", `Shelves to keep in mind: ${[up && `<b>${money(up.level)}</b> above`, dn && `<b>${money(dn.level)}</b> below`].filter(Boolean).join(" and ")}.`]);
   }
   const plan = `<div class="gp">${steps.map(([c, t], i) => `<div data-n="${i + 1}" style="--c:${c}"><span>${t}</span></div>`).join("")}</div>`;
@@ -2486,9 +2501,9 @@ function optionsHTML(o) {
   return (o.demo ? `<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>` : "") + closed + er + o.plans.map(p => {
     const up = p.direction === 1, col = up ? "#3DD68C" : "#FF6B5E", side = up ? "Calls" : "Puts";
     const head = p.mode === "prep" ? `${side} <small>if a 4-hour candle closes ${up ? "above" : "below"} ${money(p.edge)}</small>`
-      : `${side} <small>${esc(p.setup)} breakout is live</small>`;
+      : `${side} <small>${esc(p.setup)} ${up ? "breakout" : "breakdown"} is live · ${up ? "bullish" : "bearish"}</small>`;
     const h = p.history || {};
-    const hist = h.n ? `On ${esc(o.symbol)}, <b>${h.reached} of ${h.n}</b> past ${up ? "upside" : "downside"} breakouts reached the shelf${h.median_days != null ? `, usually within <b>${h.median_days} trading day${h.median_days === 1 ? "" : "s"}</b>` : ""}.` : "Not enough past breakouts on this stock to judge timing yet.";
+    const hist = h.n ? `On ${esc(o.symbol)}, <b>${h.reached} of ${h.n}</b> past ${up ? "breakouts" : "breakdowns"} reached the aim${h.median_days != null ? `, usually within <b>${h.median_days} trading day${h.median_days === 1 ? "" : "s"}</b>` : ""}.` : "Not enough past breakouts on this stock to judge timing yet.";
     return `<div class="ox" style="--c:${col}">
       <div class="ox-h">${head}</div>
       <div class="ox-chips"><span><small>Expiry</small>${day(p.expiry)} · ${p.dte} days</span><span><small>Aim</small>${money(p.target)} (${sgn(p.target_pct)})</span>
@@ -2497,10 +2512,13 @@ function optionsHTML(o) {
         <div class="ox-ct"><b>$${c.strike} ${up ? "call" : "put"}</b><small>${esc(c.label)} · delta ${c.delta}</small></div>
         <div class="ox-grid">
           <div><small>${c.estimated ? "Est. cost at the breakout" : "Cost now (mid)"}</small><b>${money(c.mid)}</b><i>${money(c.cost)} per contract</i></div>
-          <div><small>If it reaches the shelf</small><b class="u-up2">≈ ${money(c.at_shelf)}</b><i>${sgn(c.at_shelf_pct)}</i></div>
-          <div><small>If the breakout fails</small><b class="u-down2">≈ ${money(c.at_fail)}</b><i>${sgn(c.at_fail_pct)}</i></div>
+          <div><small>If it reaches the aim</small><b class="u-up2">≈ ${money(c.at_shelf)}</b><i class="ox-up">${sgn(c.at_shelf_pct)}</i>
+            <em class="ox-odds">${h.n ? `Reached the aim in <b>${h.reached} of ${h.n}</b> past setups` : "Too few past setups to judge the odds"}</em></div>
+          <div><small>If the ${up ? "breakout" : "breakdown"} fails</small><b class="u-down2">≈ ${money(c.at_fail)}</b><i class="ox-dn">${sgn(c.at_fail_pct)}</i>
+            <em class="ox-odds">${h.n ? `Didn't reach it in <b>${h.n - h.reached} of ${h.n}</b>` : "Plan for this case first"}</em></div>
           <div><small>Breakeven at expiry</small><b>${money(c.breakeven)}</b><i>max loss ${money(c.cost)}</i></div>
         </div>
+        <p class="ox-assume">≈ figures assume the aim is reached in about <b>${p.days_to_target} trading day${p.days_to_target === 1 ? "" : "s"}</b> at today's implied volatility (<b>${c.iv}%</b>). Bid/ask now <b>${c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted"}</b>${o.earnings ? ` · next earnings <b>${esc(o.earnings.label)}</b>${o.earnings.date > p.expiry ? " (after expiry)" : ""}` : ""}. Slower moves or falling volatility mean less.</p>
         ${c.wide_spread ? `<p class="ox-warn">⚠ Wide bid/ask spread (${money(c.bid)} / ${money(c.ask)}). Use a limit order near the middle.</p>` : ""}
       </div>`).join("")}
       <p class="ox-note">${hist}</p>
@@ -2751,7 +2769,7 @@ function paintBriefLive() {
   if (!BRIEF_SYM || !LIVE[BRIEF_SYM] || !$("bfLive")) return;
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(BRIEF_SYM);
   const v = liveVsHub(st, LIVE[BRIEF_SYM].price);
-  $("bfLive").innerHTML = liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
+  $("bfLive").innerHTML = `<span class="bf-pl">${LIVE_OPEN ? "Live" : "Last trade"}</span>` + liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
 }
 
 // ---------------------------------------------------------------- install as an app (PWA)
@@ -3529,6 +3547,24 @@ html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, 
 #record .stats > div { text-align: center; display: flex; flex-direction: column; align-items: center; }
 #winRank > p.note { text-align: center; }
 @media (max-width: 760px) { .rec-tabs { justify-content: flex-start; } }
+</style>
+<style>
+/* Shelf card: clearer direction, prices and option numbers */
+.bf-px { font-weight: 800; color: var(--ink, #fff); } .bf-pxn { color: var(--muted); }
+.bf-pl { margin-right: 6px; padding: 1px 6px; border-radius: 4px; font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); }
+.bf-prev { margin: 6px 0 0; font-size: 12.5px; color: var(--muted); }
+.ox-grid small { color: #b4c0ce !important; font-size: 12px !important; font-weight: 500; }
+.ox-grid i { display: block; margin-top: 2px; font-size: 13px !important; font-weight: 600 !important; color: #c9d3df !important; }
+.ox-grid i.ox-up, .ox-grid i.ox-dn { font-size: 16px !important; font-weight: 800 !important; }
+.ox-odds b { display: inline !important; font: inherit !important; font-weight: 700 !important; }
+.ox-grid i.ox-up { color: #3DD68C !important; } .ox-grid i.ox-dn { color: #ff7d72 !important; }
+.ox-odds { display: block; margin-top: 4px; font-style: normal; font-size: 12px; color: #c9d3df; } .ox-odds b { color: #fff; }
+.ox-assume { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: #a9b6c6; } .ox-assume b { color: #eef2f7; }
+.ox-ct small, .ox-h small { color: #b4c0ce !important; }
+html[data-theme="light"] .ox-grid small, html[data-theme="light"] .ox-ct small, html[data-theme="light"] .ox-h small { color: #4b5563 !important; }
+html[data-theme="light"] .ox-grid i { color: #111827 !important; } html[data-theme="light"] .ox-grid i.ox-up { color: #15803d !important; } html[data-theme="light"] .ox-grid i.ox-dn { color: #b91c1c !important; }
+html[data-theme="light"] .ox-odds, html[data-theme="light"] .ox-assume { color: #374151; } html[data-theme="light"] .ox-odds b, html[data-theme="light"] .ox-assume b { color: #0d1117; }
+html[data-theme="light"] .bf-px { color: #0d1117; }
 </style>
 </body>
 </html>
