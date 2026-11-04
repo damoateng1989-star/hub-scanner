@@ -1467,17 +1467,35 @@ html[data-theme="light"] .ox-odds, html[data-theme="light"] .ox-assume { color: 
 html[data-theme="light"] .bf-px { color: #0d1117; }
 </style>
 <style>
-/* Shelf card from "Analyze": full screen on computers, two columns */
+/* Shelf card from "Analyze": edge to edge on computers, two columns */
 @media (min-width: 900px) {
-  .brief { top: 12px !important; left: 12px !important; right: 12px !important; bottom: 12px !important; width: auto !important; max-width: none !important; }
-  .brief .bf-top, .brief .bf-seg, .brief .bf-body, .brief .bf-foot { width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
-  .brief .bf-seg { max-width: 620px !important; margin-left: max(20px, calc((100% - 1400px) / 2 + 20px)) !important; }
+  .brief { top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: auto !important; max-width: none !important; border-radius: 0 !important; border: 0 !important; }
+  .brief .bf-top, .brief .bf-seg, .brief .bf-body, .brief .bf-foot { width: auto; max-width: none; box-sizing: border-box; }
+  .brief .bf-seg { max-width: 620px !important; margin-left: 32px !important; margin-right: 32px !important; }
   .bf-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
   .bf-col > .bf-h:first-child { margin-top: 6px; }
-  .bf-body { padding-left: 28px !important; padding-right: 28px !important; }
-  .bf-top { padding-left: 28px !important; padding-right: 28px !important; }
+  .bf-body { padding-left: 32px !important; padding-right: 32px !important; }
+  .bf-top { padding-left: 32px !important; padding-right: 32px !important; padding-top: 24px !important; }
+  .bf-foot { padding-left: 32px !important; padding-right: 32px !important; }
 }
 @media (min-width: 1500px) { .bf-cols { gap: 48px; } }
+/* Shelf card on phones: full height, tighter */
+@media (max-width: 899px) {
+  .brief { top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; height: 100% !important; height: 100dvh !important; border-radius: 0 !important; border: 0 !important; }
+  .bf-top { padding: 12px 14px 8px !important; padding-top: max(12px, env(safe-area-inset-top)) !important; }
+  .bf-head h3 { font-size: 22px !important; }
+  .bf-head p, .bf-prev { font-size: 12.5px !important; }
+  .bf-tag { margin-top: 6px !important; padding: 3px 9px !important; font-size: 12px !important; }
+  .bf-x { width: 32px !important; height: 32px !important; }
+  .bf-seg { margin: 0 14px 2px !important; }
+  .bf-seg button { padding: 7px 0 !important; font-size: 12px !important; letter-spacing: -.01em; white-space: nowrap; }
+  .bf-seg { gap: 1px !important; }
+  .bf-body { padding: 4px 14px 18px !important; font-size: 13.5px; }
+  .bf-h { margin: 16px 0 8px !important; }
+  .bf-foot { padding: 10px 14px !important; padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; font-size: 13.5px !important; }
+  .ox-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+  .ox-grid > div { padding: 8px !important; }
+}
 </style>
 </head>
 <body class="term">
