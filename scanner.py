@@ -162,7 +162,8 @@ def format_event(sym: str, e: dict) -> str:
         edge = e["high"] if up else e["low"]
         d = 1 if up else -1
         hist = history_line(sym)
-        return (f"{'🚀' if up else '🔻'} {sym}: 4H close {'ABOVE' if up else 'BELOW'} hub\n"
+        return (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
+                f"4H close {'above' if up else 'below'} the hub\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"
                 + plan_lines(e["close"], edge, e["target"], d, (e["close"] - e["target"]) * d >= 0, e.get("shelf"))
                 + (f"\n{hist}" if hist else "") + f"\nCandle closed: {t}")
@@ -316,7 +317,8 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                     continue
                 up = sig["direction"] == 1
                 typ = "breakout" if up else "breakdown"
-                msg = (f"{'🚀' if up else '🔻'} {sym}: 1:30 PM close {'ABOVE' if up else 'BELOW'} the hub (early read)\n"
+                msg = (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if sig.get('shelf') else 'target'} (early read)\n"
+                       f"1:30 PM close {'above' if up else 'below'} the hub\n"
                        f"Close ≈ {_money(close)} · hub {_money(sig['low'])}–{_money(sig['high'])}\n"
                        + plan_lines(close, sig["edge"], sig["target"], sig["direction"], sig["reached"], sig.get("shelf"))
                        + "\nFrom the real-time feed. The full market data confirms it at about 1:47 PM; you'll get a note either way."

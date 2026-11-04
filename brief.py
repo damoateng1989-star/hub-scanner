@@ -72,7 +72,8 @@ def build(u: dict | None) -> dict:
             st = json.loads(row.get("status") or "{}")
             if st.get("state") in ("forming", "watching", "breakout_up", "breakdown"):
                 mine.append(dict(symbol=sym, state=st["state"], low=(st.get("hub") or {}).get("low"),
-                                 high=(st.get("hub") or {}).get("high"), target=st.get("target"), price=st.get("last_close")))
+                                 high=(st.get("hub") or {}).get("high"), target=st.get("target"), price=st.get("last_close"),
+                                 shelf=st.get("target_kind") != "atr"))
         watching = len(db.user_symbols(u["id"]))
     else:
         watching = 0
@@ -93,7 +94,7 @@ def _mine_line(m: dict) -> str:
     if m["state"] in ("forming", "watching"):
         return f"{m['symbol']}: resting in a hub {_money(m['low'])}–{_money(m['high'])}. Trade only on a 4H close outside it."
     up = m["state"] == "breakout_up"
-    return f"{m['symbol']}: {'broke out ↑' if up else 'broke down ↓'}, aiming for {_money(m['target'])}."
+    return f"{m['symbol']}: {'broke out' if up else 'broke down'} · heading to {'next shelf' if m.get('shelf', True) else 'target'} {_money(m['target'])}."
 
 
 def text(d: dict) -> str:

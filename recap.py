@@ -55,7 +55,8 @@ def build(u: dict | None) -> dict:
     held = [r for r in b["live"] if _k(r) > 1]
     near = sorted(b["near"], key=brief._edge_dist)[:3]
     new_rows = [dict(symbol=r["symbol"], up=r["state"] == "breakout_up", close=r.get("last_close"), edge=_edge(r),
-                     target=r.get("target"), to_target=r.get("to_target_pct"), earn=_earn(r["symbol"])) for r in new[:5]]
+                     target=r.get("target"), to_target=r.get("to_target_pct"), earn=_earn(r["symbol"]),
+                     shelf=r.get("target_kind") != "atr") for r in new[:5]]
     near_rows = [dict(symbol=r["symbol"], side=r["near_edge"], low=r["hub"]["low"], high=r["hub"]["high"], earn=_earn(r["symbol"]))
                  for r in near]
     mine, events = [], []
@@ -85,7 +86,7 @@ def build(u: dict | None) -> dict:
 
 def _plan(c: dict) -> str:
     up = c["up"]
-    return (f"{c['symbol']} {'broke out ↑' if up else 'broke down ↓'} · closed {_money(c['close'])}\n"
+    return (f"{c['symbol']} {'broke out' if up else 'broke down'} · heading to {'next shelf' if c.get('shelf', True) else 'target'} · closed {_money(c['close'])}\n"
             f"   Target {_money(c['target'])}" + (f" ({c['to_target']:+.1f}%)" if c.get("to_target") is not None else "")
             + f" · wrong if a 4H close is back {'below' if up else 'above'} {_money(c['edge'])}{c['earn']}")
 

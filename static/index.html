@@ -1601,6 +1601,8 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 }
 
 /* computers too: same calm look */
+html body .board-table .board-state.board-state.up, html body .board-table .board-state.board-state.down { flex-direction: column; align-items: flex-start !important; line-height: 1.25 !important; border-radius: 10px !important; padding: 4px 10px !important; font-weight: 700 !important; }
+.board-state .bs-sub { display: block; font-size: 11px; font-weight: 500; opacity: .85; white-space: nowrap; }
 #closesCard .seg { gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid #23262E; background: #0E0F12; }
 #closesCard .seg button { border: 0 !important; background: transparent !important; color: #9AA0AC !important; padding: 8px 14px !important; border-radius: 9px !important; font: 600 13.5px var(--sans) !important; cursor: pointer; }
 #closesCard .seg button.on { background: #F2F3F5 !important; color: #0E0F12 !important; }
@@ -2673,7 +2675,7 @@ function renderSide() {
     : isPro() ? `You're on <b>Pro</b>` : `Free plan · <a href="#account" style="color:#3DD68C">Go Pro</a>`;
 }
 function stateColor(key) { return ({ breakout_up: "#3DD68C", breakdown: "#FF6B5E", forming: "#7C93FF", watching: "#9AA0AC" })[key] || "#646B78"; }
-const STATE_WORD = { breakout_up: "Breaking out ↑", breakdown: "Breaking down ↓", forming: "Resting in a hub", watching: "Hub just ended",
+const STATE_WORD = { breakout_up: "Broke out · heading to next shelf", breakdown: "Broke down · heading to next shelf", forming: "Resting in a hub", watching: "Hub just ended",
   "follow-through": "Reached its shelf", "snap-back": "Failed breakout", stalled: "Ran out of time" };
 function gaugeHTML(st) {
   const h = st && st.hub, p = st && st.last_close;
@@ -2735,8 +2737,8 @@ function briefHead(sym, st) {
   const hubNote = k === "forming" || k === "watching" ? `<p class="bf-prev">Hub: resting, no hub trade yet</p>` : "";
   let tag = "";
   if (st) {
-    if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">Hub ${k === "breakout_up" ? "breakout ↑ · bullish" : "breakdown ↓ · bearish"}</span>`;
-    else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)} ${other.state === "breakout_up" ? "breakout ↑ · bullish" : "breakdown ↓ · bearish"}</span>` + hubNote;
+    if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">${brokeWord(k === "breakout_up", st.target_kind)}</span>`;
+    else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)}: ${brokeWord(other.state === "breakout_up").toLowerCase()}</span>` + hubNote;
     else if (k === "forming" || k === "watching") tag = `<span class="bf-tag rest">${STATE_WORD[k]} · no trade yet</span>`;
     else tag = `<span class="bf-tag rest">No setup in play</span>`;
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
@@ -3013,8 +3015,9 @@ function bGroup(title, rows, kind, empty) {
 }
 
 let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
+const brokeWord=(up,kind)=>(up?"Broke out":"Broke down")+" · heading to "+(kind==="atr"?"target":"next shelf");
 function boardStatus(r,kind){
-  if(kind==="live") return r.state==="breakdown"?["Broke down ↓","down"]:["Broke out ↑","up"];
+  if(kind==="live") return r.state==="breakdown"?[brokeWord(false,r.target_kind),"down"]:[brokeWord(true,r.target_kind),"up"];
   if(kind==="near"||kind==="forming") return ["Inside a hub","hub"];
   const map={"follow-through":["Reached target","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
   return map[r.state]||[String(r.state||"No signal").replaceAll("_"," "),"neutral"];
@@ -3053,7 +3056,7 @@ function renderInstitutionalBoard(){
     const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions":kind==="recent"?"Completed setup":"—";
     return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td><span class="board-state '+status[1]+'">'+esc(status[0])+'</span></td><td>'+money(r.last_close)+'</td>'+
+      '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span></td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
       '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
