@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
@@ -537,7 +538,6 @@ details summary::after { color: var(--ns-green) !important; }
 .mf-c b { font: 700 17px var(--sans); color: #fff; } .mf-c p { margin: 6px 0 0; color: #93a3b5; font-size: 15px; line-height: 1.55; }
 @media (max-width: 860px) { .mf-grid { grid-template-columns: 1fr; } .manifesto { padding: 64px 0 56px; margin-top: 70px; } .mf-sub { font-size: 16px; } }
 </style>
-<link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
 @font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
@@ -552,7 +552,6 @@ input, button, select, textarea { font-family: inherit; }
 td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b, .price { font-variant-numeric: tabular-nums; }
 </style>
 
-<link rel="preload" href="/fonts/Newsreader.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* ================= Serif headlines (Newsreader, SIL Open Font License); Geist stays for body, prices and UI ================= */
 @font-face { font-family: "Newsreader"; src: url("/fonts/Newsreader.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
@@ -2080,7 +2079,6 @@ fetch("/api/board").then(r => r.json()).then(b => {
 
 
 
-<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
 <script>
 // ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
 (function () {

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
@@ -178,7 +179,6 @@ h2 em { font-family: var(--sans) !important; font-style: normal !important; font
 .pfoot { border-top: 1px solid #1b2734; margin-top: 50px; padding: 26px 0 40px; color: #6b7a8c; font-size: 13px; }
 .pfoot a { color: #a3b1c2; margin-right: 16px; text-decoration: none; } .pfoot a:hover { color: #eef2f7; }
 </style>
-<link rel="preload" href="/fonts/Geist.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
 @font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
@@ -483,7 +483,6 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") goBack(e);
 /* the chart reads its colours when it draws: redraw after switching themes */
 (function () { var set = window.nsSetTheme; window.nsSetTheme = function (p) { set(p); location.reload(); }; })();
 </script>
-<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
 <script>
 // ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
 (function () {

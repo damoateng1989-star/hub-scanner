@@ -165,6 +165,8 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="NextShelf", lifespan=lifespan)
+from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+app.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=6)   # pages and data ~4x smaller over the wire
 User = Depends(auth.require_user)
 Maybe = Depends(auth.current_user)        # signed in or a visitor (None)
 Pro = Depends(auth.require_pro)
