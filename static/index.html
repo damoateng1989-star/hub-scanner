@@ -1608,6 +1608,11 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 }
 
 /* computers too: same calm look */
+#closesCard .seg { gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid #23262E; background: #0E0F12; }
+#closesCard .seg button { border: 0 !important; background: transparent !important; color: #9AA0AC !important; padding: 8px 14px !important; border-radius: 9px !important; font: 600 13.5px var(--sans) !important; cursor: pointer; }
+#closesCard .seg button.on { background: #F2F3F5 !important; color: #0E0F12 !important; }
+html[data-theme="light"] #closesCard .seg { background: #F6F6F3; border-color: #E4E3DC; }
+html[data-theme="light"] #closesCard .seg button.on { background: #141412 !important; color: #F6F6F3 !important; }
 html[data-theme="light"] body .board-state.board-state.board-state { background: transparent !important; border: 1px solid currentColor !important; }
 html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; }
 html body .sf-hello { display: none !important; }
@@ -3367,7 +3372,19 @@ function briefCard() {
   <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
       <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>
+  ${closesCard()}
   ${quietCard()}`;
+}
+function closesCard() {
+  const mid = ME.closes === "midday";
+  return `<div class="acct" id="closesCard"><h3>Which closes to alert on</h3><p>The 1:30 PM close is confirmed while the market is open, so you can enter the same afternoon (you get an early read at about 1:31 PM, confirmed at 1:47). The 4:00 PM close is confirmed after the market shuts, so the earliest entry is the next morning.</p>
+    <div class="seg" role="radiogroup" style="margin-top:10px;display:inline-flex"><button class="${mid ? "" : "on"}" onclick="saveCloses('both')">Both closes</button><button class="${mid ? "on" : ""}" onclick="saveCloses('midday')">Only the 1:30 PM close</button></div>
+    ${mid ? `<p class="note" style="margin-top:8px">4:00 PM breakouts still show up in the evening recap and on the board, just without an alert.</p>` : ""}</div>`;
+}
+async function saveCloses(v) {
+  try { await api("/api/me/closes", {method: "POST", body: JSON.stringify({closes: v})}); ME.closes = v;
+    $("closesCard").outerHTML = closesCard(); toast(v === "midday" ? "Alerts only for the 1:30 PM close" : "Alerts for both closes"); }
+  catch (e) { toast(friendly(e)); }
 }
 function quietCard() {
   const [a, b] = (ME.quiet || "09:30-16:00").split("-"), on = !!ME.quiet;

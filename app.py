@@ -53,6 +53,7 @@ log = logging.getLogger("app")
 # free Alpaca plan's 15-minute delay on full-market (SIP) data.
 SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:47,16:17").split(",") if t.strip()]
 # Pre-close warning ~15 minutes before each 4H close (uses Alpaca's free real-time IEX price). Empty = off.
+EARLY_TIMES = [t.strip() for t in os.getenv("EARLY_TIMES", "13:31").split(",") if t.strip()]   # early read after the 1:30 PM close
 PRECLOSE_TIMES = [t.strip() for t in os.getenv("PRECLOSE_TIMES", "13:15,15:45").split(",") if t.strip()]
 # Hub Board: market-wide scan, a few minutes after the watchlist scan. Empty = off.
 BOARD_TIMES = [t.strip() for t in os.getenv("BOARD_TIMES", "13:52,16:22").split(",") if t.strip()]
@@ -126,6 +127,11 @@ async def lifespan(_app: FastAPI):
         sched.add_job(scanner.scan_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                     timezone="America/New_York"),
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
+    for t in EARLY_TIMES:
+        h, m = t.split(":")
+        sched.add_job(scanner.early_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
+                                                     timezone="America/New_York"),
+                      misfire_grace_time=240, coalesce=True, max_instances=1)
     for t in PRECLOSE_TIMES:
         h, m = t.split(":")
         sched.add_job(scanner.preclose_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
@@ -496,7 +502,7 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, quiet=u.get("quiet") or "",
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, quiet=u.get("quiet") or "", closes=u.get("closes") or "both",
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
                 style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
@@ -532,6 +538,18 @@ def set_brief(body: OnBody, u: dict = User):
 def set_recap(body: OnBody, u: dict = User):
     db.update_user(u["id"], recap=1 if body.on else 0)
     return {"recap": body.on}
+
+
+class ClosesBody(BaseModel):
+    closes: str
+
+
+@app.post("/api/me/closes")
+def set_closes(body: ClosesBody, u: dict = User):
+    if body.closes not in ("both", "midday"):
+        raise HTTPException(400, "Pick both closes or only the 1:30 PM close")
+    db.update_user(u["id"], closes=None if body.closes == "both" else "midday")
+    return {"closes": body.closes}
 
 
 class QuietBody(BaseModel):

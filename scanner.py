@@ -226,7 +226,11 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         d_ = 1 if e["type"] == "breakout" else -1
                         edge_ = e["high"] if d_ == 1 else e["low"]
                         extra = (lambda s_=sym, d_=d_, c_=e["close"], ed_=edge_, t_=e["target"]: options.alert_line(s_, d_, c_, ed_, t_))
-                    notify.symbol_alert(sym, e["type"], msg, speech, pro_extra=extra)
+                    early = db.get_alert(f"{sym}|early|{e['time'].isoformat()}") if e["type"] in ("breakout", "breakdown") else None
+                    if early and early["type"] == e["type"]:      # already told them at 1:31 PM: confirm, don't ring again
+                        msg = "✅ Confirmed with the full market data\n" + msg
+                        speech = None
+                    notify.symbol_alert(sym, e["type"], msg, speech, pro_extra=extra, candle_start=e["time"])
                     sent.append(msg)
     try:      # other setups (triangles, channels, support & resistance): alert on new breaks only
         pa = patterns.analyze_all(c4, res, SETTINGS)
@@ -240,10 +244,21 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 if e["type"] in ("breakout", "breakdown"):
                     msg += earnings.alert_line(sym)
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
-                    notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]])
+                    notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"])
                     sent.append(msg)
     except Exception as ex:
         log.warning("pattern scan failed for %s: %s", sym, ex)
+    try:      # an early read went out for the newest candle but the full data shows no breakout: say so
+        last = c4.index[-1]
+        early = db.get_alert(f"{sym}|early|{last.isoformat()}")
+        if early and not any(e["time"] == last and e["type"] == early["type"] for e in res["events"]):
+            msg = (f"⚠️ {sym}: not confirmed after all\n" f"The full market data puts the {engine.candle_end(last).strftime('%-I:%M %p')} close back inside the hub"
+                   f" ({_money(float(c4['Close'].iloc[-1]))}). No breakout, so no trade. If you entered on the early read, the plan says exit.")
+            if db.add_alert(f"{sym}|unconfirmed|{last.isoformat()}", sym, "unconfirmed", last.isoformat(), msg):
+                notify.symbol_alert(sym, "unconfirmed", msg, None, candle_start=last)
+                sent.append(msg)
+    except Exception as ex:
+        log.warning("early-read check failed for %s: %s", sym, ex)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
 
@@ -278,6 +293,46 @@ def scan_all() -> list[str]:
         return sent
 
 
+def early_all(now: pd.Timestamp | None = None) -> list[str]:
+    """Right after the 1:30 PM close: an early read from the real-time feed, so members can act ~15 minutes sooner.
+    The regular scan confirms it with the full (delayed) data, or sends a correction."""
+    now = pd.Timestamp(now) if now is not None else pd.Timestamp.now(tz="UTC")
+    start = engine.current_candle_start(now - pd.Timedelta(minutes=5))     # the candle that just closed
+    end = engine.candle_end(start)
+    if now < end or now - end > pd.Timedelta(minutes=12):
+        return []
+    sent = []
+    with _scan_lock:
+        for row in db.list_tickers():
+            sym = row["symbol"]
+            try:
+                c4 = engine.to_4h(data.get_bars(sym, SCAN_DAYS), now=start)    # candles before the one being judged
+                if len(c4) < SETTINGS.window + 15:
+                    continue
+                res = engine.analyze(c4, SETTINGS)
+                close = data.close_at(sym, end)
+                sig = engine.preclose_check(res, close, SETTINGS)
+                if not sig:
+                    continue
+                up = sig["direction"] == 1
+                typ = "breakout" if up else "breakdown"
+                msg = (f"{'🚀' if up else '🔻'} {sym}: 1:30 PM close {'ABOVE' if up else 'BELOW'} the hub (early read)\n"
+                       f"Close ≈ {_money(close)} · hub {_money(sig['low'])}–{_money(sig['high'])}\n"
+                       + plan_lines(close, sig["edge"], sig["target"], sig["direction"], sig["reached"], sig.get("shelf"))
+                       + "\nFrom the real-time feed. The full market data confirms it at about 1:47 PM; you'll get a note either way."
+                       + earnings.alert_line(sym))
+                if db.add_alert(f"{sym}|early|{start.isoformat()}", sym, typ, start.isoformat(), msg):
+                    speech = None if sig["reached"] else (
+                        f"Next Shelf. {phone.spell(sym)} closed {'above' if up else 'below'} its hub at 1 30. Early read. "
+                        f"Close {_say_money(close)}. Hub edge {_say_money(sig['edge'])}. Target {_say_money(sig['target'])}.")
+                    notify.symbol_alert(sym, typ, msg, speech, candle_start=start)
+                    sent.append(msg)
+            except Exception as e:
+                log.warning("early read failed for %s: %s", sym, e)
+    log.info("early read done, %d alerts", len(sent))
+    return sent
+
+
 def preclose_all() -> list[str]:
     """Run shortly before each 4H close: warn if price is outside a hub that hasn't broken out yet."""
     now = pd.Timestamp.now(tz="UTC")
@@ -297,7 +352,7 @@ def preclose_all() -> list[str]:
                 msg = format_preclose(sym, sig, minutes_left) + earnings.alert_line(sym)
                 if db.add_alert(f"{sym}|preclose|{start.isoformat()}", sym, "preclose", start.isoformat(), msg):
                     notify.symbol_alert(sym, "preclose", msg,
-                                        None if sig["reached"] else speak_preclose(sym, sig, minutes_left))
+                                        None if sig["reached"] else speak_preclose(sym, sig, minutes_left), candle_start=start)
                     sent.append(msg)
             except Exception as e:
                 log.warning("pre-close check failed for %s: %s", sym, e)

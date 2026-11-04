@@ -45,6 +45,24 @@ def latest_price(symbol: str) -> float | None:
     return float(bars["Close"].iloc[-1]) if not bars.empty else None
 
 
+def close_at(symbol: str, end: pd.Timestamp) -> float | None:
+    """Closing price at `end` from the real-time IEX feed: the last 1-minute bar that finished by then.
+    Used for the early read right after the 1:30 PM close, before the 15-minute-delayed full data arrives."""
+    if provider() == "alpaca":
+        fmt = "%Y-%m-%dT%H:%M:%SZ"
+        e = pd.Timestamp(end).tz_convert("UTC")
+        r = requests.get(f"https://data.alpaca.markets/v2/stocks/{symbol}/bars",
+                         headers={"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""),
+                                  "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")},
+                         params={"timeframe": "1Min", "start": (e - pd.Timedelta(minutes=10)).strftime(fmt),
+                                 "end": e.strftime(fmt), "feed": "iex", "limit": 20}, timeout=15)
+        if r.status_code != 200:
+            raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
+        bars = [b for b in (r.json().get("bars") or []) if pd.Timestamp(b["t"]) < e]
+        return float(bars[-1]["c"]) if bars else None
+    return latest_price(symbol)
+
+
 # ---------------------------------------------------------------- live prices (watching only; signals still use 4H closes)
 _LIVE: dict[str, tuple[float, dict]] = {}
 LIVE_TTL = 15          # seconds: everyone shares one fetch, so Alpaca's free rate limit is never a problem

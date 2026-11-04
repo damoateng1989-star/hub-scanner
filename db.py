@@ -93,6 +93,11 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    try:   # added later: which 4H closes to alert on: NULL/"both" = 1:30 and 4:00 PM, "midday" = only the 1:30 PM close
+        _conn.execute("ALTER TABLE users ADD COLUMN closes TEXT")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     try:   # added later: quiet hours "HH:MM-HH:MM" New York time (no calls, silent Telegram); NULL = off
         _conn.execute("ALTER TABLE users ADD COLUMN quiet TEXT")
         _conn.commit()
@@ -137,6 +142,11 @@ def remove_ticker(symbol: str) -> bool:
 def update_ticker(symbol: str, last_candle: str | None, status: str):
     _run("UPDATE tickers SET last_candle=?, status=?, scanned_at=CURRENT_TIMESTAMP WHERE symbol=?",
          (last_candle, status, symbol))
+
+
+def get_alert(alert_id: str) -> dict | None:
+    r = _run("SELECT * FROM alerts WHERE id=?", (alert_id,)).fetchone()
+    return dict(r) if r else None
 
 
 def add_alert(alert_id: str, symbol: str, type_: str, candle_time: str, message: str) -> bool:
@@ -212,7 +222,7 @@ def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
 
 
 # --- users
-USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet")
+USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes")
 
 
 def create_user(**f) -> int:

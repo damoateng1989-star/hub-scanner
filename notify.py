@@ -36,8 +36,18 @@ def styles_of(u: dict) -> set[str]:
     return picked if _pro(u) else picked & {"hub"} or {"hub"}
 
 
+def late_close(candle_start) -> bool:
+    """Is this the 1:30-4:00 PM candle (confirmed after the market has closed)?"""
+    try:
+        import pandas as _pd
+        t = _pd.Timestamp(candle_start).tz_convert("America/New_York")
+        return t.hour * 60 + t.minute >= 13 * 60 + 30
+    except Exception:
+        return False
+
+
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
-                 pro_extra=None):
+                 pro_extra=None, candle_start=None):
     """Telegram to every watcher (Pro-only types to Pro users); phone calls to Pro users with a number.
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea."""
     extra_cache = {}
@@ -46,6 +56,8 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
             continue
         if style not in styles_of(u):
             continue
+        if candle_start is not None and (u.get("closes") or "both") == "midday" and late_close(candle_start):
+            continue                     # this member only trades the 1:30 PM close; the recap covers the 4:00 PM one
         quiet = quiet_now(u)
         if u["telegram_chat"]:
             msg = text
