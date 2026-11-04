@@ -2594,7 +2594,29 @@ let RECORD_PAT = "hub";
 
 
 // ---------------------------------------------------------------- morning brief (Today card + settings)
+function eveningNow() { const n = etNow(), m = n.getHours() * 60 + n.getMinutes(), wd = n.getDay(); return wd >= 1 && wd <= 5 && m >= 16 * 60 + 30; }
+async function loadRecapCard() {
+  let d; try { d = await api("/api/recap"); } catch (e) { return false; }
+  const el = $("mbrief"); if (!el) return false;
+  const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
+  const neu = d.pro && d.new.length ? `<div class="mb-k">Broke out today, confirmed on the close</div><div class="mb-row">${d.new.map(c =>
+      chip(c.symbol, `${c.up ? "↑" : "↓"} target ${money(c.target)} · wrong past ${money(c.edge)}`, c.up ? "#3DD68C" : "#FF6B5E")).join("")}</div>`
+    : !d.pro ? `<div class="mb-lock">🔒 <b>${d.new_count}</b> stock${d.new_count === 1 ? "" : "s"} broke out today. <a href="${ME && !ME.guest ? "#account" : "/login#signup"}">Pro shows each one with its target and exit level →</a></div>`
+    : `<p class="mb-quiet">No new breakouts today. No trade is a fine trade.</p>`;
+  const watch = d.pro && d.near.length ? `<div class="mb-k">Watch tomorrow</div><div class="mb-row">${d.near.map(c =>
+      chip(c.symbol, `at the ${c.side === "up" ? "top ↑" : "bottom ↓"}`, "#F2C14E")).join("")}</div>` : "";
+  const stale = d.fresh ? "" : `<p class="mb-quiet" style="margin-top:8px">⚠️ The after-the-close sweep hasn't finished yet, so this uses the earlier one.</p>`;
+  const deliver = !ME || ME.guest ? `<a href="/login#signup">Sign up free</a> to get this after every close.`
+    : ME.recap === false ? `<a href="#account">Turn on the evening recap</a> to get this after the close.`
+    : `Arrives at ${fmtET(ME.recap_time || "16:45")} ET on weekdays. Tomorrow's 4-hour closes: 1:30 PM and 4:00 PM.`;
+  el.innerHTML = `<div class="mb-h"><div><div class="mb-t">🌙 Evening recap <span>${esc(d.date)}${d.swept_at ? " · sweep " + esc(d.swept_at) : ""}</span></div>
+      <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.new_count}</b> new breakout${d.new_count === 1 ? "" : "s"} · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
+    ${stale}${neu}${watch}<div class="mb-f">${deliver}</div>`;
+  el.hidden = false;
+  return true;
+}
 async function loadBrief() {
+  if (eveningNow() && await loadRecapCard()) return;
   let d; try { d = await api("/api/brief"); } catch (e) { return; }
   const el = $("mbrief"); if (!el) return;
   const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
@@ -2604,7 +2626,7 @@ async function loadBrief() {
   else if (!d.pro) main = `<div class="mb-lock">🔒 <b>${d.near_count}</b> stocks are at the edge of a hub today. <a href="${ME && !ME.guest ? "#account" : "/login#signup"}">Pro shows the 5 closest to breaking out →</a></div>`
       + (d.resting.length ? `<div class="mb-k">Resting in a hub</div><div class="mb-row">${d.resting.map(c => chip(c.symbol, `${c.sessions} sessions`, "#7C93FF")).join("")}</div>` : "");
   else main = `<p class="mb-quiet">Nothing is pressing a hub edge right now.</p>`;
-  const play = d.pro && d.in_play.length ? `<div class="mb-k">Breakouts still in play</div><div class="mb-row">${d.in_play.map(c =>
+  const play = d.pro && d.in_play.length ? `<div class="mb-k">Breakouts still in play${d.live_count > d.in_play.length ? ` <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${d.in_play.length} closest to target of ${d.live_count}</span>` : ""}</div><div class="mb-row">${d.in_play.map(c =>
       chip(c.symbol, `${c.up ? "↑" : "↓"} aiming ${money(c.target)}`, c.up ? "#3DD68C" : "#FF6B5E")).join("")}</div>` : "";
   const t12 = (ME && ME.brief_time || "08:45").replace(/^0/, "");
   const ways = [ME && ME.telegram && ME.telegram.linked && "on Telegram", ME && ME.email_on && "by email"].filter(Boolean);
@@ -3483,6 +3505,11 @@ html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, 
 .rank select { padding: 3px 6px; border-radius: 7px; border: 1px solid var(--line); background: transparent; color: var(--ink); }
 .rank-bar { position: relative; display: inline-flex; align-items: center; min-width: 110px; padding: 2px 8px; border-radius: 4px; font-variant-numeric: tabular-nums; overflow: hidden; }
 .rank-bar i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); background: color-mix(in srgb, var(--c) 16%, transparent); }
+</style>
+<style>
+/* big screens: everything on Today lines up at full width; market chip in the app font */
+.mkt, .mkt b, .mkt * { font-family: var(--sans) !important; letter-spacing: 0 !important; }
+[data-view="today"] .lesson-wrap, [data-view="today"] .lesson, #today .lesson { max-width: none !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; }
 </style>
 </body>
 </html>

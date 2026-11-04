@@ -499,6 +499,12 @@ class OnBody(BaseModel):
     on: bool
 
 
+@app.get("/api/recap")
+def recap_today(u: dict | None = Maybe):
+    """Today's evening recap (the same one that goes out by Telegram and email after the close)."""
+    return recap.build(u)
+
+
 @app.post("/api/me/brief")
 def set_brief(body: OnBody, u: dict = User):
     db.update_user(u["id"], brief=1 if body.on else 0)
