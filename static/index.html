@@ -1937,9 +1937,14 @@ const LESSON = (() => {
       if (playing) { t0 = 0; raf = requestAnimationFrame(frame); } else cancelAnimationFrame(raf);
     };
     el("lsReplay").onclick = () => { playing = true; el("lsPlay").textContent = "❚❚"; go(0); };
-    if (reduce) { playing = false; el("lsPlay").hidden = true; }
+    let seen = false;
+    if (reduce) {      // reduced motion: no animation, but still step through the four scenes while it's on screen
+      el("lsPlay").hidden = true;
+      setInterval(() => { if (seen && playing) go((scene + 1) % 4); }, 5500);
+    }
     // play only while it's on screen
     new IntersectionObserver(([e]) => {
+      seen = e.isIntersecting;
       if (e.isIntersecting && playing && !reduce) { t0 = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
       else cancelAnimationFrame(raf);
     }).observe(el("lsSvg"));

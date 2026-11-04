@@ -929,10 +929,10 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
   let vis = false;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
   show(1);
-  if ("IntersectionObserver" in window && !reduce) new IntersectionObserver((es) => es.forEach(e => {
+  if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach(e => {
     vis = e.isIntersecting; if (vis) { if (!playing) { playing = true; tick(); } } else { playing = false; clearTimeout(timer); }
   }), {threshold: .2}).observe(root);
-  else if (!reduce) { playing = true; tick(); }
+  else { playing = true; tick(); }
 })();
 </script>
 
@@ -1169,9 +1169,14 @@ const LESSON = (() => {
       if (playing) { t0 = 0; raf = requestAnimationFrame(frame); } else cancelAnimationFrame(raf);
     };
     el("lsReplay").onclick = () => { playing = true; el("lsPlay").textContent = "❚❚"; go(0); };
-    if (reduce) { playing = false; el("lsPlay").hidden = true; }
+    let seen = false;
+    if (reduce) {      // reduced motion: no animation, but still step through the four scenes while it's on screen
+      el("lsPlay").hidden = true;
+      setInterval(() => { if (seen && playing) go((scene + 1) % 4); }, 5500);
+    }
     // play only while it's on screen
     new IntersectionObserver(([e]) => {
+      seen = e.isIntersecting;
       if (e.isIntersecting && playing && !reduce) { t0 = 0; cancelAnimationFrame(raf); raf = requestAnimationFrame(frame); }
       else cancelAnimationFrame(raf);
     }).observe(el("lsSvg"));
