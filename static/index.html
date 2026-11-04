@@ -3521,5 +3521,14 @@ html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, 
 .rank-h { align-items: center !important; } .rank-h .eyebrow { line-height: 1.2; }
 #record > .lede { max-width: 760px; }
 </style>
+<style>
+/* results: centered tabs, intro and stat tiles */
+.rec-tabs { justify-content: center; }
+.rec-tabs button, .rec-tabs b, .rec-tabs small { text-align: center !important; }
+#record > .lede { text-align: center; margin-left: auto !important; margin-right: auto !important; }
+#record .stats > div { text-align: center; display: flex; flex-direction: column; align-items: center; }
+#winRank > p.note { text-align: center; }
+@media (max-width: 760px) { .rec-tabs { justify-content: flex-start; } }
+</style>
 </body>
 </html>
