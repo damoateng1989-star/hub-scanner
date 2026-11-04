@@ -6,6 +6,7 @@ Estimates assume implied volatility stays the same; real prices will differ.
 """
 from __future__ import annotations
 
+import logging
 import math
 import os
 import re
@@ -247,7 +248,9 @@ def _plan(sym: str) -> dict:
     import patterns
     import scanner
     sym = scanner.clean_symbol(sym)
+    T = {"t0": time.time()}
     c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)      # same lookback as the scanner and the board
+    T["bars"] = time.time()
     if len(c4) < 40:
         raise ValueError("not enough price history")
     S = scanner.SETTINGS
@@ -263,9 +266,13 @@ def _plan(sym: str) -> dict:
         out["earnings"] = None
     _side: dict[int, list] = {}
 
+    chain_s = [0.0]
+
     def rows_for(d: int) -> list[dict]:          # fetch only calls or only puts, and only when a plan needs them
         if d not in _side:
+            t = time.time()
             _side[d] = chain(sym, last, iv0, "call" if d == 1 else "put")
+            chain_s[0] += time.time() - t
         return _side[d]
     state = st.get("state")
     if state in ("breakout_up", "breakdown"):
@@ -297,6 +304,10 @@ def _plan(sym: str) -> dict:
             out["message"] = "No breakout or hub right now, so there's no options swing to plan. Let the trade come to you."
     if not out["plans"] and _side and not any(_side.values()) and not out.get("message"):
         out["message"] = "No listed options were found for this stock."
+    total = time.time() - T["t0"]
+    out["timing"] = dict(history=round(T["bars"] - T["t0"], 2), chain=round(chain_s[0], 2),
+                         analysis=round(total - (T["bars"] - T["t0"]) - chain_s[0], 2), total=round(total, 2))
+    logging.getLogger("options").info("options plan %s: %s", sym, out["timing"])
     return out
 
 

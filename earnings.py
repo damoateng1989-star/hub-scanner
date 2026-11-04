@@ -52,21 +52,26 @@ def _finnhub(start: date, end: date) -> dict[str, dict]:
 def _nasdaq(start: date, end: date) -> dict[str, dict]:
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
                "Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
-    out, d = {}, start
-    while d <= end:
-        if d.weekday() < 5:
-            try:
-                r = requests.get("https://api.nasdaq.com/api/calendar/earnings", params={"date": d.isoformat()}, headers=headers, timeout=15)
-                rows = ((r.json() or {}).get("data") or {}).get("rows") or []
-                for x in rows:
-                    sym = (x.get("symbol") or "").upper().replace("/", ".")
-                    t = x.get("time") or ""
-                    if sym and sym not in out:
-                        out[sym] = {"date": d.isoformat(), "when": "bmo" if "pre" in t else "amc" if "after" in t else ""}
-            except Exception as e:  # one bad day shouldn't lose the rest
-                log.warning("nasdaq earnings %s failed: %s", d, e)
-            time.sleep(0.35)
-        d += timedelta(days=1)
+    days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
+    days = [d for d in days if d.weekday() < 5]
+
+    def one(d):
+        try:
+            r = requests.get("https://api.nasdaq.com/api/calendar/earnings", params={"date": d.isoformat()}, headers=headers, timeout=8)
+            return d, ((r.json() or {}).get("data") or {}).get("rows") or []
+        except Exception as e:  # one bad day shouldn't lose the rest
+            log.warning("nasdaq earnings %s failed: %s", d, e)
+            return d, []
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        results = sorted(ex.map(one, days))
+    out = {}
+    for d, rows in results:
+        for x in rows:
+            sym = (x.get("symbol") or "").upper().replace("/", ".")
+            t = x.get("time") or ""
+            if sym and sym not in out:
+                out[sym] = {"date": d.isoformat(), "when": "bmo" if "pre" in t else "amc" if "after" in t else ""}
     return out
 
 
@@ -110,7 +115,10 @@ def refresh(force: bool = False) -> int:
             log.warning("earnings refresh failed: %s", e)
             _AT = time.time() - TTL + 1800          # try again in 30 min, keep what we had
             return len(_CAL)
-        if cal or not _CAL:
+        if not cal:
+            _AT = time.time() - TTL + 1800              # nothing came back: try again in 30 min, keep what we had
+            return len(_CAL)
+        if cal:
             _CAL, _AT = cal, time.time()
             try:
                 db.set_setting("earnings_cal", json.dumps({"at": _AT, "cal": _CAL}))
@@ -120,16 +128,37 @@ def refresh(force: bool = False) -> int:
 
 
 def _refresh_async():
-    if not _CAL or time.time() - _AT > TTL:
-        threading.Thread(target=refresh, daemon=True).start()
+    if (not _CAL or time.time() - _AT > TTL) and _BUSY.acquire(blocking=False):
+        def run():
+            try:
+                refresh()
+            finally:
+                _BUSY.release()
+        threading.Thread(target=run, daemon=True).start()
+
+
+_LOADED = False
+_BUSY = threading.Lock()
+
+
+def _load_saved():
+    """Use the last saved calendar straight away (even if a bit old) so no page ever waits for a refresh."""
+    global _CAL, _AT, _LOADED
+    if _LOADED:
+        return
+    _LOADED = True
+    try:
+        saved = json.loads(db.get_setting("earnings_cal") or "{}")
+        if saved.get("cal") and not _CAL:
+            _CAL, _AT = saved["cal"], saved.get("at", 0)
+    except Exception:
+        pass
 
 
 def lookup(sym: str) -> dict | None:
-    """{"date", "days", "when", "label"} if the stock reports within AHEAD days, else None."""
-    if not _CAL:
-        refresh()
-    else:
-        _refresh_async()
+    """{"date", "days", "when", "label"} if the stock reports within AHEAD days, else None. Never blocks on the network."""
+    _load_saved()
+    _refresh_async()
     x = _CAL.get((sym or "").upper())
     if not x:
         return None

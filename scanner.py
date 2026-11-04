@@ -34,18 +34,20 @@ def clean_symbol(s: str) -> str:
 
 
 _BARS: dict[tuple, tuple[float, pd.DataFrame]] = {}
+_BARS_LOCKS: dict[tuple, threading.Lock] = {}
 BARS_TTL = 90      # seconds: the chart, the Shelf card and the options plan share one download per stock
 
 
 def load_4h(symbol: str, days: int) -> pd.DataFrame:
     import time as _t
     key = (symbol, days)
-    hit = _BARS.get(key)
-    if hit and _t.time() - hit[0] < BARS_TTL:
-        bars = hit[1]
-    else:
-        bars = data.get_bars(symbol, days)
-        _BARS[key] = (_t.time(), bars)
+    with _BARS_LOCKS.setdefault(key, threading.Lock()):     # chart + options asking at once: download once, share it
+        hit = _BARS.get(key)
+        if hit and _t.time() - hit[0] < BARS_TTL:
+            bars = hit[1]
+        else:
+            bars = data.get_bars(symbol, days)
+            _BARS[key] = (_t.time(), bars)
         if len(_BARS) > 300:                       # keep memory small
             for k in sorted(_BARS, key=lambda k: _BARS[k][0])[:100]:
                 _BARS.pop(k, None)
