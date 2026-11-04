@@ -57,18 +57,24 @@ def _parse(occ: str):
     return date(2000 + int(yy), int(mm), int(dd)), cp == "C", int(k) / 1000
 
 
-def chain(sym: str, spot: float, iv_guess: float) -> list[dict]:
-    """Contracts expiring in MIN_DTE..MAX_DTE days with strikes within ~15% of spot."""
-    key = f"{sym}|{round(spot, 1)}"
+STRIKE_BAND = 0.08      # the plan only uses at-the-money and one strike in, so ±8% of price is plenty
+
+
+def chain(sym: str, spot: float, iv_guess: float, side: str | None = None) -> list[dict]:
+    """Contracts expiring in ~10..MAX_DTE days with strikes within ±8% of spot; side = 'call', 'put' or None for both."""
+    key = f"{sym}|{round(spot, 1)}|{side or 'both'}"
     hit = _CACHE.get(key)
     if hit and time.time() - hit[0] < 60:
         return hit[1]
-    rows = _alpaca_chain(sym, spot) if data.provider() == "alpaca" else _demo_chain(sym, spot, iv_guess)
+    if data.provider() == "alpaca":
+        rows = _alpaca_chain(sym, spot, side)
+    else:
+        rows = [r for r in _demo_chain(sym, spot, iv_guess) if side is None or r["call"] == (side == "call")]
     _CACHE[key] = (time.time(), rows)
     return rows
 
 
-def _alpaca_chain(sym: str, spot: float) -> list[dict]:
+def _alpaca_chain(sym: str, spot: float, side: str | None = None) -> list[dict]:
     key, secret = os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY")
     if not key or not secret:
         raise RuntimeError("ALPACA_API_KEY and ALPACA_SECRET_KEY are not set")
@@ -76,7 +82,9 @@ def _alpaca_chain(sym: str, spot: float) -> list[dict]:
     params = dict(feed=os.getenv("ALPACA_OPTIONS_FEED", "indicative"), limit=1000,
                   expiration_date_gte=(today + timedelta(days=MIN_DTE - 4)).isoformat(),
                   expiration_date_lte=(today + timedelta(days=MAX_DTE)).isoformat(),
-                  strike_price_gte=round(spot * 0.85, 2), strike_price_lte=round(spot * 1.15, 2))
+                  strike_price_gte=round(spot * (1 - STRIKE_BAND), 2), strike_price_lte=round(spot * (1 + STRIKE_BAND), 2))
+    if side in ("call", "put"):
+        params["type"] = side
     headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
     out, token = [], None
     for _ in range(5):
@@ -253,15 +261,17 @@ def _plan(sym: str) -> dict:
         out["earnings"] = earnings.lookup(sym)
     except Exception:
         out["earnings"] = None
-    rows = chain(sym, last, iv0)
-    if not rows:
-        out["message"] = "No listed options were found for this stock."
-        return out
+    _side: dict[int, list] = {}
+
+    def rows_for(d: int) -> list[dict]:          # fetch only calls or only puts, and only when a plan needs them
+        if d not in _side:
+            _side[d] = chain(sym, last, iv0, "call" if d == 1 else "put")
+        return _side[d]
     state = st.get("state")
     if state in ("breakout_up", "breakdown"):
         d = 1 if state == "breakout_up" else -1
         h = st["hub"]
-        p = _one(sym, rows, d, last, h["high"] if d == 1 else h["low"], st["target"], st.get("target_kind", "atr"), res, iv0, "live", "Hub")
+        p = _one(sym, rows_for(d), d, last, h["high"] if d == 1 else h["low"], st["target"], st.get("target_kind", "atr"), res, iv0, "live", "Hub")
         out.update(mode="live", plans=[p] if p else [])
     else:
         try:      # a live breakout on another setup (triangle, channel, support/resistance)
@@ -271,7 +281,7 @@ def _plan(sym: str) -> dict:
             lv = None
         if lv:
             t = lv["trade"]
-            p = _one(sym, rows, t["direction"], last, t["edge"], t["target"], lv["target_kind"], res, iv0, "live", patterns.KINDS[lv["kind"]])
+            p = _one(sym, rows_for(t["direction"]), t["direction"], last, t["edge"], t["target"], lv["target_kind"], res, iv0, "live", patterns.KINDS[lv["kind"]])
             out.update(mode="live", plans=[p] if p else [])
         elif state in ("forming", "watching") and st.get("hub"):
             h, up, dn = st["hub"], st.get("shelf_up"), st.get("shelf_down")
@@ -279,12 +289,14 @@ def _plan(sym: str) -> dict:
             pl = []
             for d, edge, sh in ((1, h["high"], up), (-1, h["low"], dn)):
                 tgt = sh["level"] if sh else edge + d * S.target_atr * atr
-                p = _one(sym, rows, d, edge, edge, tgt, "shelf" if sh else "atr", res, iv0, "prep", "Hub")
+                p = _one(sym, rows_for(d), d, edge, edge, tgt, "shelf" if sh else "atr", res, iv0, "prep", "Hub")
                 if p:
                     pl.append(p)
             out.update(mode="prep", plans=pl)
         else:
             out["message"] = "No breakout or hub right now, so there's no options swing to plan. Let the trade come to you."
+    if not out["plans"] and _side and not any(_side.values()) and not out.get("message"):
+        out["message"] = "No listed options were found for this stock."
     return out
 
 

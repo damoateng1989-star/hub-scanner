@@ -33,8 +33,22 @@ def clean_symbol(s: str) -> str:
     return s
 
 
+_BARS: dict[tuple, tuple[float, pd.DataFrame]] = {}
+BARS_TTL = 90      # seconds: the chart, the Shelf card and the options plan share one download per stock
+
+
 def load_4h(symbol: str, days: int) -> pd.DataFrame:
-    bars = data.get_bars(symbol, days)
+    import time as _t
+    key = (symbol, days)
+    hit = _BARS.get(key)
+    if hit and _t.time() - hit[0] < BARS_TTL:
+        bars = hit[1]
+    else:
+        bars = data.get_bars(symbol, days)
+        _BARS[key] = (_t.time(), bars)
+        if len(_BARS) > 300:                       # keep memory small
+            for k in sorted(_BARS, key=lambda k: _BARS[k][0])[:100]:
+                _BARS.pop(k, None)
     return engine.to_4h(bars, now=pd.Timestamp.now(tz="UTC"))
 
 
