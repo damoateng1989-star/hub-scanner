@@ -1467,34 +1467,83 @@ html[data-theme="light"] .ox-odds, html[data-theme="light"] .ox-assume { color: 
 html[data-theme="light"] .bf-px { color: #0d1117; }
 </style>
 <style>
-/* Shelf card from "Analyze": edge to edge on computers, two columns */
+/* ---------- Shelf card v2: calm cards, half the screen on computers ---------- */
+.brief { overflow-y: auto !important; overscroll-behavior: contain; background: #0f1319 !important; }
+.bf-body { flex: none !important; overflow: visible !important; display: grid; gap: 14px; padding: 0 16px 18px !important; }
+.bf-hero { margin: 16px 16px 14px; padding: 22px 22px 18px; border-radius: 22px; background: #161b23; border: 1px solid #252c37; }
+.bf-hero .bf-top { padding: 0 !important; }
+.bf-kick, .bf-k, .bf-card .bf-h { font: 600 12px var(--sans) !important; letter-spacing: .14em; text-transform: uppercase; color: #8b95a3 !important; }
+.bf-head h3 { margin: 8px 0 12px !important; font-size: 34px !important; }
+.bf-tag { margin: 0 0 12px !important; padding: 6px 14px !important; border-radius: 999px !important; background: transparent !important; border: 1px solid #2b3340; font-weight: 500 !important; }
+.bf-tag::before { display: none; } .bf-tag.rest { color: #c3cad4; }
+.bf-head p { font-size: 13.5px !important; } .bf-head p.bf-prev { margin-top: -6px !important; margin-bottom: 8px !important; }
+.bf-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.bf-stats small { display: block; color: #8b95a3; font-size: 13px; }
+.bf-stats b { display: block; margin: 4px 0 3px; font: 800 24px var(--sans); letter-spacing: -.01em; color: #fff; font-variant-numeric: tabular-nums; }
+.bf-stats i { display: block; font-style: normal; font-size: 13px; line-height: 1.35; color: #c3cad4; }
+.bf-stats i.s-up { color: #3DD68C; } .bf-stats i.s-dn { color: #ff7d72; }
+.bf-hero .bf-seg { margin: 20px 0 0 !important; max-width: none !important; padding: 4px; border-radius: 14px; background: #0f1319; border-color: #252c37; }
+.bf-hero .bf-seg button { padding: 9px 4px !important; }
+.bf-hero .bf-seg button.on { background: #f3f4f6 !important; color: #0d1117 !important; }
+.bf-card { padding: 20px 22px; border-radius: 22px; background: #161b23; border: 1px solid #252c37; min-width: 0; }
+.bf-k { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; scroll-margin-top: 16px; }
+.bf-card .bf-h { margin: 22px 0 10px !important; }
+.ox-edu { padding: 3px 10px; border-radius: 8px; border: 1px solid #8b7cf6; color: #a99bff; font-size: 11px; letter-spacing: .1em; }
+.bf-legal { margin: 2px 6px 0 !important; text-align: center; }
+.bf-foot { position: sticky; bottom: 0; margin-top: auto; background: #0f1319; border-top-color: #252c37 !important; }
+/* options as a calm list */
+.ox2 + .ox2 { margin-top: 22px; padding-top: 18px; border-top: 1px solid #252c37; }
+.oc-t b { display: block; font: 700 20px var(--sans); color: #fff; }
+.oc-t small { display: block; margin: 4px 0 14px; color: #a3acb9; font-size: 14.5px; }
+.oc-rows > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 13px 0; border-top: 1px solid #252c37; font-size: 15px; }
+.oc-rows > div span { color: #a3acb9; } .oc-rows > div b { color: #fff; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.oc-rows em { font-style: normal; margin-left: 4px; } .oc-rows em.up { color: #3DD68C; } .oc-rows em.dn { color: #ff7d72; }
+.oc-note { margin: 0 !important; padding: 2px 0 14px; color: #7f8896 !important; font-size: 13px !important; line-height: 1.55; }
+.oc-assume { padding: 12px 0 0; }
+.oc-warn { margin: 10px 0 0; color: #ff9b8f; font-size: 13.5px; line-height: 1.5; }
+.oc-earn { margin: 12px 0 0; color: #c4a8ff; font-size: 13.5px; line-height: 1.5; }
+.oc-more, .oc-alt { border-top: 1px solid #252c37; }
+.oc-more > summary, .oc-alt > summary { padding: 13px 0; color: #8b9bff; font: 600 14.5px var(--sans); cursor: pointer; list-style: none; }
+.oc-more > summary::-webkit-details-marker, .oc-alt > summary::-webkit-details-marker { display: none; }
+.oc-more > summary::before, .oc-alt > summary::before { content: "▸"; display: inline-block; width: 16px; font-size: 11px; }
+.oc-more[open] > summary::before, .oc-alt[open] > summary::before { content: "▾"; }
+.oc-alt { margin-top: 14px; } .oc-alt .oc-t b { font-size: 17px; }
+/* light theme */
+html[data-theme="light"] .brief { background: #f4f5f7 !important; }
+html[data-theme="light"] .bf-hero, html[data-theme="light"] .bf-card { background: #fff; border-color: #e5e7eb; }
+html[data-theme="light"] .bf-hero .bf-seg { background: #f4f5f7; border-color: #e5e7eb; }
+html[data-theme="light"] .bf-hero .bf-seg button.on { background: #0d1117 !important; color: #fff !important; }
+html[data-theme="light"] .bf-tag { border-color: #e1e4e8; } html[data-theme="light"] .bf-tag.rest { color: #4b5563; }
+html[data-theme="light"] .bf-stats b, html[data-theme="light"] .oc-t b, html[data-theme="light"] .oc-rows > div b { color: #0d1117 !important; }
+html[data-theme="light"] .bf-stats i { color: #4b5563; } html[data-theme="light"] .bf-stats i.s-up, html[data-theme="light"] .oc-rows em.up { color: #15803d; }
+html[data-theme="light"] .bf-stats i.s-dn, html[data-theme="light"] .oc-rows em.dn { color: #b91c1c; }
+html[data-theme="light"] .oc-t small, html[data-theme="light"] .oc-rows > div span { color: #4b5563; }
+html[data-theme="light"] .oc-note { color: #6b7280 !important; }
+html[data-theme="light"] .oc-rows > div, html[data-theme="light"] .oc-more, html[data-theme="light"] .oc-alt, html[data-theme="light"] .ox2 + .ox2 { border-color: #eceef1; }
+html[data-theme="light"] .oc-more > summary, html[data-theme="light"] .oc-alt > summary { color: #4f46e5; }
+html[data-theme="light"] .ox-edu { color: #6d28d9; border-color: #a78bfa; }
+html[data-theme="light"] .oc-earn { color: #6d28d9; } html[data-theme="light"] .oc-warn { color: #b91c1c; }
+html[data-theme="light"] .bf-foot { background: #f4f5f7; border-top-color: #e5e7eb !important; }
+/* computers: a panel half the screen wide */
 @media (min-width: 900px) {
-  .brief { top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: auto !important; max-width: none !important; border-radius: 0 !important; border: 0 !important; }
-  .brief .bf-top, .brief .bf-seg, .brief .bf-body, .brief .bf-foot { width: auto; max-width: none; box-sizing: border-box; }
-  .brief .bf-seg { max-width: 620px !important; margin-left: 32px !important; margin-right: 32px !important; }
-  .bf-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
-  .bf-col > .bf-h:first-child { margin-top: 6px; }
-  .bf-body { padding-left: 32px !important; padding-right: 32px !important; }
-  .bf-top { padding-left: 32px !important; padding-right: 32px !important; padding-top: 24px !important; }
-  .bf-foot { padding-left: 32px !important; padding-right: 32px !important; }
+  .brief { top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important; width: max(50vw, 620px) !important; max-width: 100vw !important;
+    border-radius: 0 !important; border: 0 !important; border-left: 1px solid #252c37 !important; }
+  html[data-theme="light"] .brief { border-left-color: #e5e7eb !important; }
+  .bf-hero { margin: 20px 20px 14px; } .bf-body { padding: 0 20px 20px !important; } .bf-foot { padding: 14px 28px !important; }
 }
-@media (min-width: 1500px) { .bf-cols { gap: 48px; } }
-/* Shelf card on phones: full height, tighter */
+/* phones: full screen, a little tighter */
 @media (max-width: 899px) {
   .brief { top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; height: 100% !important; height: 100dvh !important; border-radius: 0 !important; border: 0 !important; }
-  .bf-top { padding: 12px 14px 8px !important; padding-top: max(12px, env(safe-area-inset-top)) !important; }
-  .bf-head h3 { font-size: 22px !important; }
-  .bf-head p, .bf-prev { font-size: 12.5px !important; }
-  .bf-tag { margin-top: 6px !important; padding: 3px 9px !important; font-size: 12px !important; }
+  .bf-hero { margin: 12px 12px 12px; margin-top: max(12px, env(safe-area-inset-top)); padding: 18px 16px 14px; border-radius: 18px; }
+  .bf-head h3 { font-size: 28px !important; }
   .bf-x { width: 32px !important; height: 32px !important; }
-  .bf-seg { margin: 0 14px 2px !important; }
-  .bf-seg button { padding: 7px 0 !important; font-size: 12px !important; letter-spacing: -.01em; white-space: nowrap; }
-  .bf-seg { gap: 1px !important; }
-  .bf-body { padding: 4px 14px 18px !important; font-size: 13.5px; }
-  .bf-h { margin: 16px 0 8px !important; }
-  .bf-foot { padding: 10px 14px !important; padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; font-size: 13.5px !important; }
-  .ox-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
-  .ox-grid > div { padding: 8px !important; }
+  .bf-stats { gap: 10px; } .bf-stats b { font-size: 19px; } .bf-stats small, .bf-stats i { font-size: 12px; }
+  .bf-hero .bf-seg { margin-top: 16px !important; gap: 1px !important; }
+  .bf-hero .bf-seg button { padding: 8px 0 !important; font-size: 12px !important; letter-spacing: -.01em; white-space: nowrap; }
+  .bf-body { padding: 0 12px 14px !important; gap: 12px; }
+  .bf-card { padding: 16px 16px; border-radius: 18px; }
+  .oc-t b { font-size: 18px; } .oc-rows > div { font-size: 14px; padding: 12px 0; }
+  .bf-foot { padding: 10px 16px !important; padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; font-size: 13.5px !important; }
 }
 </style>
 </head>
@@ -1685,12 +1734,14 @@ html[data-theme="light"] .bf-px { color: #0d1117; }
   </footer>
 </main>
 <aside class="brief" id="brief" aria-hidden="true" aria-label="Shelf card">
+  <div class="bf-hero">
   <div class="bf-top">
     <div class="bf-head" id="bfHead"></div>
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   <div class="bf-seg" id="bfCmds" role="tablist">
     <button data-sec="levels" class="on">Levels</button><button data-sec="setup">Game plan</button><button data-sec="options">Options</button><button data-sec="history">Track record</button>
+  </div>
   </div>
   <div class="bf-body" id="bfBody"></div>
   <div class="bf-foot"><a id="bfChart" href="#">Open full chart →</a></div>
@@ -2575,7 +2626,7 @@ async function openBrief(sym) {
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null;
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
-  document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false");
+  document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false"); $("brief").scrollTop = 0;
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   setCmd("levels");
@@ -2600,13 +2651,37 @@ function briefHead(sym, st) {
   if (st) {
     if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">Hub ${k === "breakout_up" ? "breakout ↑ · bullish" : "breakdown ↓ · bearish"}</span>`;
     else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)} ${other.state === "breakout_up" ? "breakout ↑ · bullish" : "breakdown ↓ · bearish"}</span>` + hubNote;
-    else if (k === "forming" || k === "watching") tag = `<span class="bf-tag" style="--c:${stateColor(k)}">${STATE_WORD[k]} · no trade yet</span>`;
-    else tag = `<span class="bf-tag" style="--c:#8a9aae">No setup in play</span>`;
+    else if (k === "forming" || k === "watching") tag = `<span class="bf-tag rest">${STATE_WORD[k]} · no trade yet</span>`;
+    else tag = `<span class="bf-tag rest">No setup in play</span>`;
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
   }
-  $("bfHead").innerHTML = `<h3>${esc(sym)}</h3><p>${st && st.last_close ? `<b class="bf-px">${money(st.last_close)}</b> last 4-hour close <span class="bf-pxn">· the plan uses this</span>` : "Loading…"}</p><div class="bf-live" id="bfLive"></div>
-    ${tag}`;
+  $("bfHead").innerHTML = `<div class="bf-kick">Shelf card</div><h3>${esc(sym)}</h3>${tag}
+    <p>${st && st.last_close ? `<b class="bf-px">${money(st.last_close)}</b> last 4-hour close <span class="bf-pxn">· the plan uses this</span>` : "Loading…"}</p><div class="bf-live" id="bfLive"></div>
+    ${heroStats(st)}`;
   paintBriefLive();
+}
+// the three numbers that matter, at the top of the card
+function heroStats(st) {
+  if (!st || st.last_close == null) return "";
+  const k = st.state, h = st.hub, p = st.last_close;
+  const live = (k === "breakout_up" || k === "breakdown") && h;
+  const other = !live && (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+  const pct = (a, b) => { const v = (a / b - 1) * 100; return (v > 0 ? "+" : "") + v.toFixed(1) + "%"; };
+  const trio = (d, edge, aim, fired) => [
+    [fired ? "Triggered" : "Trigger", money(edge), `4H close ${d === 1 ? "above" : "below"}`, ""],
+    ["Aim", aim != null ? money(aim) : "–", aim != null ? `${pct(aim, edge)} from trigger` : "no shelf in range", d === 1 ? "up" : "dn"],
+    ["Wrong if", money(edge), `4H close back ${d === 1 ? "below" : "above"}`, ""]];
+  let cells;
+  if (live) { const d = k === "breakout_up" ? 1 : -1; cells = trio(d, d === 1 ? h.high : h.low, st.target, true); }
+  else if (other) { const d = other.state === "breakout_up" ? 1 : -1; cells = trio(d, other.edge, other.target, true); }
+  else if ((k === "forming" || k === "watching") && h) {
+    const d = st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : 0;
+    if (d) { const sh = d === 1 ? st.shelf_up : st.shelf_down; cells = trio(d, d === 1 ? h.high : h.low, sh ? sh.level : null, false); }
+    else cells = [["Long above", money(h.high), "4H close above the hub", "up"], ["Short below", money(h.low), "4H close below the hub", "dn"], ["Last close", money(p), "4-hour candle", ""]];
+  } else cells = [["Last close", money(p), "4-hour candle", ""],
+    ["Shelf above", st.shelf_up ? money(st.shelf_up.level) : "–", st.shelf_up ? pct(st.shelf_up.level, p) + " away" : "none in range", "up"],
+    ["Shelf below", st.shelf_down ? money(st.shelf_down.level) : "–", st.shelf_down ? pct(st.shelf_down.level, p) + " away" : "none in range", "dn"]];
+  return `<div class="bf-stats">${cells.map(([l, v, sub, c]) => `<div><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div>`;
 }
 function setCmd(sec) {
   BRIEF_SEC = sec;
@@ -2615,8 +2690,8 @@ function setCmd(sec) {
   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 document.querySelectorAll("#bfCmds button").forEach(b => b.onclick = () => setCmd(b.dataset.sec));
-$("bfBody").addEventListener("scroll", () => {
-  const top = $("bfBody").getBoundingClientRect().top + 40; let cur = "levels";
+$("brief").addEventListener("scroll", () => {
+  const top = $("brief").getBoundingClientRect().top + 60; let cur = "levels";
   ["levels", "setup", "options", "history"].forEach(k => { const el = document.getElementById("bf-" + k); if (el && el.getBoundingClientRect().top <= top) cur = k; });
   document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === cur));
 }, {passive: true});
@@ -2685,11 +2760,11 @@ function briefHTML(sym, st, chart) {
       else if (x.kind.startsWith("flag")) t = `<b>${esc(x.name)}</b> after a ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}% pole. A 4-hour close <b>${x.trigger === "up" ? "above " + money(x.upper) : "below " + money(x.lower)}</b> continues the move.`;
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
-  return `<div class="bf-cols"><div class="bf-col"><div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
-    <div class="bf-h" id="bf-setup">Game plan</div>${plan2}</div><div class="bf-col">
-    <div class="bf-h" id="bf-options">Options swing <span class="ox-beta">educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>
-    <div class="bf-h" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}
-    <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p></div></div>`;
+  return `<section class="bf-card"><div class="bf-k" id="bf-levels">Level map</div>${map}${setupsHTML}</section>
+    <section class="bf-card"><div class="bf-k" id="bf-setup">Game plan</div>${plan2}</section>
+    <section class="bf-card"><div class="bf-k" id="bf-options">Options swing <span class="ox-edu">Educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div></section>
+    <section class="bf-card"><div class="bf-k" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}</section>
+    <p class="bf-fine bf-legal">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
 function orderPlan(h, dir, shelf) {
@@ -3024,33 +3099,40 @@ function optionsHTML(o) {
   const day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString(undefined, {month: "short", day: "numeric"});
   const closed = o.market_open === false ? `<p class="ox-closed"><i></i>Market closed. Prices as of the last close${o.session ? " (" + new Date(o.session + "T12:00:00").toLocaleDateString(undefined, {weekday: "short", month: "short", day: "numeric"}) + ")" : ""}. They stay put until the open.</p>` : "";
   const er = o.earnings && o.plans.some(p => o.earnings.date <= p.expiry) ? `<p class="ox-earn">📅 <b>Earnings ${esc(o.earnings.label)}</b>, before these contracts expire. Option prices usually drop right after earnings (the "IV crush"), even when the stock moves your way, and a gap can skip past your exit.</p>` : "";
-  return (o.demo ? `<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>` : "") + closed + er + o.plans.map(p => {
-    const up = p.direction === 1, col = up ? "#3DD68C" : "#FF6B5E", side = up ? "Calls" : "Puts";
-    const head = p.mode === "prep" ? `${side} <small>if a 4-hour candle closes ${up ? "above" : "below"} ${money(p.edge)}</small>`
-      : `${side} <small>${esc(p.setup)} ${up ? "breakout" : "breakdown"} is live · ${up ? "bullish" : "bearish"}</small>`;
-    const h = p.history || {};
-    const hist = h.n ? `On ${esc(o.symbol)}, <b>${h.reached} of ${h.n}</b> past ${up ? "breakouts" : "breakdowns"} reached the aim${h.median_days != null ? `, usually within <b>${h.median_days} trading day${h.median_days === 1 ? "" : "s"}</b>` : ""}.` : "Not enough past breakouts on this stock to judge timing yet.";
-    return `<div class="ox" style="--c:${col}">
-      <div class="ox-h">${head}</div>
-      <div class="ox-chips"><span><small>Expiry</small>${day(p.expiry)} · ${p.dte} days</span><span><small>Aim</small>${money(p.target)} (${sgn(p.target_pct)})</span>
-        <span><small>Wrong if</small>4H close ${up ? "below" : "above"} ${money(p.edge)}</span></div>
-      ${p.contracts.map(c => `<div class="ox-c">
-        <div class="ox-ct"><b>$${c.strike} ${up ? "call" : "put"}</b><small>${esc(c.label)} · delta ${c.delta}</small></div>
-        <div class="ox-grid">
-          <div><small>${c.estimated ? "Est. cost at the breakout" : "Cost now (mid)"}</small><b>${money(c.mid)}</b><i>${money(c.cost)} per contract</i></div>
-          <div><small>If it reaches the aim</small><b class="${(c.at_shelf_pct ?? 0) > 0 ? "u-up2" : "u-down2"}">≈ ${money(c.at_shelf)}</b><i class="${(c.at_shelf_pct ?? 0) > 0 ? "ox-up" : "ox-dn"}">${sgn(c.at_shelf_pct)}${(c.at_shelf_pct ?? 0) <= 0 ? " even if right" : ""}</i>
-            <em class="ox-odds">${h.n ? `Reached the aim in <b>${h.reached} of ${h.n}</b> past setups` : "Too few past setups to judge the odds"}</em></div>
-          <div><small>If the ${up ? "breakout" : "breakdown"} fails</small><b class="u-down2">≈ ${money(c.at_fail)}</b><i class="ox-dn">${sgn(c.at_fail_pct)}</i>
-            <em class="ox-odds">${h.n ? `Didn't reach it in <b>${h.n - h.reached} of ${h.n}</b>` : "Plan for this case first"}</em></div>
-          <div><small>Breakeven at expiry</small><b>${money(c.breakeven)}</b><i>max loss ${money(c.cost)}</i></div>
-        </div>
-        ${(c.at_shelf_pct ?? 0) <= 0 ? `<p class="ox-warn">⚠ <b>Loses money even if the stock reaches the aim.</b> The move to ${money(p.target)} is too small to pay for this contract's time value. Skip it, or wait for a setup with more room to the target.</p>` : ""}
-        <p class="ox-assume">≈ figures assume the aim is reached in about <b>${p.days_to_target} trading day${p.days_to_target === 1 ? "" : "s"}</b> at today's implied volatility (<b>${c.iv}%</b>). Bid/ask now <b>${c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted"}</b>${o.earnings ? ` · next earnings <b>${esc(o.earnings.label)}</b>${o.earnings.date > p.expiry ? " (after expiry)" : ""}` : ""}. Slower moves or falling volatility mean less.</p>
-        ${c.wide_spread ? `<p class="ox-warn">⚠ Wide bid/ask spread (${money(c.bid)} / ${money(c.ask)}). Use a limit order near the middle.</p>` : ""}
-      </div>`).join("")}
-      <p class="ox-note">${hist}</p>
+  const ctr = (c, p, up, h, cond) => {
+    const side = up ? "call" : "put", move = up ? "breakout" : "breakdown", good = (c.at_shelf_pct ?? 0) > 0;
+    const odds = h.n ? `Reached the aim in ${h.reached} of ${h.n} past setups.` : "Too few past setups to judge the odds yet.";
+    const note = c.estimated ? `≈${money(c.mid)} if the ${move} happens (about ${money(c.quote_now)} now, since the stock isn't there yet). ${odds}` : `${money(c.cost)} for one contract (100 shares). ${odds}`;
+    return `<div class="oc">
+      <div class="oc-t"><b>${day(p.expiry)} $${c.strike} ${side}s</b><small>${cond}</small></div>
+      <div class="oc-rows">
+        <div><span>${c.estimated ? "Est. cost at the " + move : "Cost now (mid)"}</span><b>${c.estimated ? "≈ " : ""}${money(c.mid)}</b></div>
+        <div><span>If it reaches the aim</span><b>≈ ${money(c.at_shelf)} <em class="${good ? "up" : "dn"}">${sgn(c.at_shelf_pct)}</em></b></div>
+        <p class="oc-note">${note}</p>
+        <div><span>If the ${move} fails</span><b>≈ ${money(c.at_fail)} <em class="dn">${sgn(c.at_fail_pct)}</em></b></div>
+        <div><span>Max loss</span><b>${money(c.cost)}</b></div>
+      </div>
+      ${good ? "" : `<p class="oc-warn">⚠ Loses money even if the stock reaches ${money(p.target)}: the move is too small to pay for this contract's time value. Skip it.</p>`}
+      <details class="oc-more"><summary>Show the math</summary><div class="oc-rows">
+        <div><span>Breakeven at expiry</span><b>${money(c.breakeven)}</b></div>
+        <div><span>Expiry</span><b>${day(p.expiry)} · ${p.dte} days</b></div>
+        <div><span>Strike</span><b>${esc(c.label)} · delta ${c.delta}</b></div>
+        <div><span>Bid / ask now</span><b>${c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted"}</b></div>
+        <div><span>Implied volatility</span><b>${c.iv}%</b></div></div>
+        <p class="oc-note">Black-Scholes estimates. The cost${c.estimated ? " assumes the stock is at " + money(p.entry) + " when it breaks out" : " is the middle of the bid and ask"}; the other values assume the volatility stays the same.</p></details>
+      <p class="oc-note oc-assume">Figures assume the aim is reached in about ${p.days_to_target} trading day${p.days_to_target === 1 ? "" : "s"} at today's implied volatility (${c.iv}%). Slower moves or falling volatility mean less.</p>
+      ${c.wide_spread ? `<p class="oc-warn">⚠ Wide bid/ask spread (${money(c.bid)} / ${money(c.ask)}). Use a limit order near the middle.</p>` : ""}
     </div>`;
-  }).join("") + `<div class="gp ox-rules">
+  };
+  return (o.demo ? `<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>` : "") + closed + o.plans.map(p => {
+    const up = p.direction === 1, h = p.history || {};
+    const cond = p.mode === "prep" ? `If a 4-hour candle closes ${up ? "above the hub top" : "below the hub bottom"} (${money(p.edge)})` : `${esc(p.setup)} ${up ? "breakout" : "breakdown"} is live · ${up ? "bullish" : "bearish"}`;
+    const [c0, ...rest] = p.contracts;
+    const earn = o.earnings && o.earnings.date <= p.expiry ? `<p class="oc-earn">⚠ Earnings ${esc(o.earnings.label)}, before this contract expires. Options usually lose value right after earnings, even when the stock moves your way.</p>` : "";
+    return `<div class="ox2">${ctr(c0, p, up, h, cond)}${earn}
+      ${rest.map(c => `<details class="oc-alt"><summary>Compare: $${c.strike} ${up ? "call" : "put"} · ${esc(c.label.toLowerCase())}</summary>${ctr(c, p, up, h, esc(c.label))}</details>`).join("")}
+    </div>`;
+  }).join("") + `<div class="bf-h">Rules for the trade</div><div class="gp ox-rules">
       <div data-n="1" style="--c:#3DD68C"><span>Take profit when the stock reaches the <b>shelf</b>, not when the option "feels" high.</span></div>
       <div data-n="2" style="--c:#FF6B5E"><span>Exit on a 4-hour <b>close back inside</b> the pattern, whatever the option is worth.</span></div>
       <div data-n="3" style="--c:#F2C14E"><span>Size small. The most you can lose is what you pay for the contract.</span></div></div>
