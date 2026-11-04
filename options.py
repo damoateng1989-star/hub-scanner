@@ -296,6 +296,8 @@ def alert_line(sym: str, d: int, close: float, edge: float, target: float) -> st
         if not pl or not pl["contracts"]:
             return None
         c = pl["contracts"][0]
+        if (c.get("at_shelf_pct") or 0) <= 0:      # don't suggest a contract that loses money even when right
+            return None
         exp = date.fromisoformat(pl["expiry"]).strftime("%b %-d")
         gain = f" · est. {c['at_shelf_pct']:+d}% at the shelf" if c.get("at_shelf_pct") is not None else ""
         return (f"🎯 Options swing (educational): {exp} ${c['strike']:g} {pl['side']}s ({pl['dte']} days) ≈ ${c['mid']:.2f}"

@@ -2512,12 +2512,13 @@ function optionsHTML(o) {
         <div class="ox-ct"><b>$${c.strike} ${up ? "call" : "put"}</b><small>${esc(c.label)} · delta ${c.delta}</small></div>
         <div class="ox-grid">
           <div><small>${c.estimated ? "Est. cost at the breakout" : "Cost now (mid)"}</small><b>${money(c.mid)}</b><i>${money(c.cost)} per contract</i></div>
-          <div><small>If it reaches the aim</small><b class="u-up2">≈ ${money(c.at_shelf)}</b><i class="ox-up">${sgn(c.at_shelf_pct)}</i>
+          <div><small>If it reaches the aim</small><b class="${(c.at_shelf_pct ?? 0) > 0 ? "u-up2" : "u-down2"}">≈ ${money(c.at_shelf)}</b><i class="${(c.at_shelf_pct ?? 0) > 0 ? "ox-up" : "ox-dn"}">${sgn(c.at_shelf_pct)}${(c.at_shelf_pct ?? 0) <= 0 ? " even if right" : ""}</i>
             <em class="ox-odds">${h.n ? `Reached the aim in <b>${h.reached} of ${h.n}</b> past setups` : "Too few past setups to judge the odds"}</em></div>
           <div><small>If the ${up ? "breakout" : "breakdown"} fails</small><b class="u-down2">≈ ${money(c.at_fail)}</b><i class="ox-dn">${sgn(c.at_fail_pct)}</i>
             <em class="ox-odds">${h.n ? `Didn't reach it in <b>${h.n - h.reached} of ${h.n}</b>` : "Plan for this case first"}</em></div>
           <div><small>Breakeven at expiry</small><b>${money(c.breakeven)}</b><i>max loss ${money(c.cost)}</i></div>
         </div>
+        ${(c.at_shelf_pct ?? 0) <= 0 ? `<p class="ox-warn">⚠ <b>Loses money even if the stock reaches the aim.</b> The move to ${money(p.target)} is too small to pay for this contract's time value. Skip it, or wait for a setup with more room to the target.</p>` : ""}
         <p class="ox-assume">≈ figures assume the aim is reached in about <b>${p.days_to_target} trading day${p.days_to_target === 1 ? "" : "s"}</b> at today's implied volatility (<b>${c.iv}%</b>). Bid/ask now <b>${c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted"}</b>${o.earnings ? ` · next earnings <b>${esc(o.earnings.label)}</b>${o.earnings.date > p.expiry ? " (after expiry)" : ""}` : ""}. Slower moves or falling volatility mean less.</p>
         ${c.wide_spread ? `<p class="ox-warn">⚠ Wide bid/ask spread (${money(c.bid)} / ${money(c.ask)}). Use a limit order near the middle.</p>` : ""}
       </div>`).join("")}
