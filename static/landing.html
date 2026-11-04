@@ -102,7 +102,7 @@ h2 { font-size: clamp(30px, 4vw, 44px); letter-spacing: -0.03em; line-height: 1.
 .demo-copy { margin-top: 72px; max-width: 640px; }
 .demo-copy h3 { font-size: 26px; letter-spacing: -0.02em; margin-bottom: 12px; font-weight: 650; }
 .demo-copy p { color: var(--ink2); font-size: 16px; }
-.stage { display: grid; grid-template-columns: 1.9fr 1fr; gap: 20px; margin-top: 32px; align-items: start; }
+.stage { display: grid; grid-template-columns: 1.9fr 1fr; gap: 20px; margin-top: 32px; align-items: center; }
 .chart-card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
 .chart-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .chart-top .tk2 { font-weight: 700; font-size: 15px; } .chart-top .tk2 span { font-weight: 400; color: var(--ink2); font-size: 13px; }
@@ -110,7 +110,8 @@ h2 { font-size: clamp(30px, 4vw, 44px); letter-spacing: -0.03em; line-height: 1.
 .clockpill.warn { color: var(--warn); border-color: var(--warn); } .clockpill.idle { color: var(--ink2); border-color: var(--line); }
 #stChart .brk, #stChart .tag, #stChart .arc { transition: opacity .5s; }
 .phone { width: 300px; margin: 0 auto; background: #101014; border-radius: 44px; padding: 14px; border: 1px solid #2A2A30; }
-.phone .scr { background: #17171C; border-radius: 32px; padding: 20px 16px; min-height: 420px; }
+.phone .scr { background: #17171C; border-radius: 32px; padding: 20px 16px 0; height: 440px; display: flex; flex-direction: column; overflow: hidden; }
+#stMsgs { flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent); mask-image: linear-gradient(to bottom, #000 78%, transparent); }
 .phone .clock { font-size: 34px; font-weight: 700; color: #fff; text-align: center; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .phone .clocksub { font-size: 12px; color: #8A8A94; text-align: center; margin-bottom: 14px; }
 .msg { background: #23232B; border-radius: 14px; padding: 12px 14px; font-size: 13px; color: #E8EAEE; margin-bottom: 10px; line-height: 1.5; transition: opacity .4s, transform .4s; }
@@ -357,13 +358,13 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
     </div>
     <div class="phone"><div class="scr">
       <div class="clock" id="stTime">1:52</div>
-      <div class="clocksub">NextShelf alerts</div>
+      <div class="clocksub" id="stDay">Monday · NextShelf alerts</div>
       <div id="stMsgs">
-        <div class="msg alert" data-at="4"><b>TELEGRAM</b> <span class="ts">NOW</span><br>🎯 <b>AMD reached the shelf</b><br>Hit $186.10, the target. Logged in the track record.</div>
-        <div class="msg alert" data-at="3"><b>TELEGRAM</b> <span class="ts">4:22 PM</span><br>🚀 <b>AMD: 4H close above the hub</b><br>Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div>
-        <div class="msg" data-at="2"><b>TELEGRAM</b> <span class="probadge">PRO</span> <span class="ts">3:45 PM</span><br>⚠ <b>AMD: trading above the hub</b>, about 15 min before the 4H close<br>Now $179.40. If the candle closes above $178.01, that's the breakout.</div>
+        <div class="msg alert" data-at="4"><b>TELEGRAM</b> <span class="ts">THU</span><br>🎯 <b>AMD reached the shelf</b><br>Hit $186.10, the target. Logged in the track record.</div>
+        <div class="msg alert" data-at="3"><b>TELEGRAM</b> <span class="ts">TUE 4:22 PM</span><br>🚀 <b>AMD: 4H close above the hub</b><br>Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div>
+        <div class="msg" data-at="2"><b>TELEGRAM</b> <span class="probadge">PRO</span> <span class="ts">TUE 3:45 PM</span><br>⚠ <b>AMD: trading above the hub</b>, about 15 min before the 4H close<br>Now $179.40. If the candle closes above $178.01, that's the breakout.</div>
         <div class="msg" data-at="1"><b>TELEGRAM</b> <span class="ts">MON</span><br>■ <b>AMD: new hub</b> forming between $172.20 and $178.01</div>
-        <div class="msg" data-at="0"><b>SCOUT</b> <span class="ts">1:52 PM</span><br>🔎 Swept 543 stocks after the 1:30 PM close. Nothing on your list yet, so nothing to do.</div>
+        <div class="msg" data-at="0"><b>SCOUT</b> <span class="ts">MON 1:52 PM</span><br>🔎 Swept 543 stocks after the 1:30 PM close. Nothing on your list yet, so nothing to do.</div>
       </div>
     </div></div>
   </div>
@@ -506,15 +507,16 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
 
   // ---- the example setup plays itself; tap a step to jump to it
   const steps = [...document.querySelectorAll("#stSteps .tcard")], msgs = [...document.querySelectorAll("#stMsgs .msg")];
-  const clocks = [["1:52", "● After every 4H close", "idle"], ["Mon", "● Hub forming", "idle"], ["3:45", "● 3:45 PM · 15 min to the close", "warn"], ["4:22", "● 4:00 PM close confirmed", ""], ["Wed", "● Shelf reached", ""]];
+  const clocks = [["1:52", "Monday", "● After every 4H close", "idle"], ["4:22", "Monday", "● Hub forming", "idle"], ["3:45", "Tuesday", "● 3:45 PM · 15 min to the close", "warn"],
+                  ["4:22", "Tuesday", "● 4:00 PM close confirmed", ""], ["1:52", "Thursday", "● Shelf reached", ""]];
   const chart = $("stChart");
   let cur = 0, timer = null;
   function show(i) {
     cur = i;
     steps.forEach((b, k) => b.classList.toggle("on", k === i));
     msgs.forEach(m => m.hidden = +m.dataset.at > i);
-    const [t, label, cls] = clocks[i];
-    $("stTime").textContent = t; $("stClock").textContent = label; $("stClock").className = "clockpill " + cls;
+    const [t, dayName, label, cls] = clocks[i];
+    $("stTime").textContent = t; $("stDay").textContent = dayName + " · NextShelf alerts"; $("stClock").textContent = label; $("stClock").className = "clockpill " + cls;
     chart.querySelector(".brk").style.opacity = i >= 3 ? 1 : i === 2 ? .45 : 0;
     chart.querySelector(".tag").style.opacity = i >= 3 ? 1 : 0;
     chart.querySelector(".arc").style.opacity = i >= 4 ? 1 : 0;
