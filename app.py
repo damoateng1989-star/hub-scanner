@@ -752,6 +752,13 @@ async def precheck_now(u: dict = Admin):
     return {"alerts": len(sent)}
 
 
+def board_for(u: dict | None) -> bool:
+    """Full Hub Board (live breakouts and stocks at the edge): Pro, or every signed-in member while BOARD_FOR_ALL is on (beta). Set it to false at launch."""
+    if auth.is_pro(u):
+        return True
+    return bool(u) and os.getenv("BOARD_FOR_ALL", "true").strip().lower() in ("1", "true", "yes", "on")
+
+
 @app.get("/api/board")
 def board_data(u: dict | None = Maybe):
     b = board.board()
@@ -759,7 +766,7 @@ def board_data(u: dict | None = Maybe):
     for group in ("live", "near", "forming", "recent"):
         for r in b[group]:
             r["watching"] = r["symbol"] in mine
-    if not auth.is_pro(u):                  # free: the timely groups are counts only
+    if not board_for(u):                    # free: the timely groups are counts only
         b["locked"] = True
         b["live_count"], b["near_count"] = len(b["live"]), len(b["near"])
         b["live"], b["near"] = [], []
@@ -797,7 +804,7 @@ def _next_sweep() -> str | None:
 def scanner_status(request: Request):
     """Live state of the market-scanning agent shown on Discover."""
     u = auth.current_user(request)
-    full = bool(u and (u.get("is_admin") or u.get("plan") == "pro"))
+    full = bool(u and (u.get("is_admin") or board_for(u)))
     sc = dict(board.SCAN)
     found = sc.pop("found", [])
     sc["found_count"] = len(found)
