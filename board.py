@@ -69,6 +69,9 @@ SCAN = dict(running=False, done=0, total=0, current=None, started=None, finished
 FIND_STATES = {"breakout_up": "breakout", "breakdown": "breakdown"}
 
 
+BATCH = 40
+
+
 def scan_board() -> int:
     """Scan the whole universe (plus your watchlist). Runs after each 4H close."""
     if not _lock.acquire(blocking=False):      # a sweep is already running
@@ -87,14 +90,23 @@ def _scan_board() -> int:
         now = pd.Timestamp.now(tz="UTC")
         SCAN.update(running=True, done=0, total=len(syms), current="loading prices", found=[],
                     started=pd.Timestamp.now(tz="UTC").isoformat())
-        bars = data.get_bars_many(syms, BOARD_DAYS)
         done = 0
         lab_hub, lab_tri, lab_live, lab_pat = [], [], [], {}
+        bars, batch_end = {}, 0
         for k, sym in enumerate(syms):
+            if k >= batch_end:        # download 40 stocks at a time, so memory stays small on any server size
+                bars = None
+                batch = syms[k:k + BATCH]
+                batch_end = k + BATCH
+                try:
+                    bars = data.get_bars_many(batch, BOARD_DAYS)
+                except Exception as e:
+                    log.warning("board batch %s..%s failed: %s", batch[0], batch[-1], e)
+                    bars = {}
             time.sleep(0.01)          # let web requests through between stocks so the site stays quick during a scan
             SCAN.update(current=sym, done=k)
             try:
-                c4 = engine.to_4h(bars.get(sym, pd.DataFrame()), now=now)
+                c4 = engine.to_4h(bars.pop(sym, pd.DataFrame()), now=now)
                 if len(c4) < scanner.SETTINGS.window + 15:
                     continue
                 res = engine.analyze(c4, scanner.SETTINGS)
