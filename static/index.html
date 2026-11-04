@@ -1466,6 +1466,19 @@ html[data-theme="light"] .ox-grid i { color: #111827 !important; } html[data-the
 html[data-theme="light"] .ox-odds, html[data-theme="light"] .ox-assume { color: #374151; } html[data-theme="light"] .ox-odds b, html[data-theme="light"] .ox-assume b { color: #0d1117; }
 html[data-theme="light"] .bf-px { color: #0d1117; }
 </style>
+<style>
+/* Shelf card from "Analyze": full screen on computers, two columns */
+@media (min-width: 900px) {
+  .brief { top: 12px !important; left: 12px !important; right: 12px !important; bottom: 12px !important; width: auto !important; max-width: none !important; }
+  .brief .bf-top, .brief .bf-seg, .brief .bf-body, .brief .bf-foot { width: 100%; max-width: 1400px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  .brief .bf-seg { max-width: 620px !important; margin-left: max(20px, calc((100% - 1400px) / 2 + 20px)) !important; }
+  .bf-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+  .bf-col > .bf-h:first-child { margin-top: 6px; }
+  .bf-body { padding-left: 28px !important; padding-right: 28px !important; }
+  .bf-top { padding-left: 28px !important; padding-right: 28px !important; }
+}
+@media (min-width: 1500px) { .bf-cols { gap: 48px; } }
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -2655,11 +2668,11 @@ function briefHTML(sym, st, chart) {
       else if (x.kind.startsWith("flag")) t = `<b>${esc(x.name)}</b> after a ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}% pole. A 4-hour close <b>${x.trigger === "up" ? "above " + money(x.upper) : "below " + money(x.lower)}</b> continues the move.`;
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
-  return `<div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
-    <div class="bf-h" id="bf-setup">Game plan</div>${plan2}
+  return `<div class="bf-cols"><div class="bf-col"><div class="bf-h" id="bf-levels">Level map</div>${map}${setupsHTML}
+    <div class="bf-h" id="bf-setup">Game plan</div>${plan2}</div><div class="bf-col">
     <div class="bf-h" id="bf-options">Options swing <span class="ox-beta">educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>
     <div class="bf-h" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}
-    <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
+    <p class="bf-fine">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p></div></div>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
 function orderPlan(h, dir, shelf) {
