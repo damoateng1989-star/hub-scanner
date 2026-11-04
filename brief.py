@@ -76,7 +76,14 @@ def build(u: dict | None) -> dict:
         watching = len(db.user_symbols(u["id"]))
     else:
         watching = 0
-    return dict(date=pd.Timestamp.now(tz=engine.NY).strftime("%a %b %-d"), pro=pro, universe=b["universe"],
+    now = pd.Timestamp.now(tz=engine.NY)
+    try:      # the morning brief comes before today's first sweep: nothing new since last night's recap
+        swept = pd.Timestamp(b.get("updated")).tz_localize("UTC").tz_convert(engine.NY) if b.get("updated") else None
+    except Exception:
+        swept = None
+    overnight = bool(swept is not None and swept.date() < now.date())
+    return dict(date=now.strftime("%a %b %-d"), pro=pro, universe=b["universe"], overnight=overnight,
+                swept_day=swept.strftime("%a") if swept is not None else None,
                 universe_name=universe.describe(), live_count=len(b["live"]), near_count=len(b["near"]),
                 forming_count=len(forming), closest=closest if pro else [], in_play=in_play if pro else [],
                 resting=resting, mine=mine, watching=watching, updated=b.get("updated"))
@@ -91,11 +98,15 @@ def _mine_line(m: dict) -> str:
 
 def text(d: dict) -> str:
     """Telegram version."""
-    L = [f"☀️ NextShelf morning brief · {d['date']}",
-         f"Last sweep: {d['universe']} stocks · {_n(d['live_count'], 'breakout')} in play · {d['near_count']} at the edge of a hub", ""]
+    L = [f"☀️ NextShelf morning brief · {d['date']}"]
+    if d.get("overnight"):
+        L += ["No new 4-hour candles since last night's recap, so nothing has changed overnight.",
+              "Today's decision points: the 1:30 PM and 4:00 PM ET closes.", ""]
+    else:
+        L += [f"Last sweep: {d['universe']} stocks · {_n(d['live_count'], 'breakout')} in play · {d['near_count']} at the edge of a hub", ""]
     if d["pro"]:
         if d["closest"]:
-            L.append("🎯 Closest to a breakout today")
+            L.append("🎯 Today's decision: closest to a breakout")
             for c in d["closest"]:
                 L.append(f"• {c['symbol']} at the {'top' if c['side'] == 'up' else 'bottom'} of its hub {_money(c['low'])}–{_money(c['high'])}"
                          + (" · right at the edge" if c['dist'] < 0.05 else f" · {c['dist']}% to a {'breakout' if c['side'] == 'up' else 'breakdown'}")
@@ -107,7 +118,11 @@ def text(d: dict) -> str:
                              + (", risk is bigger than the reward" if op["rr"] < 1 else "") + ")")
             L.append("(Stop orders fire on a touch, not a 4H close: see 'Set it before work' in the app.)")
             L.append("")
-        if d["in_play"]:
+        if d["in_play"] and d.get("overnight"):
+            L.append("🚀 Still running: " + ", ".join(f"{c['symbol']} {'↑' if c['up'] else '↓'}" for c in d["in_play"])
+                     + " (targets and exits are in last night's recap)")
+            L.append("")
+        elif d["in_play"]:
             L.append("🚀 Breakouts still in play")
             for c in d["in_play"]:
                 L.append(f"• {c['symbol']} {'↑' if c['up'] else '↓'} aiming for {_money(c['target'])}"
