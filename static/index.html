@@ -1569,13 +1569,6 @@ html body .sweep-btn { background: #F2F3F5 !important; color: #0E0F12 !important
 html body .sweep-btn::before, html body .sweep-btn::after { display: none !important; }
 html[data-theme="light"] body .chip.on, html[data-theme="light"] body .board-filter.active, html[data-theme="light"] body .rank-ctl .seg button.on, html[data-theme="light"] body .sweep-btn { background: #141412 !important; color: #F6F6F3 !important; border-color: #141412 !important; }
 
-/* earnings: a quiet amber warning line, not a pill */
-html body .earn-tag, html body .earn-tag.board-state.board-state { display: inline-flex !important; align-items: center; gap: 4px; padding: 0 !important; border: 0 !important; border-radius: 0 !important;
-  background: none !important; color: #E5A13D !important; font: 700 11.5px var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; }
-html body .earn-tag::before, html body .earn-tag.board-state.board-state::before { content: "⚠" !important; display: inline !important; width: auto !important; height: auto !important; background: none !important; border-radius: 0 !important; font-size: 11px; }
-html body .earn-tag.soon { color: #FF8A4C !important; }
-html[data-theme="light"] body .earn-tag, html[data-theme="light"] body .earn-tag.board-state.board-state { color: #B7791F !important; }
-html[data-theme="light"] body .earn-tag.soon { color: #C2410C !important; }
 /* the Shelf card stays out of the way when it's closed */
 body:not(.brief-open) .brief { visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s .28s; }
 body.brief-open .brief { visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1); }
@@ -1614,7 +1607,11 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 html[data-theme="light"] #closesCard .seg { background: #F6F6F3; border-color: #E4E3DC; }
 html[data-theme="light"] #closesCard .seg button.on { background: #141412 !important; color: #F6F6F3 !important; }
 html[data-theme="light"] body .board-state.board-state.board-state { background: transparent !important; border: 1px solid currentColor !important; }
-html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; }
+/* earnings: the light purple pill */
+html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; border-radius: 4px !important; padding: 3px 8px !important;
+  color: #d2bcff !important; background: rgba(167,139,250,.13) !important; font: 500 12px/1.35 var(--sans) !important; }
+html body .earn-tag.earn-tag.board-state.board-state::before { display: none !important; content: none !important; }
+html[data-theme="light"] body .earn-tag.earn-tag.board-state.board-state { color: #5b21b6 !important; background: #ede9fe !important; }
 html body .sf-hello { display: none !important; }
 html body .scout-fab { width: 58px !important; height: 58px !important; }
 html body .lesson { background: #15171C !important; border: 1px solid #23262E !important; box-shadow: none !important; }
