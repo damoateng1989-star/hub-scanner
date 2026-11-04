@@ -216,6 +216,89 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .live .dot, .scout-fab i { animation: none; } .btn:hover { transform: none; } }
 </style>
+<style>
+/* the hub-to-alert animation (kept from the previous landing page) */
+.flow-sec { padding-top: 10px; }
+.flow { margin-top: 30px; padding: 18px; border-radius: 26px; border: 1px solid var(--fl-line); background: var(--fl-bg);
+  box-shadow: 0 30px 80px var(--fl-shadow); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3);
+  --fl-bg: rgba(14,20,29,.72); --fl-line: rgba(255,255,255,.08); --fl-shadow: rgba(0,0,0,.35); --fl-ink: #eef2f7; --fl-mut: #8a9aae; --fl-card: #0b1119;
+  --fl-grid: rgba(255,255,255,.05); --fl-up: #3DD68C; --fl-down: #FF6B5E; --fl-hub: #7C93FF; --fl-candle-up: #e8eef5; --fl-candle-dn: #5b6b7f; }
+html[data-theme="light"] .flow { --fl-bg: rgba(255,255,255,.78); --fl-line: rgba(15,23,42,.08); --fl-shadow: rgba(15,23,42,.12); --fl-ink: #0d1117;
+  --fl-mut: #5f6b7a; --fl-card: #ffffff; --fl-grid: rgba(15,23,42,.06); --fl-up: #16a34a; --fl-hub: #5b6cf0; --fl-candle-up: #111827; --fl-candle-dn: #9aa4b2; }
+.fl-stage { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: stretch; }
+.fl-chart { position: relative; padding: 14px 14px 6px; border-radius: 18px; background: var(--fl-card); border: 1px solid var(--fl-line); min-width: 0; }
+.fl-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--fl-mut); font-size: 13px; }
+.fl-sym b { color: var(--fl-ink); font-size: 16px; margin-right: 4px; }
+.fl-clock { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--fl-line);
+  font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fl-ink); font-variant-numeric: tabular-nums; transition: color .3s, border-color .3s; }
+.fl-clock i { width: 7px; height: 7px; border-radius: 50%; background: var(--fl-mut); }
+.flow[data-step="3"] .fl-clock { color: #F2C14E; border-color: rgba(242,193,78,.45); } .flow[data-step="3"] .fl-clock i { background: #F2C14E; animation: flBlink 1s steps(1) infinite; }
+.flow[data-step="4"] .fl-clock, .flow[data-step="5"] .fl-clock { color: var(--fl-up); border-color: color-mix(in srgb, var(--fl-up) 45%, transparent); }
+.flow[data-step="4"] .fl-clock i, .flow[data-step="5"] .fl-clock i { background: var(--fl-up); }
+@keyframes flBlink { 50% { opacity: .2; } }
+.fl-chart svg { width: 100%; height: auto; display: block; margin-top: 6px; }
+@media (max-width: 560px) { .fl-chart { padding: 10px 8px 4px; } }
+.fl-chart svg text { font-family: var(--sans, "DM Sans", sans-serif); }
+/* scene layers: shown by step */
+.fl-l { opacity: 0; transition: opacity .6s ease, transform .6s ease; }
+.flow[data-step="1"] .s1, .flow[data-step="2"] .s1, .flow[data-step="3"] .s1, .flow[data-step="4"] .s1, .flow[data-step="5"] .s1,
+.flow[data-step="2"] .s2, .flow[data-step="3"] .s2, .flow[data-step="4"] .s2, .flow[data-step="5"] .s2,
+.flow[data-step="3"] .s3only, .flow[data-step="4"] .s4, .flow[data-step="5"] .s4, .flow[data-step="5"] .s5 { opacity: 1; }
+.flow[data-step="1"] .s1dim { opacity: .45; }
+.fl-scan { opacity: 0; }
+.flow[data-step="1"] .fl-scan { opacity: 1; animation: flSweep 2.6s ease-in-out infinite; }
+@keyframes flSweep { from { transform: translateX(0); } to { transform: translateX(520px); } }
+.fl-live { animation: flLive 1.2s ease-in-out infinite; }
+@keyframes flLive { 50% { opacity: .55; } }
+.fl-runc { opacity: 0; transition: opacity .35s ease; }
+.flow[data-step="5"] .fl-runc { opacity: 1; }
+/* phone */
+.fl-phone { position: relative; padding: 34px 12px 14px; border-radius: 34px; overflow: hidden; min-height: 330px;
+  background: radial-gradient(120% 70% at 50% 0%, #253a5a, #0b1220 70%); border: 6px solid #0a0f17; box-shadow: 0 8px 18px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.06); }
+html[data-theme="light"] .fl-phone { background: radial-gradient(120% 70% at 50% 0%, #cfe0f7, #eef3fa 70%); border-color: #111827; }
+.fl-notch { position: absolute; top: 8px; left: 50%; width: 84px; height: 20px; margin-left: -42px; border-radius: 12px; background: #05080d; }
+.fl-time { text-align: center; color: #fff; font-size: 44px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.fl-date { text-align: center; color: rgba(255,255,255,.7); font-size: 12px; margin: 4px 0 14px; font-weight: 500; }
+html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .fl-date { color: #4b5563; }
+.fl-stack { display: flex; flex-direction: column-reverse; gap: 8px; }
+.fl-note { padding: 10px 11px; border-radius: 16px; background: rgba(245,247,250,.9); color: #0d1117; box-shadow: 0 8px 20px rgba(0,0,0,.18);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); animation: flIn .5s cubic-bezier(.2,1.3,.4,1) both; transform-origin: top center; }
+.fl-note.old { opacity: .55; transform: scale(.97); transition: opacity .4s, transform .4s; }
+.fl-nh { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #6b7280; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.fl-nh span { display: inline-flex; align-items: center; gap: 5px; }
+.fl-nh span::before { content: ""; width: 14px; height: 14px; border-radius: 4px; background: #0d1117 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 11 7 7l2 2 4-5' fill='none' stroke='%233DD68C' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/11px no-repeat; }
+.fl-nt { margin-top: 4px; font-weight: 700; font-size: 13px; line-height: 1.3; }
+.fl-nb { margin-top: 2px; font-size: 12px; line-height: 1.4; color: #374151; }
+.fl-pro { font-style: normal; margin-left: 5px; padding: 1px 5px; border-radius: 4px; background: #0d1117; color: #fff; font-size: 9px; letter-spacing: .08em; vertical-align: 1px; }
+@keyframes flIn { from { opacity: 0; transform: translateY(-14px) scale(.94); } }
+/* steps */
+.fl-steps { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0 0; padding: 0; counter-reset: fl; }
+.fl-steps li { position: relative; padding: 12px 12px 14px; border-radius: 14px; border: 1px solid var(--fl-line); cursor: pointer; color: var(--fl-mut);
+  transition: background .25s, color .25s, border-color .25s; overflow: hidden; }
+.fl-steps li:hover { color: var(--fl-ink); }
+.fl-steps li small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.fl-steps li b { display: block; margin-top: 4px; font-size: 14.5px; line-height: 1.3; color: inherit; }
+.fl-steps li p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; }
+.fl-steps li.on { color: var(--fl-ink); background: color-mix(in srgb, var(--fl-ink) 5%, transparent); border-color: color-mix(in srgb, var(--fl-ink) 18%, transparent); }
+.fl-steps li.on small { color: var(--fl-up); }
+.fl-steps li.on[data-n="3"] small { color: #F2C14E; }
+.fl-steps li i { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--fl-up); }
+.fl-steps li.on i { animation: flProg var(--fl-dur, 4s) linear forwards; }
+.flow.paused .fl-steps li.on i { animation-play-state: paused; }
+@keyframes flProg { to { width: 100%; } }
+@media (max-width: 860px) {
+  .flow { padding: 12px; border-radius: 22px; }
+  .fl-stage { grid-template-columns: 1fr; }
+  .fl-phone { min-height: 0; padding: 26px 12px 12px; border-radius: 26px; }
+  .fl-notch { display: none; } .fl-time { font-size: 30px; } .fl-date { margin-bottom: 10px; }
+  .fl-stack { min-height: 150px; }
+  .fl-steps { grid-template-columns: 1fr; }
+  .fl-steps li { padding: 10px 12px; } .fl-steps li:not(.on) p { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .flow *, .flow { animation: none !important; transition: none !important; } }
+.flow { margin-top: 32px; }
+.fl-pill { display: inline-block; margin-left: 6px; padding: 2px 9px; border-radius: 99px; background: var(--up); color: #fff; font: 700 10px var(--sans); letter-spacing: .06em; text-transform: uppercase; vertical-align: 2px; }
+</style>
 </head>
 <body>
 
@@ -324,56 +407,20 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
     <p>One setup, start to finish: the warning before the close, the confirmation on the close, the target when it hits. Most days the scanner says nothing. That's the discipline, built in.</p>
   </div>
 
-  <div class="stage" id="stage">
-    <div class="chart-card">
-      <div class="chart-top"><span class="tk2">AMD <span>4-hour · example</span></span><span class="clockpill" id="stClock">● After every 4H close</span></div>
-      <svg id="stChart" viewBox="0 0 600 330" width="100%" role="img" aria-label="Example 4-hour chart: a decline into a hub, then a close above the hub">
-        <rect x="30" y="30" width="540" height="36" fill="#12805C" opacity="0.07"/>
-        <line x1="30" y1="30" x2="570" y2="30" stroke="#12805C" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
-        <line x1="30" y1="66" x2="570" y2="66" stroke="#12805C" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
-        <text x="560" y="54" text-anchor="end" font-family="JetBrains Mono,monospace" font-size="11" letter-spacing="1.5" fill="#12805C">NEXT SHELF $186.10</text>
-        <g stroke-width="2" stroke="#8A8F9C">
-          <line x1="60" y1="52" x2="60" y2="82"/><rect x="53" y="58" width="14" height="18" fill="#8A8F9C" stroke="none"/>
-          <line x1="95" y1="70" x2="95" y2="102"/><rect x="88" y="76" width="14" height="20" fill="#8A8F9C" stroke="none"/>
-          <line x1="130" y1="90" x2="130" y2="124"/><rect x="123" y="96" width="14" height="22" fill="#8A8F9C" stroke="none"/>
-          <line x1="165" y1="112" x2="165" y2="148"/><rect x="158" y="118" width="14" height="24" fill="#8A8F9C" stroke="none"/>
-          <line x1="200" y1="136" x2="200" y2="174"/><rect x="193" y="142" width="14" height="26" fill="#8A8F9C" stroke="none"/>
-          <line x1="235" y1="162" x2="235" y2="200"/><rect x="228" y="168" width="14" height="26" fill="#8A8F9C" stroke="none"/>
-          <line x1="270" y1="184" x2="270" y2="218"/><rect x="263" y="190" width="14" height="22" fill="#8A8F9C" stroke="none"/>
-        </g>
-        <rect x="292" y="196" width="150" height="58" fill="#2F54EB" opacity="0.06"/>
-        <rect x="292" y="196" width="150" height="58" fill="none" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.7"/>
-        <text x="367" y="278" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" letter-spacing="2" fill="#2F54EB">HUB · 6 SESSIONS</text>
-        <g stroke-width="2" stroke="#8A8F9C">
-          <line x1="315" y1="202" x2="315" y2="232"/><rect x="308" y="208" width="14" height="18" fill="#8A8F9C" stroke="none"/>
-          <line x1="345" y1="206" x2="345" y2="236"/><rect x="338" y="212" width="14" height="18" fill="#8A8F9C" stroke="none"/>
-          <line x1="375" y1="210" x2="375" y2="238"/><rect x="368" y="216" width="14" height="16" fill="#8A8F9C" stroke="none"/>
-        </g>
-        <g class="brk" stroke-width="2" stroke="#12805C"><line x1="412" y1="158" x2="412" y2="228"/><rect x="404" y="168" width="16" height="50" fill="#12805C" stroke="none"/></g>
-        <g class="tag"><rect x="318" y="112" width="188" height="32" rx="16" fill="#12805C"/>
-          <text x="412" y="133" text-anchor="middle" font-family="Inter,sans-serif" font-size="13" font-weight="600" fill="#fff">Closed above the hub</text></g>
-        <g class="arc"><path d="M430,160 C470,120 500,90 530,70" fill="none" stroke="#141412" stroke-width="1.5" stroke-dasharray="5 4"/><path d="M530,70 l-11,2 l6,8 z" fill="#141412"/></g>
-        <text x="446" y="205" font-family="JetBrains Mono,monospace" font-size="12" fill="#2F54EB">$178.01</text>
-      </svg>
-    </div>
-    <div class="phone"><div class="scr">
-      <div class="clock" id="stTime">1:52</div>
-      <div class="clocksub" id="stDay">Monday · NextShelf alerts</div>
-      <div id="stMsgs">
-        <div class="msg alert" data-at="4"><b>TELEGRAM</b> <span class="ts">THU</span><br>🎯 <b>AMD reached the shelf</b><br>Hit $186.10, the target. Logged in the track record.</div>
-        <div class="msg alert" data-at="3"><b>TELEGRAM</b> <span class="ts">TUE 4:22 PM</span><br>🚀 <b>AMD: 4H close above the hub</b><br>Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div>
-        <div class="msg" data-at="2"><b>TELEGRAM</b> <span class="probadge">PRO</span> <span class="ts">TUE 3:45 PM</span><br>⚠ <b>AMD: trading above the hub</b>, about 15 min before the 4H close<br>Now $179.40. If the candle closes above $178.01, that's the breakout.</div>
-        <div class="msg" data-at="1"><b>TELEGRAM</b> <span class="ts">MON</span><br>■ <b>AMD: new hub</b> forming between $172.20 and $178.01</div>
-        <div class="msg" data-at="0"><b>SCOUT</b> <span class="ts">MON 1:52 PM</span><br>🔎 Swept 543 stocks after the 1:30 PM close. Nothing on your list yet, so nothing to do.</div>
+  <div class="flow" id="flowDemo" data-step="1">
+    <div class="fl-stage">
+      <div class="fl-chart">
+        <div class="fl-top"><span class="fl-sym"><b>AMD</b> 4-hour</span><span class="fl-clock" id="flClock"><i></i><span>After every 4H close</span></span></div>
+        <svg viewBox="0 10 600 305" preserveAspectRatio="xMidYMid meet" aria-hidden="true" id="flSvg"></svg>
       </div>
-    </div></div>
-  </div>
-  <div class="timeline" id="stSteps">
-    <button class="tcard" data-s="0"><div class="when">After every 4H close</div><h4>Scout sweeps <span class="livebadge">LIVE</span></h4><p>540+ stocks checked about 20 minutes after each 4-hour close.</p></button>
-    <button class="tcard" data-s="1"><div class="when">Over a few days</div><h4>A hub forms</h4><p>Price coils in a tight range for 4+ sessions.</p></button>
-    <button class="tcard" data-s="2"><div class="when">3:45 PM</div><h4>15 minutes to the close</h4><p>Price is outside the hub. Pro members get a heads-up.</p></button>
-    <button class="tcard" data-s="3"><div class="when">4:00 PM</div><h4>The candle closes</h4><p>Breakout confirmed, aiming for the next shelf.</p></button>
-    <button class="tcard" data-s="4"><div class="when">Next sessions</div><h4>Next shelf</h4><p>Target reached or failed, either way it's logged.</p></button>
+      <div class="fl-phone" aria-hidden="true">
+        <div class="fl-notch"></div>
+        <div class="fl-time" id="flPhoneTime">4:00</div>
+        <div class="fl-date">NextShelf alerts</div>
+        <div class="fl-stack" id="flStack"></div>
+      </div>
+    </div>
+    <ol class="fl-steps" id="flSteps"></ol>
   </div>
   <p class="stage-note">Example setup, for illustration.</p>
 </div></section>
@@ -505,28 +552,6 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
     }
   }).catch(() => {});
 
-  // ---- the example setup plays itself; tap a step to jump to it
-  const steps = [...document.querySelectorAll("#stSteps .tcard")], msgs = [...document.querySelectorAll("#stMsgs .msg")];
-  const clocks = [["1:52", "Monday", "● After every 4H close", "idle"], ["4:22", "Monday", "● Hub forming", "idle"], ["3:45", "Tuesday", "● 3:45 PM · 15 min to the close", "warn"],
-                  ["4:22", "Tuesday", "● 4:00 PM close confirmed", ""], ["1:52", "Thursday", "● Shelf reached", ""]];
-  const chart = $("stChart");
-  let cur = 0, timer = null;
-  function show(i) {
-    cur = i;
-    steps.forEach((b, k) => b.classList.toggle("on", k === i));
-    msgs.forEach(m => m.hidden = +m.dataset.at > i);
-    const [t, dayName, label, cls] = clocks[i];
-    $("stTime").textContent = t; $("stDay").textContent = dayName + " · NextShelf alerts"; $("stClock").textContent = label; $("stClock").className = "clockpill " + cls;
-    chart.querySelector(".brk").style.opacity = i >= 3 ? 1 : i === 2 ? .45 : 0;
-    chart.querySelector(".tag").style.opacity = i >= 3 ? 1 : 0;
-    chart.querySelector(".arc").style.opacity = i >= 4 ? 1 : 0;
-  }
-  function play() { clearInterval(timer); timer = setInterval(() => show((cur + 1) % steps.length), 2800); }
-  steps.forEach((b, k) => b.onclick = () => { show(k); play(); });
-  show(0);
-  const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? play() : clearInterval(timer)), {threshold: .25}) : null;
-  if (io) io.observe($("stage")); else play();
-
   // ---- waitlist sign-up
   document.querySelectorAll("form.join").forEach(f => f.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -577,6 +602,91 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
     location.href = shelf(s);
   });
   setTimeout(load, 1500);
+})();
+</script>
+<script>
+(function () {
+  const root = document.getElementById("flowDemo"); if (!root) return;
+  const svg = document.getElementById("flSvg");
+  const STEPS = [
+    {t: "After every 4H close", k: "Scout sweeps", pill: true, p: "540+ stocks checked about 20 minutes after each 4-hour close.", ph: "1:52"},
+    {t: "Day 1–3", k: "A hub forms", p: "Price coils in a tight range for 4+ sessions.", ph: "4:22"},
+    {t: "3:45 PM", k: "15 minutes to the close", p: "Price is outside the hub. Pro members get a heads-up.", ph: "3:45"},
+    {t: "4:00 PM", k: "The candle closes", p: "Breakout confirmed, aiming for the next shelf.", ph: "4:00"},
+    {t: "Next sessions", k: "Next shelf", p: "Target reached, and logged in the track record.", ph: "11:31"},
+  ];
+  const NOTES = [
+    {h: "Scout", t: "Swept 540+ stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs."},
+    {h: "Telegram", t: "🟦 AMD: new hub", b: "4H closes held $176.80–$178.01 for 6 sessions. Watching for a close outside."},
+    {h: "Telegram", t: "⚠️ AMD: trading above hub, ~15 min before the 4H close", b: "Now $179.40. If the candle closes above $178.01, that's the breakout.", pro: true},
+    {h: "Telegram", t: "🚀 AMD: 4H close above hub", b: "Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01."},
+    {h: "Telegram", t: "✅ AMD: follow-through", b: "4H close $186.40 reached the next shelf $186.10, 3 candles after the breakout."},
+  ];
+  // ---- draw the chart once; layers fade in by step
+  const X0 = 40, DX = 21, Y = (p) => 282 - (p - 176) * 19.5;          // price → y
+  const C = (i, o, c, h, l, cls, extra) => { const x = X0 + i * DX, up = c >= o, top = Y(Math.max(o, c)), bot = Y(Math.min(o, c));
+    return `<g class="${cls}" ${extra || ""}><line x1="${x}" x2="${x}" y1="${Y(h)}" y2="${Y(l)}" stroke="var(${up ? "--fl-candle-up" : "--fl-candle-dn"})" stroke-width="1.4"/>
+      <rect x="${x - 6}" y="${top}" width="12" height="${Math.max(2, bot - top)}" rx="1.5" fill="${up ? "var(--fl-candle-up)" : "var(--fl-candle-dn)"}"/></g>`; };
+  const pre = [[187.2,186.0,187.8,185.4],[186.0,186.4,187.0,185.2],[186.4,184.9,186.8,184.4],[184.9,183.1,185.3,182.6],[183.1,181.6,183.6,181.0],[181.6,179.6,182.0,179.1],[179.6,178.2,180.0,177.6]];
+  const hub = [[178.2,177.4,178.6,176.9],[177.4,177.9,178.3,176.8],[177.9,177.1,178.4,176.7],[177.1,177.8,178.2,176.9],[177.8,177.2,178.3,176.8],[177.2,177.7,178.1,176.9],[177.7,177.3,178.2,176.8],[177.3,177.9,178.3,177.0]];
+  const run = [[179.8,181.4,181.9,179.4],[181.4,183.0,183.5,180.9],[183.0,182.6,183.9,182.0],[182.6,184.5,185.0,182.3],[184.5,186.4,186.9,184.2]];
+  const hubL = 176.8, hubH = 178.01, shelf = 186.10, nH = pre.length, xs = X0 + nH * DX - 11, xe = X0 + (nH + hub.length - 1) * DX + 11;
+  const bi = nH + hub.length, bx = X0 + bi * DX;
+  let g = "";
+  for (let k = 0; k < 6; k++) g += `<line x1="20" x2="580" y1="${22 + k * 56}" y2="${22 + k * 56}" stroke="var(--fl-grid)"/>`;
+  // shelf zone (earlier hub up top)
+  g += `<g class="fl-l s1"><rect x="${X0 - 12}" y="${Y(187.8)}" width="${560 - X0}" height="${Y(185.4) - Y(187.8)}" fill="color-mix(in srgb, var(--fl-up) 9%, transparent)"/>
+    <line x1="${X0 - 12}" x2="548" y1="${Y(shelf)}" y2="${Y(shelf)}" stroke="var(--fl-up)" stroke-width="1.4" stroke-dasharray="5 5"/>
+    <text x="548" y="${Y(shelf) - 8}" text-anchor="end" font-size="11" font-weight="700" letter-spacing="1.4" fill="var(--fl-up)">NEXT SHELF $186.10</text></g>`;
+  // candles before + in hub
+  pre.forEach((q, i) => g += C(i, ...q, "fl-l s1"));
+  hub.forEach((q, i) => g += C(nH + i, ...q, "fl-l s1"));
+  // hub box
+  g += `<g class="fl-l s2"><rect x="${xs}" y="${Y(hubH)}" width="${xe - xs + 70}" height="${Y(hubL) - Y(hubH)}" rx="4" fill="color-mix(in srgb, var(--fl-hub) 14%, transparent)" stroke="var(--fl-hub)" stroke-width="1.3" stroke-dasharray="4 3"/>
+    <text x="${xs + 4}" y="${Y(hubL) + 16}" font-size="11" font-weight="700" letter-spacing="1.4" fill="var(--fl-hub)">HUB · 6 SESSIONS</text>
+    <text x="${xe + 66}" y="${Y(hubH) - 6}" text-anchor="end" font-size="10.5" font-weight="600" fill="var(--fl-hub)">$178.01</text></g>`;
+  // step 3: live candle (not closed yet)
+  g += `<g class="fl-l s3only"><g class="fl-live"><line x1="${bx}" x2="${bx}" y1="${Y(179.9)}" y2="${Y(177.6)}" stroke="#F2C14E" stroke-width="1.4"/>
+      <rect x="${bx - 6}" y="${Y(179.4)}" width="12" height="${Y(177.9) - Y(179.4)}" rx="1.5" fill="none" stroke="#F2C14E" stroke-width="1.6" stroke-dasharray="3 2"/></g>
+    <g transform="translate(${bx + 16} ${Y(179.4) - 30})"><rect width="146" height="24" rx="12" fill="#F2C14E"/><text x="73" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1a1405">⏳ 15 min to the close</text></g></g>`;
+  // step 4: closed breakout candle
+  g += `<g class="fl-l s4">${C(bi, 177.9, 179.76, 180.0, 177.6, "")}<circle cx="${bx}" cy="${Y(179.76)}" r="14" fill="var(--fl-up)" opacity=".18"/>
+    <g class="fl-tag4" transform="translate(${bx + 16} ${Y(179.76) - 30})"><rect width="148" height="24" rx="12" fill="var(--fl-up)"/><text x="74" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#04140b">🚀 Closed above the hub</text></g></g>`;
+  // step 5: run to the shelf
+  run.forEach((q, i) => g += C(bi + 1 + i, ...q, "fl-runc", `style="transition-delay:${.15 + i * .18}s"`));
+  g += `<g class="fl-l s5" style="transition-delay:1.1s"><circle cx="${X0 + (bi + 5) * DX}" cy="${Y(shelf)}" r="16" fill="var(--fl-up)" opacity=".2"/>
+    <g transform="translate(${X0 + (bi + 5) * DX - 170} ${Y(shelf) + 18})"><rect width="150" height="24" rx="12" fill="var(--fl-up)"/><text x="75" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#04140b">🎯 Shelf hit · +3.5%</text></g></g>`;
+  // step 1: scanning beam
+  g += `<g class="fl-scan"><rect x="20" y="20" width="3" height="290" rx="1.5" fill="var(--fl-up)" opacity=".7"/><rect x="-30" y="20" width="50" height="290" fill="url(#flBeam)"/></g>`;
+  svg.innerHTML = `<defs><linearGradient id="flBeam" x1="0" x2="1"><stop offset="0" stop-color="#3DD68C" stop-opacity="0"/><stop offset="1" stop-color="#3DD68C" stop-opacity=".18"/></linearGradient></defs>` + g;
+  // the step 4 tag overlaps step 5's run; hide it in step 5
+  const st = document.createElement("style"); st.textContent = `.flow[data-step="5"] .fl-tag4 { opacity: 0; transition: opacity .3s; }`; document.head.appendChild(st);
+
+  // ---- steps + phone
+  const list = document.getElementById("flSteps"), stack = document.getElementById("flStack");
+  list.innerHTML = STEPS.map((s, i) => `<li data-n="${i + 1}"><small>${s.t}</small><b>${s.k}${s.pill ? ' <span class="live-pill run fl-pill">Live</span>' : ""}</b><p>${s.p}</p><i></i></li>`).join("");
+  const DUR = 4200; root.style.setProperty("--fl-dur", DUR + "ms");
+  let cur = 1, timer = null, playing = false;
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+  function show(n) {
+    cur = n; root.dataset.step = n;
+    document.getElementById("flClock").lastElementChild.textContent = STEPS[n - 1].t;
+    document.getElementById("flPhoneTime").textContent = STEPS[n - 1].ph;
+    [...list.children].forEach((li, i) => { li.classList.remove("on"); void li.offsetWidth; li.classList.toggle("on", i === n - 1); });
+    stack.innerHTML = NOTES.slice(Math.max(0, n - 3), n).map((x, i, a) => `<div class="fl-note${i < a.length - 1 ? " old" : ""}">
+      <div class="fl-nh"><span>${x.h}${x.pro ? '<em class="fl-pro">PRO</em>' : ""}</span>now</div>
+      <div class="fl-nt">${esc(x.t)}</div><div class="fl-nb">${esc(x.b)}</div></div>`).join("");
+  }
+  function tick() { clearTimeout(timer); if (!playing) return; timer = setTimeout(() => { show(cur % 5 + 1); tick(); }, cur === 5 ? DUR + 1200 : DUR); }
+  list.addEventListener("click", (e) => { const li = e.target.closest("li"); if (!li) return; show(+li.dataset.n); tick(); });
+
+  let vis = false;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  show(1);
+  if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach(e => {
+    vis = e.isIntersecting; if (vis) { if (!playing) { playing = true; tick(); } } else { playing = false; clearTimeout(timer); }
+  }), {threshold: .2}).observe(root);
+  else { playing = true; tick(); }
 })();
 </script>
 </body>
