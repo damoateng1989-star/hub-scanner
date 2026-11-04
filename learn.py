@@ -334,7 +334,10 @@ def render(slug: str | None = None) -> str | None:
     a = shell.index('<div class="toc">')
     b = shell.index("</div>", a) + len("</div>")
     shell = shell[:a] + f'<div class="toc">{crumbs}</div>' + shell[b:]
+    css, js = STYLE.split("<script>", 1)
+    h = shell.index("</head>")
+    shell = shell[:h] + css + shell[h:]              # styles in <head>: no flash of the unstyled page
     i = shell.rindex("</body>")
-    shell = shell[:i] + STYLE + shell[i:]
+    shell = shell[:i] + "<script>" + js + shell[i:]
     return (shell.replace("{{TITLE}}", _e(title)).replace("{{UPDATED}}", "")
                  .replace("{{BODY}}", body).replace("{{SLUG}}", slug or "learn"))

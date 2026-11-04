@@ -105,34 +105,6 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 .theme-btn:hover { background: rgba(127,127,127,.12); }
 .theme-btn .ic-moon { display: none; } [data-theme="light"] .theme-btn .ic-sun { display: none; } [data-theme="light"] .theme-btn .ic-moon { display: block; }
 </style>
-</head>
-<body>
-<nav><div class="wrap">
-  <a class="brand" href="/">
-    <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="#F4F4F6"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#2F54EB"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#0B0B0D" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-    NextShelf</a>
-  <div class="nl"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><a class="hide-sm" href="/app#discover">Market board</a><a class="hide-sm" href="/#pricing">Pricing</a><a href="/login">Log in</a><a class="cta" href="/login#signup">Sign up</a></div>
-</div></nav>
-
-<header class="ph"><div class="wrap">
-  <div class="toc"><a href="/terms" data-s="terms">Terms</a><a href="/privacy" data-s="privacy">Privacy</a><a href="/disclaimer" data-s="disclaimer">Risk disclaimer</a><a href="/contact" data-s="contact">Contact</a></div>
-  <h1>{{TITLE}}</h1>
-  {{UPDATED}}
-</div></header>
-
-<main class="wrap"><article>
-{{BODY}}
-</article></main>
-
-<footer><div class="wrap">
-  <nav><a href="/">Home</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></nav>
-  <div><b>Don't force trades. Let the trade come to you.</b><br>© <span id="yr"></span> NextShelf. Educational tool, not financial advice.</div>
-</div></footer>
-<script>
-document.getElementById("yr").textContent = new Date().getFullYear();
-document.querySelectorAll(".toc a").forEach(a => a.classList.toggle("on", a.dataset.s === "{{SLUG}}"));
-</script>
-
 <style>
 /* MONOCHROME */
 form button, .cform button, .nl .cta, #watch { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #070b10 !important; }
@@ -174,7 +146,6 @@ html[data-theme="light"] .theme-btn { color: #0d1117 !important; background: rgb
 html[data-theme="dark"] .theme-btn { color: #e8eef5 !important; }
 html[data-theme="light"] #signin a, html[data-theme="light"] nav #signin a { color: #0d1117 !important; }
 </style>
-<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 /* ================= Typeface: DM Sans (SIL OFL) + tracked uppercase labels + tabular numbers ================= */
 @font-face { font-family: "DM Sans"; src: url("/fonts/DMSans.woff2") format("woff2"); font-weight: 100 1000; font-style: normal; font-display: swap; }
@@ -195,6 +166,43 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
 .board-table td, .lrow .s, .r .s, .board-symbol a { font-family: "DM Sans", sans-serif !important; letter-spacing: .01em; }
 .board-symbol a, .lrow summary .s, .r .s { font-weight: 700 !important; }
 </style>
+<style>
+/* footer links: plain row, not a glass bar */
+html footer nav, html[data-theme="light"] footer nav { position: static !important; background: none !important; border: 0 !important; box-shadow: none !important;
+  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; height: auto !important; }
+</style>
+<style>
+@media (max-width: 520px) { nav .nl a { white-space: nowrap; } nav .nl a[href="/login"] { display: none !important; } nav .nl { gap: 8px !important; } }
+</style>
+</head>
+<body>
+<nav><div class="wrap">
+  <a class="brand" href="/">
+    <svg width="32" height="32" viewBox="0 0 24 24" aria-hidden="true"><rect x="1" y="1" width="22" height="22" rx="7" fill="#F4F4F6"/><rect x="4.5" y="14" width="9" height="4" rx="1.2" fill="#2F54EB"/><rect x="11.5" y="5.5" width="8" height="3" rx="1" fill="#3DD68C"/><path d="M5.5 16.5 L8.5 15 L11 16 L14.5 11.5 L18 7.2" fill="none" stroke="#0B0B0D" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    NextShelf</a>
+  <div class="nl"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><a class="hide-sm" href="/app#discover">Market board</a><a class="hide-sm" href="/#pricing">Pricing</a><a href="/login">Log in</a><a class="cta" href="/login#signup">Sign up</a></div>
+</div></nav>
+
+<header class="ph"><div class="wrap">
+  <div class="toc"><a href="/terms" data-s="terms">Terms</a><a href="/privacy" data-s="privacy">Privacy</a><a href="/disclaimer" data-s="disclaimer">Risk disclaimer</a><a href="/contact" data-s="contact">Contact</a></div>
+  <h1>{{TITLE}}</h1>
+  {{UPDATED}}
+</div></header>
+
+<main class="wrap"><article>
+{{BODY}}
+</article></main>
+
+<footer><div class="wrap">
+  <nav><a href="/">Home</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></nav>
+  <div><b>Don't force trades. Let the trade come to you.</b><br>© <span id="yr"></span> NextShelf. Educational tool, not financial advice.</div>
+</div></footer>
+<script>
+document.getElementById("yr").textContent = new Date().getFullYear();
+document.querySelectorAll(".toc a").forEach(a => a.classList.toggle("on", a.dataset.s === "{{SLUG}}"));
+</script>
+
+<link rel="preload" href="/fonts/DMSans.woff2" as="font" type="font/woff2" crossorigin>
 <script>
 // ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
 (function () {
@@ -221,13 +229,5 @@ td, .board-table td, .live, .lm-row b, .tiles b, .ox-grid b, .r .d, .nf-t time, 
   }).catch(() => {});
 })();
 </script>
-<style>
-/* footer links: plain row, not a glass bar */
-html footer nav, html[data-theme="light"] footer nav { position: static !important; background: none !important; border: 0 !important; box-shadow: none !important;
-  -webkit-backdrop-filter: none !important; backdrop-filter: none !important; padding: 0 !important; height: auto !important; }
-</style>
-<style>
-@media (max-width: 520px) { nav .nl a { white-space: nowrap; } nav .nl a[href="/login"] { display: none !important; } nav .nl { gap: 8px !important; } }
-</style>
 </body>
 </html>
