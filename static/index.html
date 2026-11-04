@@ -2712,7 +2712,8 @@ async function openBrief(sym) {
   $("brief").classList.add("bf-collapsed");
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
-  setCmd("levels");
+  BRIEF_SEC = "levels"; document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === "levels"));
+  $("brief").scrollTop = 0;
   loadOptions(sym);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
@@ -2781,7 +2782,7 @@ function setCmd(sec) {
 document.querySelectorAll("#bfCmds button").forEach(b => b.onclick = () => setCmd(b.dataset.sec));
 $("brief").addEventListener("scroll", () => {
   const top = $("brief").getBoundingClientRect().top + 60; let cur = "levels";
-  ["levels", "setup", "options", "history"].forEach(k => { const el = document.getElementById("bf-" + k); if (el && el.getBoundingClientRect().top <= top) cur = k; });
+  ["levels", "setup", "options", "history"].forEach(k => { const el = document.getElementById("bf-" + k); if (el && el.offsetParent !== null && el.getBoundingClientRect().top <= top) cur = k; });
   document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === cur));
 }, {passive: true});
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && BRIEF_SYM) closeBrief(); });
