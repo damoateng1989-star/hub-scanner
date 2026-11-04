@@ -30,6 +30,7 @@ import pandas as pd  # noqa: E402
 import auth  # noqa: E402
 import engine  # noqa: E402
 import legal  # noqa: E402
+import learn  # noqa: E402
 import options  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
@@ -310,6 +311,19 @@ def ticker_page(symbol: str):
 
 
 # ---------------------------------------------------------------- trust pages: terms, privacy, risk disclaimer, contact
+@app.get("/learn", response_class=HTMLResponse)
+def learn_index():
+    return learn.render()
+
+
+@app.get("/learn/{slug}", response_class=HTMLResponse)
+def learn_lesson(slug: str):
+    page = learn.render(slug)
+    if page is None:
+        return RedirectResponse("/learn", 302)
+    return page
+
+
 @app.get("/terms", response_class=HTMLResponse)
 def terms_page():
     return legal.render("terms")
