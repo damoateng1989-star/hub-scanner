@@ -1502,6 +1502,8 @@ html[data-theme="light"] .bf-px { color: #0d1117; }
 .oc-rows em { font-style: normal; margin-left: 4px; } .oc-rows em.up { color: #3DD68C; } .oc-rows em.dn { color: #ff7d72; }
 .oc-note { margin: 0 !important; padding: 2px 0 14px; color: #7A808C !important; font-size: 13px !important; line-height: 1.55; }
 .oc-assume { padding: 12px 0 0; }
+.oc-rows > div b.oc-gain { color: #3DD68C; } .oc-rows > div b.oc-lossv { color: #ff7d72; }
+html[data-theme="light"] .oc-rows > div b.oc-gain { color: #15803d !important; } html[data-theme="light"] .oc-rows > div b.oc-lossv { color: #b91c1c !important; }
 .oc-warn { margin: 10px 0 0; color: #ff9b8f; font-size: 13.5px; line-height: 1.5; }
 .oc-earn { margin: 12px 0 0; color: #c4a8ff; font-size: 13.5px; line-height: 1.5; }
 .oc-more, .oc-alt { border-top: 1px solid #292A2D; }
@@ -3197,7 +3199,9 @@ function optionsHTML(o) {
         <div><span>If it reaches the aim</span><b>≈ ${money(c.at_shelf)} <em class="${good ? "up" : "dn"}">${sgn(c.at_shelf_pct)}</em></b></div>
         <p class="oc-note">${note}</p>
         <div><span>If the ${move} fails</span><b>≈ ${money(c.at_fail)} <em class="dn">${sgn(c.at_fail_pct)}</em></b></div>
+        <div><span>Est. gain at the aim</span><b class="${good ? "oc-gain" : "oc-lossv"}">≈ ${good ? "+" : "−"}${money(Math.abs((c.at_shelf - c.mid) * 100))}</b></div>
         <div><span>Max loss</span><b>${money(c.cost)}</b></div>
+        <p class="oc-note">Per contract (100 shares). The gain isn't capped, so this is what the plan aims for, not a ceiling; the loss is capped at what you pay.</p>
       </div>
       ${good ? "" : `<p class="oc-warn">⚠ Loses money even if the stock reaches ${money(p.target)}: the move is too small to pay for this contract's time value. Skip it.</p>`}
       <details class="oc-more"><summary>Show the math</summary><div class="oc-rows">
