@@ -1,10 +1,29 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/InstrumentSerifItalic.woff2" as="font" type="font/woff2" crossorigin>
+<script>
+/* light/dark: "system" (default) follows the device; choice saved per browser */
+(function () {
+  var pick = "system"; try { pick = localStorage.getItem("ns_theme") || "system"; } catch (e) {}
+  var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
+  function apply(p) {
+    var t = p === "system" ? (mq && mq.matches ? "light" : "dark") : p;
+    document.documentElement.dataset.theme = t; document.documentElement.dataset.themePick = p;
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#F6F6F3" : "#0E0F12";
+    document.querySelectorAll("[data-theme-btn]").forEach(function (b) { b.setAttribute("aria-label", "Theme: " + p + " (switch)"); b.title = t === "light" ? "Switch to dark" : "Switch to light"; b.dataset.mode = t; });
+    document.querySelectorAll("[data-theme-opt]").forEach(function (b) { b.classList.toggle("on", b.dataset.themeOpt === p); });
+  }
+  window.nsSetTheme = function (p) { try { localStorage.setItem("ns_theme", p); } catch (e) {} pick = p; apply(p); };
+  window.nsToggleTheme = function () { nsSetTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"); };
+  if (mq && mq.addEventListener) mq.addEventListener("change", function () { if (pick === "system") apply("system"); });
+  apply(pick);
+  document.addEventListener("DOMContentLoaded", function () { apply(pick); });
+})();
+</script>
 <meta name="theme-color" content="#F6F6F3">
 <title>NextShelf · Hub-breakout scanner for swing traders</title>
 <meta name="description" content="Built for swing traders with day jobs. NextShelf checks 540+ stocks and ETFs after every 4-hour close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
@@ -194,6 +213,27 @@ footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(
   .navend .signin { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .live .dot,  .btn:hover { transform: none; } }
+
+/* ---------- light / dark ---------- */
+.theme-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
+.theme-btn:hover { border-color: var(--ink3); }
+.theme-btn .ic-moon { display: none; } [data-theme="light"] .theme-btn .ic-sun { display: none; } [data-theme="light"] .theme-btn .ic-moon { display: block; }
+html[data-theme="dark"] {
+  --paper: #0E0F12; --card: #15171C; --sunk: #1A1C22; --ink: #E9EBEF; --ink2: #9AA0AC; --ink3: #646B78;
+  --line: #23262E; --blue: #4F6BFF; --up: #3DD68C; --down: #FF6B5E; --warn: #E5A13D; color-scheme: dark;
+}
+html[data-theme="dark"] nav.top { background: rgba(14,15,18,.86); }
+html[data-theme="dark"] .btn.solid { background: #F2F3F5; color: #0E0F12; }
+html[data-theme="dark"] .live { background: #15171C; border: 1px solid #23262E; color: #E9EBEF; }
+html[data-theme="dark"] .plan.pro { background: #1C1F26; border-color: #2E323B; color: #E9EBEF; }
+html[data-theme="dark"] .cmp-row > div:last-child { background: #151A2B; } html[data-theme="dark"] .cmp-row.head > div:last-child { background: #1B2240; }
+html[data-theme="dark"] .illus { background: #F6F6F3; border-color: #2E323B; }
+html[data-theme="dark"] .rec .big[style*="--up"] { color: #3DD68C !important; }
+html[data-theme="dark"] .join input[type=email] { background: #15171C; }
+html[data-theme="dark"] .alt a, html[data-theme="dark"] .honest a, html[data-theme="dark"] .feat .when, html[data-theme="dark"] .step .num { color: #8EA2FF; }
+html[data-theme="dark"] em { color: #C3C7CF; }
+.navend { display: flex; align-items: center; gap: 14px; } .navend .btn { white-space: nowrap; }
+@media (max-width: 460px) { .wordmark em { display: none; } .navend { gap: 8px; } .navend .btn.sm { padding: 9px 13px; font-size: 13.5px; } nav.top .wrap { padding: 0 16px; } }
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
@@ -379,7 +419,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
 <nav class="top"><div class="wrap">
   <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf <em>beta</em></a>
   <div class="navlinks"><a href="#why">Why NextShelf</a><a href="#how">How it works</a><a href="#record">Track record</a><a href="#pricing">Pricing</a><a href="/learn">University</a><a href="#faq">FAQ</a></div>
-  <div class="navend" id="navEnd"><a class="signin" href="/login">Sign in</a><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></div>
+  <div class="navend"><span id="themeSlot"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></span><span id="navEnd" class="navend"><a class="signin" href="/login">Sign in</a><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
 <header class="hero"><div class="wrap">
