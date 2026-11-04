@@ -3014,10 +3014,9 @@ function bGroup(title, rows, kind, empty) {
 
 let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
 function boardStatus(r,kind){
-  if(kind==="live") return r.state==="breakdown"?["Breakdown","down"]:["Breakout","up"];
-  if(kind==="near") return ["At the edge","near"];
-  if(kind==="forming") return ["Inside hub","hub"];
-  const map={"follow-through":["Hit shelf","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
+  if(kind==="live") return r.state==="breakdown"?["Broke down ↓","down"]:["Broke out ↑","up"];
+  if(kind==="near"||kind==="forming") return ["Inside a hub","hub"];
+  const map={"follow-through":["Reached target","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
   return map[r.state]||[String(r.state||"No signal").replaceAll("_"," "),"neutral"];
 }
 function boardDistance(r,kind){
@@ -3040,7 +3039,7 @@ function boardRows(){
 }
 function renderInstitutionalBoard(){
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];return(BOARD_KIND==="all"||BOARD_KIND===r._kind)&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     let av,bv;
     if(BOARD_SORT==="symbol"){av=a.symbol;bv=b.symbol;}
@@ -3089,10 +3088,9 @@ async function loadBoard() {
     (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
     '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
-    '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Breakouts</button>'+
-    '<button class="board-filter" data-kind="near" onclick="filterInstitutionalBoard(\'near\')">At edge</button>'+
-    '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">In hub</button>'+
-    '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')">Recent</button></div></div>'+
+    '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
+    '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
+    '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')" title="Breakouts that already reached their target, failed or ran out of time">Finished</button></div></div>'+
     '<div class="board-frame"><div class="board-caption"><span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
