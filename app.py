@@ -236,8 +236,9 @@ def touch_icon():
 
 @app.get("/fonts/{name}")
 def fonts(name: str):
-    """Self-hosted Geist fonts (SIL Open Font License): sharp, fast, no third-party font requests."""
-    if name not in ("Geist.woff2", "GeistMono.woff2", "Newsreader.woff2", "NewsreaderItalic.woff2", "DMSans.woff2", "OFL.txt", "OFL-Newsreader.txt", "OFL-DMSans.txt"):
+    """Self-hosted fonts (SIL Open Font License): sharp, fast, no third-party font requests."""
+    if name not in ("Geist.woff2", "GeistMono.woff2", "Newsreader.woff2", "NewsreaderItalic.woff2", "DMSans.woff2", "Inter.woff2", "InstrumentSerif.woff2", "InstrumentSerifItalic.woff2", "JetBrainsMono.woff2",
+                    "OFL.txt", "OFL-Newsreader.txt", "OFL-DMSans.txt", "OFL-Inter.txt", "OFL-InstrumentSerif.txt", "OFL-JetBrainsMono.txt"):
         raise HTTPException(404)
     return FileResponse(STATIC / "fonts" / name, media_type="font/woff2" if name.endswith("woff2") else "text/plain",
                         headers={"Cache-Control": "public, max-age=31536000, immutable"})
@@ -785,6 +786,19 @@ def scanner_status(request: Request):
     sc["found"] = found[-12:] if full else []       # names of fresh finds are a Pro feature, like the board
     sc["next"] = _next_sweep()
     return sc
+
+
+@app.get("/api/public/summary")
+def public_summary():
+    """Real numbers for the landing page: today's board and the hub track record (no symbols from the Pro groups)."""
+    b = board.board()
+    rec = board.track_record("hub")["stats"]
+    by = rec.get("by_outcome") or {}
+    closed = rec.get("closed") or 0
+    return dict(updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
+                signals=rec.get("signals"), closed=closed, open=rec.get("open"),
+                reached_pct=round(100 * by.get("follow-through", 0) / closed) if closed else None,
+                win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), next=_next_sweep(), times=sorted(BOARD_TIMES))
 
 
 @app.get("/api/record")

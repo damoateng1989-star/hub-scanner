@@ -254,7 +254,7 @@ def index_body() -> str:
         rows = []
         for slug, t, m, *_ in lessons:
             k += 1
-            rows.append(f'<a class="lu-l" href="/learn/{slug}"><span class="lu-n">{k}</span><span class="lu-t">{_e(t)}</span>'
+            rows.append(f'<a class="lu-l" href="/learn/{slug}"><span class="lu-n">{k:02d}</span><span class="lu-t">{_e(t)}</span>'
                         f'<span class="lu-m">{m} min</span></a>')
         parts.append(f'<section class="lu-mod"><div class="lu-mh"><small>Module {mi}</small><h2>{_e(title)}</h2><p>{_e(blurb)}</p></div>'
                      f'<div class="lu-ls">{"".join(rows)}</div></section>')
@@ -339,5 +339,7 @@ def render(slug: str | None = None) -> str | None:
     shell = shell[:h] + css + shell[h:]              # styles in <head>: no flash of the unstyled page
     i = shell.rindex("</body>")
     shell = shell[:i] + "<script>" + js + shell[i:]
+    if not slug:                                     # the index gets the editorial headline
+        shell = shell.replace("<h1>{{TITLE}}</h1>", "<h1>Learn the <em>setup.</em></h1>")
     return (shell.replace("{{TITLE}}", _e(title)).replace("{{UPDATED}}", "")
                  .replace("{{BODY}}", body).replace("{{SLUG}}", slug or "learn"))

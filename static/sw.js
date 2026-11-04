@@ -1,9 +1,9 @@
 /* NextShelf service worker: makes the app installable and quick to open.
    Pages: network first (always fresh), cached copy when offline.
    Fonts, icons, chart library: cache first.  API calls: never cached (prices must be live). */
-const V = "ns-v1";
+const V = "ns-v2";
 const SHELL = ["/app", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/favicon.svg",
-               "/fonts/Geist.woff2", "/fonts/GeistMono.woff2", "/vendor/lightweight-charts.js"];
+               "/fonts/Inter.woff2", "/fonts/InstrumentSerifItalic.woff2", "/fonts/JetBrainsMono.woff2", "/vendor/lightweight-charts.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (e) => {
   e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== V).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
