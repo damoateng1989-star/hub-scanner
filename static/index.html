@@ -916,7 +916,7 @@ body.brief-open .sf-hello { display: none; }
   .board-table td:nth-child(1) .board-symbol a { font-size: 17px !important; font-weight: 800; }
   .board-table td:nth-child(1) .board-symbol small { display: inline; margin-left: 6px; }
   .board-table td:last-child { grid-column: 1 / -1; padding-top: 4px !important; } .board-table td:last-child::before { display: none; }
-  .board-table td:last-child .board-actions { justify-content: flex-start !important; }
+  .board-table td:last-child .board-actions { justify-content: flex-end !important; }
   .board-table td:last-child .board-actions a, .board-table td:last-child .board-actions .btnx { font-size: 13px !important; padding: 8px 14px !important; border-radius: 999px !important; }
   .board-table td:empty, .board-table td[data-label=""]::before { display: none; }
   /* hub board: status pill sits top-right next to the ticker */
@@ -1615,6 +1615,16 @@ html[data-theme="light"] body .lesson { background: #fff !important; border-colo
 html body .rule1 .r1-mark { background: transparent !important; border: 1px solid #2E323B !important; box-shadow: none !important; }
 html[data-theme="light"] body .rule1 .r1-mark { border-color: #E4E3DC !important; }
 @media (min-width: 761px) { #hello, .vh h1 { font-size: 40px !important; } }
+
+/* Analyze opens to one screen: the plan and the level map; the rest is behind "See more" */
+.bf-more { display: grid; gap: 14px; } @media (max-width: 899px) { .bf-more { gap: 12px; } }
+#brief.bf-collapsed .bf-more { display: none; }
+.bf-seemore { display: none; }
+#brief.bf-collapsed .bf-seemore { display: block; flex: 1; padding: 13px 16px; border: 0; border-radius: 12px; cursor: pointer;
+  background: #F2F3F5; color: #0E0F12; font: 700 15px var(--sans); }
+html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; color: #F6F6F3; }
+#brief.bf-collapsed .bf-foot { align-items: center; gap: 16px; }
+#brief.bf-collapsed .bf-foot a { white-space: nowrap; font-size: 14px; }
 </style>
 </head>
 <body class="term">
@@ -1814,7 +1824,7 @@ html[data-theme="light"] body .rule1 .r1-mark { border-color: #E4E3DC !important
   </div>
   </div>
   <div class="bf-body" id="bfBody"></div>
-  <div class="bf-foot"><a id="bfChart" href="#">Open full chart →</a></div>
+  <div class="bf-foot"><button type="button" class="bf-seemore" id="bfMore" onclick="briefMore()">See more</button><a id="bfChart" href="#">Open full chart →</a></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Scout: scan for setups" aria-expanded="false">
@@ -2697,6 +2707,7 @@ async function openBrief(sym) {
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
   document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false"); $("brief").scrollTop = 0;
+  $("brief").classList.add("bf-collapsed");
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   setCmd("levels");
@@ -2753,8 +2764,14 @@ function heroStats(st) {
     ["Shelf below", st.shelf_down ? money(st.shelf_down.level) : "–", st.shelf_down ? pct(st.shelf_down.level, p) + " away" : "none in range", "dn"]];
   return `<div class="bf-stats">${cells.map(([l, v, sub, c]) => `<div><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div>`;
 }
+function briefMore(sec) {
+  $("brief").classList.remove("bf-collapsed");
+  const t = document.getElementById("bf-" + (sec || "setup"));
+  if (t) setTimeout(() => t.scrollIntoView({behavior: "smooth", block: "start"}), 30);
+}
 function setCmd(sec) {
   BRIEF_SEC = sec;
+  if (sec !== "levels" && $("brief").classList.contains("bf-collapsed")) { $("brief").classList.remove("bf-collapsed"); }
   document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === sec));
   const target = document.getElementById("bf-" + sec);
   if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2831,10 +2848,10 @@ function briefHTML(sym, st, chart) {
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
   return `<section class="bf-card"><div class="bf-k" id="bf-levels">Level map</div>${map}${setupsHTML}</section>
-    <section class="bf-card"><div class="bf-k" id="bf-setup">Game plan</div>${plan2}</section>
+    <div class="bf-more"><section class="bf-card"><div class="bf-k" id="bf-setup">Game plan</div>${plan2}</section>
     <section class="bf-card"><div class="bf-k" id="bf-options">Options swing <span class="ox-edu">Educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div></section>
     <section class="bf-card"><div class="bf-k" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}</section>
-    <p class="bf-fine bf-legal">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p>`;
+    <p class="bf-fine bf-legal">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p></div>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
 function orderPlan(h, dir, shelf) {
