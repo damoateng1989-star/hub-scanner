@@ -459,7 +459,7 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-state.hub{color:#a8b9e8;background:#242528}.board-state.near{color:#d8b878;background:#2b2519}
 .board-state.neutral{color:#9eacbb;background:#222326}.board-distance{font-weight:700;color:#dce6ef}.board-shelf{font-weight:700;color:#b6c9dc}
 .board-actions{display:flex;justify-content:flex-end;gap:7px}.board-actions a{font-size:10px!important;padding:6px 8px!important;border-radius:4px!important}
-.board-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}
+.board-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}.board-lockrow{font-size:14px;padding:18px}.board-table tr:has(.board-lockrow) td{grid-column:1/-1}.board-table tr:has(.board-lockrow) td::before{display:none}.board-lockrow a{color:#8EA2FF;font-weight:700;text-decoration:none}
 .board-lock{display:flex;justify-content:space-between;gap:16px;align-items:center;background:#1F2023;border:1px solid #34465a;border-radius:7px;padding:15px;margin-bottom:12px}
 .board-lock p{margin:4px 0 0;color:var(--muted);font-size:11px}.board-lock strong{font-size:13px}
 @media(max-width:700px){.board-toolbar{align-items:stretch}.board-search{max-width:none}.board-lock{align-items:flex-start;flex-direction:column}.board-caption{align-items:flex-start;flex-direction:column}}
@@ -3061,7 +3061,9 @@ function renderInstitutionalBoard(){
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
       '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
   }).join("");
-  const tbody=$("boardRows");if(tbody)tbody.innerHTML=html||'<tr><td colspan="9"><div class="board-empty">No symbols match this view.</div></td></tr>';
+  const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
+  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' has':'s have')+' broken out</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
+  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="9"><div class="board-empty">No symbols match this view.</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
   document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
