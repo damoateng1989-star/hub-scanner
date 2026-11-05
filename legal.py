@@ -159,7 +159,7 @@ def disclaimer() -> str:
 <p class="lead">Trading stocks involves substantial risk, including the possible loss of all the money you invest. Please read this before using NextShelf's signals.</p>
 
 <h2>Educational information only</h2>
-<p>Everything on NextShelf, including alerts, setups, targets, game plans, options swing plans, the Scout assistant, lessons and track records, is general
+<p>Everything on NextShelf, including alerts, setups, targets, game plans, options swing plans, the Sika assistant, lessons and track records, is general
 educational information. It is not personalized investment advice and is not an offer or recommendation to buy or sell any security.
 NextShelf is not a registered investment adviser or broker-dealer.</p>
 

@@ -1752,7 +1752,7 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
     <p><span id="bUni">The S&amp;P 500, Nasdaq-100 and major ETFs</span>, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
   <div class="agent" id="agent">
     <div class="ag-main">
-      <div class="ag-name">Scout <small>your hub-hunting assistant</small><span class="ag-state live-pill" id="agState">Live</span></div>
+      <div class="ag-name">Sika <small>your setup scout</small><span class="ag-state live-pill" id="agState">Live</span></div>
       <div class="ag-line" id="agLine">Getting ready…</div>
       <div class="ag-bar"><i id="agBar"></i></div>
       <div class="ag-finds" id="agFinds"></div>
@@ -1840,12 +1840,12 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
   <div class="bf-foot"><button type="button" class="bf-seemore" id="bfMore" onclick="briefMore()">See more</button><a id="bfChart" href="#">Open full chart →</a></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
-<button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Scout: scan for setups" aria-expanded="false">
-  <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-name">Scout</span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
+<button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
+  <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-name">Sika</span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
 </button>
 <div class="sf-hello" id="sfHello" hidden onclick="this.hidden=true;toggleScout(true)"></div>
-<div class="scout-pop" id="scoutPop" hidden role="dialog" aria-label="Scout">
-  <div class="sp-head"><div><b>Scout</b><small id="spState" class="live-pill">Live</small></div><button class="bf-x" onclick="toggleScout(false)" aria-label="Close">✕</button></div>
+<div class="scout-pop" id="scoutPop" hidden role="dialog" aria-label="Sika">
+  <div class="sp-head"><div><b>Sika</b><small id="spState" class="live-pill">Live</small></div><button class="bf-x" onclick="toggleScout(false)" aria-label="Close">✕</button></div>
   <p class="sp-line" id="spLine">Checking in…</p>
   <div class="ag-bar sp-bar"><i id="spBar"></i></div>
   <div class="sp-acts" id="spActs"></div>
@@ -3139,7 +3139,7 @@ function toast(text, href, linkText) {
   clearTimeout(t._h); t._h = setTimeout(() => t.className = "", 4000);
 }
 $("bScan").addEventListener("click", async () => {
-  try { await api("/api/board/scan", {method: "POST"}); toast("Scout is sweeping the market"); } catch (e) { toast(friendly(e)); }
+  try { await api("/api/board/scan", {method: "POST"}); toast("Sika is sweeping the market"); } catch (e) { toast(friendly(e)); }
   pollAgent();
 });
 
@@ -3325,7 +3325,7 @@ function renderSetupBoard() {
         <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
         <td>${up == null ? "—" : money(up)}</td><td>${lo == null ? "—" : money(lo)}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${tvLink(x.symbol)}</div></td></tr>`; }).join("")}
-    </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Scout checks again after the next 4-hour close.</div>`)
+    </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next 4-hour close.</div>`)
     + `<div class="note" style="margin-top:10px">${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf). Check the Results page for how they've actually done.</div>`;
 }
 let RECORD_PAT = "hub";
@@ -3590,9 +3590,9 @@ setTimeout(() => {
   try { if (sessionStorage.getItem("hs_scout_hi")) return; sessionStorage.setItem("hs_scout_hi", "1"); } catch (e) {}
   if (!$("scoutPop").hidden || document.body.classList.contains("brief-open")) return;
   const guest = !ME || ME.guest, n = TICKERS.length;
-  $("sfHello").innerHTML = guest ? `Hi, I'm Scout 👋<small>Tap me to see what's setting up today.</small>`
-    : n ? `Hi${ME.name ? " " + esc(ME.name.split(" ")[0]) : ""}, I'm Scout 👋<small>Tap me and I'll scan your ${n} ticker${n === 1 ? "" : "s"} right now.</small>`
-    : `Hi, I'm Scout 👋<small>Add a few tickers and I'll watch them for you.</small>`;
+  $("sfHello").innerHTML = guest ? `Hi, I'm Sika 👋<small>Tap me to see what's setting up today.</small>`
+    : n ? `Hi${ME.name ? " " + esc(ME.name.split(" ")[0]) : ""}, I'm Sika 👋<small>Tap me and I'll scan your ${n} ticker${n === 1 ? "" : "s"} right now.</small>`
+    : `Hi, I'm Sika 👋<small>Add a few tickers and I'll watch them for you.</small>`;
   $("sfHello").hidden = false;
   setTimeout(() => { $("sfHello").hidden = true; }, 7000);
 }, 2500);
@@ -3603,7 +3603,7 @@ async function scoutScanMine() {
   MY_SCANNING = false; renderScout();
 }
 async function scoutSweep() {
-  try { await api("/api/board/scan", {method: "POST"}); toast("Scout is sweeping the market"); } catch (e) { toast(friendly(e)); }
+  try { await api("/api/board/scan", {method: "POST"}); toast("Sika is sweeping the market"); } catch (e) { toast(friendly(e)); }
   pollAgent();
 }
 

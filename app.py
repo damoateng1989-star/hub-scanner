@@ -738,7 +738,7 @@ async def scan_my_list(u: dict = User):
     import time as _t
     last = _MY_SCAN_AT.get(u["id"], 0)
     if _t.time() - last < 60:
-        raise HTTPException(429, f"Scout just checked your list. Try again in {int(60 - (_t.time() - last))}s.")
+        raise HTTPException(429, f"Sika just checked your list. Try again in {int(60 - (_t.time() - last))}s.")
     _MY_SCAN_AT[u["id"]] = _t.time()
     syms = db.user_symbols(u["id"])
 
