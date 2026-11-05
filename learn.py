@@ -1,4 +1,4 @@
-"""NextShelf University: free, public lessons on the NextShelf method, options basics and trading around a day job.
+"""NextShelf Learn: free, public lessons on the NextShelf method, options basics and trading around a day job.
 
 Pages: /learn (course index) and /learn/<slug> (one lesson). Rendered into static/page.html like the legal pages.
 Educational content only. Keep claims general and true; no promises about returns.
@@ -327,10 +327,10 @@ def render(slug: str | None = None) -> str | None:
         if not got:
             return None
         title, body = got
-        crumbs = '<a href="/learn">NextShelf University</a><a class="on">Lesson</a>'
+        crumbs = '<a href="/learn">Learn</a><a class="on">Lesson</a>'
     else:
-        title, body = "NextShelf University", index_body()
-        crumbs = '<a class="on" href="/learn">NextShelf University</a><a href="/board">Hub Board</a>'
+        title, body = "Learn", index_body()
+        crumbs = '<a class="on" href="/learn">Learn</a><a href="/board">Hub Board</a>'
     a = shell.index('<div class="toc">')
     b = shell.index("</div>", a) + len("</div>")
     shell = shell[:a] + f'<div class="toc">{crumbs}</div>' + shell[b:]
