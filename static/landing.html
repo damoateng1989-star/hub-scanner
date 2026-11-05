@@ -357,7 +357,7 @@ html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 .bp-link::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #7C93FF; }
 .bp-link::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left: 8px solid #7C93FF; border-right: 0; }
 .bp-split .sc .sc-hero { box-shadow: 0 0 0 1px rgba(124,147,255,.55); }
-@media (max-width: 980px) { .bp-link { display: none; } .bp-split { grid-template-columns: 1fr; } .bp-split .sc { max-width: 420px; width: 100%; margin: 0 auto; } }
+@media (max-width: 980px) { .bp-split .bp-row:nth-child(n+7) { display: none; } .bp-link { display: none; } .bp-split { grid-template-columns: 1fr; } .bp-split .sc { max-width: 420px; width: 100%; margin: 0 auto; } }
 @media (max-width: 760px) { .bp-split .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-split .bp-row > :nth-child(3) { display: none; } .bp-split .bp-row > :nth-child(4) { display: block; } }
 </style>
 <style>
