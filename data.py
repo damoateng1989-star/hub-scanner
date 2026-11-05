@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import requests
 
-COLS = ["Open", "High", "Low", "Close"]
+COLS = ["Open", "High", "Low", "Close", "Volume"]
 
 
 def provider() -> str:
@@ -178,14 +178,14 @@ def _alpaca_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
             continue
         df = pd.DataFrame(rs)
         df.index = pd.to_datetime(df["t"], utc=True)
-        out[sym] = df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close"})[COLS].sort_index()
+        out[sym] = df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close", "v": "Volume"}).reindex(columns=COLS).sort_index()
     return out
 
 
 def _yfinance(symbol: str, days: int) -> pd.DataFrame:
     import yfinance as yf
     df = yf.Ticker(symbol).history(period=f"{min(days, 729)}d", interval="1h", prepost=False)
-    return df[COLS] if not df.empty else pd.DataFrame(columns=COLS)
+    return df.reindex(columns=COLS) if not df.empty else pd.DataFrame(columns=COLS)
 
 
 def _demo(symbol: str, days: int) -> pd.DataFrame:
@@ -201,5 +201,7 @@ def _demo(symbol: str, days: int) -> pd.DataFrame:
                                p=[0.35, 0.4, 0.25]), 39)[:len(idx)]
     close = (50 + rng.random() * 400) * np.exp(np.cumsum(rng.normal(0, 1, len(idx)) * vol))
     spread = close * 0.002
-    df = pd.DataFrame({"Open": close, "High": close + spread, "Low": close - spread, "Close": close}, index=idx)
+    move = np.abs(np.diff(np.log(close), prepend=np.log(close[0]))) / np.maximum(vol, 1e-9)
+    volume = np.round(rng.lognormal(13, 0.35, len(idx)) * (0.6 + 0.5 * np.minimum(move, 4)))
+    df = pd.DataFrame({"Open": close, "High": close + spread, "Low": close - spread, "Close": close, "Volume": volume}, index=idx)
     return df[df.index >= now - pd.Timedelta(days=days)].tz_convert("UTC")

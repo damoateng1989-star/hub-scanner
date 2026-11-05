@@ -213,6 +213,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         for e in res["events"]:
             if e["time"] > b:
                 msg = format_event(sym, e)
+                if e["type"] in ("breakout", "breakdown"):
+                    msg += volume_line(c4, e["time"])
                 if e["type"] in ("breakout", "breakdown", "hub_formed"):
                     msg += earnings.alert_line(sym)
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
@@ -262,6 +264,20 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         log.warning("early-read check failed for %s: %s", sym, ex)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
+
+
+def volume_line(c4: pd.DataFrame, t) -> str:
+    """Breakout-candle volume vs a normal candle at that time of day. A label, not a rule."""
+    try:
+        r = engine.rvol(c4, c4.index.get_loc(t))
+    except Exception:
+        r = None
+    if r is None:
+        return ""
+    w = engine.rvol_word(r)
+    slot = "1:30 PM" if pd.Timestamp(t).tz_convert(engine.NY).hour == 9 else "4:00 PM"
+    return (f"\nVolume: {r:.2f}× a normal {slot} candle · {w}"
+            + (" (more conviction behind the move)" if w == "strong" else " (thin support for the move, be careful)" if w == "light" else ""))
 
 
 def format_pattern_event(sym: str, e: dict) -> str:
@@ -321,7 +337,7 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                        f"1:30 PM close {'above' if up else 'below'} the hub\n"
                        f"Close ≈ {_money(close)} · hub {_money(sig['low'])}–{_money(sig['high'])}\n"
                        + plan_lines(close, sig["edge"], sig["target"], sig["direction"], sig["reached"], sig.get("shelf"))
-                       + "\nFrom the real-time feed. The full market data confirms it at about 1:47 PM; you'll get a note either way."
+                       + "\nFrom the real-time feed. The full market data confirms it, with the breakout volume, at about 1:47 PM; you'll get a note either way."
                        + earnings.alert_line(sym))
                 if db.add_alert(f"{sym}|early|{start.isoformat()}", sym, typ, start.isoformat(), msg):
                     speech = None if sig["reached"] else (

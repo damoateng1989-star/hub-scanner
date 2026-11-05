@@ -57,7 +57,8 @@ def to_4h(bars: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
     df = df.assign(_start=start, _end=end)
     out = df.groupby("_start").agg(
         Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),
-        Close=("Close", "last"), _end=("_end", "first"))
+        Close=("Close", "last"), _end=("_end", "first"),
+        **({"Volume": ("Volume", "sum")} if "Volume" in df.columns else {}))
     if now is not None:
         out = out[out["_end"] <= pd.Timestamp(now).tz_convert(NY)]
     out.index.name = None
@@ -189,6 +190,34 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
     return dict(close=close, atr=atr, hubs=hubs, trades=trades, events=events)
 
 
+RVOL_STRONG, RVOL_NORMAL = 1.5, 1.0   # breakout volume vs a normal candle in the same slot
+
+
+def rvol(c4: pd.DataFrame, i: int, n: int = 20) -> float | None:
+    """Volume of candle i compared with the average of the last n candles in the same slot
+    (the 9:30-1:30 and 1:30-4:00 candles trade very different amounts, so each is compared with its own kind)."""
+    try:
+        if "Volume" not in c4 or i is None:
+            return None
+        v = c4["Volume"].to_numpy(float)
+        if not (v[i] > 0):
+            return None
+        hrs = c4.index.hour
+        prev = [v[j] for j in range(i - 1, -1, -1) if hrs[j] == hrs[i] and v[j] > 0][:n]
+        if len(prev) < 5:
+            return None
+        avg = sum(prev) / len(prev)
+        return round(v[i] / avg, 2) if avg > 0 else None
+    except Exception:
+        return None
+
+
+def rvol_word(r: float | None) -> str | None:
+    if r is None:
+        return None
+    return "strong" if r >= RVOL_STRONG else "normal" if r >= RVOL_NORMAL else "light"
+
+
 WICK_LOOKBACK = 240        # 4H candles (~4 months) to look back for an old high / low
 
 
@@ -214,6 +243,12 @@ def old_extremes(c4: pd.DataFrame, price: float) -> dict:
 
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
     st = _current_status(c4, res, s)
+    try:      # volume on the breakout candle (information only: it doesn't change the rules)
+        t = next((t for t in res["trades"] if t["outcome"] == "pending"), None) if st.get("state") in ("breakout_up", "breakdown") else None
+        if t:
+            st["rvol"] = rvol(c4, t["i0"])
+    except Exception:
+        pass
     try:
         ex = old_extremes(c4, float(res["close"].iloc[-1]))
         if not st.get("shelf_up") and ex["old_high"]:

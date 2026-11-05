@@ -1601,6 +1601,13 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 }
 
 /* computers too: same calm look */
+.vol-chip { display: inline-block; margin: 5px 0 0; padding: 1px 7px; border-radius: 6px; font: 600 11px var(--sans); border: 1px solid #2E323B; color: #C3C7CF; white-space: nowrap; }
+.board-table td .vol-chip { display: block; width: max-content; }
+.vol-chip.strong { color: #3DD68C; border-color: rgba(61,214,140,.4); } .vol-chip.light { color: #E5A13D; border-color: rgba(229,161,61,.4); }
+html[data-theme="light"] .vol-chip { color: #4b5563; border-color: #E4E3DC; } html[data-theme="light"] .vol-chip.strong { color: #15803d; border-color: #bbf7d0; } html[data-theme="light"] .vol-chip.light { color: #B7791F; border-color: #fde68a; }
+.vol-split { margin-top: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid #23262E; } .vol-split > b { display: block; margin-bottom: 6px; }
+.vol-split > div { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 6px 0; font-size: 13.5px; color: #9AA0AC; } .vol-split .vol-chip { margin: 0; }
+html[data-theme="light"] .vol-split { border-color: #E4E3DC; }
 .lm-row.oldx { opacity: .9; } .lm-row.oldx span { font-style: normal; } .lm-row.oldx b { color: #9AA0AC !important; }
 .lm-row.oldx { background: rgba(154,160,172,.06) !important; }
 .beta-note { margin: 0 0 12px; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(229,161,61,.4); background: rgba(229,161,61,.07); color: #E8C887; font-size: 13.5px; line-height: 1.5; }
@@ -2752,6 +2759,7 @@ function briefHead(sym, st) {
     else tag = `<span class="bf-tag rest">No setup in play</span>`;
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
   }
+  if (hubLive && st.rvol != null) tag += `<p class="bf-prev">${volChip(st.rvol)} on the breakout candle</p>`;
   $("bfHead").innerHTML = `<div class="bf-kick">Shelf card</div><h3>${esc(sym)}</h3>${tag}
     <p>${st && st.last_close ? `<b class="bf-px">${money(st.last_close)}</b> last 4-hour close <span class="bf-pxn">· the plan uses this</span>` : "Loading…"}</p><div class="bf-live" id="bfLive"></div>
     ${heroStats(st)}`;
@@ -3029,6 +3037,16 @@ function bGroup(title, rows, kind, empty) {
 }
 
 let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
+const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
+function volChip(r) { const w = rvolWord(r); return w ? `<span class="vol-chip ${w}" title="Breakout-candle volume vs a normal candle at that time of day">Vol ${Number(r).toFixed(2)}× · ${w}</span>` : ""; }
+function volSplit(v) {
+  if (!v) return "";
+  const rows = ["strong", "normal", "light"].filter(k => v[k] && v[k].n);
+  if (!rows.length) return `<p class="note">Breakout volume is now recorded on every signal. Once some close, this shows whether strong-volume breakouts did better than light ones.</p>`;
+  return `<div class="vol-split"><b>By breakout volume</b>${rows.map(k => `<div><span class="vol-chip ${k}">${k[0].toUpperCase() + k.slice(1)} ${k === "strong" ? "≥1.5×" : k === "normal" ? "1–1.5×" : "<1×"}</span>
+    <span>${v[k].n} closed · reached the shelf ${v[k].reached} · win rate ${v[k].win_rate ?? "–"}${v[k].win_rate == null ? "" : "%"} · avg ${v[k].avg_ret == null ? "–" : (v[k].avg_ret > 0 ? "+" : "") + v[k].avg_ret + "%"}</span></div>`).join("")}
+    <p class="note" style="margin:6px 0 0">Labels only: volume doesn't change the rules. If strong-volume breakouts clearly win, it can become one.</p></div>`;
+}
 const brokeWord=(up,kind)=>(up?"Broke out":"Broke down")+" · heading to "+(kind==="atr"?"target":"next shelf");
 function boardStatus(r,kind){
   if(kind==="live") return r.state==="breakdown"?[brokeWord(false,r.target_kind),"down"]:[brokeWord(true,r.target_kind),"up"];
@@ -3070,7 +3088,7 @@ function renderInstitutionalBoard(){
     const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions":kind==="recent"?"Completed setup":"—";
     return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span></td><td>'+money(r.last_close)+'</td>'+
+      '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
       '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
@@ -3704,6 +3722,7 @@ async function loadRecord() {
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
     ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}</div>` : ""}
+    ${volSplit(st.by_volume)}
     ${winRankHTML(r.by_symbol || [])}
     ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every signal</div><div class="tbl" style="margin-top:0"><table>
       <tr><th>Breakout</th><th>Stock</th><th></th><th>Entry</th><th>Target</th><th>Result</th><th>Return</th></tr>

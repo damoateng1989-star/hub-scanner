@@ -61,7 +61,8 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             breakout_time=bt.isoformat(), entry=round(t["entry"], 2), target=round(t["target"], 2),
             target_kind="shelf" if t["shelf"] else "atr",
             outcome=t["outcome"], outcome_time=idx[t["oi"]].isoformat() if t["oi"] is not None else None,
-            ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=int(bool(t["chase"])))
+            ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=int(bool(t["chase"])),
+            rvol=engine.rvol(c4, t["i0"]))
 
 
 # live progress of the market sweep, read by the scanner agent on Discover
@@ -226,6 +227,18 @@ def by_pattern() -> dict:
     return {k: dict(_summary(db.all_signals(1000, k)), name=patterns.KINDS[k]) for k in patterns.KINDS}
 
 
+def _by_volume(closed: list[dict]) -> dict:
+    """Did breakouts on strong volume do better than light ones? (labels only, the rules don't use volume)"""
+    out = {}
+    for name in ("strong", "normal", "light"):
+        g = [s for s in closed if s.get("rvol") is not None and engine.rvol_word(s["rvol"]) == name]
+        rets = [s["ret_pct"] for s in g if s["ret_pct"] is not None]
+        out[name] = dict(n=len(g), reached=sum(1 for s in g if s["outcome"] == "follow-through"),
+                         win_rate=round(100 * sum(1 for r in rets if r > 0) / len(rets), 1) if rets else None,
+                         avg_ret=round(sum(rets) / len(rets), 2) if rets else None)
+    return out
+
+
 def track_record(pattern: str = "hub") -> dict:
     sigs = db.all_signals(1000, pattern)
     closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
@@ -241,7 +254,7 @@ def track_record(pattern: str = "hub") -> dict:
                    avg_win=round(sum(wins) / len(wins), 2) if wins else None,
                    avg_loss=round(sum(r for r in rets if r <= 0) / max(1, len(rets) - len(wins)), 2)
                    if len(rets) > len(wins) else None,
-                   by_outcome=by),
+                   by_outcome=by, by_volume=_by_volume(closed)),
         signals=sigs[:200], pattern=pattern, patterns=by_pattern(), by_symbol=_by_symbol(closed))
 
 

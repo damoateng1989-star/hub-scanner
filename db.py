@@ -88,6 +88,11 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    try:   # added later: breakout-candle volume vs normal (information, for the volume split in the track record)
+        _conn.execute("ALTER TABLE signals ADD COLUMN rvol REAL")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     try:   # added later: morning brief on/off (on by default)
         _conn.execute("ALTER TABLE users ADD COLUMN brief INTEGER DEFAULT 1")
         _conn.commit()
@@ -206,7 +211,7 @@ def board_rows() -> list[dict]:
 # --- track record
 def upsert_signal(**f):
     cols = ", ".join(f)
-    updates = ", ".join(f"{k}=excluded.{k}" for k in ("outcome", "outcome_time", "ret_pct", "chase", "target", "target_kind"))
+    updates = ", ".join(f"{k}=excluded.{k}" for k in ("outcome", "outcome_time", "ret_pct", "chase", "target", "target_kind") if k in f or k == "outcome") + ", rvol=COALESCE(excluded.rvol, signals.rvol)"
     _run(f"INSERT INTO signals ({cols}) VALUES ({', '.join('?' * len(f))}) ON CONFLICT(id) DO UPDATE SET {updates}",
          tuple(f.values()))
 
