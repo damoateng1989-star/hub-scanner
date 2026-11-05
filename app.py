@@ -311,7 +311,9 @@ def landing():
 
 @app.get("/app")
 def index(request: Request):
-    """The app. Open to visitors (they can browse the Hub Board and charts); members get their cookie refreshed."""
+    """The app. Members only: visitors who aren't signed in go to the sign-in page."""
+    if not auth.current_user(request):
+        return RedirectResponse("/login", 302)
     resp = FileResponse(STATIC / "index.html")
     if auth.current_user(request):
         resp.set_cookie(auth.COOKIE, request.cookies[auth.COOKIE], max_age=auth.SESSION_DAYS * 86400, httponly=True,
@@ -320,7 +322,9 @@ def index(request: Request):
 
 
 @app.get("/t/{symbol}")
-def ticker_page(symbol: str):
+def ticker_page(symbol: str, request: Request):
+    if not auth.current_user(request):
+        return RedirectResponse("/login", 302)
     return FileResponse(STATIC / "ticker.html")
 
 
@@ -518,7 +522,7 @@ class StylesBody(BaseModel):
 
 
 @app.get("/api/brief")
-def brief_today(u: dict | None = Maybe):
+def brief_today(u: dict = User):
     """Today's morning brief (the same one that goes out by Telegram and email)."""
     return brief.build(u)
 
@@ -528,7 +532,7 @@ class OnBody(BaseModel):
 
 
 @app.get("/api/recap")
-def recap_today(u: dict | None = Maybe):
+def recap_today(u: dict = User):
     """Today's evening recap (the same one that goes out by Telegram and email after the close)."""
     return recap.build(u)
 
@@ -767,7 +771,11 @@ def board_for(u: dict | None) -> bool:
 @app.get("/api/board")
 def board_data(u: dict | None = Maybe):
     b = board.board()
-    mine = set(db.user_symbols(u["id"])) if u else set()
+    if not u:      # visitors who aren't signed in: counts only, no stock names
+        return dict(updated=b.get("updated"), universe=b.get("universe"), guest=True, locked=True,
+                    live_count=len(b["live"]), near_count=len(b["near"]), forming_count=len(b["forming"]),
+                    live=[], near=[], forming=[], recent=[], setups=[], setups_locked=0)
+    mine = set(db.user_symbols(u["id"]))
     for group in ("live", "near", "forming", "recent"):
         for r in b[group]:
             r["watching"] = r["symbol"] in mine
@@ -857,7 +865,7 @@ async def options_plan(symbol: str, u: dict = User):
 
 
 @app.get("/api/chart/{symbol}")
-async def chart_data(symbol: str, u: dict | None = Maybe):
+async def chart_data(symbol: str, u: dict = User):
     try:
         d = await run_in_threadpool(board.chart, symbol, bool(u and u["is_admin"]))
     except Exception as e:

@@ -731,7 +731,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     <button class="btn blue">Join the waitlist</button>
     <p class="jmsg" role="status"></p>
   </form>
-  <p class="alt">Want a look first? <a href="/app#discover">Try the demo</a> or <a href="/learn">read the University</a>.</p>
+  <p class="alt">Want to learn the setup first? <a href="/learn">Read the University</a>. Already a member? <a href="/login">Sign in</a>.</p>
 </div></div>
 
 <footer><div class="wrap">
@@ -917,7 +917,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   let B = null, loaded = false, ME = null;
   function render() {
     if (!B || !B.universe) { $("spLine").innerHTML = "I check <b>over 540</b> stocks and ETFs after every 4-hour close for tight ranges that are about to break. Ask me about any stock."; return; }
-    const live = B.locked ? B.live_count : B.live.length, near = B.locked ? B.near_count : B.near.length, hubs = B.forming.length;
+    const live = B.locked ? B.live_count : B.live.length, near = B.locked ? B.near_count : B.near.length, hubs = B.forming_count ?? B.forming.length;
     const when = B.updated ? new Date(B.updated).toLocaleString(undefined, {weekday: "short", hour: "numeric", minute: "2-digit"}) : "";
     $("spLine").innerHTML = `I swept <b>${B.universe}</b> stocks${when ? " at the last 4-hour close (" + esc(when) + ")" : ""}: <b>${live}</b> breakout${live === 1 ? "" : "s"}, <b>${near}</b> at the edge of a hub, and <b>${hubs}</b> resting in hubs.`;
     const rows = (B.locked ? B.forming.filter(r => !r.near_edge) : B.near.concat(B.forming.filter(r => !r.near_edge))).slice(0, 5);
@@ -927,6 +927,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     $("spLock").hidden = !(B.locked && lockedN);
     if (B.locked && lockedN) $("spLock").innerHTML = `🔒 ${B.live_count} breakout${B.live_count === 1 ? "" : "s"} and ${B.near_count} at the edge are ${ME && !ME.guest ? "on Pro" : "for members"}. ${ME && !ME.guest ? '<a href="/app#account">See Pro</a>' : (window.NS_SIGNUPS_OPEN ? '<a href="/login#signup">Sign up free</a>' : '<a href="#join" onclick="document.getElementById(\'scoutFab\').click()">Join the waitlist</a>')} to see them.`;
     const n = live + near; $("sfBadge").hidden = !n; $("sfBadge").textContent = n;
+    const so = document.querySelector(".sp-open"); if (so && !(ME && !ME.guest)) { so.href = "/login"; so.textContent = "Sign in to browse every setup →"; }
   }
   async function load() {
     if (loaded) return; loaded = true;
