@@ -2337,9 +2337,9 @@ async function loadAccount() {
     ${isPro() ? "" : `<div class="acct"><h3>Free and Pro plans</h3><p>Pricing will be announced at launch. During the beta, contact the site owner to try Pro.</p>
       <div class="tiers">
         <div class="tier"><b>Free · your plan</b><ul><li>Watch up to ${m.ticker_limit} tickers</li><li>Telegram alerts after each breakout</li>
-          <li>Hub Board: stocks inside a hub</li><li>Track record and charts</li></ul></div>
+          <li>Setups: stocks inside a hub</li><li>Track record and charts</li></ul></div>
         <div class="tier pro"><b>Pro</b><ul><li>Unlimited watchlist</li><li><b style="display:inline;font-size:inherit">Pre-close warnings</b> 15 min before the candle closes</li>
-          <li>Full Hub Board: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Options swing plans on every breakout</li><li>Backtests on any ticker</li></ul></div>
+          <li>All setups: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Options swing plans on every breakout</li><li>Backtests on any ticker</li></ul></div>
       </div></div>`}
 
     <div class="acct"><h3>Appearance</h3><p>Light, dark, or match your device.</p>
@@ -3718,7 +3718,7 @@ async function loadRecord() {
   $("record").innerHTML = `
     <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
       return `<button class="${RECORD_PAT === k ? "on" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${x.closed ? `${x.win_rate ?? "–"}% winners · ${x.closed} done` : "no results yet"}</small></button>`; }).join("")}</div>
-    <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout the Hub Board detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.</p>
+    <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.</p>
     <div class="stats" style="margin-top:0">
       <div><b>${st.closed}</b><span>Completed signals</span></div>
       <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>

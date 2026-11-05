@@ -278,7 +278,7 @@ def lesson_body(slug: str) -> tuple[str, str] | None:
                f'<p class="lu-why" hidden></p></div>'
                f'<div class="lu-nav">{f"<a href=/learn/{prev[0]}>← {_e(prev[1])}</a>" if prev else "<a href=/learn>← All lessons</a>"}'
                f'{f"<a class=next href=/learn/{nxt[0]}>{_e(nxt[1])} →</a>" if nxt else "<a class=next href=/learn>Back to all lessons →</a>"}</div>'
-               f'<p class="lu-fine">Educational content only, not financial advice. <a href="/board">See today\'s Hub Board →</a></p>')
+               f'<p class="lu-fine">Educational content only, not financial advice. <a href="/board">See today\'s setups →</a></p>')
         return title, out
     return None
 
@@ -330,7 +330,7 @@ def render(slug: str | None = None) -> str | None:
         crumbs = '<a href="/learn">Learn</a><a class="on">Lesson</a>'
     else:
         title, body = "Learn", index_body()
-        crumbs = '<a class="on" href="/learn">Learn</a><a href="/board">Hub Board</a>'
+        crumbs = '<a class="on" href="/learn">Learn</a><a href="/board">Setups</a>'
     a = shell.index('<div class="toc">')
     b = shell.index("</div>", a) + len("</div>")
     shell = shell[:a] + f'<div class="toc">{crumbs}</div>' + shell[b:]
