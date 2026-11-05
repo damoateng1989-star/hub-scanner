@@ -363,6 +363,8 @@ html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 @media (max-width: 760px) { .bp-split .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-split .bp-row > :nth-child(3) { display: none; } .bp-split .bp-row > :nth-child(4) { display: block; } }
 
 /* hero preview, compact */
+.sc-swap { margin: -2px 0 6px; padding: 7px 10px; border-radius: 9px; background: rgba(124,147,255,.10); color: #C3C7CF; font-size: 11.5px; line-height: 1.45; }
+.sc-swap b { color: #fff; } .sc-swap a { color: #8EA2FF; font-weight: 600; text-decoration: none; }
 .bp { max-width: 940px !important; }
 .bp-in { padding: 16px 18px 14px !important; }
 .bp-h { font-size: 22px !important; } .bp-s { font-size: 12px !important; }
@@ -609,7 +611,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
       </div>
       <div class="sc" id="sampleCard" aria-label="Example Shelf card">
     <div class="sc-hero">
-      <div class="sc-k">Shelf card · example</div>
+      <div class="sc-k">Shelf card · example</div><p class="sc-swap" id="scSwap" hidden></p>
       <div class="sc-sym">ADBE</div>
       <span class="sc-pill">Inside a hub · no trade yet</span>
       <p class="sc-px"><b>$248.48</b> last 4-hour close</p>
@@ -780,7 +782,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     <div class="stat"><div class="big" id="recHit" style="color:var(--up)">–</div><div class="cap">reached the shelf target</div></div>
     <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed signal</div></div>
   </div>
-  <p class="honest" id="recNote">These are the board's signals, not trading advice, and past signals don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/app#results">See every signal →</a></p>
+  <p class="honest" id="recNote">These are the board's signals, not trading advice, and past signals don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/board">See every signal →</a></p>
 </div></section>
 
 <section id="pricing"><div class="wrap">
@@ -854,7 +856,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   <p class="sp-k" id="spK" hidden>Resting in a hub right now</p>
   <div class="sp-res" id="spRes"></div>
   <p class="sp-lock" id="spLock" hidden></p>
-  <a class="sp-open" href="/app#discover">Browse every setup →</a>
+  <a class="sp-open" href="/board">See today's Hub Board →</a>
 </div>
 
 <script>
@@ -879,6 +881,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
 
   // ---- real numbers: today's board and the track record
   fetch("/api/public/summary").then(r => r.json()).then(s => {
+    window.NS_SUMMARY = s; document.dispatchEvent(new Event("ns-summary"));
     const n = (v) => Number(v || 0).toLocaleString();
     if (s.universe) {
       const inPlay = (s.forming || 0) + (s.live || 0);
@@ -892,7 +895,8 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     }
     if (s.signals) {
       $("recN").textContent = n(s.signals);
-      $("recNc").textContent = `hub breakouts logged${s.open ? ` · ${n(s.open)} still open` : ""}`;
+      $("recNc").textContent = `hub breakouts logged · ${n(s.open)} still open · ${n(s.reached)} of ${n(s.closed)} closed reached the shelf`;
+      if (s.updated) $("recNote").insertAdjacentHTML("afterbegin", `Updated ${new Date(String(s.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})} ET. `);
       $("recHit").textContent = s.reached_pct == null ? "–" : s.reached_pct + "%";
       $("recAvg").textContent = s.avg_ret == null ? "–" : (s.avg_ret > 0 ? "+" : "") + s.avg_ret + "%";
       if (s.avg_ret != null) $("recAvg").style.color = s.avg_ret >= 0 ? "var(--up)" : "var(--down)";
@@ -933,12 +937,17 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     {t: "Next sessions", k: "Next shelf", p: "Target reached, and logged in the track record.", ph: "11:31"},
   ];
   const NOTES = [
-    {h: "Sika", t: "Swept over 540 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs."},
+    {h: "Sika", t: "Swept over 540 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs.", live: true},
     {h: "Telegram", t: "🟦 AMD: new hub", b: "4H closes held $176.80–$178.01 for 6 sessions. Watching for a close outside."},
     {h: "Telegram", t: "⚠️ AMD: trading above hub, ~15 min before the 4H close", b: "Now $179.40. If the candle closes above $178.01, that's the breakout.", pro: true},
     {h: "Telegram", t: "🚀 AMD: 4H close above hub", b: "Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01."},
     {h: "Telegram", t: "✅ AMD: follow-through", b: "4H close $186.40 reached the next shelf $186.10, 3 candles after the breakout."},
   ];
+  // the first notification uses today's real counts, so it matches the board line above
+  const liveNote = () => { const L = window.NS_SUMMARY; if (!L || !L.universe) return;
+    NOTES[0].t = `Swept ${Number(L.universe).toLocaleString()} stocks`;
+    NOTES[0].b = `${L.live} breakout${L.live === 1 ? "" : "s"} · ${L.near} at a hub edge · ${L.forming} resting in hubs.`; };
+  liveNote(); document.addEventListener("ns-summary", () => { liveNote(); try { show(cur); } catch (e) {} });
   // ---- draw the chart once; layers fade in by step
   const X0 = 40, DX = 21, Y = (p) => 282 - (p - 176) * 19.5;          // price → y
   const C = (i, o, c, h, l, cls, extra) => { const x = X0 + i * DX, up = c >= o, top = Y(Math.max(o, c)), bot = Y(Math.min(o, c));
@@ -1080,6 +1089,21 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     const y = bb.top + bb.height / 2 - sb.top, x1 = bb.right - sb.left + 6, x2 = cb.left - sb.left - 4;
     Object.assign(link.style, {top: y + "px", left: x1 + "px", width: Math.max(0, x2 - x1) + "px"});
   }
+  // tapping Analyze on any example row selects it and points at the card (the example card itself is ADBE's)
+  split.querySelectorAll(".bp-row:not(.bp-th)").forEach(row => { const btn = row.querySelector(".bp-an"); if (!btn) return;
+    btn.style.cursor = "pointer"; btn.setAttribute("role", "button"); btn.tabIndex = 0;
+    const pick = () => {
+      split.querySelectorAll(".bp-row").forEach(r => r.classList.remove("sel"));
+      split.querySelectorAll(".bp-an").forEach(x => { x.classList.remove("on"); x.textContent = "Analyze"; });
+      row.classList.add("sel"); btn.classList.add("on"); btn.textContent = "Open →";
+      const sym = row.querySelector("b").textContent, sw = document.getElementById("scSwap");
+      sw.hidden = sym === "ADBE"; sw.innerHTML = `This example is ADBE's card. Members get <b>${sym}</b>'s card, with its own levels. <a href="/login#signup">Sign up free</a>`;
+      if (window.NS_SIGNUPS_OPEN === false || !window.NS_SIGNUPS_OPEN) sw.querySelector("a").outerHTML = '<a href="#join">Join the waitlist</a>';
+      draw(); card.animate([{transform: "translateX(6px)"}, {transform: "none"}], {duration: 260});
+      if (getComputedStyle(link).display === "none") card.scrollIntoView({behavior: "smooth", block: "center"});
+    };
+    btn.addEventListener("click", pick); btn.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
   addEventListener("resize", draw); addEventListener("load", draw); setTimeout(draw, 300);
 })();
 </script>

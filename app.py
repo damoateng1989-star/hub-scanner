@@ -321,6 +321,12 @@ def index(request: Request):
     return resp
 
 
+@app.get("/board")
+def public_board():
+    """Public Hub Board: counts only, no sign-in. Tickers stay members-only."""
+    return FileResponse(STATIC / "board.html")
+
+
 @app.get("/t/{symbol}")
 def ticker_page(symbol: str, request: Request):
     if not auth.current_user(request):
@@ -834,7 +840,7 @@ def public_summary():
     by = rec.get("by_outcome") or {}
     closed = rec.get("closed") or 0
     return dict(updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
-                signals=rec.get("signals"), closed=closed, open=rec.get("open"),
+                signals=rec.get("signals"), closed=closed, open=rec.get("open"), reached=by.get("follow-through", 0),
                 reached_pct=round(100 * by.get("follow-through", 0) / closed) if closed else None,
                 win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), next=_next_sweep(), times=sorted(BOARD_TIMES))
 

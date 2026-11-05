@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(function () {
+  var pick = "system"; try { pick = localStorage.getItem("ns_theme") || "system"; } catch (e) {}
+  var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
+  var t = pick === "system" ? (mq && mq.matches ? "light" : "dark") : pick;
+  document.documentElement.dataset.theme = t;
+  window.nsToggleTheme = function () { var n = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    try { localStorage.setItem("ns_theme", n); } catch (e) {} document.documentElement.dataset.theme = n; };
+})();
+</script>
+<title>Hub Board · NextShelf</title>
+<meta name="description" content="Today's NextShelf Hub Board: how many stocks are breaking out of a hub, at the edge, or resting in one, checked after every 4-hour close.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Inter"; src: url("/fonts/Inter.woff2") format("woff2"); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerifItalic.woff2") format("woff2"); font-style: italic; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-display: swap; }
+:root { --bg: #F6F6F3; --card: #FFFFFF; --ink: #141412; --ink2: #5C5B55; --ink3: #9A998F; --line: #E4E3DC; --blue: #2F54EB;
+  --up: #12805C; --down: #D1352B; --warn: #B7791F; --hub: #2F54EB;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace; --serif: "Instrument Serif", Georgia, serif; }
+html[data-theme="dark"] { --bg: #0E0F12; --card: #15171C; --ink: #E9EBEF; --ink2: #9AA0AC; --ink3: #646B78; --line: #23262E; --blue: #4F6BFF;
+  --up: #3DD68C; --down: #FF7D72; --warn: #E5A13D; --hub: #7C93FF; color-scheme: dark; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; } em { font-family: var(--serif); font-style: italic; font-weight: 400; color: var(--ink2); }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 22px; }
+nav.top { border-bottom: 1px solid var(--line); }
+nav.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; gap: 12px; }
+.wordmark { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; letter-spacing: -0.02em; text-decoration: none; }
+.wordmark img { width: 26px; height: 26px; border-radius: 7px; }
+.navend { display: flex; align-items: center; gap: 14px; font-size: 14px; } .navend a { text-decoration: none; color: var(--ink2); }
+.theme-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; font-size: 15px; }
+.btn { display: inline-block; padding: 10px 18px; border-radius: 10px; font: 600 14px var(--sans); text-decoration: none; background: var(--ink); color: var(--bg) !important; white-space: nowrap; }
+.btn.blue { background: var(--blue); color: #fff !important; }
+header { padding: 56px 0 24px; text-align: center; }
+.kicker { font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 600; margin-top: 12px; }
+.sub { color: var(--ink2); margin: 12px auto 0; max-width: 56ch; }
+.live { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; font: 600 12px var(--mono); letter-spacing: .08em; color: var(--up); text-transform: uppercase; }
+.live i { width: 8px; height: 8px; border-radius: 50%; background: var(--up); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 28px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.tile b { display: block; font-size: 32px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.tile span { font-size: 13px; color: var(--ink2); }
+.tile.up b { color: var(--up); } .tile.near b { color: var(--warn); } .tile.hub b { color: var(--hub); }
+.when { margin-top: 12px; text-align: center; font-size: 13px; color: var(--ink3); }
+.panel { margin-top: 32px; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.ph { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.ph b { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); } .ph span { font-size: 12px; color: var(--ink3); }
+.row { display: grid; grid-template-columns: 1fr 1.6fr 1fr; gap: 10px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); font-size: 14px; font-variant-numeric: tabular-nums; }
+.row:first-of-type { border-top: 0; } .row b { font-weight: 700; }
+.blur { filter: blur(5px); user-select: none; }
+.pill { display: inline-flex; flex-direction: column; padding: 3px 10px; border-radius: 10px; border: 1px solid currentColor; font-weight: 700; font-size: 12px; line-height: 1.3; width: max-content; }
+.pill small { font-weight: 500; font-size: 10.5px; opacity: .85; } .pill.up { color: var(--up); } .pill.dn { color: var(--down); } .pill.hub { color: var(--hub); border-radius: 99px; }
+.lockbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--blue) 6%, transparent); }
+.lockbar p { font-size: 14px; color: var(--ink2); } .lockbar p b { color: var(--ink); }
+.how { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 28px; }
+.how div { padding: 16px; border-radius: 14px; border: 1px solid var(--line); font-size: 14px; color: var(--ink2); } .how b { display: block; color: var(--ink); margin-bottom: 4px; }
+footer { margin-top: 56px; padding: 26px 0; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink3); }
+footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; } footer a { color: var(--ink2); text-decoration: none; margin-left: 14px; }
+@media (max-width: 720px) { .tiles { grid-template-columns: 1fr 1fr; } .how { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr 1.6fr; } .row > :nth-child(3) { display: none; } .navend .si { display: none; } }
+</style>
+</head>
+<body>
+<nav class="top"><div class="wrap">
+  <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
+  <div class="navend"><button class="theme-btn" onclick="nsToggleTheme()" aria-label="Switch theme">☀︎</button><a class="si" href="/login" id="navSign">Sign in</a><a class="btn" href="/login#signup" data-cta>Sign up free</a></div>
+</div></nav>
+
+<main class="wrap">
+<header>
+  <div class="kicker">Hub Board</div>
+  <h1>Today on the <em>board.</em></h1>
+  <p class="sub">NextShelf checks the S&amp;P 500, Nasdaq-100 and major ETFs after every 4-hour close for stocks resting in a tight range, and the ones breaking out of it.</p>
+  <div class="live"><i></i><span id="liveWhen">Live counts</span></div>
+</header>
+
+<div class="tiles">
+  <div class="tile up"><b id="tLive">–</b><span>breaking out now</span></div>
+  <div class="tile near"><b id="tNear">–</b><span>at a hub edge</span></div>
+  <div class="tile hub"><b id="tHub">–</b><span>resting in a hub</span></div>
+  <div class="tile"><b id="tUni">–</b><span>stocks checked</span></div>
+</div>
+<p class="when" id="tNext"></p>
+
+<section class="panel" aria-label="Example rows">
+  <div class="ph"><b>Hub structure monitor</b><span>Example rows · members see every stock</span></div>
+  <div class="row"><b>NFLX</b><span><span class="pill up">Broke out ↑<small>heading to next shelf</small></span></span><span>$1,182.40</span></div>
+  <div class="row"><b>ADBE</b><span><span class="pill hub">Inside a hub</span></span><span>$248.48</span></div>
+  <div class="row"><b>EQT</b><span><span class="pill dn">Broke down ↓<small>heading to next shelf</small></span></span><span>$51.36</span></div>
+  <div class="row blur" aria-hidden="true"><b>XXXX</b><span><span class="pill up">Broke out ↑<small>heading to target</small></span></span><span>$000.00</span></div>
+  <div class="row blur" aria-hidden="true"><b>XXX</b><span><span class="pill hub">Inside a hub</span></span><span>$000.00</span></div>
+  <div class="lockbar"><p><b>The tickers are members-only.</b> Sign up to see every stock on the board, each with its Shelf card: trigger, aim and where you're wrong.</p>
+    <a class="btn blue" href="/login#signup" data-cta>Sign up free to see the tickers</a></div>
+</section>
+
+<div class="how">
+  <div><b>Breaking out now</b>A 4-hour candle closed outside its hub. The plan aims for the next shelf.</div>
+  <div><b>At a hub edge</b>Still inside, but pressing the top or bottom. Watch the next close.</div>
+  <div><b>Resting in a hub</b>Closing in a tight range for 5+ sessions. No trade yet.</div>
+</div>
+</main>
+
+<footer><div class="wrap"><span>© <span id="yr">2026</span> NextShelf · Educational, not financial advice.</span>
+  <span><a href="/">Home</a><a href="/learn">University</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a></span></div></footer>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id), n = (v) => Number(v || 0).toLocaleString();
+  $("yr").textContent = new Date().getFullYear();
+  const ny = {timeZone: "America/New_York"};
+  Promise.all([fetch("/api/board").then(r => r.json()).catch(() => null), fetch("/api/public/summary").then(r => r.json()).catch(() => null),
+               fetch("/auth/config").then(r => r.json()).catch(() => ({})), fetch("/api/me").then(r => r.ok ? r.json() : null).catch(() => null)])
+  .then(([b, s, c, me]) => {
+    if (b && b.universe) {
+      const live = b.live_count ?? (b.live || []).length, near = b.near_count ?? (b.near || []).length, hubs = b.forming_count ?? (b.forming || []).length;
+      $("tLive").textContent = n(live); $("tNear").textContent = n(near); $("tHub").textContent = n(hubs); $("tUni").textContent = n(b.universe);
+      if (b.updated) $("liveWhen").textContent = "Updated " + new Date(b.updated.replace(" ", "T") + "Z").toLocaleString("en-US", {...ny, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) + " ET";
+    }
+    if (s && s.next) $("tNext").textContent = "Next check " + new Date(s.next).toLocaleString("en-US", {...ny, weekday: "long", hour: "numeric", minute: "2-digit"}) + " ET, about 20 minutes after the 4-hour close.";
+    const member = me && !me.guest;
+    if (member) { $("navSign").textContent = "Open the app"; $("navSign").href = "/app#discover";
+      document.querySelectorAll("[data-cta]").forEach(a => { a.href = "/app#discover"; a.textContent = "Open the full board →"; }); }
+    else if (c && c.signups_open === false) document.querySelectorAll("[data-cta]").forEach(a => { a.href = "/#join"; a.textContent = a.textContent.includes("tickers") ? "Join the waitlist to see the tickers" : "Join the waitlist"; });
+  });
+})();
+</script>
+</body>
+</html>
