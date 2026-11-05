@@ -307,6 +307,38 @@ html[data-theme="dark"] .sc { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 #pricing .plans { margin-left: auto; margin-right: auto; text-align: left; }
 #faq .faq { margin-left: auto; margin-right: auto; text-align: left; }
 #pricing .micro { text-align: center; }
+
+/* ---------- hero preview of Browse setups ---------- */
+.bp { margin: 48px auto 0; max-width: 960px; text-align: left; border-radius: 18px; overflow: hidden; background: #0E0F12; color: #E9EBEF; border: 1px solid #23262E; box-shadow: 0 30px 80px rgba(20,20,18,.18); }
+.bp-bar { display: flex; align-items: center; gap: 7px; padding: 11px 16px; background: #15171C; border-bottom: 1px solid #23262E; }
+.bp-bar i { width: 10px; height: 10px; border-radius: 50%; background: #2E323B; } .bp-bar span { margin-left: 10px; font: 500 12px var(--mono); color: #9AA0AC; letter-spacing: .04em; }
+.bp-in { padding: 22px 24px 18px; }
+.bp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.bp-h { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; } .bp-h em { color: #9AA0AC; }
+.bp-s { font-size: 13px; color: #9AA0AC; margin-top: 2px; }
+.bp-live { display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px; border-radius: 99px; border: 1px solid rgba(61,214,140,.45); color: #3DD68C; font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; flex: none; }
+.bp-live b { width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; animation: ping 2.4s infinite; }
+.bp-scout { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #15171C; border: 1px solid #23262E; font-size: 14px; color: #C3C7CF; }
+.bp-scout > b { color: #fff; margin-right: 4px; } .bp-scout span b { color: #fff; } .bp-scout .g { color: #3DD68C; } .bp-scout .y { color: #E5A13D; }
+.bp-next { color: #9AA0AC; }
+.bp-tabs { display: flex; gap: 8px; margin-top: 14px; overflow: hidden; white-space: nowrap; }
+.bp-tabs span { flex: none; padding: 7px 13px; border-radius: 99px; border: 1px solid #23262E; color: #9AA0AC; font-size: 13px; font-weight: 600; }
+.bp-tabs span.on { background: #F2F3F5; color: #0E0F12; border-color: #F2F3F5; }
+.bp-tabs small { margin-left: 4px; font-weight: 700; } .bp-tabs i { font-style: normal; margin-left: 5px; font: 700 9.5px var(--sans); color: #E5A13D; text-transform: uppercase; letter-spacing: .06em; }
+.bp-tbl { margin-top: 14px; border: 1px solid #23262E; border-radius: 12px; overflow: hidden; }
+.bp-row { display: grid; grid-template-columns: .7fr 1.5fr 1fr 1.2fr 1fr .8fr; gap: 10px; align-items: center; padding: 11px 14px; border-top: 1px solid #23262E; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.bp-row:first-child { border-top: 0; } .bp-row > span:last-child { text-align: right; }
+.bp-th { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #646B78; background: #15171C; }
+.bp .pill { display: inline-flex; flex-direction: column; font-family: var(--sans); letter-spacing: 0; font-style: normal; padding: 3px 10px; border-radius: 10px; border: 1px solid currentColor; font-weight: 700; font-size: 12px; line-height: 1.3; }
+.bp .pill small { font-weight: 500; font-size: 10.5px; opacity: .85; } .bp .pill.up { color: #3DD68C; } .bp .pill.dn { color: #FF7D72; } .bp .pill.hub { color: #7C93FF; border-radius: 99px; }
+.bp-an { display: inline-block; padding: 6px 12px; border-radius: 8px; border: 1px solid #2E323B; color: #E9EBEF; text-decoration: none; font-size: 12px; font-weight: 600; }
+.bp-an:hover { border-color: #9AA0AC; }
+.bp-note { margin-top: 12px; font-size: 12px; color: #646B78; }
+html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-color: #2E323B; }
+@media (max-width: 760px) {
+  .bp-in { padding: 16px 14px 14px; } .bp-h { font-size: 22px; } .bp-s { display: none; }
+  .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-row > :nth-child(3), .bp-row > :nth-child(4), .bp-row > :nth-child(5) { display: none; }
+}
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
@@ -502,10 +534,22 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#record">See the track record</a></div>
   <div class="micro">Free tier · No card needed · Educational, not financial advice</div>
 
-  <div class="live" id="liveStrip">
-    <div><span class="t"><span class="dot"></span>Today on the board</span><div class="n" id="lvHubs">–<small>Loading the board…</small></div></div>
-    <div><span class="t">Next check</span><div class="n" id="lvNext">–<small>about 20 minutes after each 4-hour close</small></div></div>
-    <div><span class="t">Stocks covered</span><div class="n" id="lvUni">over 540<small>S&amp;P 500, Nasdaq-100 and major ETFs</small></div></div>
+  <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
+    <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
+    <div class="bp-in">
+      <div class="bp-head"><div><div class="bp-h">Browse <em>setups.</em></div><p class="bp-s">S&amp;P 500, Nasdaq-100 and major ETFs, checked after every 4-hour close.</p></div>
+        <span class="bp-live"><b></b>Live</span></div>
+      <div class="bp-scout"><b>Scout</b> <span id="bpLine">Swept <b>over 540</b> stocks after the last 4-hour close.</span> <span class="bp-next" id="bpNext"></span></div>
+      <div class="bp-tabs"><span class="on">Hubs <small id="bpHubs">–</small></span><span>Flags <i>beta</i></span><span>Double tops <i>beta</i></span><span>Triangles <i>beta</i></span><span>Channels <i>beta</i></span><span>Support &amp; resistance <i>beta</i></span></div>
+      <div class="bp-tbl">
+        <div class="bp-row bp-th"><span>Stock</span><span>Setup</span><span>Last price</span><span>Hub</span><span>Next shelf</span><span></span></div>
+        <div class="bp-row"><b>NFLX</b><span><em class="pill up">Broke out ↑<small>heading to next shelf</small></em></span><span>$1,182.40</span><span>$1,121–1,168</span><span>$1,236.10</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
+        <div class="bp-row"><b>ADBE</b><span><em class="pill hub">Inside a hub</em></span><span>$248.48</span><span>$246.07–254.78</span><span>$271.27</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
+        <div class="bp-row"><b>EQT</b><span><em class="pill dn">Broke down ↓<small>heading to next shelf</small></em></span><span>$51.36</span><span>$52.10–54.85</span><span>$48.90</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
+        <div class="bp-row"><b>HON</b><span><em class="pill hub">Inside a hub</em></span><span>$223.80</span><span>$219.40–224.60</span><span>$237.68</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
+      </div>
+      <p class="bp-note">Example rows. Members see every stock on the board, updated after each 4-hour close.</p>
+    </div>
   </div>
 </div></header>
 
@@ -774,13 +818,13 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     const n = (v) => Number(v || 0).toLocaleString();
     if (s.universe) {
       const inPlay = (s.forming || 0) + (s.live || 0);
-      $("lvHubs").innerHTML = `${n(inPlay)} hub${inPlay === 1 ? "" : "s"} in play<small>${n(s.live)} breaking out now · ${n(s.near)} at the edge</small>`;
-      $("lvUni").innerHTML = `${n(s.universe)}<small>S&amp;P 500, Nasdaq-100 and major ETFs</small>`;
-    } else $("lvHubs").innerHTML = `Live soon<small>The board fills after the next sweep</small>`;
+      $("bpHubs").textContent = n(inPlay);
+      $("bpLine").innerHTML = `Swept <b>${n(s.universe)}</b> stocks: <b class="g">${n(s.live)}</b> breaking out now, <b class="y">${n(s.near)}</b> at the edge, <b>${n(inPlay)}</b> hubs in play.`;
+    }
     if (s.next) {
       const d = new Date(s.next), ny = {timeZone: "America/New_York"};
-      const day = d.toLocaleDateString("en-US", {...ny, weekday: "short"}) === new Date().toLocaleDateString("en-US", {...ny, weekday: "short"}) ? "Today" : d.toLocaleDateString("en-US", {...ny, weekday: "short"});
-      $("lvNext").innerHTML = `${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})}<small>ET · about 20 minutes after each 4-hour close</small>`;
+      const day = d.toLocaleDateString("en-US", {...ny, weekday: "short"}) === new Date().toLocaleDateString("en-US", {...ny, weekday: "short"}) ? "today" : d.toLocaleDateString("en-US", {...ny, weekday: "long"});
+      $("bpNext").textContent = `Next check ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
     }
     if (s.signals) {
       $("recN").textContent = n(s.signals);
