@@ -339,6 +339,24 @@ html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
   .bp-in { padding: 16px 14px 14px; } .bp-h { font-size: 22px; } .bp-s { display: none; }
   .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-row > :nth-child(3), .bp-row > :nth-child(4), .bp-row > :nth-child(5) { display: none; }
 }
+
+/* hero preview: board on the left, the Shelf card open on the right */
+.bp { max-width: 1120px; }
+.bp-split { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: start; margin-top: 14px; }
+.bp-split .bp-tbl { margin-top: 0; }
+.bp-split .bp-row { grid-template-columns: .7fr 1.6fr 1fr auto; }
+.bp-row.sel { background: rgba(124,147,255,.08); box-shadow: inset 3px 0 0 #7C93FF; }
+.bp-an.on { background: #F2F3F5; color: #0E0F12; border-color: #F2F3F5; }
+.bp-split .sc { box-shadow: none; border-color: #2E323B; }
+.sc-solo { grid-template-columns: 1fr !important; max-width: 760px; }
+.sc-solo .sc-list { max-width: 640px; margin-left: auto; margin-right: auto; }
+.bp-split { position: relative; }
+.bp-link { position: absolute; height: 2px; background: #7C93FF; pointer-events: none; z-index: 2; border-radius: 2px; }
+.bp-link::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #7C93FF; }
+.bp-link::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left: 8px solid #7C93FF; border-right: 0; }
+.bp-split .sc { outline: 2px solid rgba(124,147,255,.55); outline-offset: 0; }
+@media (max-width: 980px) { .bp-link { display: none; } .bp-split { grid-template-columns: 1fr; } .bp-split .sc { max-width: 420px; width: 100%; margin: 0 auto; } }
+@media (max-width: 760px) { .bp-split .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-split .bp-row > :nth-child(3) { display: none; } .bp-split .bp-row > :nth-child(4) { display: block; } }
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
@@ -541,14 +559,60 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
         <span class="bp-live"><b></b>Live</span></div>
       <div class="bp-scout"><b>Scout</b> <span id="bpLine">Swept <b>over 540</b> stocks after the last 4-hour close.</span> <span class="bp-next" id="bpNext"></span></div>
       <div class="bp-tabs"><span class="on">Hubs <small id="bpHubs">–</small></span><span>Flags <i>beta</i></span><span>Double tops <i>beta</i></span><span>Triangles <i>beta</i></span><span>Channels <i>beta</i></span><span>Support &amp; resistance <i>beta</i></span></div>
+      <div class="bp-split">
       <div class="bp-tbl">
-        <div class="bp-row bp-th"><span>Stock</span><span>Setup</span><span>Last price</span><span>Hub</span><span>Next shelf</span><span></span></div>
-        <div class="bp-row"><b>NFLX</b><span><em class="pill up">Broke out ↑<small>heading to next shelf</small></em></span><span>$1,182.40</span><span>$1,121–1,168</span><span>$1,236.10</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
-        <div class="bp-row"><b>ADBE</b><span><em class="pill hub">Inside a hub</em></span><span>$248.48</span><span>$246.07–254.78</span><span>$271.27</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
-        <div class="bp-row"><b>EQT</b><span><em class="pill dn">Broke down ↓<small>heading to next shelf</small></em></span><span>$51.36</span><span>$52.10–54.85</span><span>$48.90</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
-        <div class="bp-row"><b>HON</b><span><em class="pill hub">Inside a hub</em></span><span>$223.80</span><span>$219.40–224.60</span><span>$237.68</span><span><a class="bp-an" href="#card">Analyze</a></span></div>
+        <div class="bp-row bp-th"><span>Stock</span><span>Setup</span><span>Last price</span><span></span></div>
+        <div class="bp-row"><b>NFLX</b><span><em class="pill up">Broke out ↑<small>heading to next shelf</small></em></span><span>$1,182.40</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row sel"><b>ADBE</b><span><em class="pill hub">Inside a hub</em></span><span>$248.48</span><span><span class="bp-an on">Open →</span></span></div>
+        <div class="bp-row"><b>EQT</b><span><em class="pill dn">Broke down ↓<small>heading to next shelf</small></em></span><span>$51.36</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>HON</b><span><em class="pill hub">Inside a hub</em></span><span>$223.80</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>NVDA</b><span><em class="pill hub">Inside a hub</em></span><span>$181.20</span><span><span class="bp-an">Analyze</span></span></div>
       </div>
-      <p class="bp-note">Example rows. Members see every stock on the board, updated after each 4-hour close.</p>
+      <div class="sc" id="sampleCard" aria-label="Example Shelf card">
+    <div class="sc-hero">
+      <div class="sc-k">Shelf card · example</div>
+      <div class="sc-sym">ADBE</div>
+      <span class="sc-pill">Inside a hub · no trade yet</span>
+      <p class="sc-px"><b>$248.48</b> last 4-hour close</p>
+      <div class="sc-stats">
+        <div><small>Trigger</small><b>$254.78</b><i>4H close above</i></div>
+        <div><small>Aim</small><b>$271.27</b><i class="up">+6.5% from trigger</i></div>
+        <div><small>Wrong if</small><b>$254.78</b><i>4H close back below</i></div>
+      </div>
+      <div class="sc-tabs" role="tablist"><button data-t="lv" class="on">Levels</button><button data-t="gp">Game plan</button><button data-t="ox">Options</button><button data-t="tr">Track record</button></div>
+    </div>
+    <div class="sc-body">
+      <div class="sc-pane on" data-p="lv"><div class="sc-k">Level map</div>
+        <div class="sc-lm">
+          <div class="up"><span>Next shelf above<small>zone $271.27–276.19</small></span><b>$271.27<small>+9.2%</small></b></div>
+          <div class="hub"><span>Hub top<small>close above = long setup</small></span><b>$254.78<small>+2.5%</small></b></div>
+          <div class="now"><span>Last 4-hour close</span><b>$248.48</b></div>
+          <div class="hub"><span>Hub bottom<small>close below = short setup</small></span><b>$246.07<small>−1.0%</small></b></div>
+          <div class="dn"><span>Next shelf below<small>zone $236.18–242.27</small></span><b>$242.27<small>−2.5%</small></b></div>
+        </div></div>
+      <div class="sc-pane" data-p="gp"><div class="sc-k">Game plan</div>
+        <ol class="sc-gp">
+          <li>It's been closing inside <b>$246.07–254.78</b> for 5 sessions. Inside the hub there's <b>no trade</b>.</li>
+          <li>A 4-hour <b>close above $254.78</b> starts a long setup, aiming for the shelf at <b>$271.27</b>.</li>
+          <li>A 4-hour <b>close below $246.07</b> starts a short setup, aiming for <b>$242.27</b>.</li>
+        </ol></div>
+      <div class="sc-pane" data-p="ox"><div class="sc-k">Options swing <span class="sc-edu">Educational</span></div>
+        <div class="sc-ct"><b>Nov 27 $255 calls</b><small>If a 4-hour candle closes above the hub top</small></div>
+        <div class="sc-rows">
+          <div><span>Est. cost at the breakout</span><b>≈ $13.69</b></div>
+          <div><span>If it reaches the aim</span><b>≈ $23.14 <em class="up">+69%</em></b></div>
+          <div><span>If the breakout fails</span><b>≈ $12.46 <em class="dn">−9%</em></b></div>
+          <div><span>Est. gain at the aim</span><b class="up">≈ +$945.00</b></div>
+          <div><span>Max loss</span><b>$1,369.00</b></div>
+        </div>
+        <p class="sc-note">Per contract. Reached the aim in 4 of 10 past setups.</p></div>
+      <div class="sc-pane" data-p="tr"><div class="sc-k">Track record</div>
+        <div class="sc-tiles"><div><b>10</b><small>breakouts in ~9 months</small></div><div><b>40%</b><small>reached the shelf</small></div></div>
+        <div class="sc-trs"><div><span>Oct 21 · Long</span><i class="up">Reached shelf</i></div><div><span>Sep 30 · Short</span><i class="dn">Failed</i></div><div><span>Sep 9 · Long</span><i class="up">Reached shelf</i></div><div><span>Aug 18 · Long</span><i>Timed out</i></div></div></div>
+    </div>
+  </div>
+      </div>
+      <p class="bp-note">Example rows and card. Members see every stock on the board, updated after each 4-hour close, and tap Analyze for its Shelf card.</p>
     </div>
   </div>
 </div></header>
@@ -656,7 +720,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   <p class="stage-note">Example setup, for illustration.</p>
 </div></section>
 
-<section id="card"><div class="wrap sc-wrap">
+<section id="card"><div class="wrap sc-wrap sc-solo">
   <div class="sc-copy">
     <div class="kicker">The Shelf card</div>
     <h2>Every setup comes <em>with a plan.</em></h2>
@@ -668,51 +732,9 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
       <li><b>Options swing.</b> The contract, what it may be worth at the aim, and your max loss.</li>
       <li><b>Track record.</b> How this stock's past breakouts actually turned out.</li>
     </ul>
-    <p class="micro" style="margin-top:18px">Example card with sample numbers. Educational, not financial advice.</p>
+    <p class="micro" style="margin-top:18px">See the example card at the top of the page. Sample numbers; educational, not financial advice.</p>
   </div>
-  <div class="sc" id="sampleCard" aria-label="Example Shelf card">
-    <div class="sc-hero">
-      <div class="sc-k">Shelf card · example</div>
-      <div class="sc-sym">ADBE</div>
-      <span class="sc-pill">Resting in a hub · no trade yet</span>
-      <p class="sc-px"><b>$251.47</b> last 4-hour close</p>
-      <div class="sc-stats">
-        <div><small>Trigger</small><b>$254.78</b><i>4H close above</i></div>
-        <div><small>Aim</small><b>$271.27</b><i class="up">+6.5% from trigger</i></div>
-        <div><small>Wrong if</small><b>$254.78</b><i>4H close back below</i></div>
-      </div>
-      <div class="sc-tabs" role="tablist"><button data-t="lv" class="on">Levels</button><button data-t="gp">Game plan</button><button data-t="ox">Options</button><button data-t="tr">Track record</button></div>
-    </div>
-    <div class="sc-body">
-      <div class="sc-pane on" data-p="lv"><div class="sc-k">Level map</div>
-        <div class="sc-lm">
-          <div class="up"><span>Next shelf above<small>zone $271.27–276.40</small></span><b>$271.27<small>+7.9%</small></b></div>
-          <div class="hub"><span>Hub top<small>close above = long setup</small></span><b>$254.78<small>+1.3%</small></b></div>
-          <div class="now"><span>Last 4-hour close</span><b>$251.47</b></div>
-          <div class="hub"><span>Hub bottom<small>close below = short setup</small></span><b>$247.13<small>−1.7%</small></b></div>
-          <div class="dn"><span>Next shelf below<small>zone $238.90–242.27</small></span><b>$242.27<small>−3.7%</small></b></div>
-        </div></div>
-      <div class="sc-pane" data-p="gp"><div class="sc-k">Game plan</div>
-        <ol class="sc-gp">
-          <li>It's been closing inside <b>$247.13–254.78</b> for 5 sessions. Inside the hub there's <b>no trade</b>.</li>
-          <li>A 4-hour <b>close above $254.78</b> starts a long setup, aiming for the shelf at <b>$271.27</b>.</li>
-          <li>A 4-hour <b>close below $247.13</b> starts a short setup, aiming for <b>$242.27</b>.</li>
-        </ol></div>
-      <div class="sc-pane" data-p="ox"><div class="sc-k">Options swing <span class="sc-edu">Educational</span></div>
-        <div class="sc-ct"><b>Nov 27 $255 calls</b><small>If a 4-hour candle closes above the hub top</small></div>
-        <div class="sc-rows">
-          <div><span>Est. cost at the breakout</span><b>≈ $13.69</b></div>
-          <div><span>If it reaches the aim</span><b>≈ $23.14 <em class="up">+69%</em></b></div>
-          <div><span>If the breakout fails</span><b>≈ $12.46 <em class="dn">−9%</em></b></div>
-          <div><span>Est. gain at the aim</span><b class="up">≈ +$945.00</b></div>
-          <div><span>Max loss</span><b>$1,369.00</b></div>
-        </div>
-        <p class="sc-note">Per contract. Reached the aim in 4 of 10 past setups.</p></div>
-      <div class="sc-pane" data-p="tr"><div class="sc-k">Track record</div>
-        <div class="sc-tiles"><div><b>10</b><small>breakouts in ~9 months</small></div><div><b>40%</b><small>reached the shelf</small></div></div>
-        <div class="sc-trs"><div><span>Oct 21 · Long</span><i class="up">Reached shelf</i></div><div><span>Sep 30 · Short</span><i class="dn">Failed</i></div><div><span>Sep 9 · Long</span><i class="up">Reached shelf</i></div><div><span>Aug 18 · Long</span><i>Timed out</i></div></div></div>
-    </div>
-  </div>
+
 </div></section>
 
 <section id="day"><div class="wrap">
@@ -1002,6 +1024,21 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   tabs.forEach((b, k) => b.onclick = () => { user = true; clearInterval(timer); show(k); });
   function play() { if (user) return; clearInterval(timer); timer = setInterval(() => show((i + 1) % tabs.length), 3500); }
   if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? play() : clearInterval(timer)), {threshold: .4}).observe(card);
+})();
+</script>
+
+<script>
+(function () {
+  // hero preview: an arrow from the open row's button to the Shelf card
+  const split = document.querySelector(".bp-split"); if (!split) return;
+  const card = document.getElementById("sampleCard"), link = document.createElement("div"); link.className = "bp-link"; split.appendChild(link);
+  function draw() {
+    const row = split.querySelector(".bp-row.sel"); if (!row || getComputedStyle(link).display === "none") return;
+    const btn = row.querySelector(".bp-an"), sb = split.getBoundingClientRect(), bb = btn.getBoundingClientRect(), cb = card.getBoundingClientRect();
+    const y = bb.top + bb.height / 2 - sb.top, x1 = bb.right - sb.left + 6, x2 = cb.left - sb.left - 4;
+    Object.assign(link.style, {top: y + "px", left: x1 + "px", width: Math.max(0, x2 - x1) + "px"});
+  }
+  addEventListener("resize", draw); addEventListener("load", draw); setTimeout(draw, 300);
 })();
 </script>
 </body>
