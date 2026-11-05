@@ -274,7 +274,7 @@ def format_pattern_event(sym: str, e: dict) -> str:
         what = f"the {name} {'upper' if up else 'lower'} line at {_money(e['edge'])}"
     reached = (e["close"] - e["target"]) * d >= 0
     return (f"{'🚀' if up else '🔻'} {sym}: 4H close {'ABOVE' if up else 'BELOW'} {what}\n"
-            f"Setup: {patterns.KINDS[e['kind']]}\n"
+            f"Setup: {patterns.KINDS[e['kind']]} (beta: too few results to judge yet; hubs are the tested setup)\n"
             + plan_lines(e["close"], e["edge"], e["target"], d, reached, e.get("shelf"))
             + f"\nCandle closed: {candle_close(e['time'])}")
 

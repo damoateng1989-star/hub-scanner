@@ -1601,6 +1601,11 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 }
 
 /* computers too: same calm look */
+.beta-note { margin: 0 0 12px; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(229,161,61,.4); background: rgba(229,161,61,.07); color: #E8C887; font-size: 13.5px; line-height: 1.5; }
+.beta-note b { color: #F2C14E; } .beta-note a { color: inherit; text-decoration: underline; }
+html[data-theme="light"] .beta-note { color: #78350f; background: #fffbeb; border-color: #fcd34d; } html[data-theme="light"] .beta-note b { color: #92400e; }
+.beta-tag { margin-left: 6px; padding: 1px 7px; border-radius: 6px; border: 1px solid rgba(229,161,61,.5); color: #E5A13D; font: 600 10px var(--mono); letter-spacing: .08em; vertical-align: 1px; }
+.beta-line { margin: -4px 0 10px; font-size: 12.5px; color: #9AA0AC; }
 html body .board-table .board-state.board-state.up, html body .board-table .board-state.board-state.down { flex-direction: column; align-items: flex-start !important; line-height: 1.25 !important; border-radius: 10px !important; padding: 4px 10px !important; font-weight: 700 !important; }
 .board-state .bs-sub { display: block; font-size: 11px; font-weight: 500; opacity: .85; white-space: nowrap; }
 #closesCard .seg { gap: 4px; padding: 4px; border-radius: 12px; border: 1px solid #23262E; background: #0E0F12; }
@@ -2843,7 +2848,7 @@ function briefHTML(sym, st, chart) {
   } else rec = loadingHTML("Loading the track record…");
   const add = TICKERS.find(t => t.symbol === sym) ? "" : `<button class="btnx bf-addbtn" onclick="addToWatchlist('${esc(sym)}').then(ok => { if (ok) { toast('${esc(sym)} added to your watchlist'); loadTickers(); } }).catch(e => toast(e.message))">☆ Add ${esc(sym)} to my watchlist</button>`;
   const others = (st.setups || []).filter(x => x.state !== "between" || x.kind === "sr");
-  const setupsHTML = others.length ? `<div class="bf-h">Other setups on ${esc(sym)}</div><div class="gp">${others.map(x => {
+  const setupsHTML = others.length ? `<div class="bf-h">Other setups on ${esc(sym)} <span class="beta-tag">Beta</span></div><p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", hub: "#9fb3ff"}[c];
       let t;
       if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).`;
@@ -3301,7 +3306,7 @@ function renderSetupBoard() {
     sr: "Horizontal levels price has tested 3 or more times. The trade is a 4-hour close through the level, aiming for the next level or shelf.",
     flag: "A sharp move (the pole), then a short pause drifting against it. The trade is a 4-hour close out of the flag in the direction of the pole.",
     double: "Two tests of the same high (or low) with a dip between. The trade is a 4-hour close through the neckline, the middle of the M (or W)." }[SETUP_TAB];
-  $("setupBoard").innerHTML = lock + `<p class="setup-about">${about}</p>` + (rows.length ? `<div class="board-frame"><div class="board-scroll"><table class="board-table setup-table"><thead><tr>
+  $("setupBoard").innerHTML = lock + `<div class="beta-note"><b>Beta: new setup, too few results to judge yet.</b> Hubs are NextShelf's tested setup. This one's track record builds on the <a href="#results">Results</a> page.</div><p class="setup-about">${about}</p>` + (rows.length ? `<div class="board-frame"><div class="board-scroll"><table class="board-table setup-table"><thead><tr>
     <th>Instrument</th><th>Setup</th><th>Status</th><th>Last price</th><th>Upper</th><th>Lower</th><th>Target</th><th>Context</th><th>Analysis</th></tr></thead><tbody>
     ${rows.map(x => { const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown";
       const up = live ? (x.state === "breakout_up" ? x.edge : null) : x.upper, lo = live ? (x.state === "breakdown" ? x.edge : null) : x.lower;
