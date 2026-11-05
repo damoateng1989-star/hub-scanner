@@ -295,7 +295,7 @@ STYLE = """<style>
 .lu-n { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; font-weight: 700; font-size: 13px; background: rgba(61,214,140,.12); color: #3DD68C; }
 .lu-t { font-weight: 600; } .lu-m { font-size: 13px; color: var(--muted); }
 .lu-cta { margin-top: 30px; padding: 18px; border-radius: 16px; border: 1px solid rgba(61,214,140,.4); background: rgba(61,214,140,.06); color: var(--muted); }
-.lu-cta b { color: var(--ink); } .lu-cta a { color: #3DD68C !important; font-weight: 700; }
+.lu-cta b { color: var(--ink); } .lu-cta a, .lu-cta a:hover { color: #141412 !important; font-weight: 700; }
 .lu-meta { font-size: 13px; color: var(--faint, #8a9aae); }
 .lu-take, .lu-quiz { margin-top: 26px; padding: 18px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); }
 .lu-take ul { margin: 8px 0 0; }
