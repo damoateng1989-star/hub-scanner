@@ -3464,10 +3464,10 @@ function liveVsHub(st, px) {
   // where the live price sits against the hub, BEFORE the candle closes
   const h = st && st.hub;
   if (!h || !px || !["forming", "watching"].includes(st.state)) return null;
-  if (px > h.high) return ["up", `Live above the hub top ${money(h.high)}. Not closed yet`];
-  if (px < h.low) return ["down", `Live below the hub bottom ${money(h.low)}. Not closed yet`];
+  if (px > h.high) return ["up", `Price is above the hub top ${money(h.high)}. Not closed yet`];
+  if (px < h.low) return ["down", `Price is below the hub bottom ${money(h.low)}. Not closed yet`];
   const w = h.high - h.low, pos = w > 0 ? (px - h.low) / w : .5;
-  return ["in", `Live inside the hub · ${pos >= .5 ? (((h.high / px) - 1) * 100).toFixed(2) + "% to the top" : (((px / h.low) - 1) * 100).toFixed(2) + "% to the bottom"}`];
+  return ["in", `Price is inside the hub · ${pos >= .5 ? (((h.high / px) - 1) * 100).toFixed(2) + "% to the top" : (((px / h.low) - 1) * 100).toFixed(2) + "% to the bottom"}`];
 }
 function liveChip(sym) {
   const L = LIVE[sym]; if (!L) return "";
