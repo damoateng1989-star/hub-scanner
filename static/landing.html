@@ -383,6 +383,14 @@ html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 .bp-split .sc-rows > div { padding: 6px 0 !important; } .bp-split .sc-ct b { font-size: 13.5px !important; } .bp-split .sc-gp li { padding: 8px !important; }
 .bp-note { margin-top: 10px !important; font-size: 11px !important; }
 @media (max-width: 980px) { .bp-split { grid-template-columns: 1fr !important; } .bp-split .sc { max-width: 380px; } }
+
+/* hero preview: the Shelf card as one card, with a divider between the top and the tab content */
+.bp-split .sc.sc { background: #15171C !important; padding: 0 !important; overflow: hidden; }
+.bp-split .sc .sc-hero, .bp-split .sc .sc-body { background: transparent !important; border: 0 !important; border-radius: 0 !important; margin: 0 !important; }
+.bp-split .sc .sc-body { border-top: 0 !important; scrollbar-width: none; }
+.bp-split .sc .sc-hero { position: relative; } .bp-split .sc .sc-hero::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 1px; background: #2E323B; }
+.bp-split .sc .sc-body::-webkit-scrollbar { display: none; }
+.bp-split .sc .sc-hero { padding: 14px 14px 12px !important; } .bp-split .sc .sc-body { padding: 12px 14px !important; }
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
