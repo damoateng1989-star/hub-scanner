@@ -283,6 +283,11 @@ def login_page(request: Request):
     return FileResponse(STATIC / "login.html")
 
 
+@app.get("/signin")
+def signin_redirect():
+    return RedirectResponse("/login", 302)
+
+
 @app.get("/owner")
 def owner_signin(request: Request, key: str = ""):
     """Rescue sign-in for the site owner: /owner?key=YOUR_OWNER_KEY (set OWNER_KEY on the server). No password needed."""

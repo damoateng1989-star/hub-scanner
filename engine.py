@@ -15,7 +15,7 @@ CLOSE_MIN = 16 * 60        # 16:00
 
 @dataclass
 class Settings:
-    min_sessions: int = 4      # hub must last at least this many sessions
+    min_sessions: int = 5      # hub must last at least this many sessions
     k: float = 1.5             # closes must stay within k x 4H ATR(14)
     horizon: int = 10          # 4H candles to judge a breakout
     target_atr: float = 1.0    # fallback target beyond hub edge, in ATR, when there is no shelf
@@ -28,7 +28,7 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            min_sessions=int(os.getenv("MIN_SESSIONS", 4)),
+            min_sessions=int(os.getenv("MIN_SESSIONS", 5)),
             k=float(os.getenv("HUB_K", 1.5)),
             horizon=int(os.getenv("HORIZON", 10)),
             target_atr=float(os.getenv("TARGET_ATR", 1.0)),

@@ -1132,7 +1132,7 @@ html[data-theme="light"] .storage-warn { color: #7c2d12 !important; background: 
 </style>
 <style>
 html[data-theme="light"] input[type=checkbox], html[data-theme="light"] input[type=radio] { background: none !important; box-shadow: none !important; accent-color: #0d1117 !important; }
-html[data-theme="light"] .mb-f a, html[data-theme="light"] .mb-lock a, html[data-theme="light"] .upsell { color: #0d1117 !important; text-decoration: underline; }
+html[data-theme="light"] .mb-f a, html[data-theme="light"] .upsell { color: #0d1117 !important; text-decoration: underline; }
 html[data-theme="light"] .mb-chip small, html[data-theme="light"] .ag-find i, html[data-theme="light"] .live em, html[data-theme="light"] .bf-tag, html[data-theme="light"] .g-pill { filter: brightness(.72) saturate(1.3); }
 html[data-theme="light"] .lesson .lsteps button { color: #9AA0AC !important; background: transparent !important; border-color: #37383B !important; }
 html[data-theme="light"] .lesson .lsteps button.on { color: #0E0F12 !important; background: #E9EBEF !important; }
@@ -1705,7 +1705,7 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
     </div>
     <svg id="lsSvg" viewBox="0 0 440 250" role="img" aria-label="Animated example of a hub, the trap of trading inside it, and a breakout to the next shelf"></svg>
     <div class="lfoot">
-      <p id="lsCap">Price slows down and starts closing inside a tight range. After 4 days of this, it's a hub.</p>
+      <p id="lsCap">Price slows down and starts closing inside a tight range. After 5 days of this, it's a hub.</p>
       <div class="lctl"><button id="lsPlay" aria-label="Pause">❚❚</button><button id="lsReplay" aria-label="Replay">↻</button></div>
     </div>
   </div>
@@ -1800,7 +1800,7 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
     <div class="step"><span class="n">1</span><h3>A hub forms</h3>
       <svg viewBox="0 0 300 110"><rect x="40" y="40" width="220" height="30" rx="5" fill="var(--hub)" opacity=".15" stroke="var(--hub)" stroke-opacity=".6"/>
       <path d="M20 88 L40 66 L60 54 L80 62 L100 48 L120 60 L140 51 L160 63 L180 53 L200 59 L220 50 L240 58 L260 54" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/></svg>
-      <p>A stock's 4-hour candles keep closing inside a tight range for at least 4 days. It's resting, or "coiling".</p></div>
+      <p>A stock's 4-hour candles keep closing inside a tight range for at least 5 days. It's resting, or "coiling".</p></div>
     <div class="step"><span class="n">2</span><h3>A candle closes outside</h3>
       <svg viewBox="0 0 300 110"><rect x="20" y="50" width="170" height="30" rx="5" fill="var(--hub)" opacity=".15" stroke="var(--hub)" stroke-opacity=".6"/>
       <path d="M20 66 L50 58 L80 70 L110 60 L140 68 L170 62 L200 44 L230 32" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round"/><circle cx="200" cy="44" r="6" fill="var(--up)"/></svg>
@@ -1819,7 +1819,7 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
 </section>
 
   <footer>
-    <span>Educational tool. Signals describe past price behaviour, not financial advice.</span>
+    <span>Educational tool. Signals describe past price behavior, not financial advice.</span>
     <span class="app-legal"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></span>
     <span id="sched"></span>
   </footer>
@@ -1912,7 +1912,7 @@ async function loadInfo() {
         which is why members get signed out. Fix: in Render, add a <b>Disk</b> (mount path <code>/data</code>) and set <code>DATA_DIR=/data</code>. Only admins see this.`;
       document.querySelector("main").prepend(w);
     }
-    $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "15-min warnings " + i.preclose_times.map(fmtT).join(" & ") + " · " : ""}Closing checks ${i.scan_times.map(fmtT).join(" & ")} ET on weekdays (they confirm the ${i.scan_times.map(closeOf).filter(Boolean).join(" & ")} candles; market data arrives ~15 min after the close) · ${i.settings.horizon}-candle limit`;
+    $("sched").textContent = `Target = next shelf (else ${i.settings.target_atr}× ATR) · ${i.preclose_times.length ? "15-min warnings " + i.preclose_times.map(fmtT).join(" & ") + " · " : ""}Closing checks ${i.scan_times.map(fmtT).join(" & ")} ET on weekdays (they confirm the ${i.scan_times.map(closeOf).filter(Boolean).join(" & ")} candles; market data itself is ~15 min delayed) · ${i.settings.horizon}-candle limit`;
   } catch (e) {}
 }
 
@@ -2441,7 +2441,7 @@ window.addEventListener("hashchange", showTab);
 
 // ---------------------------------------------------------------- help: glossary, "?" tips, sheet
 const GLOSS = {
-  hub: ["Hub", "A tight price range. The stock's 4-hour candles have closed inside it for at least 4 days in a row, like a spring coiling."],
+  hub: ["Hub", "A tight price range. The stock's 4-hour candles have closed inside it for at least 5 days in a row, like a spring coiling."],
   breakout: ["Breakout", "The first 4-hour candle that closes outside the hub. Closing above it is a breakout up (bullish); closing below it is a breakdown (bearish)."],
   shelf: ["Shelf", "An earlier hub. After a breakout, price often travels to the nearest shelf, so that's the target."],
   target: ["Target", "Where a breakout is expected to head: the edge of the next shelf. If there's no shelf nearby, we use the stock's typical move (ATR)."],
@@ -2467,7 +2467,7 @@ const guideDone = () => { try { return !!localStorage.getItem("hs_guide_read"); 
 const LESSON = (() => {
   const W = 440, H = 250, PADL = 8, PADR = 48;
   const SCENES = [
-    {t: "A hub forms", c: "Price slows down and starts closing inside a tight range. After 4 days of this, it's a hub: the stock is coiling."},
+    {t: "A hub forms", c: "Price slows down and starts closing inside a tight range. After 5 days of this, it's a hub: the stock is coiling."},
     {t: "The trap: trading inside the hub", c: "Beginners buy near the top and sell near the bottom. Inside a hub price just chops back and forth, so trade after trade loses a little."},
     {t: "Wait for the close", c: "A wick poking out isn't enough, and this one gets pushed back. Only a 4-hour candle that closes outside the hub is the real breakout."},
     {t: "Ride to the next shelf", c: "After the breakout close, price travels to the next shelf. Don't force trades. Let the trade come to you."},
@@ -2744,7 +2744,9 @@ function briefHead(sym, st) {
   if (st) {
     if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">${brokeWord(k === "breakout_up", st.target_kind)}</span>`;
     else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)}: ${brokeWord(other.state === "breakout_up").toLowerCase()}</span>` + hubNote;
-    else if (k === "forming" || k === "watching") tag = `<span class="bf-tag rest">${STATE_WORD[k]} · no trade yet</span>`;
+    else if (k === "forming" || k === "watching") {
+      const hh = st.hub, px = (LIVE[sym] && LIVE[sym].price) || st.last_close, inside = hh && px >= hh.low && px <= hh.high;
+      tag = `<span class="bf-tag rest">${inside || k === "forming" ? "Inside a hub" : STATE_WORD[k]} · no trade yet</span>`; }
     else tag = `<span class="bf-tag rest">No setup in play</span>`;
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
   }
@@ -2830,7 +2832,7 @@ function briefHTML(sym, st, chart) {
     if (lv) { const u = lv.state === "breakout_up";
       steps.push([u ? "#3DD68C" : "#FF6B5E", `The trade in play is the <b>${esc(lv.name)} ${u ? "breakout ↑" : "breakdown ↓"}</b> (${u ? "bullish" : "bearish"}): it closed ${u ? "above" : "below"} <b>${money(lv.edge)}</b>, aiming for <b>${money(lv.target)}</b>.`]);
       steps.push(["#F2C14E", `It's wrong if a 4-hour candle <b>closes back ${u ? "below" : "above"} ${money(lv.edge)}</b>.`]); }
-    steps.push(["#9AA0AC", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 4+ sessions." : "The last hub breakout has played out."]);
+    steps.push(["#9AA0AC", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 5+ sessions." : "The last hub breakout has played out."]);
     if (up || dn) steps.push(["#9fb3ff", `Shelves to keep in mind: ${[up && `<b>${money(up.level)}</b> above`, dn && `<b>${money(dn.level)}</b> below`].filter(Boolean).join(" and ")}.`]);
   }
   const plan = `<div class="gp">${steps.map(([c, t], i) => `<div data-n="${i + 1}" style="--c:${c}"><span>${t}</span></div>`).join("")}</div>`;
@@ -2863,7 +2865,7 @@ function briefHTML(sym, st, chart) {
     <div class="bf-more"><section class="bf-card"><div class="bf-k" id="bf-setup">Game plan</div>${plan2}</section>
     <section class="bf-card"><div class="bf-k" id="bf-options">Options swing <span class="ox-edu">Educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div></section>
     <section class="bf-card"><div class="bf-k" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}</section>
-    <p class="bf-fine bf-legal">Based on past price behaviour and NextShelf's hub rules. For education only, not financial advice.</p></div>`;
+    <p class="bf-fine bf-legal">Based on past price behavior and NextShelf's hub rules. For education only, not financial advice.</p></div>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
 function orderPlan(h, dir, shelf) {
@@ -2921,6 +2923,7 @@ function marketChip() {
 let BOARD_ERR = null;
 async function loadToday() {
   renderToday();
+  const mb = $("mbrief"); if (mb && !mb.innerHTML.trim()) { mb.hidden = false; mb.innerHTML = '<p class="mb-quiet">Loading the board…</p>'; }
   try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
   renderToday(); renderStrip();
   loadBrief();
@@ -3067,7 +3070,7 @@ function renderInstitutionalBoard(){
       '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
-  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' has':'s have')+' broken out</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
+  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
   const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="9"><div class="board-empty">No symbols match this view.</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
@@ -3289,7 +3292,7 @@ function setupWord(x) {
   return ["Forming", "hub"];
 }
 function setupTabs(b) {
-  const n = (k) => k === "hub" ? (b.live || []).length + (b.near || []).length + (b.forming || []).length + (b.live_count || 0) + (b.near_count || 0)
+  const n = (k) => k === "hub" ? (b.forming || []).length + ((b.live || []).length || b.live_count || 0)   // hubs in play: resting (incl. at the edge) + breaking out now
     : (b.setups || []).filter(x => x.style === k).length;
   return `<div class="setup-tabs" role="tablist">${SETUP_TABS.map(([k, label]) =>
     `<button class="${SETUP_TAB === k ? "on" : ""}" onclick="pickSetupTab('${k}')">${setupIcon(k)}<span>${label}</span><small>${n(k)}</small>${k !== "hub" ? '<i>beta</i>' : ""}</button>`).join("")}</div>`;
@@ -3346,7 +3349,7 @@ async function loadRecapCard() {
 }
 async function loadBrief() {
   if (eveningNow() && await loadRecapCard()) return;
-  let d; try { d = await api("/api/brief"); } catch (e) { return; }
+  let d; try { d = await api("/api/brief"); } catch (e) { const el = $("mbrief"); if (el) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">Couldn\'t load the brief. <a href="#" onclick="loadBrief();return false">Tap to retry</a>.</p>'; } return; }
   const el = $("mbrief"); if (!el) return;
   const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
   let main;
@@ -3559,7 +3562,7 @@ function renderScout() {
   else if (MY_SCAN) {
     const hits = MY_SCAN.results.filter(r => ["breakout_up", "breakdown", "forming"].includes(r.state));
     line = `Checked your <b>${MY_SCAN.results.length}</b> ticker${MY_SCAN.results.length === 1 ? "" : "s"} just now. ` + (hits.length ? `<b>${hits.length}</b> worth watching:` : "Nothing is setting up yet. Let the trade come to you.");
-  } else line = guest ? "I check 540+ stocks and ETFs after each 4-hour close. Sign in and I'll scan your own watchlist on demand."
+  } else line = guest ? "I check over 540 stocks and ETFs after each 4-hour close. Sign in and I'll scan your own watchlist on demand."
     : `I sweep the market after every 4-hour close${sc.next ? ` (next: <b>${agDay(sc.next)}</b>)` : ""}. Want me to check your watchlist right now?`;
   $("spLine").innerHTML = line;
   $("spActs").innerHTML = guest ? `<a class="sp-go" href="/login#signup">Sign up free to scan</a><a class="sp-alt" href="#discover" onclick="toggleScout(false)">See the market board</a>`
@@ -3573,7 +3576,7 @@ function renderScout() {
       : scoutRow(r.symbol, (col[r.state] || [STATE_WORD[r.state] || "No setup"])[0], (col[r.state] || [0, "#646B78"])[1])).join("");
   else $("spRes").innerHTML = "";
   const badge = MY_SCAN ? MY_SCAN.results.filter(r => r.state === "breakout_up" || r.state === "breakdown").length : 0;
-  $("sfBadge").hidden = !badge || !pop.hidden; $("sfBadge").textContent = badge;
+  $("sfBadge").hidden = !badge || !pop.hidden || !ME || ME.guest; $("sfBadge").textContent = badge;
 }
 
 // Scout says hi once per visit, then gets out of the way
