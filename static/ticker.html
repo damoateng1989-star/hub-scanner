@@ -463,6 +463,10 @@ async function load() {
     lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: "Shelf ▲" });
   if (st.shelf_down) candles.createPriceLine({ price: st.shelf_down.level, color: css("--down"), lineWidth: 1,
     lineStyle: LightweightCharts.LineStyle.Dashed, axisLabelVisible: true, title: "Shelf ▼" });
+  if (st.old_high) candles.createPriceLine({ price: st.old_high.level, color: "#9AA0AC", lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: "Old high (wick)" });
+  if (st.old_low) candles.createPriceLine({ price: st.old_low.level, color: "#9AA0AC", lineWidth: 1,
+    lineStyle: LightweightCharts.LineStyle.Dotted, axisLabelVisible: true, title: "Old low (wick)" });
 
   // breakout markers
   const word = { "follow-through": "hit", "snap-back": "failed", stalled: "timed out", pending: "live" };

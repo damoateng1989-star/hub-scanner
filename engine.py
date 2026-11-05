@@ -189,7 +189,43 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
     return dict(close=close, atr=atr, hubs=hubs, trades=trades, events=events)
 
 
+WICK_LOOKBACK = 240        # 4H candles (~4 months) to look back for an old high / low
+
+
+def old_extremes(c4: pd.DataFrame, price: float) -> dict:
+    """The nearest earlier swing high above price and swing low below it, from wicks (not closes).
+    Shown only as a heads-up where a move might stall when there's no shelf: never a target."""
+    out = {"old_high": None, "old_low": None}
+    if c4 is None or len(c4) < 10 or "High" not in c4:
+        return out
+    d = c4.iloc[-WICK_LOOKBACK:-1]
+    hi, lo = d["High"].to_numpy(), d["Low"].to_numpy()
+    k = 3
+    highs = [(float(hi[i]), d.index[i]) for i in range(k, len(d) - k) if hi[i] == hi[i - k:i + k + 1].max() and hi[i] > price]
+    lows = [(float(lo[i]), d.index[i]) for i in range(k, len(d) - k) if lo[i] == lo[i - k:i + k + 1].min() and lo[i] < price]
+    if highs:
+        v, t = min(highs, key=lambda x: x[0])
+        out["old_high"] = dict(level=round(v, 2), time=t.isoformat())
+    if lows:
+        v, t = max(lows, key=lambda x: x[0])
+        out["old_low"] = dict(level=round(v, 2), time=t.isoformat())
+    return out
+
+
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
+    st = _current_status(c4, res, s)
+    try:
+        ex = old_extremes(c4, float(res["close"].iloc[-1]))
+        if not st.get("shelf_up") and ex["old_high"]:
+            st["old_high"] = ex["old_high"]
+        if not st.get("shelf_down") and ex["old_low"]:
+            st["old_low"] = ex["old_low"]
+    except Exception:
+        pass
+    return st
+
+
+def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
     close = res["close"]
     n = len(close)
     st = dict(last_close=round(float(close.iloc[-1]), 2), last_candle=close.index[-1].isoformat(),
