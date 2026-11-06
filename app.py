@@ -835,6 +835,9 @@ def board_data(u: dict | None = Maybe):
         b["setups"] = [x for x in b["setups"] if x["state"] not in ("breakout_up", "breakdown", "testing")]
     for x in b["setups"]:
         x["watching"] = x["symbol"] in mine
+    for group in ("live", "near", "forming", "recent", "setups"):   # for the Webull / Robinhood links
+        for r in b.get(group) or []:
+            r["exchange"] = data.exchange_for(r["symbol"])
     return b
 
 
@@ -920,6 +923,7 @@ async def chart_data(symbol: str, u: dict = User):
         raise HTTPException(400, str(e))
     d["watching"] = bool(u) and d["symbol"] in db.user_symbols(u["id"])
     d["guest"] = not u
+    d["exchange"] = data.exchange_for(symbol)
     return d
 
 

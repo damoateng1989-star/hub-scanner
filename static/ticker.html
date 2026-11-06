@@ -162,6 +162,11 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
             border: 1px solid color-mix(in srgb, var(--down) 45%, transparent); background: color-mix(in srgb, var(--down) 8%, transparent); border-radius: 14px; }
   .errbox b { color: var(--down); display: block; } .errbox span { color: var(--muted); font-size: 14px; }
   .btnx { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font: 500 14px var(--sans); cursor: pointer; }
+/* broker links (Webull / Robinhood) */
+.broker-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.broker { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 8px; font: 500 12px var(--sans, system-ui);
+          color: var(--muted, #8a8f98); border: 1px solid var(--line-2, rgba(128,128,128,.3)); text-decoration: none; white-space: nowrap; }
+.broker:hover { color: var(--ink, inherit); border-color: var(--faint, rgba(128,128,128,.5)); }
 </style>
 
 <style>
@@ -306,6 +311,12 @@ html[data-theme="light"] body { background: #F6F6F3; }
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const rhUrl = (s) => `https://robinhood.com/stocks/${encodeURIComponent(s.toUpperCase())}`;
+const wbUrl = (s, ex) => ex ? `https://www.webull.com/quote/${ex}-${encodeURIComponent(s.toLowerCase())}` : null;
+const brokerLinks = (s, ex) => {
+  const wb = wbUrl(s, ex);
+  return `${wb ? `<a class="broker" href="${wb}" target="_blank" rel="noopener" title="Open ${esc(s)} in Webull" aria-label="Open ${esc(s)} in Webull">Webull</a>` : ""}<a class="broker" href="${rhUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in Robinhood" aria-label="Open ${esc(s)} in Robinhood">Robinhood</a>`;
+};
 const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const pctFrom = (lvl, p) => { const v = (lvl / p - 1) * 100; return (v > 0 ? "+" : "") + v.toFixed(1) + "%"; };
 const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
@@ -374,6 +385,7 @@ async function load() {
       </div>
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
+    <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
     <h2>Past <em>results</em></h2>
     ${s.n ? `<div class="kv">
       <div><small>Breakouts</small><b>${s.n}</b></div>

@@ -205,3 +205,53 @@ def _demo(symbol: str, days: int) -> pd.DataFrame:
     volume = np.round(rng.lognormal(13, 0.35, len(idx)) * (0.6 + 0.5 * np.minimum(move, 4)))
     df = pd.DataFrame({"Open": close, "High": close + spread, "Low": close - spread, "Close": close, "Volume": volume}, index=idx)
     return df[df.index >= now - pd.Timedelta(days=days)].tz_convert("UTC")
+
+
+# ---------------------------------------------------------------- exchange per symbol (for Webull links)
+# Webull quote URLs need the exchange (webull.com/quote/nasdaq-aapl). Resolve it from the provider,
+# cache it, and return None when unknown: a guessed Webull link is worse than none.
+_EXCHANGE_CACHE: dict[str, str | None] = {}
+_EXCHANGE_MAP = {"NASDAQ": "nasdaq", "NMS": "nasdaq", "NGM": "nasdaq", "NCM": "nasdaq",
+                 "NYSE": "nyse", "NYQ": "nyse",
+                 "ARCA": "nysearca", "NYSEARCA": "nysearca", "PCX": "nysearca",
+                 "AMEX": "amex", "ASE": "amex"}
+_ALPACA_ASSETS = {"loaded": 0.0}
+
+
+def _load_alpaca_exchanges():
+    """One bulk call for every US equity (paper endpoint; read-only). Retries at most hourly on failure."""
+    if time.time() - _ALPACA_ASSETS["loaded"] < 3600:
+        return
+    _ALPACA_ASSETS["loaded"] = time.time()
+    try:
+        r = requests.get("https://paper-api.alpaca.markets/v2/assets",
+                         headers={"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""),
+                                  "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")},
+                         params={"status": "active", "asset_class": "us_equity"}, timeout=30)
+        if r.status_code >= 300:
+            return
+        for a in r.json():
+            sym = str(a.get("symbol", "")).upper()
+            if sym:
+                _EXCHANGE_CACHE[sym] = _EXCHANGE_MAP.get(str(a.get("exchange", "")).upper())
+    except Exception:
+        pass
+
+
+def exchange_for(symbol: str) -> str | None:
+    """Webull slug for a symbol ('nasdaq' / 'nyse' / 'nysearca' / 'amex'), or None. Never raises."""
+    sym = (symbol or "").upper()
+    if sym in _EXCHANGE_CACHE:
+        return _EXCHANGE_CACHE[sym]
+    p = provider()
+    try:
+        if p == "alpaca":
+            _load_alpaca_exchanges()
+            return _EXCHANGE_CACHE.get(sym)          # not cached on a miss, so the hourly reload can fill it
+        if p == "yfinance":
+            import yfinance as yf
+            _EXCHANGE_CACHE[sym] = _EXCHANGE_MAP.get(str(yf.Ticker(sym).info.get("exchange", "")).upper())
+            return _EXCHANGE_CACHE[sym]
+    except Exception:
+        return None
+    return None                                      # demo: no real exchange, so no Webull link

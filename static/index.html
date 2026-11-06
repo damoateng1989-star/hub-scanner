@@ -224,13 +224,14 @@
            transition: opacity .2s, transform .2s; max-width: calc(100% - 32px); }
   #toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
   #toast a { color: var(--bg); font-weight: 600; margin-left: 6px; }
-  .tv { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 3px 8px; border-radius: 8px; font: 500 11px var(--sans);
+  .broker, .tv { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 3px 8px; border-radius: 8px; font: 500 11px var(--sans);
         color: var(--muted); border: 1px solid var(--line-2); text-decoration: none; vertical-align: 2px; white-space: nowrap; }
-  .tv:hover { color: var(--ink); border-color: var(--faint); }
+  .broker:hover, .tv:hover { color: var(--ink); border-color: var(--faint); }
   .tv-mini { margin-left: 4px; padding: 2px 4px; vertical-align: -2px; }
   .symrow { display: flex; align-items: baseline; flex-wrap: wrap; row-gap: 4px; }
   .bact { display: flex; align-items: center; gap: 6px; }
-  .bact .tv { margin-left: 0; padding: 5px 8px; }
+  .bact .tv, .bact .broker { margin-left: 0; padding: 5px 8px; }
+  .board-actions .broker { margin-left: 6px; }
   @media (max-width: 600px) { .bact { grid-column: 2; justify-self: start; margin-top: 4px; } .brow button { margin-top: 0; } }
   /* ---------- app shell (beginner-friendly redesign) ---------- */
   nav .brand { text-decoration: none; color: var(--ink); }
@@ -1064,7 +1065,7 @@ html[data-theme="light"] .sb-foot a, html[data-theme="light"] .sb-foot button, h
 html[data-theme="light"] .sb-brand svg rect:first-child, html[data-theme="light"] nav .brand svg rect:first-child { fill: #0d1117; } html[data-theme="light"] .sb-brand svg path, html[data-theme="light"] nav .brand svg path { stroke: #fff; }
 /* buttons, chips, inputs */
 html[data-theme="light"] button.primary, html[data-theme="light"] .btnx.primary, html[data-theme="light"] .primary, html[data-theme="light"] .sp-go, html[data-theme="light"] #addBtn { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
-html[data-theme="light"] .btnx, html[data-theme="light"] .chip, html[data-theme="light"] button.sec, html[data-theme="light"] .ghost, html[data-theme="light"] .helpbtn, html[data-theme="light"] .signout, html[data-theme="light"] .sec, html[data-theme="light"] .tvbtn, html[data-theme="light"] .tv, html[data-theme="light"] .board-filter, html[data-theme="light"] .board-sort, html[data-theme="light"] .more, html[data-theme="light"] .sp-alt, html[data-theme="light"] .bf-x, html[data-theme="light"] .theme-btn {
+html[data-theme="light"] .btnx, html[data-theme="light"] .chip, html[data-theme="light"] button.sec, html[data-theme="light"] .ghost, html[data-theme="light"] .helpbtn, html[data-theme="light"] .signout, html[data-theme="light"] .sec, html[data-theme="light"] .tvbtn, html[data-theme="light"] .tv, html[data-theme="light"] .broker, html[data-theme="light"] .board-filter, html[data-theme="light"] .board-sort, html[data-theme="light"] .more, html[data-theme="light"] .sp-alt, html[data-theme="light"] .bf-x, html[data-theme="light"] .theme-btn {
   background: rgba(255,255,255,.8) !important; border-color: rgba(15,23,42,.12) !important; color: #0d1117 !important; }
 html[data-theme="light"] .chip.on, html[data-theme="light"] .board-filter.active, html[data-theme="light"] .setup-tabs button.on, html[data-theme="light"] .rec-tabs button.on, html[data-theme="light"] .bf-seg button.on, html[data-theme="light"] .theme-seg .on { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
 html[data-theme="light"] .setup-tabs button.on svg, html[data-theme="light"] .setup-tabs button.on small, html[data-theme="light"] .rec-tabs button.on b { color: #fff !important; } html[data-theme="light"] .rec-tabs button.on small { color: rgba(255,255,255,.7) !important; }
@@ -1897,8 +1898,12 @@ const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefine
 const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : "";
 const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"}) : "";
 const TV_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 4v16M6 8h-2v6h2M12 6v14M12 9h-2v7h2M18 3v15M18 6h-2v6h2"/><path d="M15 21h6v-6" opacity=".0"/></svg>`;
-const tvUrl = (s) => `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(s)}&interval=240`;
-const tvLink = (s) => ""; const _tvLinkOld = (s) => `<a class="tv" href="${tvUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in TradingView (4H)" aria-label="Open ${esc(s)} in TradingView">${TV_ICON}<span>TradingView</span></a>`;
+const rhUrl = (s) => `https://robinhood.com/stocks/${encodeURIComponent(s.toUpperCase())}`;
+const wbUrl = (s, ex) => ex ? `https://www.webull.com/quote/${ex}-${encodeURIComponent(s.toLowerCase())}` : null;
+const brokerLinks = (s, ex) => {
+  const wb = wbUrl(s, ex);
+  return `${wb ? `<a class="broker" href="${wb}" target="_blank" rel="noopener" title="Open ${esc(s)} in Webull" aria-label="Open ${esc(s)} in Webull">Webull</a>` : ""}<a class="broker" href="${rhUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in Robinhood" aria-label="Open ${esc(s)} in Robinhood">Robinhood</a>`;
+};
 let TICKERS = [], FILTER = "all";
 
 const loadingHTML = (text = "Loading…") => `<div class="loading"><span class="spin"></span>${text}</div>`;
@@ -3088,7 +3093,7 @@ function bRow(r, kind) {
   } else {
     d = `${{"follow-through": "Hit shelf", "snap-back": "Failed breakout", stalled: "Timed out"}[r.state]}`;
   }
-  return `<div class="brow">${sym(r.symbol)}<div class="d"><span class="px mono">${money(r.last_close)}</span> · ${d}</div><div class="bact">${tvLink(r.symbol)}${watchBtn(r)}</div></div>`;
+  return `<div class="brow">${sym(r.symbol)}<div class="d"><span class="px mono">${money(r.last_close)}</span> · ${d}</div><div class="bact">${brokerLinks(r.symbol, r.exchange)}${watchBtn(r)}</div></div>`;
 }
 function bGroup(title, rows, kind, empty) {
   const id = "g-" + kind, more = rows.length > 8;
@@ -3153,7 +3158,7 @@ function renderInstitutionalBoard(){
       '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
-      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+tvLink(r.symbol)+'</div></td></tr>';
+      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>';
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
   const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
@@ -3226,40 +3231,6 @@ $("bScan").addEventListener("click", async () => {
 
 
 
-// ---------------------------------------------------------------- chop-zone nudge (Rule #1 at the moment of a forced trade)
-function nudgeSnoozed() { try { return localStorage.getItem("hs_nudge_off") === new Date().toDateString(); } catch (e) { return false; } }
-document.addEventListener("click", (e) => {
-  const a = e.target.closest && e.target.closest('a[href*="tradingview.com/chart"]');
-  if (!a || a.dataset.nudged || nudgeSnoozed()) return;
-  const m = /symbol=([^&]+)/.exec(a.href); if (!m) return;
-  const sym = decodeURIComponent(m[1]), st = findStatus(sym);
-  if (!st || st.state !== "forming" || !st.hub) return;
-  e.preventDefault(); e.stopPropagation();
-  const h = st.hub, onList = TICKERS.some(t => t.symbol === sym);
-  showSheet(`<div class="nudge">
-    <div class="ng-art" aria-hidden="true"><svg viewBox="0 0 220 70"><rect x="14" y="22" width="192" height="30" rx="7" fill="rgba(124,147,255,.14)" stroke="rgba(124,147,255,.55)"/>
-      <path d="M20 44 34 30 48 45 62 29 76 44 90 30 104 45 118 29 132 44 146 30 160 45 174 30 188 43 200 33" fill="none" stroke="#FF6B5E" stroke-width="2.2" stroke-linejoin="round"/>
-      <text x="110" y="15" text-anchor="middle" fill="#9fb3ff" font-size="11" font-family="Inter,sans-serif" font-weight="600">THE CHOP ZONE</text></svg></div>
-    <div class="ng-k">Rule #1 check</div>
-    <h3>Hold on. ${esc(sym)} is still inside its hub.</h3>
-    <p>It's been closing between <b>${money(h.low)}</b> and <b>${money(h.high)}</b> for ${h.sessions} sessions. Trades in here tend to get chopped up: buy the top, sell the bottom, repeat.</p>
-    <div class="ng-plan"><div><i style="--c:#3DD68C"></i><span>Long only after a 4-hour <b>close above ${money(h.high)}</b></span></div><div><i style="--c:#FF6B5E"></i><span>Short only after a 4-hour <b>close below ${money(h.low)}</b></span></div></div>
-    <p class="ng-q">Is this trade coming to you, or are you forcing it?</p>
-    <div class="ng-acts">
-      <button class="sp-go" onclick="nudgeWait('${esc(sym)}', ${onList})">${onList ? "You're right, I'll wait" : `Wait. Add ${esc(sym)} to my watchlist`}</button>
-      <button class="sp-alt" onclick="nudgeOpen('${esc(a.href)}')">I'm just looking at the chart</button>
-    </div>
-    <label class="ng-snooze"><input type="checkbox" id="ngSnooze"> Don't ask again today</label>
-  </div>`);
-}, true);
-function nudgeSnoozeSave() { try { if ($("ngSnooze") && $("ngSnooze").checked) localStorage.setItem("hs_nudge_off", new Date().toDateString()); } catch (e) {} }
-async function nudgeWait(sym, onList) {
-  nudgeSnoozeSave(); closeSheet();
-  if (onList) { toast(`Good call. NextShelf will tell you when ${sym} closes outside its hub.`); return; }
-  try { if (await addToWatchlist(sym)) { await loadTickers(); toast(`${sym} added. You'll get an alert when it closes outside the hub.`); } }
-  catch (e) { toast(friendly(e)); }
-}
-function nudgeOpen(href) { nudgeSnoozeSave(); closeSheet(); window.open(href, "_blank", "noopener"); }
 
 
 
@@ -3404,7 +3375,7 @@ function renderSetupBoard() {
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>4H</small></div></td>
         <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
         <td>${up == null ? "—" : money(up)}</td><td>${lo == null ? "—" : money(lo)}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
-        <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${tvLink(x.symbol)}</div></td></tr>`; }).join("")}
+        <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
     </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next 4-hour close.</div>`)
     + `<div class="note" style="margin-top:10px">${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf). Check the Results page for how they've actually done.</div>`;
 }
