@@ -2864,12 +2864,13 @@ function heroStats(st) {
   return `<div class="bf-stats">${cells.map(([l, v, sub, c]) => `<div><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div><div class="bf-gamma" id="bfGamma"></div>`;
 }
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
-let GAMMA_CTX = {d: 0}; const GAMMA = {};
+let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
 async function loadGamma(sym) {
   if (!ME || ME.guest) return;
-  if (!(sym in GAMMA)) {
-    GAMMA[sym] = "loading"; paintGamma(sym);
+  if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 600000)) {   // re-read every 10 min: walls follow the price
+    if (!(sym in GAMMA)) { GAMMA[sym] = "loading"; paintGamma(sym); }
     try { GAMMA[sym] = (await api(`/api/gamma/${encodeURIComponent(sym)}`)).walls || null; } catch (e) { GAMMA[sym] = null; }
+    GAMMA_AT[sym] = Date.now();
   }
   paintGamma(sym);
 }

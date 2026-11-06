@@ -18,11 +18,14 @@ import requests
 
 log = logging.getLogger("gamma")
 
-_CACHE: dict[tuple[str, str], dict | None] = {}   # (symbol, YYYY-MM-DD) -> walls or None
+_CHAIN_CACHE: dict[tuple[str, str], list] = {}    # (symbol, YYYY-MM-DD) -> slim contracts (one fetch/day)
 _FAILED: dict[str, float] = {}                    # symbol -> time of last failed fetch (retry after an hour)
 _LOCK = threading.Lock()
 _URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/{}.json"
-_BAND = 0.10                                      # only strikes within ±10% of spot
+_BAND = 0.20                                      # strikes within ±20% of spot: wide enough that the
+                                                  # max-GEX strike sits well inside (gamma at 20% OTM on a
+                                                  # >=7 DTE monthly is negligible), so the band edge can
+                                                  # no longer decide the wall
 _RETRY = 3600
 
 
@@ -45,16 +48,30 @@ def _monthly(date_: date) -> bool:
     return date_ == friday + timedelta(weeks=2)
 
 
-def _compute(contracts: list, spot: float, today: date) -> dict | None:
-    by_exp: dict[date, list] = {}
+def _slim(contracts: list) -> list:
+    """Raw Cboe entries -> (expiry, is_call, strike, gamma, oi) tuples: a fraction of the memory of the raw dicts."""
+    out = []
     for c in contracts:
+        if isinstance(c, tuple):
+            out.append(c)
+            continue
         p = _occ(c.get("option", ""))
         if not p:
             continue
-        exp, call, k = p
+        try:
+            out.append((p[0], p[1], p[2], float(c.get("gamma") or 0), float(c.get("open_interest") or 0)))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _compute(contracts: list, spot: float, today: date) -> dict | None:
+    """Walls at this spot. Takes raw Cboe entries or the slim tuples from _slim()."""
+    by_exp: dict[date, list] = {}
+    for exp, call, k, g, oi in _slim(contracts):
         if abs(k - spot) / spot > _BAND:
             continue
-        by_exp.setdefault(exp, []).append((call, k, float(c.get("gamma") or 0), float(c.get("open_interest") or 0)))
+        by_exp.setdefault(exp, []).append((call, k, g, oi))
     swing = [e for e in by_exp if (e - today).days >= 7]          # no weeklies under 7 days, no 0DTE
     monthlies = [e for e in swing if _monthly(e)]
     exp = min(monthlies) if monthlies else min(swing, default=None)
@@ -78,30 +95,52 @@ def _compute(contracts: list, spot: float, today: date) -> dict | None:
     return {"call_wall": cw, "put_wall": pw, "flip": flip, "expiry": exp.isoformat()}
 
 
-def walls(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
-    """{'call_wall', 'put_wall', 'flip', 'expiry'} or None. Never raises.
-    fetch=False reads the cache only (for page loads: they never trigger a download)."""
+def _fetch_contracts(symbol: str) -> list:
+    """Chain for (symbol, today), fetched once a day and kept slim. [] on failure (fail-open). Never raises."""
     sym = (symbol or "").upper()
-    key = (sym, date.today().isoformat())
-    if key in _CACHE:
-        return _CACHE[key]
-    if not fetch or not spot or spot <= 0:
-        return None
+    today = date.today().isoformat()
+    key = (sym, today)
+    with _LOCK:
+        if key in _CHAIN_CACHE:
+            return _CHAIN_CACHE[key]
     if time.time() - _FAILED.get(sym, 0) < _RETRY:
-        return None
-    out = None
+        return []
     try:
         r = requests.get(_URL.format(sym), headers={"User-Agent": "NextShelf/1.0"}, timeout=20)
         r.raise_for_status()
-        contracts = (r.json().get("data") or {}).get("options") or []
-        out = _compute(contracts, float(spot), date.today())
+        contracts = _slim((r.json().get("data") or {}).get("options") or [])
     except Exception as e:
         log.warning("walls failed for %s: %s", sym, e)
         _FAILED[sym] = time.time()        # a blip shouldn't blank the whole day: try again in an hour
-        return None
+        return []
     with _LOCK:
-        _CACHE[key] = out
-    return out
+        for k in [k for k in _CHAIN_CACHE if k[1] != today]:     # yesterday's chains: drop them
+            del _CHAIN_CACHE[k]
+        _CHAIN_CACHE[key] = contracts
+    return contracts
+
+
+def walls(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
+    """{'call_wall', 'put_wall', 'flip', 'expiry'} or None. Never raises.
+    The chain is fetched once per symbol per day and cached; the walls are recomputed
+    from that chain at the CURRENT spot on every call, so a $1 spot move can no longer
+    leave this morning's wall on the card all day.
+    fetch=False reads the cached chain only (for page loads: they never trigger a download)."""
+    try:
+        sym = (symbol or "").upper()
+        if not spot or float(spot) <= 0:
+            return None
+        if fetch:
+            contracts = _fetch_contracts(sym)
+        else:
+            with _LOCK:
+                contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            return None
+        return _compute(contracts, float(spot), date.today())
+    except Exception as e:
+        log.warning("walls compute failed for %s: %s", symbol, e)
+        return None
 
 
 def attach(c: dict, fetch: bool = True) -> dict:

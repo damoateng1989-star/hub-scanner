@@ -932,15 +932,16 @@ async def options_plan(symbol: str, u: dict = User):
 async def gamma_walls(symbol: str, u: dict = User):
     """Gamma walls for the Shelf card (one Cboe chain per symbol per day, cached). Fail-open: walls=None."""
     sym = symbol.strip().upper()[:12]
-    spot = None
-    row = next((r for r in db.board_rows() if r["symbol"] == sym), None)
+    try:      # walls follow the current price (recomputed from the day's cached chain)
+        spot = await run_in_threadpool(data.latest_price, sym)
+    except Exception:
+        spot = None
+    row = None if spot else next((r for r in db.board_rows() if r["symbol"] == sym), None)
     if row:
         try:
             spot = json.loads(row["status"] or "{}").get("last_close")
         except Exception:
             spot = None
-    if not spot:
-        spot = await run_in_threadpool(data.latest_price, sym)
     w = await run_in_threadpool(gamma.walls, sym, spot) if spot else None
     return dict(symbol=sym, walls=w)
 
