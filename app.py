@@ -291,6 +291,18 @@ def lwc():
     return FileResponse(STATIC / "vendor" / "lightweight-charts.js", media_type="application/javascript")
 
 
+_BROKER_LOGOS = {"robinhood.svg": "image/svg+xml", "webull-mark.png": "image/png"}
+
+
+@app.get("/vendor/{name}")
+def broker_logo(name: str):
+    """Broker marks for the Open-in links (whitelisted names only)."""
+    f = STATIC / "vendor" / name
+    if name not in _BROKER_LOGOS or not f.exists():
+        raise HTTPException(404)
+    return FileResponse(f, media_type=_BROKER_LOGOS[name], headers={"Cache-Control": "public, max-age=604800"})
+
+
 # ---------------------------------------------------------------- pages (sign-in required)
 @app.get("/login")
 def login_page(request: Request):
