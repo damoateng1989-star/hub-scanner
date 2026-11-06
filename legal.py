@@ -56,7 +56,7 @@ whether to place any trade, and you are fully responsible for those decisions an
 </ul>
 
 <h2>4. Plans and payments</h2>
-<p>NextShelf offers a free plan and a paid Pro plan. Prices and features are shown on the pricing page and may change; we'll tell you
+<p>NextShelf offers a free plan and a paid Pro plan. Prices and features are shown in the pricing section on the homepage and may change; we'll tell you
 before a price change affects you. Paid plans renew automatically until you cancel. You can cancel anytime, and you'll keep Pro until
 the end of the period you've paid for. Except where the law requires otherwise, payments are non-refundable.</p>
 

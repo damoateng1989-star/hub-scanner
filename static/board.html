@@ -64,12 +64,14 @@ h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.08; letter-spacing: -0.03
 .how div { padding: 16px; border-radius: 14px; border: 1px solid var(--line); font-size: 14px; color: var(--ink2); } .how b { display: block; color: var(--ink); margin-bottom: 4px; }
 footer { margin-top: 56px; padding: 26px 0; border-top: 1px solid var(--line); font-size: 13px; color: var(--ink3); }
 footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; } footer a { color: var(--ink2); text-decoration: none; margin-left: 14px; }
-@media (max-width: 720px) { .tiles { grid-template-columns: 1fr 1fr; } .how { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr 1.6fr; } .row > :nth-child(3) { display: none; } .navend .si { display: none; } }
+@media (max-width: 720px) { .tiles { grid-template-columns: 1fr 1fr; } .how { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr 1.6fr; } .row > :nth-child(3) { display: none; } .navend .si { display: none; } .navlinks { display: none; } }
+.navlinks { display: flex; gap: 18px; font-size: 14px; } .navlinks a { text-decoration: none; color: var(--ink2); }
 </style>
 </head>
 <body>
 <nav class="top"><div class="wrap">
   <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
+  <div class="navlinks"><a href="/">Home</a><a href="/#pricing">Pricing</a><a href="/learn">Learn</a><a href="/#faq">FAQ</a></div>
   <div class="navend"><button class="theme-btn" onclick="nsToggleTheme()" aria-label="Switch theme">☀︎</button><a class="si" href="/login" id="navSign" hidden>Sign in</a><a class="btn" href="/login#signup" data-cta>Sign up free</a></div>
 </div></nav>
 

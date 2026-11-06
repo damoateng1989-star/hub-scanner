@@ -356,6 +356,18 @@ def public_board():
     return FileResponse(STATIC / "board.html")
 
 
+@app.get("/pricing")
+def pricing_page():
+    """No standalone pricing page: the pricing section lives on the homepage."""
+    return RedirectResponse("/#pricing", 302)
+
+
+@app.get("/faq")
+def faq_page():
+    """No standalone FAQ page: the FAQ lives on the homepage."""
+    return RedirectResponse("/#faq", 302)
+
+
 @app.get("/t/{symbol}")
 def ticker_page(symbol: str, request: Request):
     if not auth.current_user(request):
