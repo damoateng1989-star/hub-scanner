@@ -1601,6 +1601,10 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 }
 
 /* computers too: same calm look */
+.pgoal { margin: 0 0 14px; padding: 16px 18px; border-radius: 14px; border: 1px solid #23262E; background: #15171C; }
+.pgoal-h { display: flex; justify-content: space-between; font-size: 15px; } .pgoal-h span { color: #9AA0AC; }
+.pgoal-bar { height: 8px; margin-top: 10px; border-radius: 99px; background: #23262E; overflow: hidden; } .pgoal-bar i { display: block; height: 100%; background: #3DD68C; border-radius: 99px; }
+html[data-theme="light"] .pgoal { background: #fff; border-color: #E4E3DC; } html[data-theme="light"] .pgoal-bar { background: #EFEEE9; }
 .vol-chip { display: inline-block; margin: 5px 0 0; padding: 1px 7px; border-radius: 6px; font: 600 11px var(--sans); border: 1px solid #2E323B; color: #C3C7CF; white-space: nowrap; }
 .board-table td .vol-chip { display: block; width: max-content; }
 .vol-chip.strong { color: #3DD68C; border-color: rgba(61,214,140,.4); } .vol-chip.light { color: #E5A13D; border-color: rgba(229,161,61,.4); }
@@ -2230,7 +2234,12 @@ async function loadPaper() {
         : `${esc(t.exit_reason)} · ${money(t.entry_price)} → ${money(t.exit_price)} · ${day(t.closed_at)}`}</small>
       <small class="r" style="font-size:12px;${pc(open ? t.unreal : t.pnl)}">${open ? (t.unreal == null ? "" : usd(t.unreal)) : usd(t.pnl)}</small>
     </div>`;
+  const goal = p.goal || 50, pct = Math.min(100, Math.round(100 * st.closed / goal));
+  const how = p.source === "board" ? `${p.daily_max === 1 ? "One trade a day" : `Up to ${p.daily_max} trades a day`}: the best confirmed hub breakout on the whole board, entered after the close (about 1:54 PM for the 1:30 candle, 9:35 AM for yesterday's 4:00 candle), only while price is in the first half of the move. At most ${p.max_open} open at once.`
+    : "Entries from members' watchlists, about 2 minutes before each 4-hour close.";
   $("paper").innerHTML = `
+    <div class="pgoal"><div class="pgoal-h"><b>${st.closed} of ${goal}</b> closed trades collected <span>${pct}%</span></div><div class="pgoal-bar"><i style="width:${pct}%"></i></div>
+      <p class="note" style="margin:8px 0 0">${how} Judge the strategy once ${goal} trades have closed, not before.</p></div>
     <div class="stats" style="margin-top:0">
       <div><b>${st.closed}</b><span>Closed trades</span></div>
       <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
@@ -2240,7 +2249,7 @@ async function loadPaper() {
     <div class="note">${p.account ? `Paper account equity ${money(p.account.equity)} · ` : ""}${money(p.trade_usd)} per trade${p.allow_short ? " · longs and shorts" : " · longs only"} · entries and exits ~2 min before each 4H close</div>
     ${p.open.length ? `<div class="eyebrow" style="margin:16px 0 8px">Open</div><div class="feed">${p.open.map(t => row(t, true)).join("")}</div>` : ""}
     ${p.closed.length ? `<div class="eyebrow" style="margin:16px 0 8px">Closed</div><div class="feed">${p.closed.map(t => row(t, false)).join("")}</div>`
-      : p.open.length ? "" : `<div class="empty" style="margin-top:12px">${p.enabled ? "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub." : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
+      : p.open.length ? "" : `<div class="empty" style="margin-top:12px">${p.enabled ? (p.source === "board" ? "Waiting for the first confirmed breakout. One trade a day, entered after the close." : "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub.") : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
 }
 
 $("pSwitch").addEventListener("click", async () => {

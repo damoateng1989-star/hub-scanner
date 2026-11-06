@@ -24,6 +24,7 @@ import requests
 
 import data
 import db
+import earnings
 import engine
 import notify
 import scanner
@@ -234,6 +235,125 @@ def _try_entry(b, sym: str, candle_start: pd.Timestamp) -> str | None:
             f"or after {scanner.SETTINGS.horizon} candles")
 
 
+# ---------------------------------------------------------------- one trade a day, from the whole board, after the close
+DAILY_MAX = int(os.getenv("PAPER_DAILY_MAX", 1))     # new paper trades per day
+MAX_OPEN = int(os.getenv("PAPER_MAX_OPEN", 10))      # open paper trades at once
+GOAL = int(os.getenv("PAPER_GOAL", 50))              # closed trades before judging the strategy
+
+
+def source() -> str:
+    """'board' (default): one confirmed breakout a day from the whole board. 'watchlist': the old pre-close entries."""
+    return os.getenv("PAPER_SOURCE", "board").strip().lower()
+
+
+def _today_ny() -> str:
+    return pd.Timestamp.now(tz=engine.NY).strftime("%Y-%m-%d")
+
+
+def entries_today() -> int:
+    n = 0
+    for t in db.all_trades(50):
+        try:
+            if pd.Timestamp(t["opened_at"]).tz_localize("UTC").tz_convert(engine.NY).strftime("%Y-%m-%d") == _today_ny():
+                n += 1
+        except Exception:
+            pass
+    return n
+
+
+def _fresh(row: dict, window: str) -> bool:
+    """Did this breakout confirm on the candle we're entering after?
+    midday: today's 9:30-1:30 candle.  morning: the previous session's 1:30-4:00 candle."""
+    import re as _re
+    m = _re.search(r"(\d+)/\d+", row.get("label") or "")
+    if not m or int(m.group(1)) != 0 or not row.get("last_candle"):
+        return False
+    t = pd.Timestamp(row["last_candle"]).tz_convert(engine.NY)
+    today = pd.Timestamp.now(tz=engine.NY).normalize()
+    if window == "midday":
+        return t.normalize() == today and t.hour == 9
+    return t.normalize() < today and t.hour == 13 and (today - t.normalize()).days <= 4
+
+
+def candidates(window: str) -> list[dict]:
+    """Fresh hub breakouts, still in the first half of the move, ranked by reward : risk at today's price."""
+    from board import board as _board
+    rows = [r for r in _board()["live"] if _fresh(r, window) and r.get("hub") and r.get("target")]
+    if not rows:
+        return []
+    try:
+        live = data.latest_prices([r["symbol"] for r in rows])
+    except Exception:
+        live = {}
+    out = []
+    for r in rows:
+        d = 1 if r["state"] == "breakout_up" else -1
+        if d == -1 and not allow_short():
+            continue
+        edge = r["hub"]["high"] if d == 1 else r["hub"]["low"]
+        tgt = r["target"]
+        px = (live.get(r["symbol"]) or {}).get("price") or r.get("last_close")
+        if not px or (tgt - edge) * d <= 0:
+            continue
+        half = edge + (tgt - edge) / 2
+        if (px - edge) * d <= 0 or (px - half) * d > 0:     # back inside, or past the first half: skip, don't chase
+            continue
+        try:
+            e = earnings.lookup(r["symbol"])
+            if e and e.get("days") is not None and e["days"] <= 7:
+                continue                                        # don't hold through an earnings report
+        except Exception:
+            pass
+        rr = abs(tgt - px) / max(abs(px - edge), 1e-9)
+        out.append(dict(symbol=r["symbol"], d=d, edge=edge, target=tgt, price=px, rr=rr, low=r["hub"]["low"], high=r["hub"]["high"],
+                        kind=r.get("target_kind") or "shelf", hub_start=r["hub"].get("start"), candle=r["last_candle"]))
+    # best reward : risk first (capped, so a price sitting right on the edge doesn't win on a tiny risk alone), then the bigger move
+    return sorted(out, key=lambda c: (-min(c["rr"], 4.0), -abs(c["target"] / c["price"] - 1)))
+
+
+def enter_daily(window: str = "midday") -> str | None:
+    """The paper trader's one trade a day: the best fresh, confirmed breakout from the whole board."""
+    if not enabled() or source() != "board":
+        return None
+    if window == "midday":                 # the 1:52 PM board sweep confirms the 1:30 close: wait for it
+        import time as _t
+        from board import SCAN
+        for _ in range(60):
+            if not SCAN.get("running"):
+                break
+            _t.sleep(10)
+    with _lock:
+        if entries_today() >= DAILY_MAX or len(db.open_trades()) >= MAX_OPEN:
+            return None
+        b = broker()
+        try:
+            if not b.is_open():
+                return None
+        except Exception as e:
+            log.warning("clock check failed: %s", e)
+            return None
+        busy = {t["symbol"] for t in db.open_trades()}
+        for c in candidates(window):
+            hub_key = f"{c['symbol']}|{c['hub_start']}"
+            if c["symbol"] in busy or db.hub_traded(hub_key):
+                continue
+            qty = math.floor(trade_usd() / c["price"])
+            if qty < 1 or (c["d"] == -1 and hasattr(b, "shortable") and not b.shortable(c["symbol"])):
+                continue
+            fill, oid = b.enter(c["symbol"], qty, "buy" if c["d"] == 1 else "sell")
+            tp = b.place_target(c["symbol"], qty, "sell" if c["d"] == 1 else "buy", c["target"])
+            db.add_trade(symbol=c["symbol"], direction=c["d"], qty=qty, hub_key=hub_key, hub_low=c["low"], hub_high=c["high"],
+                         edge=c["edge"], target=round(c["target"], 2), target_kind=c["kind"],
+                         entry_candle=c["candle"], entry_price=fill, entry_order=oid, tp_order=tp)
+            msg = (f"🧪 Paper trade of the day: {'LONG' if c['d'] == 1 else 'SHORT'} {qty} {c['symbol']} @ {_money(fill)}\n"
+                   f"Confirmed {'1:30 PM' if window == 'midday' else 'yesterday 4:00 PM'} close outside the hub {_money(c['low'])}–{_money(c['high'])} · "
+                   f"{'next shelf' if c['kind'] == 'shelf' else 'ATR target'} {_money(c['target'])} · reward:risk {c['rr']:.1f}\n"
+                   f"Exit on a close back {'≤' if c['d'] == 1 else '≥'} {_money(c['edge'])}, or after {scanner.SETTINGS.horizon} candles.")
+            notify.admins(msg)
+            return msg
+    return None
+
+
 def run_check(force: bool = False) -> list[str]:
     """Runs ~2 minutes before each 4H close: exits first, then new entries."""
     if not enabled() and not force:
@@ -258,7 +378,7 @@ def run_check(force: bool = False) -> list[str]:
                 log.warning("exit check failed for %s: %s", t["symbol"], e)
                 msgs.append(f"🧪 {t['symbol']}: paper exit check failed ({e})")
         busy = {t["symbol"] for t in db.open_trades()}
-        for row in db.list_tickers():
+        for row in (db.list_tickers() if source() == "watchlist" else []):   # board mode enters in enter_daily()
             if row["symbol"] in busy:
                 continue
             try:
@@ -324,6 +444,7 @@ def summary(with_prices: bool = True) -> dict:
         log.warning("account fetch failed: %s", e)
     return dict(
         enabled=enabled(), broker=b.name, trade_usd=trade_usd(), allow_short=allow_short(), account=acct,
+        source=source(), daily_max=DAILY_MAX, max_open=MAX_OPEN, goal=GOAL,
         stats=dict(closed=len(closed), wins=len(wins),
                    win_rate=round(100 * len(wins) / len(closed), 1) if closed else None,
                    total_pnl=round(sum(t["pnl"] or 0 for t in closed), 2),
