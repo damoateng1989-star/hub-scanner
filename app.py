@@ -41,6 +41,7 @@ import earnings  # noqa: E402
 import db  # noqa: E402
 import notify  # noqa: E402
 import paper  # noqa: E402
+import paper_opt  # noqa: E402
 import phone  # noqa: E402
 import scanner  # noqa: E402
 import telegram_bot  # noqa: E402
@@ -142,6 +143,16 @@ async def lifespan(_app: FastAPI):
         sched.add_job(paper.run_check, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                    timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1)
+    # paper OPTIONS experiment (off unless switched on): same setups, same windows, its own journal
+    for h_, m_, w_ in ((9, 36, "morning"), (13, 55, "midday")):
+        sched.add_job(paper_opt.enter_daily_opt, CronTrigger(day_of_week="mon-fri", hour=h_, minute=m_, timezone="America/New_York"),
+                      kwargs={"window": w_}, misfire_grace_time=900, coalesce=True, max_instances=1, id=f"paper_opt_{w_}", replace_existing=True)
+    sched.add_job(paper_opt.sync_opt, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5", timezone="America/New_York"),
+                  coalesce=True, max_instances=1, id="paper_opt_sync", replace_existing=True)
+    for t in ENTRY_TIMES:
+        h, m = t.split(":")
+        sched.add_job(paper_opt.run_check_opt, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m), timezone="America/New_York"),
+                      misfire_grace_time=60, coalesce=True, max_instances=1, id=f"paper_opt_check_{t}", replace_existing=True)
     # paper trading: one confirmed breakout a day from the whole board
     sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=9, minute=35, timezone="America/New_York"),
                   args=["morning"], misfire_grace_time=600, coalesce=True, max_instances=1, id="paper_morning", replace_existing=True)
@@ -897,6 +908,18 @@ async def backtest(symbol: str, u: dict = Pro):
         return await run_in_threadpool(scanner.backtest, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+@app.get("/api/paper/options")
+async def paper_options(u: dict = Admin):
+    """Admin only: the paper OPTIONS experiment. Never part of any public number."""
+    return await run_in_threadpool(paper_opt.summary_opt)
+
+
+@app.post("/api/paper/options/toggle")
+def paper_options_toggle(body: OnBody, u: dict = Admin):
+    paper_opt.set_enabled(body.on)
+    return {"enabled": paper_opt.enabled()}
 
 
 @app.get("/api/paper")

@@ -93,6 +93,13 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    for _col, _ddl in [("kind", "TEXT DEFAULT 'share'"), ("occ", "TEXT"), ("expiry", "TEXT"), ("strike", "REAL"),
+                       ("opt_iv", "REAL"), ("opt_delta", "REAL"), ("opt_premium", "REAL")]:
+        try:   # added later: the paper OPTIONS experiment shares the journal table, kept apart by kind
+            _conn.execute(f"ALTER TABLE paper_trades ADD COLUMN {_col} {_ddl}")
+            _conn.commit()
+        except sqlite3.OperationalError:
+            pass
     try:   # added later: morning brief on/off (on by default)
         _conn.execute("ALTER TABLE users ADD COLUMN brief INTEGER DEFAULT 1")
         _conn.commit()
@@ -186,12 +193,14 @@ def update_trade(trade_id: int, **f):
     _run(f"UPDATE paper_trades SET {sets} WHERE id=?", (*f.values(), trade_id))
 
 
-def open_trades() -> list[dict]:
-    return [dict(r) for r in _run("SELECT * FROM paper_trades WHERE status='open' ORDER BY id").fetchall()]
+def open_trades(kind: str = "share") -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM paper_trades WHERE status='open' AND COALESCE(kind,'share')=? ORDER BY id",
+                                  (kind,)).fetchall()]
 
 
-def all_trades(limit: int = 200) -> list[dict]:
-    return [dict(r) for r in _run("SELECT * FROM paper_trades ORDER BY id DESC LIMIT ?", (limit,)).fetchall()]
+def all_trades(limit: int = 200, kind: str = "share") -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM paper_trades WHERE COALESCE(kind,'share')=? ORDER BY id DESC LIMIT ?",
+                                  (kind, limit)).fetchall()]
 
 
 def hub_traded(hub_key: str) -> bool:

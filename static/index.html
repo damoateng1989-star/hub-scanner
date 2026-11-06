@@ -1800,6 +1800,7 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
     <span class="toggle"><span class="note" id="pBroker" style="margin:0"></span>
       <button class="switch" id="pSwitch" aria-label="Auto paper trading"></button></span></div>
   <div id="paper"><div class="loading"><span class="spin"></span>Loading…</div></div>
+  <div id="paperOpt"></div>
   <a id="tabPaper" hidden></a>
 </section>
 
@@ -2222,6 +2223,7 @@ async function loadPaper() {
   let p;
   if (!$("paper").querySelector(".stats")) $("paper").innerHTML = loadingHTML("Loading paper trades…");
   try { p = await api("/api/paper"); } catch (e) { $("paper").innerHTML = failedHTML("paper trades", e, "loadPaper()"); return; }
+  loadPaperOpt();
   $("pSwitch").classList.toggle("on", p.enabled);
   $("pBroker").textContent = `${p.enabled ? "Auto-trading on" : "Off"} · ${p.broker}`;
   const st = p.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
@@ -2252,6 +2254,25 @@ async function loadPaper() {
       : p.open.length ? "" : `<div class="empty" style="margin-top:12px">${p.enabled ? (p.source === "board" ? "Waiting for the first confirmed breakout. One trade a day, entered after the close." : "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub.") : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
 }
 
+async function loadPaperOpt() {
+  const el = $("paperOpt"); if (!el) return;
+  let o; try { o = await api("/api/paper/options"); } catch (e) { el.innerHTML = ""; return; }
+  const st = o.stats, money0 = (v) => v == null ? "–" : (v < 0 ? "-" : "+") + money(Math.abs(v));
+  const row = (t) => `<div class="pos"><div><b class="mono">${esc(t.symbol)}</b> <small>${esc(t.occ || "")} · ${t.qty} @ ${money(t.entry_price)}</small></div>
+    <small>${t.status === "open" ? `aiming ${money(t.target)} · exit if back ${t.direction === 1 ? "≤" : "≥"} ${money(t.edge)} · expires ${esc(t.expiry || "")}` : `${esc(t.exit_reason)} · ${money0(t.pnl)} (${t.pnl_pct > 0 ? "+" : ""}${t.pnl_pct}%)`}</small></div>`;
+  el.innerHTML = `<div class="acct" style="margin-top:22px"><div class="row" style="justify-content:space-between;align-items:center">
+      <h3 style="margin:0">Options experiment <span class="beta-tag">Private</span></h3>
+      <button class="chip ${o.enabled ? "on" : ""}" onclick="togglePaperOpt(${!o.enabled})">${o.enabled ? "On" : "Off"}</button></div>
+    <p class="note" style="margin-top:8px">The same confirmed breakouts, traded with at-the-money calls or puts instead of shares: one per qualifying setup, up to ${o.daily_max} a day and ${o.max_open} open, at most ${money(o.max_premium)} premium each, skipped if the spread is over ${Math.round(o.max_spread * 100)}%. Long options only, so the most it can lose is the premium. Paper fills are simulated and flatter real results, so this never counts toward the public record.${o.ready ? "" : " <b>Needs Alpaca paper keys; it does nothing in demo mode.</b>"}</p>
+    <div class="stats" style="margin-top:10px"><div><b>${st.closed} / ${o.goal}</b><span>Closed</span></div><div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
+      <div><b>${st.closed ? money0(st.total_pnl) : "–"}</b><span>Total P&amp;L</span></div><div><b>${money(st.premium_paid)}</b><span>Premium paid</span></div></div>
+    ${o.open.length ? `<div class="eyebrow" style="margin:14px 0 6px">Open</div><div class="feed">${o.open.map(row).join("")}</div>` : ""}
+    ${o.closed.length ? `<div class="eyebrow" style="margin:14px 0 6px">Closed</div><div class="feed">${o.closed.map(row).join("")}</div>` : ""}</div>`;
+}
+async function togglePaperOpt(on) {
+  try { await api("/api/paper/options/toggle", {method: "POST", body: JSON.stringify({on})}); toast(on ? "Options experiment is on" : "Options experiment is off"); loadPaperOpt(); }
+  catch (e) { toast(friendly(e)); }
+}
 $("pSwitch").addEventListener("click", async () => {
   const on = !$("pSwitch").classList.contains("on");
   try { await api("/api/paper/toggle", {method: "POST", body: JSON.stringify({on})}); } catch (e) {}
