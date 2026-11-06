@@ -966,6 +966,10 @@ body.brief-open .sf-hello { display: none; }
 .broker-logo { width: 18px; height: 18px; vertical-align: -3px; display: block; }
 .gwall { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; color: var(--muted); white-space: normal; max-width: 220px; line-height: 1.35; }
 .board-table .gwall { white-space: nowrap; }
+.bf-gamma:empty { display: none; }
+.gw-row { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--line-2, rgba(128,128,128,.25)); border-radius: 10px; font-size: 13px; line-height: 1.45; color: var(--ink2, inherit); }
+.gw-row small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
+.gw-row .gw-cap { color: #b8860b; } .gw-wait { color: var(--muted); }
 </style>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
@@ -2803,7 +2807,7 @@ async function openBrief(sym) {
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   BRIEF_SEC = "levels"; document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === "levels"));
   $("brief").scrollTop = 0;
-  loadOptions(sym);
+  loadOptions(sym); loadGamma(sym);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); }
@@ -2834,7 +2838,7 @@ function briefHead(sym, st) {
   $("bfHead").innerHTML = `<div class="bf-kick">Shelf card</div><h3>${esc(sym)}</h3>${tag}
     <p>${st && st.last_close ? `<b class="bf-px">${money(st.last_close)}</b> last 4-hour close <span class="bf-pxn">· the plan uses this</span>` : "Loading…"}</p><div class="bf-live" id="bfLive"></div>
     ${heroStats(st)}`;
-  paintBriefLive();
+  paintBriefLive(); paintGamma(sym);
 }
 // the three numbers that matter, at the top of the card
 function heroStats(st) {
@@ -2847,17 +2851,44 @@ function heroStats(st) {
     [fired ? "Triggered" : "Trigger", money(edge), `4H close ${d === 1 ? "above" : "below"}`, ""],
     ["Aim", aim != null ? money(aim) : "–", aim != null ? `${pct(aim, edge)} from trigger` : "no shelf in range", d === 1 ? "up" : "dn"],
     ["Wrong if", money(edge), `4H close back ${d === 1 ? "below" : "above"}`, ""]];
-  let cells;
-  if (live) { const d = k === "breakout_up" ? 1 : -1; cells = trio(d, d === 1 ? h.high : h.low, st.target, true); }
-  else if (other) { const d = other.state === "breakout_up" ? 1 : -1; cells = trio(d, other.edge, other.target, true); }
+  let cells; GAMMA_CTX = {d: 0};
+  if (live) { const d = k === "breakout_up" ? 1 : -1; cells = trio(d, d === 1 ? h.high : h.low, st.target, true); GAMMA_CTX = {d, edge: d === 1 ? h.high : h.low, aim: st.target}; }
+  else if (other) { const d = other.state === "breakout_up" ? 1 : -1; cells = trio(d, other.edge, other.target, true); GAMMA_CTX = {d, edge: other.edge, aim: other.target}; }
   else if ((k === "forming" || k === "watching") && h) {
     const d = st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : 0;
-    if (d) { const sh = d === 1 ? st.shelf_up : st.shelf_down; cells = trio(d, d === 1 ? h.high : h.low, sh ? sh.level : null, false); }
+    if (d) { const sh = d === 1 ? st.shelf_up : st.shelf_down; cells = trio(d, d === 1 ? h.high : h.low, sh ? sh.level : null, false); GAMMA_CTX = {d, edge: d === 1 ? h.high : h.low, aim: sh ? sh.level : null}; }
     else cells = [["Long above", money(h.high), "4H close above the hub", "up"], ["Short below", money(h.low), "4H close below the hub", "dn"], ["Last close", money(p), "4-hour candle", ""]];
   } else cells = [["Last close", money(p), "4-hour candle", ""],
     ["Shelf above", st.shelf_up ? money(st.shelf_up.level) : "–", st.shelf_up ? pct(st.shelf_up.level, p) + " away" : "none in range", "up"],
     ["Shelf below", st.shelf_down ? money(st.shelf_down.level) : "–", st.shelf_down ? pct(st.shelf_down.level, p) + " away" : "none in range", "dn"]];
-  return `<div class="bf-stats">${cells.map(([l, v, sub, c]) => `<div><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div>`;
+  return `<div class="bf-stats">${cells.map(([l, v, sub, c]) => `<div><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div><div class="bf-gamma" id="bfGamma"></div>`;
+}
+// ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
+let GAMMA_CTX = {d: 0}; const GAMMA = {};
+async function loadGamma(sym) {
+  if (!ME || ME.guest) return;
+  if (!(sym in GAMMA)) {
+    GAMMA[sym] = "loading"; paintGamma(sym);
+    try { GAMMA[sym] = (await api(`/api/gamma/${encodeURIComponent(sym)}`)).walls || null; } catch (e) { GAMMA[sym] = null; }
+  }
+  paintGamma(sym);
+}
+function paintGamma(sym) {
+  const el = $("bfGamma"); if (!el || BRIEF_SYM !== sym) return;
+  const w = GAMMA[sym];
+  if (w === "loading") { el.innerHTML = `<div class="gw-row gw-wait">🧱 Checking options walls…</div>`; return; }
+  if (!w || (!w.call_wall && !w.put_wall)) { el.innerHTML = ""; return; }      // no options data: say nothing
+  const {d, edge, aim} = GAMMA_CTX, flip = w.flip ? ` · flip ${money(w.flip)}` : "";
+  const exp = w.expiry ? ` · ${new Date(w.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})} expiry` : "";
+  let main;
+  if (d) {
+    const wall = d === 1 ? w.call_wall : w.put_wall, name = d === 1 ? "Call wall" : "Put wall";
+    if (!wall) main = `<b>Open gamma</b> · no ${name.toLowerCase()} near the price`;
+    else if (aim != null && (d === 1 ? edge < wall && wall < aim : aim < wall && wall < edge))
+      main = `<b class="gw-cap">${name} ${money(wall)} sits before the aim.</b> Dealer hedging tends to slow price there, so the wall is the safer take-profit.`;
+    else main = `<b>Open gamma${aim != null ? ` to ${money(aim)}` : ""}</b> · ${name.toLowerCase()} ${money(wall)}`;
+  } else main = `<b>Call wall</b> ${w.call_wall ? money(w.call_wall) : "–"} · <b>put wall</b> ${w.put_wall ? money(w.put_wall) : "–"}`;
+  el.innerHTML = `<div class="gw-row">🧱 ${main}<small>Biggest options open interest by strike${exp}${flip}. Delayed data, context only.</small></div>`;
 }
 function briefMore(sec) {
   $("brief").classList.remove("bf-collapsed");

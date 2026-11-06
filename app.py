@@ -34,6 +34,7 @@ import learn  # noqa: E402
 import options  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
+import gamma  # noqa: E402
 import brief  # noqa: E402
 import recap  # noqa: E402
 import data  # noqa: E402
@@ -925,6 +926,23 @@ async def options_plan(symbol: str, u: dict = User):
         return await run_in_threadpool(options.plan, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+@app.get("/api/gamma/{symbol}")
+async def gamma_walls(symbol: str, u: dict = User):
+    """Gamma walls for the Shelf card (one Cboe chain per symbol per day, cached). Fail-open: walls=None."""
+    sym = symbol.strip().upper()[:12]
+    spot = None
+    row = next((r for r in db.board_rows() if r["symbol"] == sym), None)
+    if row:
+        try:
+            spot = json.loads(row["status"] or "{}").get("last_close")
+        except Exception:
+            spot = None
+    if not spot:
+        spot = await run_in_threadpool(data.latest_price, sym)
+    w = await run_in_threadpool(gamma.walls, sym, spot) if spot else None
+    return dict(symbol=sym, walls=w)
 
 
 @app.get("/api/chart/{symbol}")
