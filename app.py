@@ -654,8 +654,34 @@ def test_call(u: dict = Pro):
 @app.get("/api/admin/users")
 def admin_users(u: dict = Admin):
     return [dict(id=x["id"], email=x["email"], name=x["name"], plan=x["plan"], is_admin=bool(x["is_admin"]),
-                 created_at=x["created_at"], tickers=len(db.user_symbols(x["id"])), telegram=bool(x["telegram_chat"]))
+                 created_at=x["created_at"], last_login_at=x.get("last_login_at"),
+                 tickers=len(db.user_symbols(x["id"])), telegram=bool(x["telegram_chat"]))
             for x in db.all_users()]
+
+
+@app.get("/api/admin/overview")
+def admin_overview(u: dict = Admin):
+    """Totals for the admin dashboard, from the existing tables."""
+    users, subs = db.all_users(), db.subscribers()
+    week = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=7)).strftime("%Y-%m-%d %H:%M:%S")
+    is_pro = lambda x: x["plan"] == "pro" or x["is_admin"]
+    return dict(members=len(users), pro=sum(1 for x in users if is_pro(x)), free=sum(1 for x in users if not is_pro(x)),
+                joined_week=sum(1 for x in users if (x["created_at"] or "") >= week),
+                seen_week=sum(1 for x in users if (x.get("last_login_at") or "") >= week),
+                waitlist=sum(1 for s in subs if s["status"] == "subscribed"),
+                waitlist_unsub=sum(1 for s in subs if s["status"] != "subscribed"),
+                waitlist_week=sum(1 for s in subs if (s["created_at"] or "") >= week))
+
+
+@app.get("/api/admin/users/{uid}")
+def admin_user_detail(uid: int, u: dict = Admin):
+    """One member: contact and usage only. Never passwords, Google ids, link codes or tokens."""
+    x = db.get_user(uid)
+    if not x:
+        raise HTTPException(404, "No such member")
+    return dict(id=x["id"], email=x["email"], name=x["name"], plan=x["plan"], is_admin=bool(x["is_admin"]),
+                created_at=x["created_at"], last_login_at=x.get("last_login_at"), telegram=bool(x["telegram_chat"]),
+                phone=x.get("phone") or "", tickers=db.user_symbols(uid))
 
 
 @app.post("/api/admin/users/{uid}/plan")

@@ -100,6 +100,11 @@ with _lock:
             _conn.commit()
         except sqlite3.OperationalError:
             pass
+    try:   # added later: last sign-in, for the admin dashboard
+        _conn.execute("ALTER TABLE users ADD COLUMN last_login_at TEXT")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     try:   # added later: morning brief on/off (on by default)
         _conn.execute("ALTER TABLE users ADD COLUMN brief INTEGER DEFAULT 1")
         _conn.commit()
@@ -247,6 +252,10 @@ def create_user(**f) -> int:
 def update_user(uid: int, **f):
     assert all(k in USER_FIELDS for k in f)
     _run(f"UPDATE users SET {', '.join(f'{k}=?' for k in f)} WHERE id=?", (*f.values(), uid))
+
+
+def touch_login(uid: int):
+    _run("UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?", (uid,))
 
 
 def get_user(uid: int) -> dict | None:

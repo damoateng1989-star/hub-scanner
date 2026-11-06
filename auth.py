@@ -54,6 +54,7 @@ def _secure(request: Request) -> bool:
 def start_session(response: Response, request: Request, uid: int):
     token = secrets.token_urlsafe(32)
     db.add_session(_sha(token), uid, (_now() + pd.Timedelta(days=SESSION_DAYS)).isoformat())
+    db.touch_login(uid)
     response.set_cookie(COOKIE, token, max_age=SESSION_DAYS * 86400, httponly=True, samesite="lax",
                         secure=_secure(request), path="/")
 

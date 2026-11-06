@@ -1601,6 +1601,10 @@ html[data-theme="light"] .mb-chip { border-color: #E4E3DC !important; background
 }
 
 /* computers too: same calm look */
+.mdet { margin-top: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid #23262E; }
+.mdet-t { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; } .mdet-t span { padding: 3px 9px; border-radius: 7px; border: 1px solid #2E323B; font: 600 12.5px var(--sans); }
+.mdet-t span.none { border: 0; padding: 0; font-weight: 400; color: #9AA0AC; } .mlink { color: inherit; text-decoration: underline; text-decoration-color: #646B78; }
+html[data-theme="light"] .mdet { border-color: #E4E3DC; } html[data-theme="light"] .mdet-t span { border-color: #E4E3DC; }
 .pgoal { margin: 0 0 14px; padding: 16px 18px; border-radius: 14px; border: 1px solid #23262E; background: #15171C; }
 .pgoal-h { display: flex; justify-content: space-between; font-size: 15px; } .pgoal-h span { color: #9AA0AC; }
 .pgoal-bar { height: 8px; margin-top: 10px; border-radius: 99px; background: #23262E; overflow: hidden; } .pgoal-bar i { display: block; height: 100%; background: #3DD68C; border-radius: 99px; }
@@ -1664,7 +1668,8 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
     <div class="sb-label">Market</div>
     <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a>
     <div class="sb-label">Yours</div>
-    <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>Watchlist</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a>
+    <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>Watchlist</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#admin" data-nav="admin" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
+    <a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a>
     <div class="sb-label">Learn</div>
     <a class="sb-item" href="/learn" data-nav="learn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 9 12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg><span>Learn</span></a>
     <div class="sb-label sb-shelves-h">My shelves <a href="#list" title="Add a ticker">+ Add</a></div>
@@ -1805,6 +1810,11 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
 </section>
 
 <!-- LAB (admin) -->
+<!-- ADMIN DASHBOARD -->
+<section data-view="admin" hidden>
+  <div class="vh"><h1>Admin <em>dashboard.</em></h1><p>Members, waitlist, invites and inbox. Only you can see this page.</p></div>
+  <div id="admin"><div class="loading"><span class="spin"></span>Loading…</div></div>
+</section>
 <section data-view="lab" hidden>
   <div class="vh"><h1>The <em>lab.</em></h1><p>Testing <b>tightening hubs</b> (triangles) next to regular hubs. Only you can see this page; members get no alerts from it.</p></div>
   <div id="lab"><div class="loading"><span class="spin"></span>Loading…</div></div>
@@ -2339,26 +2349,6 @@ async function loadAccount() {
     return;
   }
   const m = ME, tg = m.telegram;
-  let admin = "";
-  if (m.is_admin) {
-    const users = await api("/api/admin/users");
-    admin = `<div class="acct"><h3>Members · ${users.length}</h3><p>Set someone's plan by hand until payments are added.</p>
-      <div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>Tickers</th><th>Telegram</th><th>Plan</th></tr>
-      ${users.map(x => `<tr><td>${esc(x.email)}${x.is_admin ? " (admin)" : ""}</td><td>${day(x.created_at + "Z")}</td><td>${x.tickers}</td>
-        <td>${x.telegram ? "yes" : "–"}</td><td>${x.is_admin ? "Pro" : `<select onchange="setPlan(${x.id}, this.value)">
-          <option value="free"${x.plan === "free" ? " selected" : ""}>Free</option><option value="pro"${x.plan === "pro" ? " selected" : ""}>Pro</option></select>`}</td></tr>`).join("")}
-      </table></div></div>`;
-    let msgs = [];
-    try { const m = await api("/api/admin/messages"); msgs = Array.isArray(m) ? m : []; } catch (e) {}
-    const open = msgs.filter(x => !x.handled).length;
-    admin += `<div class="acct"><h3>Inbox · ${open} new</h3><p>Messages from the <a href="/contact" style="color:#3DD68C">contact page</a>. Reply by email, then mark them done.</p>
-      ${msgs.length ? `<div class="inbox">${msgs.slice(0, 30).map(x => `<div class="msgi${x.handled ? " done" : ""}">
-        <div class="mi-h"><b>${esc(x.topic)}</b><span>${day(x.created_at + "Z")}</span></div>
-        <div class="mi-f">${esc(x.name || "(no name)")} · <a href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Re: " + x.topic)}">${esc(x.email)}</a></div>
-        <p>${esc(x.message)}</p>
-        <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
-        : `<p class="note">No messages yet.</p>`}</div>`;
-  }
   $("account").innerHTML = `
     <div class="acct"><h3>${esc(m.name || m.email)}</h3><p>${esc(m.email)} · ${m.google ? "Google sign-in" : "email and password"}</p>
       <div class="row"><span class="plan${isPro() ? " pro" : ""}">${isPro() ? "Pro" : "Free"} plan</span>
@@ -2399,21 +2389,58 @@ async function loadAccount() {
     </div>
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
-      ${m.is_admin ? `<a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>
-    ${admin}${m.is_admin ? `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>` : ""}${m.is_admin ? `<div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>` : ""}`;
-  if (m.is_admin) loadInvites();
-  if (m.is_admin) api("/api/admin/subscribers").then(d => {
-    $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
-      <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
-      ${d.recent.length ? `<div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>From</th><th>Status</th></tr>
-        ${d.recent.slice(0, 15).map(x => `<tr><td>${esc(x.email)}</td><td>${day(x.created_at + "Z")}</td><td>${esc(x.source)}</td>
-          <td style="color:var(${x.status === "subscribed" ? "--up" : "--faint"})">${x.status}</td></tr>`).join("")}</table></div>` : `<p>No sign-ups yet.</p>`}`;
-  }).catch(e => { if ($("emailList")) $("emailList").innerHTML = failedHTML("the email list", e, "loadAccount()"); });
+      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>`;
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }
     catch (err) { $("phoneMsg").textContent = err.message; }
   });
+}
+// ---------------------------------------------------------------- admin dashboard: members, waitlist, invites, inbox
+async function loadAdmin() {
+  if (!ME) await loadMe();
+  if (!ME || !ME.is_admin) return;
+  let ov = null; try { ov = await api("/api/admin/overview"); } catch (e) {}
+  const strip = ov ? `<div class="stats" style="margin-top:0">
+      <div><b>${ov.members}</b><span>Members</span></div><div><b>${ov.pro}</b><span>Pro</span></div><div><b>${ov.free}</b><span>Free</span></div>
+      <div><b>${ov.joined_week}</b><span>Joined this week</span></div><div><b>${ov.seen_week}</b><span>Signed in this week</span></div>
+      <div><b>${ov.waitlist}</b><span>Waitlist${ov.waitlist_unsub ? ` · ${ov.waitlist_unsub} unsubscribed` : ""}</span></div><div><b>${ov.waitlist_week}</b><span>Waitlist this week</span></div></div>` : "";
+  let admin = "";
+  const users = await api("/api/admin/users");
+  admin = `<div class="acct"><h3>Members · ${users.length}</h3><p>Set someone's plan by hand until payments are added.</p>
+      <div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>Last seen</th><th>Tickers</th><th>Telegram</th><th>Plan</th></tr>
+      ${users.map(x => `<tr><td><a href="#" class="mlink" onclick="memberDetail(${x.id});return false">${esc(x.email)}</a>${x.is_admin ? " (admin)" : ""}</td><td>${day(x.created_at + "Z")}</td><td>${x.last_login_at ? day(x.last_login_at + "Z") : "–"}</td><td>${x.tickers}</td>
+        <td>${x.telegram ? "yes" : "–"}</td><td>${x.is_admin ? "Pro" : `<select onchange="setPlan(${x.id}, this.value)">
+          <option value="free"${x.plan === "free" ? " selected" : ""}>Free</option><option value="pro"${x.plan === "pro" ? " selected" : ""}>Pro</option></select>`}</td></tr>`).join("")}
+      </table></div><div id="memberDetail"></div></div>`;
+    let msgs = [];
+    try { const m = await api("/api/admin/messages"); msgs = Array.isArray(m) ? m : []; } catch (e) {}
+    const open = msgs.filter(x => !x.handled).length;
+    admin += `<div class="acct"><h3>Inbox · ${open} new</h3><p>Messages from the <a href="/contact" style="color:#3DD68C">contact page</a>. Reply by email, then mark them done.</p>
+      ${msgs.length ? `<div class="inbox">${msgs.slice(0, 30).map(x => `<div class="msgi${x.handled ? " done" : ""}">
+        <div class="mi-h"><b>${esc(x.topic)}</b><span>${day(x.created_at + "Z")}</span></div>
+        <div class="mi-f">${esc(x.name || "(no name)")} · <a href="mailto:${esc(x.email)}?subject=${encodeURIComponent("Re: " + x.topic)}">${esc(x.email)}</a></div>
+        <p>${esc(x.message)}</p>
+        <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
+        : `<p class="note">No messages yet.</p>`}</div>`;
+    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
+  loadInvites();
+  api("/api/admin/subscribers").then(d => {
+    $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
+      <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
+      ${d.recent.length ? `<div class="tbl"><table><tr><th>Email</th><th>Joined</th><th>From</th><th>Status</th></tr>
+        ${d.recent.slice(0, 15).map(x => `<tr><td>${esc(x.email)}</td><td>${day(x.created_at + "Z")}</td><td>${esc(x.source)}</td>
+          <td style="color:var(${x.status === "subscribed" ? "--up" : "--faint"})">${x.status}</td></tr>`).join("")}</table></div>` : `<p>No sign-ups yet.</p>`}`;
+  }).catch(e => { if ($("emailList")) $("emailList").innerHTML = failedHTML("the email list", e, "loadAdmin()"); });
+}
+async function memberDetail(uid) {
+  const el = $("memberDetail"); if (!el) return;
+  el.innerHTML = loadingHTML("Loading the member…");
+  let x; try { x = await api(`/api/admin/users/${uid}`); } catch (e) { el.innerHTML = failedHTML("this member", e, `memberDetail(${uid})`); return; }
+  el.innerHTML = `<div class="mdet"><div class="row" style="justify-content:space-between"><b>${esc(x.name || x.email)}</b><button class="btnx sm" onclick="$('memberDetail').innerHTML=''">Close</button></div>
+    <p class="note" style="margin:6px 0 0">${esc(x.email)} · ${x.is_admin ? "admin · " : ""}${x.plan === "pro" || x.is_admin ? "Pro" : "Free"} · joined ${day(x.created_at + "Z")} · last seen ${x.last_login_at ? day(x.last_login_at + "Z") : "–"}</p>
+    <p class="note" style="margin:4px 0 0">Phone ${x.phone ? esc(x.phone) : "–"} · Telegram ${x.telegram ? "connected" : "not connected"}</p>
+    <div class="mdet-t">${x.tickers.length ? x.tickers.map(t => `<span>${esc(t)}</span>`).join("") : `<span class="none">No tickers on their watchlist</span>`}</div></div>`;
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
 async function loadInvites() {
@@ -2459,14 +2486,14 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results" };
-const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide", "lab"];
-const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account" };
+const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide", "lab", "admin"];
+const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account", admin: "account" };
 let CUR = "today";
 function showTab() {
   let tab = (location.hash || "#today").slice(1);
   tab = ALIAS[tab] || tab;
   CUR = VIEWS.includes(tab) ? tab : "today";
-  if ((CUR === "paper" || CUR === "lab") && !(ME && ME.is_admin)) CUR = "today";
+  if ((CUR === "paper" || CUR === "lab" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
   document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== CUR);
   const navKey = CUR in NAV_FOR ? NAV_FOR[CUR] : CUR;
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
@@ -2478,6 +2505,7 @@ function showTab() {
   if (CUR === "account") loadAccount();
   if (CUR === "guide") renderGloss();
   if (CUR === "lab") loadLab();
+  if (CUR === "admin") loadAdmin();
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", showTab);
