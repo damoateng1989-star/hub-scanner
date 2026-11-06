@@ -206,18 +206,73 @@ def login(email: str, password: str) -> int:
 
 
 # ---------------------------------------------------------------- password reset (email via Resend)
-def send_email(to: str, subject: str, html: str) -> bool:
+def send_email(to: str, subject: str, html: str, text: str | None = None) -> bool:
     key = os.getenv("RESEND_API_KEY", "").strip()
     sender = os.getenv("EMAIL_FROM", "NextShelf <onboarding@resend.dev>")
     if not key:
         log.warning("RESEND_API_KEY not set; email to %s not sent: %s", to, subject)
         return False
+    payload = {"from": sender, "to": [to], "subject": subject, "html": html}
+    if text:
+        payload["text"] = text
     r = requests.post("https://api.resend.com/emails", headers={"Authorization": f"Bearer {key}"},
-                      json={"from": sender, "to": [to], "subject": subject, "html": html}, timeout=20)
+                      json=payload, timeout=20)
     if r.status_code >= 300:
         log.warning("email failed: %s", r.text[:200])
         return False
     return True
+
+
+def _reset_email_html(link: str) -> str:
+    """Branded password-reset email. Table layout + inline styles only
+    (email-client safe). Same copy as before, dressed in the brand:
+    dark background, white pill button, black button text."""
+    return f"""<html><head><meta name="color-scheme" content="light dark">
+<meta name="supported-color-schemes" content="light dark"></head>
+<body style="margin:0;padding:0;background:#000000;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#000000;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#000000;border:1px solid #33302a;border-radius:12px;">
+<tr><td style="padding:32px 40px 0 40px;text-align:center;">
+<div style="font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:1.2;color:#f5efe3;">NextShelf</div>
+<div style="font-family:Georgia,'Times New Roman',serif;font-size:13px;line-height:1.5;color:#a89e8d;margin-top:6px;font-style:italic;">We watch your setup while you go do other things.</div>
+</td></tr>
+<tr><td style="padding:24px 40px 0 40px;"><div style="border-top:1px solid #33302a;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+<tr><td style="padding:28px 40px 8px 40px;">
+<div style="font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:1.3;color:#f5efe3;">Reset your password</div>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#e9e2d3;margin:16px 0 0 0;">Someone asked to reset the password for your NextShelf account.</p>
+</td></tr>
+<tr><td align="center" style="padding:24px 40px 8px 40px;">
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" href="{link}" style="width:240px;height:48px;" arcsize="50%" fillcolor="#ffffff" stroke="f">
+<v:textbox inset="0,0,0,0"><center style="color:#1c1917;font-family:Arial,sans-serif;font-size:16px;">Choose a new password</center></v:textbox>
+</v:roundrect>
+<![endif]-->
+<!--[if !mso]><!-- -->
+<a href="{link}" style="display:inline-block;background:#ffffff;color:#1c1917;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1;text-decoration:none;padding:15px 32px;border-radius:999px;">Choose a new password</a>
+<!--<![endif]-->
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#a89e8d;margin:14px 0 0 0;">Link works for 1 hour.</p>
+</td></tr>
+<tr><td style="padding:16px 40px 8px 40px;">
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#e9e2d3;margin:0;">If this wasn&rsquo;t you, ignore this email &mdash; your password stays as it is.</p>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.6;color:#a89e8d;margin:20px 0 0 0;">Button not working? Paste this link into your browser:<br>
+<span style="word-break:break-all;color:#d8cdb8;">{link}</span></p>
+</td></tr>
+<tr><td style="padding:24px 40px 0 40px;"><div style="border-top:1px solid #33302a;font-size:0;line-height:0;">&nbsp;</div></td></tr>
+<tr><td style="padding:20px 40px 32px 40px;text-align:center;">
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#a89e8d;margin:0;">NextShelf &mdash; hub-breakout scanner for swing traders with day jobs.<br>
+You&rsquo;re getting this because a password reset was requested for your NextShelf account.<br>
+<a href="https://nextshelfapp.com" style="color:#a89e8d;">nextshelfapp.com</a></p>
+</td></tr>
+</table></td></tr></table></body></html>"""
+
+
+def _reset_email_text(link: str) -> str:
+    return ("Someone asked to reset the password for your NextShelf account.\n\n"
+            f"Choose a new password (link works for 1 hour): {link}\n\n"
+            "If this wasn't you, ignore this email — your password stays as it is.\n\n"
+            "NextShelf — hub-breakout scanner for swing traders with day jobs.\n"
+            "https://nextshelfapp.com")
 
 
 def start_reset(email: str, base_url: str):
@@ -229,9 +284,7 @@ def start_reset(email: str, base_url: str):
     db.add_reset(_sha(token), u["id"], (_now() + pd.Timedelta(hours=1)).isoformat())
     link = f"{base_url}/login#reset={token}"
     sent = send_email(u["email"], "Reset your NextShelf password",
-                      f"<p>Someone asked to reset the password for your NextShelf account.</p>"
-                      f"<p><a href=\"{link}\">Choose a new password</a> (link works for 1 hour).</p>"
-                      f"<p>If this wasn't you, ignore this email.</p>")
+                      _reset_email_html(link), _reset_email_text(link))
     if not sent:
         log.warning("Password reset link for %s (email not configured): %s", u["email"], link)
 
