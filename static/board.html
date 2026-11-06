@@ -70,7 +70,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wr
 <body>
 <nav class="top"><div class="wrap">
   <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
-  <div class="navend"><button class="theme-btn" onclick="nsToggleTheme()" aria-label="Switch theme">☀︎</button><a class="si" href="/login" id="navSign">Sign in</a><a class="btn" href="/login#signup" data-cta>Sign up free</a></div>
+  <div class="navend"><button class="theme-btn" onclick="nsToggleTheme()" aria-label="Switch theme">☀︎</button><a class="si" href="/login" id="navSign" hidden>Sign in</a><a class="btn" href="/login#signup" data-cta>Sign up free</a></div>
 </div></nav>
 
 <main class="wrap">
@@ -125,7 +125,7 @@ footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wr
     }
     if (s && s.next) $("tNext").textContent = "Next check " + new Date(s.next).toLocaleString("en-US", {...ny, weekday: "long", hour: "numeric", minute: "2-digit"}) + " ET, about 20 minutes after the 4-hour close.";
     const member = me && !me.guest;
-    if (member) { $("navSign").textContent = "Open the app"; $("navSign").href = "/app#discover";
+    if (member) { $("navSign").hidden = false; $("navSign").textContent = "Open the app"; $("navSign").href = "/app#discover";
       document.querySelectorAll("[data-cta]").forEach(a => { a.href = "/app#discover"; a.textContent = "Open the full board →"; }); }
     else if (c && c.signups_open === false) document.querySelectorAll("[data-cta]").forEach(a => { a.href = "/#join"; a.textContent = a.textContent.includes("tickers") ? "Join the waitlist to see the tickers" : "Join the waitlist"; });
   });
