@@ -13,6 +13,7 @@ import data
 import earnings
 import db
 import engine
+import gamma
 import options
 import patterns
 import notify
@@ -217,6 +218,13 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     msg += volume_line(c4, e["time"])
                 if e["type"] in ("breakout", "breakdown", "hub_formed"):
                     msg += earnings.alert_line(sym)
+                if e["type"] in ("breakout", "breakdown") and e["time"] == c4.index[-1]:
+                    # gamma wall (newest candle only, so old events never trigger a chain download)
+                    gd_ = 1 if e["type"] == "breakout" else -1
+                    g = gamma.attach({"symbol": sym, "d": gd_, "edge": e["high"] if gd_ == 1 else e["low"],
+                                      "target": e["target"], "price": e["close"]})
+                    if (gl := gamma.line(g)):
+                        msg += "\n" + gl
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
                                 e["time"].isoformat(), msg):
                     # ring only for the newest candle (no burst of calls after downtime), and not for chases

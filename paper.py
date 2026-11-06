@@ -26,6 +26,7 @@ import data
 import db
 import earnings
 import engine
+import gamma
 import notify
 import scanner
 
@@ -305,8 +306,14 @@ def candidates(window: str) -> list[dict]:
         except Exception:
             pass
         rr = abs(tgt - px) / max(abs(px - edge), 1e-9)
-        out.append(dict(symbol=r["symbol"], d=d, edge=edge, target=tgt, price=px, rr=rr, low=r["hub"]["low"], high=r["hub"]["high"],
-                        kind=r.get("target_kind") or "shelf", hub_start=r["hub"].get("start"), candle=r["last_candle"]))
+        c = dict(symbol=r["symbol"], d=d, edge=edge, target=tgt, price=px, rr=rr, low=r["hub"]["low"], high=r["hub"]["high"],
+                 kind=r.get("target_kind") or "shelf", hub_start=r["hub"].get("start"), candle=r["last_candle"])
+        gamma.attach(c)                       # a gamma wall between the edge and the shelf caps the target at the wall
+        if c["gamma_capped"] and (c["target"] - px) * d <= 0:
+            continue                          # price is already at/through the wall: the capped move is done, don't chase
+        if c["gamma_capped"]:
+            c["rr"] = abs(c["target"] - px) / max(abs(px - edge), 1e-9)
+        out.append(c)
     # best reward : risk first (capped, so a price sitting right on the edge doesn't win on a tiny risk alone), then the bigger move
     return sorted(out, key=lambda c: (-min(c["rr"], 4.0), -abs(c["target"] / c["price"] - 1)))
 
@@ -347,7 +354,8 @@ def enter_daily(window: str = "midday") -> str | None:
                          entry_candle=c["candle"], entry_price=fill, entry_order=oid, tp_order=tp)
             msg = (f"🧪 Paper trade of the day: {'LONG' if c['d'] == 1 else 'SHORT'} {qty} {c['symbol']} @ {_money(fill)}\n"
                    f"Confirmed {'1:30 PM' if window == 'midday' else 'yesterday 4:00 PM'} close outside the hub {_money(c['low'])}–{_money(c['high'])} · "
-                   f"{'next shelf' if c['kind'] == 'shelf' else 'ATR target'} {_money(c['target'])} · reward:risk {c['rr']:.1f}\n"
+                   f"{'gamma wall' if c.get('gamma_capped') else 'next shelf' if c['kind'] == 'shelf' else 'ATR target'} {_money(c['target'])} · reward:risk {c['rr']:.1f}\n"
+                   + (f"{gamma.line(c)}\n" if gamma.line(c) else "") +
                    f"Exit on a close back {'≤' if c['d'] == 1 else '≥'} {_money(c['edge'])}, or after {scanner.SETTINGS.horizon} candles.")
             notify.admins(msg)
             return msg

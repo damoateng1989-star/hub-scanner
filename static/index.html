@@ -964,6 +964,8 @@ body.brief-open .sf-hello { display: none; }
 .brief-sw input { width: 18px !important; min-width: 0 !important; height: 18px !important; padding: 0 !important; margin: 0 !important; flex: none; accent-color: #3DD68C; }
 .broker.logo-only, a.broker:has(> .broker-logo) { padding: 4px 6px !important; line-height: 0; }
 .broker-logo { width: 18px; height: 18px; vertical-align: -3px; display: block; }
+.gwall { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; color: var(--muted); white-space: normal; max-width: 220px; line-height: 1.35; }
+.board-table .gwall { white-space: nowrap; }
 </style>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
@@ -3084,6 +3086,7 @@ function bRow(r, kind) {
   if (kind === "live") {
     const up = r.state === "breakout_up";
     d = `<b class="u-${up ? "up" : "down"}">${up ? "Breakout ↑" : "Breakdown ↓"}</b> · target ${money(r.target)} <span class="u-${up ? "up" : "down"}">(${(r.to_target_pct > 0 ? "+" : "") + r.to_target_pct}%)</span> · ${esc((r.label || "").split(", ")[1] || "")}`;
+    if (r.gamma_line) d += `<span class="gwall">${esc(r.gamma_line)}</span>`;
   } else if (kind === "near") {
     const up = r.near_edge === "up";
     const dist = Math.abs(up ? r.to_high_pct : r.to_low_pct).toFixed(1);
@@ -3159,7 +3162,7 @@ function renderInstitutionalBoard(){
     return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
       '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
-      '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span></td>'+
+      '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>';
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;

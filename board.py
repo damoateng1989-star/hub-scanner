@@ -12,6 +12,7 @@ import pandas as pd
 import data
 import db
 import engine
+import gamma
 import patterns
 import scanner
 import universe
@@ -150,7 +151,34 @@ def _scan_board() -> int:
             hub=engine.stats(lab_hub), tightening=engine.stats(lab_tri), live=lab_live,
             patterns={k: engine.stats(v) for k, v in lab_pat.items()})))
         log.info("board scan done: %d/%d symbols", done, len(syms))
+        threading.Thread(target=_warm_gamma, daemon=True).start()   # walls for the fresh breakouts, off the hot path
         return done
+
+
+def _fresh_break(r: dict) -> bool:
+    """Broke out on the latest candle or the one before (label 'n/10 candles', n <= 1)."""
+    import re as _re
+    m = _re.search(r"(\d+)/\d+", r.get("label") or "")
+    return bool(m) and int(m.group(1)) <= 1
+
+
+def _gamma_input(r: dict) -> dict | None:
+    hub = r.get("hub") or {}
+    d = 1 if r.get("state") == "breakout_up" else -1
+    edge = hub.get("high") if d == 1 else hub.get("low")
+    if not edge or not r.get("target"):
+        return None
+    return {"symbol": r["symbol"], "d": d, "edge": edge, "target": r["target"], "price": r.get("last_close")}
+
+
+def _warm_gamma():
+    """Fetch gamma walls once a day for fresh confirmed breakouts only (a handful), never the whole universe."""
+    try:
+        for r in board()["live"]:
+            if _fresh_break(r) and (g := _gamma_input(r)):
+                gamma.walls(g["symbol"], g["price"])
+    except Exception as e:
+        log.warning("gamma warm-up failed: %s", e)
 
 
 def _tri_live(sym: str, c4: pd.DataFrame, res: dict, tri: dict) -> list[dict]:
@@ -195,6 +223,13 @@ def board() -> dict:
         r["watching"] = r["symbol"] in watch
     live = [r for r in rows if r.get("state") in ("breakout_up", "breakdown")]
     live.sort(key=lambda r: abs(r.get("to_target_pct") or 99))
+    for r in live:      # gamma wall line, from the per-day cache only: a page load never downloads a chain
+        g = _gamma_input(r)
+        if g:
+            gamma.attach(g, fetch=False)
+            r["gamma_line"] = gamma.line(g) or None
+            r["gamma_capped"] = g["gamma_capped"]
+            r["gamma_wall"] = g["gamma_wall"]
     forming = [r for r in rows if r.get("state") in ("forming", "watching")]
     near = [r for r in forming if r.get("near_edge")]
     near.sort(key=lambda r: -abs(r["pos"] - 0.5))
