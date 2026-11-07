@@ -145,7 +145,7 @@ async def lifespan(_app: FastAPI):
                                                    timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1)
     # paper OPTIONS experiment (off unless switched on): same setups, same windows, its own journal
-    for h_, m_, w_ in ((9, 36, "morning"), (13, 55, "midday")):
+    for h_, m_, w_ in ((10, 15, "morning"), (13, 55, "midday")):
         sched.add_job(paper_opt.enter_daily_opt, CronTrigger(day_of_week="mon-fri", hour=h_, minute=m_, timezone="America/New_York"),
                       kwargs={"window": w_}, misfire_grace_time=900, coalesce=True, max_instances=1, id=f"paper_opt_{w_}", replace_existing=True)
     sched.add_job(paper_opt.sync_opt, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5", timezone="America/New_York"),
