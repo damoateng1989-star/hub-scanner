@@ -35,6 +35,7 @@ import options  # noqa: E402
 import patterns  # noqa: E402
 import board  # noqa: E402
 import gamma  # noqa: E402
+import push  # noqa: E402
 import brief  # noqa: E402
 import recap  # noqa: E402
 import data  # noqa: E402
@@ -606,6 +607,48 @@ def set_closes(body: ClosesBody, u: dict = User):
         raise HTTPException(400, "Pick both closes or only the 1:30 PM close")
     db.update_user(u["id"], closes=None if body.closes == "both" else "midday")
     return {"closes": body.closes}
+
+
+class PushSubBody(BaseModel):
+    endpoint: str
+    keys: dict
+    device: str = ""
+
+
+class PushEndBody(BaseModel):
+    endpoint: str
+
+
+@app.get("/api/push/key")
+def push_key(u: dict = User):
+    k = push.keys()
+    if not k:
+        raise HTTPException(503, "Notifications aren't available on the server yet")
+    return {"key": k["public"], "devices": len(db.push_subs(u["id"]))}
+
+
+@app.post("/api/push/subscribe")
+def push_subscribe(body: PushSubBody, u: dict = User):
+    p256dh, auth_ = (body.keys or {}).get("p256dh"), (body.keys or {}).get("auth")
+    if not body.endpoint.startswith("https://") or not p256dh or not auth_:
+        raise HTTPException(400, "That subscription doesn't look right")
+    db.add_push_sub(u["id"], body.endpoint, p256dh, auth_, body.device)
+    return {"ok": True, "devices": len(db.push_subs(u["id"]))}
+
+
+@app.post("/api/push/unsubscribe")
+def push_unsubscribe(body: PushEndBody, u: dict = User):
+    db.del_push_sub(body.endpoint, u["id"])
+    return {"ok": True, "devices": len(db.push_subs(u["id"]))}
+
+
+@app.post("/api/push/test")
+async def push_test(u: dict = User):
+    n = await run_in_threadpool(push.send, u["id"], "🔔 NextShelf alerts are on",
+                                "This is how a breakout alert will arrive on this device.", "/app#today", "test")
+    if not n:
+        raise HTTPException(400, "Couldn't reach this device. Turn alerts off and on again.")
+    return {"sent": n}
 
 
 class QuietBody(BaseModel):

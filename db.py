@@ -66,6 +66,10 @@ with _lock:
         outcome TEXT, outcome_time TEXT, ret_pct REAL, chase INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS push_subs (
+        endpoint TEXT PRIMARY KEY, user_id INTEGER, p256dh TEXT, auth TEXT, device TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS invites (
         code TEXT PRIMARY KEY, note TEXT, max_uses INTEGER DEFAULT 1, uses INTEGER DEFAULT 0,
         active INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP
@@ -427,3 +431,21 @@ def use_invite(code: str):
 
 def set_invite_active(code: str, active: bool):
     _run("UPDATE invites SET active=? WHERE code=?", (int(active), code.strip().upper()))
+
+
+# ---------------------------------------------------------------- web push (iPhone / Android / desktop notifications)
+def add_push_sub(user_id: int, endpoint: str, p256dh: str, auth: str, device: str = ""):
+    _run("INSERT INTO push_subs (endpoint, user_id, p256dh, auth, device) VALUES (?,?,?,?,?) "
+         "ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth, device=excluded.device",
+         (endpoint, user_id, p256dh, auth, device[:120]))
+
+
+def push_subs(user_id: int) -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM push_subs WHERE user_id=?", (user_id,)).fetchall()]
+
+
+def del_push_sub(endpoint: str, user_id: int | None = None):
+    if user_id is None:
+        _run("DELETE FROM push_subs WHERE endpoint=?", (endpoint,))
+    else:
+        _run("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", (endpoint, user_id))

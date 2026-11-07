@@ -6,3 +6,4 @@ pandas>=2.1
 numpy>=1.26
 python-dotenv>=1.0
 yfinance>=0.2.40
+pywebpush>=2.0

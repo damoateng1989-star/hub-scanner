@@ -3,8 +3,11 @@ from __future__ import annotations
 
 import logging
 
+import threading
+
 import db
 import phone
+import push
 import telegram_bot
 
 log = logging.getLogger("notify")
@@ -59,23 +62,32 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
         if candle_start is not None and (u.get("closes") or "both") == "midday" and late_close(candle_start):
             continue                     # this member only trades the 1:30 PM close; the recap covers the 4:00 PM one
         quiet = quiet_now(u)
+        msg = text
+        if pro_extra and _pro(u):
+            if "v" not in extra_cache:
+                try:
+                    extra_cache["v"] = pro_extra() if callable(pro_extra) else pro_extra
+                except Exception:
+                    extra_cache["v"] = None
+            if extra_cache["v"]:
+                msg = f"{text}\n{extra_cache['v']}"
         if u["telegram_chat"]:
-            msg = text
-            if pro_extra and _pro(u):
-                if "v" not in extra_cache:
-                    try:
-                        extra_cache["v"] = pro_extra() if callable(pro_extra) else pro_extra
-                    except Exception:
-                        extra_cache["v"] = None
-                if extra_cache["v"]:
-                    msg = f"{text}\n{extra_cache['v']}"
             telegram_bot.send(msg, u["telegram_chat"], silent=quiet)
+        _push(u["id"], msg, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
         if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
             phone.safe_call(speech, to=u["phone"])
+
+
+def _push(user_id: int, text: str, url: str, tag: str | None = None, silent: bool = False):
+    """iPhone / browser notification, off the alert loop's thread so a slow push service never delays Telegram."""
+    title, body = push.split(text)
+    threading.Thread(target=push.send, args=(user_id, title, body, url, tag, silent), daemon=True).start()
 
 
 def admins(text: str):
     """Messages only the site owner should get (e.g. paper trading)."""
     for u in db.all_users():
-        if u["is_admin"] and u["telegram_chat"]:
-            telegram_bot.send(text, u["telegram_chat"])
+        if u["is_admin"]:
+            if u["telegram_chat"]:
+                telegram_bot.send(text, u["telegram_chat"])
+            _push(u["id"], text, "/app#paper", None)

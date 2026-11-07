@@ -1,7 +1,7 @@
 /* NextShelf service worker: makes the app installable and quick to open.
    Pages: network first (always fresh), cached copy when offline.
    Fonts, icons, chart library: cache first.  API calls: never cached (prices must be live). */
-const V = "ns-v3";
+const V = "ns-v4";
 const SHELL = ["/app", "/manifest.webmanifest", "/icon-192.png", "/icon-512.png", "/favicon.svg",
                "/fonts/Inter.woff2", "/fonts/InstrumentSerifItalic.woff2", "/fonts/JetBrainsMono.woff2", "/vendor/lightweight-charts.js"];
 self.addEventListener("install", (e) => { e.waitUntil(caches.open(V).then((c) => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting())); });
@@ -21,4 +21,22 @@ self.addEventListener("fetch", (e) => {
     e.respondWith(fetch(r).then((res) => { if (res.ok) { const cp = res.clone(); caches.open(V).then((c) => c.put(r, cp)); } return res; })
       .catch(() => caches.match(r).then((hit) => hit || caches.match("/app"))));
   }
+});
+
+/* web push: breakout alerts as notifications (iPhone home-screen app, Android, desktop) */
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: "NextShelf", body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(self.registration.showNotification(d.title || "NextShelf", {
+    body: d.body || "", tag: d.tag || undefined, renotify: !!d.tag, silent: !!d.silent,
+    icon: "/icon-192.png", badge: "/icon-192.png", data: { url: d.url || "/app#today" },
+  }));
+});
+self.addEventListener("notificationclick", (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || "/app#today", self.location.origin).href;
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((cs) => {
+    for (const c of cs) { if (c.url.startsWith(self.location.origin) && "focus" in c) { c.navigate(url).catch(() => {}); return c.focus(); } }
+    return self.clients.openWindow(url);
+  }));
 });

@@ -3478,6 +3478,7 @@ async function loadBrief() {
 }
 function briefCard() {
   if (!ME || ME.guest) return "";
+  setTimeout(paintPush, 0);        // fills in the "Alerts on this device" card once it's on the page
   const tg = ME.telegram && ME.telegram.linked;
   const where = [tg && "Telegram", ME.email_on && "email"].filter(Boolean).join(" and ");
   return `<div class="acct"><h3>Morning brief</h3><p>Every weekday at ${esc((ME.brief_time || "08:45").replace(/^0/, ""))} AM ET: the stocks closest to a breakout, breakouts still in play, and your watchlist.${where ? ` Sent by ${where}.` : " Connect Telegram below to receive it."}</p>
@@ -3486,8 +3487,62 @@ function briefCard() {
   <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
       <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>
+  <div class="acct" id="pushCard"><h3>Alerts on this device</h3><p class="note">Checking…</p></div>
   ${closesCard()}
   ${quietCard()}`;
+}
+// ---------------------------------------------------------------- push notifications (iPhone home-screen app, Android, desktop)
+const b64ToBytes = (b) => { const p = "=".repeat((4 - b.length % 4) % 4), raw = atob((b + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, c => c.charCodeAt(0)); };
+async function pushState() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window))
+    return isIOS() && !isStandalone() ? "ios-install" : "unsupported";
+  if (Notification.permission === "denied") return "denied";
+  const reg = await navigator.serviceWorker.ready;
+  return (await reg.pushManager.getSubscription()) ? "on" : "off";
+}
+async function paintPush() {
+  const el = $("pushCard"); if (!el) return;
+  let st; try { st = await pushState(); } catch (e) { st = "unsupported"; }
+  const body = {
+    "ios-install": `<p>Get breakout alerts as iPhone notifications. First add NextShelf to your Home Screen: in Safari tap <b>Share</b> → <b>Add to Home Screen</b>, open NextShelf from the new icon, then come back to Account and turn alerts on here.</p>`,
+    unsupported: `<p>This browser can't show notifications. On an iPhone, add NextShelf to your Home Screen from Safari and open it from the icon.</p>`,
+    denied: `<p>Notifications are blocked for NextShelf on this device. ${isIOS() ? "Turn them on in iPhone <b>Settings → Notifications → NextShelf</b>" : "Allow them in your browser's site settings"}, then come back here.</p>`,
+    off: `<p>Get the same breakout alerts you get on Telegram as notifications on this ${isIOS() ? "iPhone" : "device"}. During your quiet hours they arrive without a sound.</p>
+      <div class="row"><button class="btnx sm" onclick="pushOn(this)">Turn on alerts on this device</button></div>`,
+    on: `<p>✓ Alerts are on for this ${isIOS() ? "iPhone" : "device"}. Breakouts on your watchlist arrive here as notifications.</p>
+      <div class="row"><button class="btnx sm" onclick="pushTest(this)">Send a test</button><button class="btnx sm ghost" onclick="pushOff(this)">Turn off</button></div>`,
+  }[st];
+  el.innerHTML = `<h3>Alerts on this device</h3>${body}`;
+}
+async function pushOn(btn) {
+  btn.disabled = true; btn.textContent = "Turning on…";
+  try {
+    const perm = await Notification.requestPermission();         // must come straight from the tap (iPhone requires it)
+    if (perm !== "granted") { await paintPush(); return; }
+    const { key } = await api("/api/push/key");
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+    const j = sub.toJSON();
+    await api("/api/push/subscribe", { method: "POST", body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, device: isIOS() ? "iPhone" : navigator.userAgent.slice(0, 100) }) });
+    toast("Alerts are on for this device");
+    api("/api/push/test", { method: "POST" }).catch(() => {});
+  } catch (e) { toast(friendly(e)); }
+  paintPush();
+}
+async function pushOff(btn) {
+  btn.disabled = true;
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    if (sub) { await api("/api/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe(); }
+    toast("Alerts are off for this device");
+  } catch (e) { toast(friendly(e)); }
+  paintPush();
+}
+async function pushTest(btn) {
+  btn.disabled = true;
+  try { await api("/api/push/test", { method: "POST" }); toast("Test sent. It should arrive in a few seconds."); }
+  catch (e) { toast(friendly(e)); }
+  btn.disabled = false;
 }
 function closesCard() {
   const mid = ME.closes === "midday";
