@@ -205,8 +205,11 @@ def _try_entry(b, sym: str, candle_start: pd.Timestamp) -> str | None:
     c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
     res = engine.analyze(c4, scanner.SETTINGS)
     price = data.latest_price(sym)
-    sig = engine.preclose_check(res, price, scanner.SETTINGS)
+    sig = engine.preclose_check(res, price, scanner.SETTINGS, scanner.forming_volume(sym))
     if not sig or sig["reached"]:
+        return None
+    if sig.get("vol_ok") is False:
+        log.info("%s: paper entry skipped (no volume on the break)", sym)
         return None
     d = sig["direction"]
     if d == -1 and not allow_short():

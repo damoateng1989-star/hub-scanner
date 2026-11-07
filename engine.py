@@ -20,6 +20,8 @@ class Settings:
     horizon: int = 10          # 4H candles to judge a breakout
     target_atr: float = 1.0    # fallback target beyond hub edge, in ATR, when there is no shelf
     shelf_min_atr: float = 0.5 # a shelf must sit at least this far (in ATR) beyond the hub edge
+    vol_mult: float = 1.0      # rule #5: breakout candle volume must clear this x the same-slot average (0 = off)
+    vol_window: int = 20       # same-slot 4H candles averaged for the volume baseline
 
     @property
     def window(self) -> int:
@@ -33,6 +35,8 @@ class Settings:
             horizon=int(os.getenv("HORIZON", 10)),
             target_atr=float(os.getenv("TARGET_ATR", 1.0)),
             shelf_min_atr=float(os.getenv("SHELF_MIN_ATR", 0.5)),
+            vol_mult=float(os.getenv("VOLUME_MULT", 1.0)),
+            vol_window=int(os.getenv("VOLUME_WINDOW", 20)),
         )
 
 
@@ -110,12 +114,33 @@ def target_for(hubs: list, cur: dict, d: int, atr_v: float, s: Settings) -> tupl
     return (shelf["level"], shelf) if shelf else (edge + d * s.target_atr * atr_v, None)
 
 
+def slot_volume_avg(c4: pd.DataFrame, window: int = 20) -> pd.Series | None:
+    """For each 4H candle, the average volume of the previous `window` candles in the same slot
+    (9:30-1:30 vs 1:30-4:00 trade very different amounts: same baseline as engine.rvol). NaN with < 5 of them."""
+    if "Volume" not in c4.columns:
+        return None
+    v = c4["Volume"].astype(float).where(lambda x: x > 0)
+    return v.groupby(c4.index.hour).transform(lambda x: x.shift().rolling(window, min_periods=5).mean())
+
+
+def _vol_ok(vol: pd.Series | None, vol_avg: pd.Series | None, i: int, s: Settings) -> bool:
+    """Rule #5: the breakout candle's volume must clear vol_mult x its same-slot average."""
+    if s.vol_mult <= 0 or vol is None or vol_avg is None:
+        return True            # gate off, or no volume data: fail open, never block on missing data
+    avg = vol_avg.iloc[i]
+    if pd.isna(avg) or avg <= 0 or pd.isna(vol.iloc[i]):
+        return True            # not enough history yet: fail open
+    return vol.iloc[i] >= s.vol_mult * avg
+
+
 def analyze(c4: pd.DataFrame, s: Settings) -> dict:
     close = c4["Close"]
     n = len(close)
     prev = close.shift()
     tr = pd.concat([c4.High - c4.Low, (c4.High - prev).abs(), (c4.Low - prev).abs()], axis=1).max(axis=1)
     atr = tr.rolling(14).mean()
+    vol = c4["Volume"] if "Volume" in c4.columns else None
+    vol_avg = slot_volume_avg(c4, s.vol_window) if vol is not None else None
 
     w = s.window
     width = close.rolling(w).max() - close.rolling(w).min()
@@ -150,12 +175,13 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
         brk = None
         for i in range(h["end_i"] + 1, min(h["end_i"] + 1 + s.horizon, n)):
             c = close.iloc[i]
-            if c > h["high"]:
-                brk = (i, 1)
-                break
-            if c < h["low"]:
-                brk = (i, -1)
-                break
+            dd = 1 if c > h["high"] else -1 if c < h["low"] else 0
+            if dd == 0:
+                continue
+            if not _vol_ok(vol, vol_avg, i, s):
+                continue       # closed outside, but no volume on the break: keep watching
+            brk = (i, dd)
+            break
         if brk is None:
             continue
         i0, d = brk
@@ -206,7 +232,7 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
                                low=h["low"], high=h["high"], target=t["target"], shelf=t["shelf"],
                                direction=t["direction"], candles=t["oi"] - t["i0"]))
     events.sort(key=lambda e: e["time"])
-    return dict(close=close, atr=atr, hubs=hubs, trades=trades, events=events)
+    return dict(close=close, atr=atr, hubs=hubs, trades=trades, events=events, volume=vol, volume_avg=vol_avg)
 
 
 def _hub_grade(c4: pd.DataFrame, atr: pd.Series, h: dict, s: Settings) -> dict:
@@ -417,7 +443,7 @@ def stats(trades: list) -> dict:
     return out
 
 
-def preclose_check(res: dict, price: float, s: Settings) -> dict | None:
+def preclose_check(res: dict, price: float, s: Settings, forming_volume: float | None = None) -> dict | None:
     """Is price currently outside a hub that hasn't broken out yet? (checked before the 4H close)"""
     if not res["hubs"] or price is None:
         return None
@@ -431,8 +457,18 @@ def preclose_check(res: dict, price: float, s: Settings) -> dict | None:
         return None
     edge = h["high"] if d == 1 else h["low"]
     target, shelf = target_for(res["hubs"], h, d, float(res["atr"].iloc[-1]), s)
+    vol_ok = None
+    if forming_volume is not None and s.vol_mult > 0 and res.get("volume") is not None:
+        try:      # the forming candle's projected volume vs the same slot's average
+            v, idx = res["volume"].astype(float), res["close"].index
+            slot = current_candle_start(pd.Timestamp.now(tz="UTC")).hour
+            prev = v[(idx.hour == slot) & (v > 0)].tail(s.vol_window)
+            if len(prev) >= 5 and prev.mean() > 0:
+                vol_ok = bool(forming_volume >= s.vol_mult * prev.mean())
+        except Exception:
+            vol_ok = None
     return dict(direction=d, price=price, low=h["low"], high=h["high"], sessions=h["sessions"],
-                edge=edge, target=target, shelf=shelf, reached=(price - target) * d >= 0)
+                edge=edge, target=target, shelf=shelf, reached=(price - target) * d >= 0, vol_ok=vol_ok)
 
 
 def current_candle_start(now: pd.Timestamp) -> pd.Timestamp:

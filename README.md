@@ -189,6 +189,8 @@ Open http://localhost:8000. `demo` mode makes up prices so you can click around.
 | `HORIZON` | 10 | 4H candles a breakout gets to follow through |
 | `TARGET_ATR` | 1.0 | Fallback target when there's no shelf: distance beyond the hub edge, in ATR |
 | `SHELF_MIN_ATR` | 0.5 | Minimum gap between the hub edge and a shelf, in ATR. Raise it to skip shelves that are too close to be worth trading. |
+| `VOLUME_MULT` | 1.0 | Breakout candle volume must clear this × the average of the same 4H slot (9:30–1:30 or 1:30–4:00). 0 turns the volume rule off. |
+| `VOLUME_WINDOW` | 20 | Same-slot 4H candles in that volume average. |
 | `SCAN_TIMES` | 13:47,16:17 | Scan times, ET, weekdays |
 | `PRECLOSE_TIMES` | 13:15,15:45 | Pre-close warning times, ET, weekdays. Leave empty to turn it off. |
 | `ALPACA_FEED` | sip | `sip` = full-market prices with a 15-minute delay. `iex` = real-time but IEX-only, so you can scan at 13:31,16:01. |

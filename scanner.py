@@ -55,6 +55,26 @@ def load_4h(symbol: str, days: int) -> pd.DataFrame:
     return engine.to_4h(bars, now=pd.Timestamp.now(tz="UTC"))
 
 
+
+def forming_volume(sym: str) -> float | None:
+    """The still-forming 4H candle's volume, projected to the full candle from the share of it traded so far
+    (the 30-min bars run ~15 min behind). None when there's no volume data: fail open."""
+    try:
+        bars = data.get_bars(sym, 5)
+        if bars is None or bars.empty or "Volume" not in bars.columns:
+            return None
+        now = pd.Timestamp.now(tz="UTC")
+        start = engine.current_candle_start(now).tz_convert("UTC")
+        part = bars[bars.index >= start]
+        if part.empty:
+            return None
+        length = (engine.MID_MIN - engine.OPEN_MIN) if engine.current_candle_start(now).hour < 13 else (engine.CLOSE_MIN - engine.MID_MIN)
+        covered = (part.index[-1] + pd.Timedelta(minutes=30) - start).total_seconds() / 60
+        frac = min(max(covered / length, 0.1), 1.0)
+        return float(part["Volume"].sum()) / frac
+    except Exception:
+        return None
+
 def _money(x: float) -> str:
     return f"${x:,.2f}"
 
@@ -116,6 +136,8 @@ def format_preclose(sym: str, sig: dict, minutes_left: int) -> str:
     return (f"⚠️ {sym}: trading {side} hub, ~{minutes_left} min before the 4H close\n"
             f"Now {_money(sig['price'])} vs hub {zone} ({sig['sessions']} sessions)\n"
             f"If the candle closes {'above' if up else 'below'} {_money(sig['edge'])}, that's the breakout.\n"
+            + (f"Volume: {'✓ confirming' if sig.get('vol_ok') else '✗ light so far. It only counts if volume picks up by the close'}\n"
+               if sig.get("vol_ok") is not None else "")
             + plan_lines(sig["price"], sig["edge"], sig["target"], sig["direction"], sig["reached"], sig["shelf"])
             + (f"\n{hist}" if hist else ""))
 
@@ -396,7 +418,7 @@ def preclose_all() -> list[str]:
             try:
                 c4 = load_4h(sym, SCAN_DAYS)
                 res = engine.analyze(c4, SETTINGS)
-                sig = engine.preclose_check(res, data.latest_price(sym), SETTINGS)
+                sig = engine.preclose_check(res, data.latest_price(sym), SETTINGS, forming_volume(sym))
                 if not sig:
                     continue
                 msg = format_preclose(sym, sig, minutes_left) + earnings.alert_line(sym)

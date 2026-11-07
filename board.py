@@ -57,7 +57,8 @@ def _board_status(c4: pd.DataFrame, res: dict) -> dict:
 # the new rules would "find" different past breakouts and quietly rewrite history. So: past signals keep
 # their old outcomes (resolved with the rules they were logged under), and only breakouts after the change
 # are logged under the new rules.
-_RULE_KEYS = ("min_sessions", "k", "horizon", "target_atr", "shelf_min_atr")
+_RULE_KEYS = ("min_sessions", "k", "horizon", "target_atr", "shelf_min_atr", "vol_mult", "vol_window")
+_OLD_DEFAULTS = dict(min_sessions=5, vol_mult=0.0)     # the rules the record was built under before tracking began
 
 
 def _rules_now() -> dict:
@@ -72,7 +73,9 @@ def _rules_check():
         stored = None
     if stored is None:
         # first run with this tracking: the stored record was built under the previous default (5 sessions)
-        stored = dict(cur, min_sessions=5) if cur["min_sessions"] != 5 else cur
+        stored = dict(cur, **_OLD_DEFAULTS)
+    else:
+        stored = dict(cur, **{k: v for k, v in _OLD_DEFAULTS.items() if k not in stored}, **stored)   # keys added later: old values
     if stored != cur:
         db.set_setting("record_rules_prev", json.dumps(stored))
         try:      # from the last sweep under the old rules, so breakouts since then get logged under the new ones
