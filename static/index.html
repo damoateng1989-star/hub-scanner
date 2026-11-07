@@ -829,7 +829,7 @@ body.brief-open .sf-hello { display: none; }
 .setup-tabs small { padding: 1px 7px; border-radius: 99px; background: #222326; color: #C3C7CF; font: 700 12px var(--sans); }
 .setup-tabs i { font-style: normal; font: 700 10px var(--sans); color: #F2C14E; text-transform: uppercase; letter-spacing: .04em; }
 .setup-about { margin: 0 0 12px; color: #A9AEB8; font-size: 14.5px; }
-.rec-tabs { display: flex; gap: 8px; margin: 0 0 16px; overflow-x: auto; scrollbar-width: none; }
+.rec-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; overflow: visible; }
 .rec-tabs button { flex: none; text-align: left; padding: 10px 14px !important; border-radius: 12px !important; border: 1px solid #313235 !important; background: #141518 !important; cursor: pointer; }
 .rec-tabs button.on { border-color: rgba(61,214,140,.55) !important; background: rgba(61,214,140,.08) !important; }
 .rec-tabs b { display: block; font: 700 14px var(--sans); color: #E9EBEF; } .rec-tabs small { color: #9AA0AC; font-size: 12px; }
@@ -1442,10 +1442,12 @@ html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, 
 </style>
 <style>
 /* results on wide screens: tabs wrap instead of running off the edge; section labels in the app font */
-@media (min-width: 761px) {
-  .rec-tabs { flex-wrap: wrap; overflow: visible; }
-  .rec-tabs button { flex: 1 1 150px; max-width: 220px; }
-}
+.rec-tabs button { flex: 1 1 150px !important; max-width: 220px; }
+.rec-tabs button.tiny small { color: var(--muted); }
+.rec-tabs .beta-tag { font: 700 10px var(--sans) !important; letter-spacing: .06em; text-transform: uppercase; color: var(--snap) !important; border: 0 !important; padding: 0 !important; background: none !important; }
+.rec-tabs small { white-space: normal; }
+@media (max-width: 760px) { .rec-tabs { display: grid !important; grid-template-columns: 1fr 1fr; } .rec-tabs button { max-width: none; min-width: 0; } }
+#record { padding-bottom: 40px; }
 .eyebrow { font-family: var(--sans) !important; font-weight: 600 !important; font-size: 11px !important; letter-spacing: .14em !important; }
 .rank-h { align-items: center !important; } .rank-h .eyebrow { line-height: 1.2; }
 #record > .lede { max-width: 760px; }
@@ -3849,16 +3851,22 @@ async function loadRecord() {
     ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]];
   $("record").innerHTML = `
     <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
-      return `<button class="${RECORD_PAT === k ? "on" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${x.closed ? `${x.win_rate ?? "–"}% winners · ${x.closed} done` : "no results yet"}</small></button>`; }).join("")}</div>
+      const tiny = x.closed && x.closed < 5;
+      const sub = !x.closed ? "no results yet"
+        : tiny ? `${x.closed} done · win ${x.win_rate ?? "–"}% · <span class="beta-tag">beta</span>`
+        : `${x.win_rate ?? "–"}% winners · ${x.closed} done`;
+      return `<button class="${RECORD_PAT === k ? "on" : ""}${tiny ? " tiny" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${sub}</small></button>`; }).join("")}</div>
     <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.</p>
-    <div class="stats" style="margin-top:0">
+    ${st.closed && st.closed < 5 ? `<div class="note"><b>Too few to judge yet.</b> This pattern has ${st.closed} completed signal${st.closed === 1 ? "" : "s"}, so the numbers below are a count, not a record. Hubs are NextShelf's tested setup.</div>
+    <div class="note">${st.closed} completed · ${st.win_rate == null ? "–" : st.win_rate + "%"} winners · avg ${sign(st.avg_ret)} · ${st.open} open now</div>`
+    : `<div class="stats" style="margin-top:0">
       <div><b>${st.closed}</b><span>Completed signals</span></div>
       <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
       <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>Avg per signal</span></div>
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
     ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}${st.against_trend ? ` · ${st.against_trend} skipped (fought the market regime)` : ""}</div>` : ""}
-    ${volSplit(st.by_volume)}${gradeSplit(st.by_grade)}
+    ${volSplit(st.by_volume)}${gradeSplit(st.by_grade)}`}
     ${winRankHTML(r.by_symbol || [])}
     ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every signal</div><div class="tbl" style="margin-top:0"><table>
       <tr><th>Breakout</th><th>Stock</th><th></th><th>Entry</th><th>Target</th><th>Result</th><th>Return</th></tr>
@@ -3869,7 +3877,8 @@ async function loadRecord() {
         <td>${money(x.entry)}</td><td>${money(x.target)}</td>
         <td style="color:var(${c})">${w}</td>
         <td style="color:var(${x.ret_pct == null ? "--muted" : x.ret_pct > 0 ? "--up" : "--down"})">${sign(x.ret_pct)}</td></tr>`; }).join("")}
-    </table></div>` : `<div class="empty" style="margin-top:14px">No signals yet. The first ones appear after the next breakout on the board.</div>`}`;
+    </table></div>` : `<div class="empty" style="margin-top:14px">No signals yet. The first ones appear after the next breakout on the board.</div>`}
+    <p class="note rec-end" style="text-align:center;margin-top:28px">End of record</p>`;
 }
 
 // the 20-second lesson lives in Learn now; it no longer plays on Today
