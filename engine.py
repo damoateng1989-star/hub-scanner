@@ -65,6 +65,22 @@ def to_4h(bars: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
     return out.drop(columns="_end")
 
 
+
+def to_daily(c4: pd.DataFrame) -> pd.DataFrame:
+    """4H candles -> daily candles (regular hours only, finished candles).
+    Aggregates the 4H frame, so the daily view can never disagree with the
+    4H view and costs no new fetch. No partial-day candle: only finished
+    4H candles are in the frame."""
+    if c4.empty:
+        return c4
+    df = c4.tz_convert(NY)
+    agg = dict(Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"), Close=("Close", "last"))
+    if "Volume" in df.columns:
+        agg["Volume"] = ("Volume", "sum")
+    out = df.groupby(df.index.normalize()).agg(**agg)
+    out.index.name = None
+    return out
+
 def candle_end(ts: pd.Timestamp) -> pd.Timestamp:
     """4H candles are labelled by their start time; this returns when they close."""
     return ts + pd.Timedelta(hours=4) if ts.hour == 9 else ts.normalize() + pd.Timedelta(hours=16)

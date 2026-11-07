@@ -169,6 +169,9 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 .broker:hover { color: var(--ink, inherit); border-color: var(--faint, rgba(128,128,128,.5)); }
 .broker.logo-only, a.broker:has(> .broker-logo) { padding: 4px 6px !important; line-height: 0; }
 .broker-logo { width: 18px; height: 18px; vertical-align: -3px; display: block; }
+.seg{display:inline-flex;background:var(--sunk,#1A1C22);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer}
+.seg button.on{background:#fff;color:#111;font-weight:600}
 </style>
 
 <style>
@@ -326,6 +329,7 @@ const STATES = { forming: ["Inside hub", "--hub"], watching: ["Hub just ended", 
   breakdown: ["Breakdown ↓", "--down"], "follow-through": ["Hit shelf", "--ft"], "snap-back": ["Failed breakout", "--snap"],
   stalled: ["Timed out", "--stall"], none: ["Waiting for a hub", "--idle"] };
 const SYM = decodeURIComponent(location.pathname.split("/").pop()).toUpperCase();
+let TF = "4h", chart = null;
 document.title = `${SYM} · NextShelf`;
 
 function summary(st) {
@@ -348,10 +352,10 @@ function summary(st) {
   }
 }
 
-async function load() {
+async function load(tf = TF) {
   let d;
   try {
-    const r = await fetch(`/api/chart/${encodeURIComponent(SYM)}`);
+    const r = await fetch(`/api/chart/${encodeURIComponent(SYM)}?tf=${encodeURIComponent(tf)}`);
     d = await r.json();
     if (!r.ok) throw new Error(d.detail || r.statusText);
   } catch (e) {
@@ -361,6 +365,11 @@ async function load() {
       <button class="btnx" onclick="location.reload()">Try again</button></div>`;
     return;
   }
+  TF = d.tf || tf;
+  render(d);
+}
+
+function render(d) {
   if (d.guest) $("signin").innerHTML = ` &nbsp;·&nbsp; <a href="/login" style="color:var(--hub)">Sign in</a>`;
   const st = d.status, [label, color] = STATES[st.state] || ["", "--idle"], s = d.stats;
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
@@ -368,7 +377,11 @@ async function load() {
     <header>
       <h1>${esc(d.symbol)}<small>${money(st.last_close)}</small></h1>
       <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <span class="badge" style="--c:var(${color})">${label}</span></span>
+        <span class="badge" style="--c:var(${color})">${label}</span>
+        <span class="seg" role="tablist" aria-label="Chart timeframe">
+          <button type="button" data-tf="4h" class="${TF === "4h" ? "on" : ""}" role="tab" aria-selected="${TF === "4h"}">4H</button>
+          <button type="button" data-tf="1d" class="${TF === "1d" ? "on" : ""}" role="tab" aria-selected="${TF === "1d"}">Daily</button>
+        </span></span>
     </header>
     <p class="sum">${summary(st)}</p>
     <div class="card"><div id="chart"></div>
@@ -377,7 +390,7 @@ async function load() {
         <span style="--c:var(--up)"><i class="dash"></i>Shelf above</span>
         <span style="--c:var(--down)"><i class="dash"></i>Shelf below</span>
         <span>▲▼ breakouts, labelled hit / failed / timed out</span>
-        <span>4H candles, regular hours, New York time</span>
+        <span>${d.tf === "1d" ? "Daily candles (hubs and breakouts still come from 4H closes)" : "4H candles"}, regular hours, New York time</span>
         ${d.tightening ? `<span style="--c:var(--snap)"><i></i>Tightening hubs (Lab, only you see this)</span>` : ""}
         ${d.setups && d.setups.lines.some(l => l.kind === "triangle") ? `<span style="--c:#F2C14E"><i></i>Triangles</span>` : ""}
         ${d.setups && d.setups.lines.some(l => l.kind.startsWith("channel")) ? `<span style="--c:#2FD4C0"><i></i>Channels</span>` : ""}
@@ -394,7 +407,7 @@ async function load() {
       <div><small>Reached shelf</small><b style="color:var(--ft)">${s["follow-through"]}%</b></div>
       <div><small>Win rate (entered at close)</small><b>${s.win_rate ?? "–"}%</b></div>
       <div><small>Avg per trade</small><b style="color:var(${(s.expectancy_pct ?? 0) > 0 ? "--up" : "--down"})">${sign(s.expectancy_pct)}</b></div>
-    </div><p class="note">Based on the candles shown on this chart. Past results don't guarantee future ones.</p>`
+    </div><p class="note">Based on 4H breakouts. Past results don't guarantee future ones.</p>`
     : `<p class="note">No completed breakouts in this period yet.</p>`}
     ${d.setups ? `<h2>Other <em>setups</em> <small style="font-size:12px;color:var(--snap)">beta</small></h2><div class="kv">
       ${[["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]].map(([k, l]) => {
@@ -406,6 +419,10 @@ async function load() {
       <div><small>Win rate</small><b>${d.tightening_stats.win_rate ?? "–"}%</b></div>
       <div><small>Avg per trade</small><b>${sign(d.tightening_stats.expectancy_pct)}</b></div></div>
       <p class="note">Test mode, visible only to admins. Members don't see tightening hubs or get alerts for them.</p>` : ""}`;
+
+  document.querySelectorAll(".seg button").forEach(b => {
+    b.onclick = () => { if (b.dataset.tf !== TF) { b.disabled = true; load(b.dataset.tf); } };
+  });
 
   if ($("watch")) $("watch").onclick = async (e) => {
     if (d.guest) {
@@ -419,12 +436,14 @@ async function load() {
   };
 
   const el = $("chart");
-  const chart = LightweightCharts.createChart(el, {
+  if (chart) { try { chart.remove(); } catch (e) {} }
+  const daily = d.tf === "1d";
+  chart = LightweightCharts.createChart(el, {
     autoSize: true,
     layout: { background: { color: "transparent" }, textColor: css("--muted"), fontFamily: "Geist Mono, ui-monospace, monospace", fontSize: 11 },
     grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
     rightPriceScale: { borderColor: css("--line") },
-    timeScale: { borderColor: css("--line"), timeVisible: true, secondsVisible: false },
+    timeScale: { borderColor: css("--line"), timeVisible: !daily, secondsVisible: false },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
   });
   const candles = chart.addCandlestickSeries({
@@ -433,10 +452,32 @@ async function load() {
   });
   candles.setData(d.candles);
 
+  // volume: own scale in the bottom pane, coloured by candle direction.
+  // Skipped entirely when the payload carries no volume (fail-open).
+  const hexA = (hex, a) => {
+    const m = /^#?([0-9a-f]{6})$/i.exec((hex || "").trim());
+    if (!m) return undefined;
+    const n = parseInt(m[1], 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  };
+  if (d.candles.length && typeof d.candles[0].volume === "number") {
+    const upV = hexA(css("--up"), .45), dnV = hexA(css("--down"), .45);
+    const vol = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol",
+                                           lastValueVisible: false, priceLineVisible: false });
+    vol.setData(d.candles.filter(c => typeof c.volume === "number").map(c => ({ time: c.time, value: c.volume,
+      color: c.close >= c.open ? upV : dnV })));
+    chart.priceScale("vol").applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
+    chart.priceScale("right").applyOptions({ scaleMargins: { top: 0.05, bottom: 0.25 } });
+  }
+
+  // on the daily view, overlay times (4H candle times) are floored to the day so they land on a daily bar
+  const dayStart = (ts) => { const dt = new Date(ts * 1000); return Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()) / 1000; };
+  const ot = (ts) => (daily ? dayStart(ts) : ts);
+
   // hubs: a top and bottom line for each hub (separate series so neighbouring hubs never join)
   const times = d.candles.map(c => c.time);
   d.hubs.forEach(h => {
-    const span = times.filter(t => t >= h.start && t <= h.end);
+    const span = times.filter(t => t >= ot(h.start) && t <= ot(h.end));
     if (span.length < 2) return;
     ["high", "low"].forEach(k => {
       const ser = chart.addLineSeries({ color: css("--hub"), lineWidth: h.active ? 3 : 2, priceLineVisible: false,
@@ -451,7 +492,7 @@ async function load() {
       [["ua", "ub"], ["la", "lb"]].forEach(([a, b]) => {
         const ser = chart.addLineSeries({ color: css("--snap"), lineWidth: 2, lineStyle: LightweightCharts.LineStyle.Solid,
                                           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-        ser.setData([{ time: tp.start, value: tp[a] }, { time: tp.end, value: tp[b] }]);
+        if (ot(tp.end) > ot(tp.start)) ser.setData([{ time: ot(tp.start), value: tp[a] }, { time: ot(tp.end), value: tp[b] }]);
       });
     });
   }
@@ -463,7 +504,7 @@ async function load() {
       [["ua", "ub"], ["la", "lb"]].forEach(([a, b]) => {
         const ser = chart.addLineSeries({ color: col, lineWidth: l.live ? 2 : 1, lineStyle: l.live ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dotted,
                                           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
-        if (l.end > l.start) ser.setData([{ time: l.start, value: l[a] }, { time: l.end, value: l[b] }]);
+        if (ot(l.end) > ot(l.start)) ser.setData([{ time: ot(l.start), value: l[a] }, { time: ot(l.end), value: l[b] }]);
       });
     });
     const p = st.last_close;
@@ -485,7 +526,7 @@ async function load() {
   // breakout markers
   const word = { "follow-through": "hit", "snap-back": "failed", stalled: "timed out", pending: "live" };
   candles.setMarkers(d.trades.map(t => ({
-    time: t.time, position: t.direction === 1 ? "belowBar" : "aboveBar",
+    time: ot(t.time), position: t.direction === 1 ? "belowBar" : "aboveBar",
     shape: t.direction === 1 ? "arrowUp" : "arrowDown",
     color: t.direction === 1 ? css("--up") : css("--down"),
     text: t.chase ? "chase" : word[t.outcome] || "",

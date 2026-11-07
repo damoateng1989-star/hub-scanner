@@ -962,9 +962,9 @@ async def gamma_walls(symbol: str, u: dict = User):
 
 
 @app.get("/api/chart/{symbol}")
-async def chart_data(symbol: str, u: dict = User):
+async def chart_data(symbol: str, tf: str = "4h", u: dict = User):
     try:
-        d = await run_in_threadpool(board.chart, symbol, bool(u and u["is_admin"]))
+        d = await run_in_threadpool(lambda: board.chart(symbol, tf=tf, lab_mode=bool(u and u["is_admin"])))
     except Exception as e:
         raise HTTPException(400, str(e))
     d["watching"] = bool(u) and d["symbol"] in db.user_symbols(u["id"])

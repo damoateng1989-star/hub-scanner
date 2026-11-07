@@ -490,11 +490,14 @@ def _seg(p, idx, t, a, b, kind, live):
                 ua=round(ua, 2), ub=round(ub, 2), la=round(da, 2), lb=round(db_, 2))
 
 
-def chart(sym: str, lab_mode: bool = False) -> dict:
+def chart(sym: str, tf: str = "4h", lab_mode: bool = False) -> dict:
     sym = scanner.clean_symbol(sym)
+    if tf not in ("4h", "1d"):
+        tf = "4h"          # unknown timeframe falls back, never 400s
     c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
     if c4.empty:
         raise ValueError("no price data")
+    frame = engine.to_daily(c4) if tf == "1d" else c4     # the view's candles; all analysis stays on c4
     res = engine.analyze(c4, scanner.SETTINGS)
     st = engine.current_status(c4, res, scanner.SETTINGS)
     idx = c4.index
@@ -502,14 +505,16 @@ def chart(sym: str, lab_mode: bool = False) -> dict:
     def t(ts):   # chart library uses UTC seconds; shift so labels read in New York time
         return int(ts.tz_localize(None).timestamp())
 
-    candles = [dict(time=t(i), open=round(r.Open, 2), high=round(r.High, 2), low=round(r.Low, 2), close=round(r.Close, 2))
-               for i, r in c4.iterrows()]
+    has_vol = "Volume" in frame.columns
+    candles = [dict(time=t(i), open=round(r.Open, 2), high=round(r.High, 2), low=round(r.Low, 2), close=round(r.Close, 2),
+                    volume=(int(r.Volume) if has_vol and pd.notna(r.Volume) else None))
+               for i, r in frame.iterrows()]
     hubs = [dict(start=t(idx[h["start_i"]]), end=t(idx[h["end_i"]]), low=round(h["low"], 2), high=round(h["high"], 2),
                  sessions=h["sessions"], active=h["active"]) for h in res["hubs"]]
     trades = [dict(time=t(idx[x["i0"]]), direction=x["direction"], target=round(x["target"], 2),
                    outcome=x["outcome"], chase=x["chase"],
                    outcome_time=t(idx[x["oi"]]) if x["oi"] is not None else None) for x in res["trades"]]
-    out = dict(symbol=sym, candles=candles, hubs=hubs, trades=trades, status=st,
+    out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st,
                stats=engine.stats(res["trades"]), watching=db.get_ticker(sym) is not None)
     try:      # other setups, drawn as lines on the chart
         pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
