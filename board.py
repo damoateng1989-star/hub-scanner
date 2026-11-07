@@ -20,6 +20,8 @@ import universe
 log = logging.getLogger("board")
 _lock = threading.Lock()
 BOARD_DAYS = int(os.getenv("BOARD_DAYS", os.getenv("SCAN_DAYS", 260)))
+REGIME_INDEX = os.getenv("REGIME_INDEX", "SPY").strip().upper()
+REGIME_DAYS = int(os.getenv("REGIME_DAYS", 50))
 MIN_DOLLAR_VOLUME = float(os.getenv("MIN_DOLLAR_VOLUME", 10_000_000))   # 20-day avg daily $ volume
 MIN_MARKET_CAP = float(os.getenv("MIN_MARKET_CAP", 25_000_000_000))      # market cap, dollars
 
@@ -49,6 +51,22 @@ def _board_status(c4: pd.DataFrame, res: dict) -> dict:
     return st
 
 
+def _regime_tag(direction: int, bt=None) -> str | None:
+    """"with" if the breakout runs with the stored market regime, "against" if it fights it,
+    None when no regime is stored yet (fail open: untagged signals stay in the stats).
+    Only breakouts from the last few days are tagged: the stored regime says nothing about an old
+    breakout (a newly added ticker's history, or a rebuilt record), so those stay untagged."""
+    try:
+        if bt is not None and pd.Timestamp.now(tz="UTC") - pd.Timestamp(bt).tz_convert("UTC") > pd.Timedelta(days=4):
+            return None
+        rg = json.loads(db.get_setting("regime") or "null")
+    except Exception:
+        return None
+    if not rg or rg.get("regime") not in ("up", "down"):
+        return None
+    return "with" if (rg["regime"] == "up") == (direction == 1) else "against"
+
+
 def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern: str = "hub", trades: list | None = None):
     idx = res["close"].index
     for t in (res["trades"] if trades is None else trades):
@@ -65,6 +83,7 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             target_kind="shelf" if t["shelf"] else "atr",
             outcome=t["outcome"], outcome_time=idx[t["oi"]].isoformat() if t["oi"] is not None else None,
             ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=int(bool(t["chase"])),
+            regime=_regime_tag(t["direction"], bt),
             rvol=engine.rvol(c4, t["i0"]))
 
 
@@ -170,6 +189,11 @@ def _scan_board() -> int:
                 if len(c4) < scanner.SETTINGS.window + 15:
                     continue
                 res = engine.analyze(c4, scanner.SETTINGS)
+                if sym == REGIME_INDEX:
+                    rg = engine.regime_from_closes(c4, REGIME_DAYS)
+                    if rg:
+                        rg.update(index=REGIME_INDEX, days=REGIME_DAYS, as_of=pd.Timestamp.now(tz=engine.NY).isoformat())
+                        db.set_setting("regime", json.dumps(rg))
                 bs = _board_status(c4, res)
                 if dv20 is not None:
                     bs["dv20"] = round(dv20)
@@ -211,6 +235,7 @@ def _scan_board() -> int:
         db.set_setting("lab", json.dumps(dict(
             updated=pd.Timestamp.now(tz=engine.NY).isoformat(), symbols=done, days=BOARD_DAYS,
             skipped_illiquid=skipped_illiquid, skipped_smallcap=skipped_smallcap,
+            regime=json.loads(db.get_setting("regime") or "null"),
             hub=engine.stats(lab_hub), tightening=engine.stats(lab_tri), live=lab_live,
             patterns={k: engine.stats(v) for k, v in lab_pat.items()})))
         log.info("board scan done: %d/%d symbols (%d skipped: illiquid, %d skipped: small-cap)",
@@ -310,11 +335,12 @@ def board() -> dict:
     setups.sort(key=lambda x: (rank.get(x["state"], 9), x["symbol"]))
     for r in rows:
         r.pop("setups", None)
-    return dict(updated=updated, universe=len(rows), live=live, near=near, forming=forming, recent=recent, setups=setups)
+    return dict(updated=updated, universe=len(rows), live=live, near=near, forming=forming, recent=recent, setups=setups,
+                regime=json.loads(db.get_setting("regime") or "null"))
 
 
 def _summary(sigs: list) -> dict:
-    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
+    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"] and s.get("regime") != "against"]
     rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
     return dict(signals=len(sigs), closed=len(closed),
                 reached=round(100 * sum(s["outcome"] == "follow-through" for s in closed) / len(closed), 1) if closed else None,
@@ -340,7 +366,7 @@ def _by_volume(closed: list[dict]) -> dict:
 
 def track_record(pattern: str = "hub") -> dict:
     sigs = db.all_signals(1000, pattern)
-    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
+    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"] and s.get("regime") != "against"]
     rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
     wins = [r for r in rets if r > 0]
     by = {o: sum(1 for s in closed if s["outcome"] == o) for o in ("follow-through", "snap-back", "stalled")}
@@ -348,6 +374,7 @@ def track_record(pattern: str = "hub") -> dict:
         since=record_start(),
         stats=dict(signals=len(sigs), closed=len(closed), open=sum(1 for s in sigs if s["outcome"] == "pending"),
                    chases=sum(1 for s in sigs if s["chase"]),
+                   against_trend=sum(1 for s in sigs if s.get("regime") == "against"),
                    win_rate=round(100 * len(wins) / len(rets), 1) if rets else None,
                    avg_ret=round(sum(rets) / len(rets), 2) if rets else None,
                    avg_win=round(sum(wins) / len(wins), 2) if wins else None,

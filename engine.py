@@ -218,6 +218,20 @@ def rvol_word(r: float | None) -> str | None:
     return "strong" if r >= RVOL_STRONG else "normal" if r >= RVOL_NORMAL else "light"
 
 
+def regime_from_closes(c4: pd.DataFrame, days: int = 50) -> dict | None:
+    """Market regime from an index's 4H candles: the last daily close vs its N-day
+    average. Returns {"regime": "up"|"down", "close": ..., "sma": ...}, or None when
+    there is not enough history to judge (fewer than `days` daily closes): fail open."""
+    if c4 is None or c4.empty or "Close" not in c4.columns:
+        return None
+    daily = c4["Close"].groupby(c4.index.normalize()).last()
+    if len(daily) < days:
+        return None
+    sma = float(daily.rolling(days).mean().iloc[-1])
+    close = float(daily.iloc[-1])
+    return dict(regime="up" if close > sma else "down", close=round(close, 2), sma=round(sma, 2))
+
+
 WICK_LOOKBACK = 240        # 4H candles (~4 months) to look back for an old high / low
 
 

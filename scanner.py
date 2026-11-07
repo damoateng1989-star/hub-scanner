@@ -199,6 +199,18 @@ def describe(sym: str, st: dict) -> str:
     return line
 
 
+def regime_allows(direction: int) -> bool:
+    """True when a breakout's direction runs with the stored market regime.
+    No regime stored yet (first sweep after deploy): fail open, allow everything."""
+    try:
+        rg = json.loads(db.get_setting("regime") or "null")
+    except Exception:
+        return True
+    if not rg or rg.get("regime") not in ("up", "down"):
+        return True
+    return (rg["regime"] == "up") == (direction == 1)
+
+
 def scan_symbol(sym: str) -> tuple[dict, list[str]]:
     """Scan one ticker. The first scan only sets a baseline; later scans alert on new events."""
     c4 = load_4h(sym, SCAN_DAYS)
@@ -225,6 +237,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                       "target": e["target"], "price": e["close"]})
                     if (gl := gamma.line(g)):
                         msg += "\n" + gl
+                if e["type"] in ("breakout", "breakdown") and not regime_allows(1 if e["type"] == "breakout" else -1):
+                    continue       # fights the market regime: no alert (the board still shows it)
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
                                 e["time"].isoformat(), msg):
                     # ring only for the newest candle (no burst of calls after downtime), and not for chases
@@ -254,6 +268,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 msg = format_pattern_event(sym, e)
                 if e["type"] in ("breakout", "breakdown"):
                     msg += earnings.alert_line(sym)
+                if e["type"] in ("breakout", "breakdown") and not regime_allows(1 if e["type"] == "breakout" else -1):
+                    continue       # fights the market regime: no alert
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
                     notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"])
                     sent.append(msg)
@@ -339,6 +355,8 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                 sig = engine.preclose_check(res, close, SETTINGS)
                 if not sig:
                     continue
+                if not regime_allows(sig["direction"]):
+                    continue       # its confirmation would be silenced by the regime filter: no early read either
                 up = sig["direction"] == 1
                 typ = "breakout" if up else "breakdown"
                 msg = (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if sig.get('shelf') else 'target'} (early read)\n"

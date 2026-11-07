@@ -3225,7 +3225,8 @@ async function loadBoard() {
     return;
   } finally { clearTimeout(slow); BOARD_LOADING = false; }
   BOARD = b; renderStrip(); if (!$("agent").classList.contains("run")) renderAgent({running: false, next: AGENT_NEXT});
-  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}` : "";
+  const rg = b.regime, rgTxt = rg && rg.regime ? ` · Market: ${rg.regime === "up" ? "uptrend" : "downtrend"} · ${rg.index} ${money(rg.close)} vs ${rg.days || 50}-day ${money(rg.sma)} · alerts on ${rg.regime === "up" ? "longs" : "shorts"} only` : "";
+  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}${rgTxt}` : "";
   if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
   $("board").innerHTML = setupTabs(b) + '<div id="setupBoard" hidden></div><div id="hubBoard">' +
@@ -3794,7 +3795,7 @@ async function loadRecord() {
       <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>Avg per signal</span></div>
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
-    ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}</div>` : ""}
+    ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}${st.against_trend ? ` · ${st.against_trend} skipped (fought the market regime)` : ""}</div>` : ""}
     ${volSplit(st.by_volume)}
     ${winRankHTML(r.by_symbol || [])}
     ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every signal</div><div class="tbl" style="margin-top:0"><table>

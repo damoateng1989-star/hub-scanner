@@ -283,7 +283,7 @@ def candidates(window: str, why: dict | None = None) -> list[dict]:
     why = why if why is not None else {}
     live_rows = _board()["live"]
     rows = [r for r in live_rows if _fresh(r, window) and r.get("hub") and r.get("target")]
-    why.update(breakouts=len(live_rows), fresh=len(rows), shorts_off=0, past_half=0, back_inside=0, earnings=0, wall=0, illiquid=0, smallcap=0, kept=0)
+    why.update(breakouts=len(live_rows), fresh=len(rows), shorts_off=0, past_half=0, back_inside=0, earnings=0, wall=0, illiquid=0, smallcap=0, regime=0, kept=0)
     if not rows:
         return []
     try:
@@ -296,6 +296,9 @@ def candidates(window: str, why: dict | None = None) -> list[dict]:
         if d == -1 and not allow_short():
             why["shorts_off"] += 1
             continue
+        if not scanner.regime_allows(d):
+            why["regime"] += 1
+            continue       # fights the market regime: no paper entry
         import board as _bmod
         q = _bmod.quality_skip(r["symbol"], r.get("dv20"), r.get("mc"))
         if q:                  # a watchlist name (exempt from the scan skip) is still never paper-traded
@@ -342,7 +345,7 @@ def _why_text(w: dict) -> str:
     for k, label in (("past_half", "already past halfway to the target"), ("back_inside", "back inside the hub"),
                      ("earnings", "earnings within 7 days"), ("wall", "already through the gamma wall"),
                      ("shorts_off", "shorts are off"), ("illiquid", "too thin to trade"),
-                     ("smallcap", "too small to trade")):
+                     ("smallcap", "too small to trade"), ("regime", "fought the market regime")):
         if w.get(k):
             parts.append(f"{w[k]} {label}")
     if w.get("kept"):

@@ -93,6 +93,11 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    try:   # added later: market regime at breakout time ("with" / "against" the tape), for the regime filter
+        _conn.execute("ALTER TABLE signals ADD COLUMN regime TEXT")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     for _col, _ddl in [("kind", "TEXT DEFAULT 'share'"), ("occ", "TEXT"), ("expiry", "TEXT"), ("strike", "REAL"),
                        ("opt_iv", "REAL"), ("opt_delta", "REAL"), ("opt_premium", "REAL")]:
         try:   # added later: the paper OPTIONS experiment shares the journal table, kept apart by kind
