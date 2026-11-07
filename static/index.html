@@ -1476,7 +1476,8 @@ html[data-theme="light"] .bf-tag { background: color-mix(in srgb, var(--c) 16%, 
 .rec-tabs button { flex: 1 1 150px !important; max-width: 220px; }
 .rec-tabs button.tiny small { color: var(--muted); }
 .rec-tabs .beta-tag { font: 700 10px var(--sans) !important; letter-spacing: .06em; text-transform: uppercase; color: var(--snap) !important; border: 0 !important; padding: 0 !important; background: none !important; }
-.rec-tabs small { white-space: normal; }
+.rec-tabs small, .rec-tabs b { white-space: normal; overflow-wrap: anywhere; }
+.rec-tabs button { min-width: 0; overflow: hidden; }
 @media (max-width: 760px) { .rec-tabs { display: grid !important; grid-template-columns: 1fr 1fr; } .rec-tabs button { max-width: none; min-width: 0; } }
 #record { padding-bottom: 40px; }
 .eyebrow { font-family: var(--sans) !important; font-weight: 600 !important; font-size: 11px !important; letter-spacing: .14em !important; }
