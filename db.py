@@ -218,6 +218,14 @@ def set_board(symbol: str, status: str):
          "ON CONFLICT(symbol) DO UPDATE SET status=excluded.status, updated_at=CURRENT_TIMESTAMP", (symbol, status))
 
 
+def delete_board(symbol: str):
+    _run("DELETE FROM board WHERE symbol=?", (symbol,))
+
+
+def pending_signal_ids(symbol: str) -> set[str]:
+    return {r[0] for r in _run("SELECT id FROM signals WHERE symbol=? AND outcome='pending'", (symbol,)).fetchall()}
+
+
 def board_rows() -> list[dict]:
     return [dict(r) for r in _run("SELECT * FROM board ORDER BY symbol").fetchall()]
 

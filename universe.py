@@ -61,3 +61,26 @@ def describe() -> str:
     choice = os.getenv("BOARD_UNIVERSE", "").strip().lower() or "all"
     return {"all": "S&P 500 and Nasdaq-100 stocks plus major ETFs", "ndx": "Nasdaq-100 stocks", "sp500": "S&P 500 stocks",
             "etf": "major ETFs"}.get(choice, "stocks on the board")
+
+
+import json as _json
+import os as _os
+
+
+def _load_caps() -> dict:
+    try:
+        with open(_os.path.join(_os.path.dirname(__file__), "market_caps.json")) as f:
+            return {k.upper(): float(v) for k, v in _json.load(f)["caps"].items()}
+    except Exception:
+        return {}          # no snapshot: fail open, the cap filter never blocks
+
+
+MARKET_CAPS = _load_caps()
+
+
+def market_cap(symbol: str) -> float | None:
+    """Market cap in dollars, or None when unknown (ETFs, or a name missing from the
+    snapshot): None means fail open, never block on missing data."""
+    if symbol.upper() in ETFS:
+        return None        # ETFs have no market cap; the volume filter still applies
+    return MARKET_CAPS.get(symbol.upper())

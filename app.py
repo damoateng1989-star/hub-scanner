@@ -731,7 +731,10 @@ def storage_persistent() -> bool | None:
 @app.get("/api/info")
 def info(u: dict | None = Maybe):
     s = scanner.SETTINGS
+    _lab = json.loads(db.get_setting("lab") or "{}")
     return dict(storage_ok=storage_persistent() is not False, universe_name=universe.describe(), universe_size=len(universe.board_universe()),
+                liquid_symbols=_lab.get("symbols"), skipped_illiquid=_lab.get("skipped_illiquid", 0),
+                skipped_smallcap=_lab.get("skipped_smallcap", 0),
                 provider=data.provider(), telegram=telegram_bot.enabled(), telegram_linked=bool(u and u["telegram_chat"]),
                 phone=bool(u and u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
                 scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],

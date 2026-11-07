@@ -20,6 +20,8 @@ import universe
 log = logging.getLogger("board")
 _lock = threading.Lock()
 BOARD_DAYS = int(os.getenv("BOARD_DAYS", os.getenv("SCAN_DAYS", 260)))
+MIN_DOLLAR_VOLUME = float(os.getenv("MIN_DOLLAR_VOLUME", 10_000_000))   # 20-day avg daily $ volume
+MIN_MARKET_CAP = float(os.getenv("MIN_MARKET_CAP", 25_000_000_000))      # market cap, dollars
 
 
 def record_start() -> str:
@@ -66,6 +68,29 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             rvol=engine.rvol(c4, t["i0"]))
 
 
+def _dollar_volume_20d(bars) -> float | None:
+    """20-day average daily dollar volume from 30-min bars (Volume x Close, per NY session).
+    None when there is not enough data to judge (fewer than 5 sessions, or no Volume
+    column): fail open, never block a name on missing data."""
+    if bars is None or bars.empty or "Volume" not in bars.columns:
+        return None
+    day = bars.index.tz_convert("America/New_York").normalize()
+    dv = (bars["Volume"] * bars["Close"]).groupby(day).sum()
+    dv = dv[dv > 0].tail(20)
+    if len(dv) < 5:
+        return None
+    return float(dv.mean())
+
+
+def quality_skip(sym: str, dv20: float | None, mc: float | None) -> str | None:
+    """'illiquid' / 'smallcap' when a name fails a universe filter, else None (missing data = pass)."""
+    if dv20 is not None and dv20 < MIN_DOLLAR_VOLUME:
+        return "illiquid"
+    if mc is not None and mc < MIN_MARKET_CAP:
+        return "smallcap"
+    return None
+
+
 # live progress of the market sweep, read by the scanner agent on Discover
 SCAN = dict(running=False, done=0, total=0, current=None, started=None, finished=None, found=[])
 FIND_STATES = {"breakout_up": "breakout", "breakdown": "breakdown"}
@@ -87,12 +112,15 @@ def scan_board() -> int:
 
 def _scan_board() -> int:
     if True:
-        syms = sorted(set(universe.board_universe()) | {r["symbol"] for r in db.list_tickers()})
+        watch = {r["symbol"] for r in db.list_tickers()}
+        syms = sorted(set(universe.board_universe()) | watch)
         start = pd.Timestamp(record_start())
         now = pd.Timestamp.now(tz="UTC")
         SCAN.update(running=True, done=0, total=len(syms), current="loading prices", found=[],
                     started=pd.Timestamp.now(tz="UTC").isoformat())
         done = 0
+        skipped_illiquid = 0
+        skipped_smallcap = 0
         lab_hub, lab_tri, lab_live, lab_pat = [], [], [], {}
         bars, batch_end = {}, 0
         for k, sym in enumerate(syms):
@@ -108,11 +136,45 @@ def _scan_board() -> int:
             time.sleep(0.01)          # let web requests through between stocks so the site stays quick during a scan
             SCAN.update(current=sym, done=k)
             try:
-                c4 = engine.to_4h(bars.pop(sym, pd.DataFrame()), now=now)
+                raw = bars.pop(sym, pd.DataFrame())
+                dv20 = _dollar_volume_20d(raw)
+                mc = universe.market_cap(sym)
+                skip = None if sym in watch else quality_skip(sym, dv20, mc)
+                if skip:
+                    if skip == "illiquid":
+                        skipped_illiquid += 1
+                    else:
+                        skipped_smallcap += 1
+                    db.delete_board(sym)          # not shown, not counted (and no stale row left behind)
+                    pend = db.pending_signal_ids(sym)
+                    if pend:                      # signals already logged still get their outcome; no new ones
+                        c4 = engine.to_4h(raw, now=now)
+                        if len(c4) >= scanner.SETTINGS.window + 15:
+                            res = engine.analyze(c4, scanner.SETTINGS)
+                            idx = res["close"].index
+                            _record(sym, c4, res, start, trades=[t for t in res["trades"]
+                                                                 if f"{sym}|{idx[t['i0']].isoformat()}" in pend])
+                            if any(not i.startswith(f"{sym}|") for i in pend):     # beta patterns too
+                                try:
+                                    pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
+                                    for kind in patterns.KINDS:
+                                        if kind != "hub":
+                                            tr = [x for x in pa["trades"] if x["kind"] == kind
+                                                  and f"{kind}|{sym}|{idx[x['i0']].isoformat()}" in pend]
+                                            if tr:
+                                                _record(sym, c4, res, start, kind, tr)
+                                except Exception:
+                                    pass
+                    continue
+                c4 = engine.to_4h(raw, now=now)
                 if len(c4) < scanner.SETTINGS.window + 15:
                     continue
                 res = engine.analyze(c4, scanner.SETTINGS)
                 bs = _board_status(c4, res)
+                if dv20 is not None:
+                    bs["dv20"] = round(dv20)
+                if mc is not None:
+                    bs["mc"] = mc
                 db.set_board(sym, json.dumps(bs))
                 kind = FIND_STATES.get(bs.get("state"))
                 if not kind and bs.get("state") == "forming" and bs.get("near_edge"):
@@ -148,9 +210,11 @@ def _scan_board() -> int:
                 log.warning("board scan failed for %s: %s", sym, e)
         db.set_setting("lab", json.dumps(dict(
             updated=pd.Timestamp.now(tz=engine.NY).isoformat(), symbols=done, days=BOARD_DAYS,
+            skipped_illiquid=skipped_illiquid, skipped_smallcap=skipped_smallcap,
             hub=engine.stats(lab_hub), tightening=engine.stats(lab_tri), live=lab_live,
             patterns={k: engine.stats(v) for k, v in lab_pat.items()})))
-        log.info("board scan done: %d/%d symbols", done, len(syms))
+        log.info("board scan done: %d/%d symbols (%d skipped: illiquid, %d skipped: small-cap)",
+                 done, len(syms), skipped_illiquid, skipped_smallcap)
         threading.Thread(target=_warm_gamma, daemon=True).start()   # walls for the fresh breakouts, off the hot path
         return done
 
