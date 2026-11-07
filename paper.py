@@ -276,10 +276,14 @@ def _fresh(row: dict, window: str) -> bool:
     return t.normalize() < today and t.hour == 13 and (today - t.normalize()).days <= 4
 
 
-def candidates(window: str) -> list[dict]:
-    """Fresh hub breakouts, still in the first half of the move, ranked by reward : risk at today's price."""
+def candidates(window: str, why: dict | None = None) -> list[dict]:
+    """Fresh hub breakouts, still in the first half of the move, ranked by reward : risk at today's price.
+    Pass a dict as `why` to get the filter counts back (for the daily no-trade note)."""
     from board import board as _board
-    rows = [r for r in _board()["live"] if _fresh(r, window) and r.get("hub") and r.get("target")]
+    why = why if why is not None else {}
+    live_rows = _board()["live"]
+    rows = [r for r in live_rows if _fresh(r, window) and r.get("hub") and r.get("target")]
+    why.update(breakouts=len(live_rows), fresh=len(rows), shorts_off=0, past_half=0, back_inside=0, earnings=0, wall=0, kept=0)
     if not rows:
         return []
     try:
@@ -290,6 +294,7 @@ def candidates(window: str) -> list[dict]:
     for r in rows:
         d = 1 if r["state"] == "breakout_up" else -1
         if d == -1 and not allow_short():
+            why["shorts_off"] += 1
             continue
         edge = r["hub"]["high"] if d == 1 else r["hub"]["low"]
         tgt = r["target"]
@@ -298,10 +303,12 @@ def candidates(window: str) -> list[dict]:
             continue
         half = edge + (tgt - edge) / 2
         if (px - edge) * d <= 0 or (px - half) * d > 0:     # back inside, or past the first half: skip, don't chase
+            why["back_inside" if (px - edge) * d <= 0 else "past_half"] += 1
             continue
         try:
             e = earnings.lookup(r["symbol"])
             if e and e.get("days") is not None and e["days"] <= 7:
+                why["earnings"] += 1
                 continue                                        # don't hold through an earnings report
         except Exception:
             pass
@@ -310,18 +317,69 @@ def candidates(window: str) -> list[dict]:
                  kind=r.get("target_kind") or "shelf", hub_start=r["hub"].get("start"), candle=r["last_candle"])
         gamma.attach(c)                       # a gamma wall between the edge and the shelf caps the target at the wall
         if c["gamma_capped"] and (c["target"] - px) * d <= 0:
+            why["wall"] += 1
             continue                          # price is already at/through the wall: the capped move is done, don't chase
         if c["gamma_capped"]:
             c["rr"] = abs(c["target"] - px) / max(abs(px - edge), 1e-9)
         out.append(c)
+    why["kept"] = len(out)
     # best reward : risk first (capped, so a price sitting right on the edge doesn't win on a tiny risk alone), then the bigger move
     return sorted(out, key=lambda c: (-min(c["rr"], 4.0), -abs(c["target"] / c["price"] - 1)))
+
+
+def _why_text(w: dict) -> str:
+    if not w:
+        return ""
+    if not w.get("fresh"):
+        return (f"none of the {w.get('breakouts', 0)} live breakouts confirmed on this close" if w.get("breakouts")
+                else "no live breakouts on the board")
+    parts = [f"{w['fresh']} fresh breakout{'s' if w['fresh'] != 1 else ''}"]
+    for k, label in (("past_half", "already past halfway to the target"), ("back_inside", "back inside the hub"),
+                     ("earnings", "earnings within 7 days"), ("wall", "already through the gamma wall"),
+                     ("shorts_off", "shorts are off")):
+        if w.get(k):
+            parts.append(f"{w[k]} {label}")
+    if w.get("kept"):
+        parts.append(f"{w['kept']} qualified but couldn't be entered (already traded, already held, or not shortable)")
+    return " · ".join(parts)
+
+
+def _record(window: str, traded: bool, reason: str):
+    """Keep the latest decision per window (Paper trades page), and tell the admins once a day when nothing fired."""
+    import json as _json
+    try:
+        db.set_setting(f"paper_check_{window}", _json.dumps(dict(at=_today_ny(), traded=traded, reason=reason)))
+    except Exception:
+        pass
+    if traded or window != "midday":
+        return
+    try:
+        m = _json.loads(db.get_setting("paper_check_morning") or "{}")
+        morning = m.get("reason") if m.get("at") == _today_ny() and not m.get("traded") else None
+        notify.admins("🧪 No paper trade today.\n"
+                      + (f"9:35 AM: {morning}\n" if morning else "")
+                      + f"1:54 PM: {reason}")
+    except Exception as e:
+        log.warning("no-trade note failed: %s", e)
+
+
+def last_checks() -> dict:
+    import json as _json
+    out = {}
+    for w in ("morning", "midday"):
+        try:
+            v = _json.loads(db.get_setting(f"paper_check_{w}") or "null")
+        except Exception:
+            v = None
+        if v:
+            out[w] = v
+    return out
 
 
 def enter_daily(window: str = "midday") -> str | None:
     """The paper trader's one trade a day: the best fresh, confirmed breakout from the whole board."""
     if not enabled() or source() != "board":
-        return None
+        return None      # paper trading off (or watchlist mode): nothing to record
     if window == "midday":                 # the 1:52 PM board sweep confirms the 1:30 close: wait for it
         import time as _t
         from board import SCAN
@@ -330,17 +388,23 @@ def enter_daily(window: str = "midday") -> str | None:
                 break
             _t.sleep(10)
     with _lock:
-        if entries_today() >= DAILY_MAX or len(db.open_trades()) >= MAX_OPEN:
+        if entries_today() >= DAILY_MAX:
+            return None      # already traded today
+        if len(db.open_trades()) >= MAX_OPEN:
+            _record(window, False, f"{MAX_OPEN} trades already open (the cap); no new entries until one closes")
             return None
         b = broker()
         try:
             if not b.is_open():
+                _record(window, False, "market closed (holiday or early close)")
                 return None
         except Exception as e:
             log.warning("clock check failed: %s", e)
+            _record(window, False, f"couldn't reach the paper broker ({str(e)[:80]})")
             return None
         busy = {t["symbol"] for t in db.open_trades()}
-        for c in candidates(window):
+        why: dict = {}
+        for c in candidates(window, why):
             hub_key = f"{c['symbol']}|{c['hub_start']}"
             if c["symbol"] in busy or db.hub_traded(hub_key):
                 continue
@@ -358,7 +422,9 @@ def enter_daily(window: str = "midday") -> str | None:
                    + (f"{gamma.line(c)}\n" if gamma.line(c) else "") +
                    f"Exit on a close back {'≤' if c['d'] == 1 else '≥'} {_money(c['edge'])}, or after {scanner.SETTINGS.horizon} candles.")
             notify.admins(msg)
+            _record(window, True, f"entered {c['symbol']}")
             return msg
+        _record(window, False, _why_text(why))
     return None
 
 
@@ -452,7 +518,7 @@ def summary(with_prices: bool = True) -> dict:
         log.warning("account fetch failed: %s", e)
     return dict(
         enabled=enabled(), broker=b.name, trade_usd=trade_usd(), allow_short=allow_short(), account=acct,
-        source=source(), daily_max=DAILY_MAX, max_open=MAX_OPEN, goal=GOAL,
+        source=source(), daily_max=DAILY_MAX, max_open=MAX_OPEN, goal=GOAL, last_checks=last_checks(),
         stats=dict(closed=len(closed), wins=len(wins),
                    win_rate=round(100 * len(wins) / len(closed), 1) if closed else None,
                    total_pnl=round(sum(t["pnl"] or 0 for t in closed), 2),

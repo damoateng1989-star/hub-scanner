@@ -2259,12 +2259,15 @@ async function loadPaper() {
         : `${esc(t.exit_reason)} · ${money(t.entry_price)} → ${money(t.exit_price)} · ${day(t.closed_at)}`}</small>
       <small class="r" style="font-size:12px;${pc(open ? t.unreal : t.pnl)}">${open ? (t.unreal == null ? "" : usd(t.unreal)) : usd(t.pnl)}</small>
     </div>`;
+  const lc = p.last_checks || {}, lcLine = ["morning", "midday"].filter(w => lc[w]).map(w =>
+    `<div><b>${w === "morning" ? "9:35 AM" : "1:54 PM"}</b> <span style="color:var(--muted)">${esc(lc[w].at || "")}</span> · ${lc[w].traded ? "✓ " : ""}${esc(lc[w].reason || "")}</div>`).join("");
   const goal = p.goal || 50, pct = Math.min(100, Math.round(100 * st.closed / goal));
   const how = p.source === "board" ? `${p.daily_max === 1 ? "One trade a day" : `Up to ${p.daily_max} trades a day`}: the best confirmed hub breakout on the whole board, entered after the close (about 1:54 PM for the 1:30 candle, 9:35 AM for yesterday's 4:00 candle), only while price is in the first half of the move. At most ${p.max_open} open at once.`
     : "Entries from members' watchlists, about 2 minutes before each 4-hour close.";
   $("paper").innerHTML = `
     <div class="pgoal"><div class="pgoal-h"><b>${st.closed} of ${goal}</b> closed trades collected <span>${pct}%</span></div><div class="pgoal-bar"><i style="width:${pct}%"></i></div>
-      <p class="note" style="margin:8px 0 0">${how} Judge the strategy once ${goal} trades have closed, not before.</p></div>
+      <p class="note" style="margin:8px 0 0">${how} Judge the strategy once ${goal} trades have closed, not before.</p>
+      ${lcLine ? `<div class="note" style="margin:10px 0 0;font-size:13px;line-height:1.6"><div style="font-weight:600;margin-bottom:2px">Latest entry checks</div>${lcLine}</div>` : ""}</div>
     <div class="stats" style="margin-top:0">
       <div><b>${st.closed}</b><span>Closed trades</span></div>
       <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
