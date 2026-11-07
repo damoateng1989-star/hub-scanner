@@ -16,13 +16,13 @@ MODULES = [
     ("Foundations", "What NextShelf looks for, and why.", [
         ("what-is-a-hub", "What a hub is, and why price pauses", 3, """
 <p>Most of the time a stock isn't trending. It's <b>pausing</b>: buyers and sellers roughly agree on a price, and the stock drifts sideways in a tight range. NextShelf calls that range a <b>hub</b>.</p>
-<p>A hub is defined by closes, not by every tick. When the 4-hour candles keep <b>closing inside the same narrow band for at least 5 sessions</b>, that band is the hub. The top of the band is the <b>hub top</b>; the bottom is the <b>hub bottom</b>.</p>
+<p>A hub is defined by closes, not by every tick. When the 4-hour candles keep <b>closing inside the same narrow band for at least 7 sessions</b>, that band is the hub. The top of the band is the <b>hub top</b>; the bottom is the <b>hub bottom</b>.</p>
 <h2>Why hubs matter</h2>
 <p>A pause stores up decisions. Traders who wanted to buy are waiting for proof; traders who wanted to sell are waiting too. When price finally <b>closes outside</b> the range, a lot of those decisions get made at once, which is why moves out of a tight range can be quick.</p>
 <p>That's not a guarantee. Plenty of hubs break, wobble and slide straight back in. That's why NextShelf pairs every breakout with a plan for being wrong.</p>
 <h2>What to do while a stock is inside its hub</h2>
 <p><b>Nothing.</b> Inside the hub, price is noise: small moves up and down that go nowhere. Trading inside it is how most people lose money while "waiting for the move." Let the stock show its hand first.</p>""",
-         ["A hub is a tight range where 4-hour candles keep closing for 5+ sessions.",
+         ["A hub is a tight range where 4-hour candles keep closing for 7+ sessions.",
           "Moves out of a hub can be fast because many traders were waiting.",
           "Inside the hub there's no trade. Wait for a close outside it."],
          ("A stock has closed inside $50–$51 for six sessions. What's the trade?",

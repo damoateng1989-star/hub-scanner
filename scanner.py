@@ -166,6 +166,7 @@ def format_event(sym: str, e: dict) -> str:
         return (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
                 f"4H close {'above' if up else 'below'} the hub\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"
+                f"Hub grade: {e.get('grade', 'ledge').capitalize()} ({e.get('grade_score', '?')}/6)\n"
                 + plan_lines(e["close"], edge, e["target"], d, (e["close"] - e["target"]) * d >= 0, e.get("shelf"))
                 + (f"\n{hist}" if hist else "") + f"\nCandle closed: {t}")
     if e["type"] == "follow-through":
@@ -197,6 +198,9 @@ def describe(sym: str, st: dict) -> str:
         line += (f"\n   shelves: ▲ {_money(up['level']) if up else 'none'} · "
                  f"▼ {_money(dn['level']) if dn else 'none'}")
     return line
+
+
+WAREHOUSE_ONLY = os.getenv("WAREHOUSE_ONLY", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
 def regime_allows(direction: int) -> bool:
@@ -239,6 +243,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         msg += "\n" + gl
                 if e["type"] in ("breakout", "breakdown") and not regime_allows(1 if e["type"] == "breakout" else -1):
                     continue       # fights the market regime: no alert (the board still shows it)
+                if WAREHOUSE_ONLY and e.get("grade") == "ledge":
+                    continue       # thin hub: graded, not gated, until the split proves it
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
                                 e["time"].isoformat(), msg):
                     # ring only for the newest candle (no burst of calls after downtime), and not for chases

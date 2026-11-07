@@ -28,7 +28,7 @@ class Settings:
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            min_sessions=int(os.getenv("MIN_SESSIONS", 5)),
+            min_sessions=int(os.getenv("MIN_SESSIONS", 7)),
             k=float(os.getenv("HUB_K", 1.5)),
             horizon=int(os.getenv("HORIZON", 10)),
             target_atr=float(os.getenv("TARGET_ATR", 1.0)),
@@ -123,6 +123,9 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
         else:
             i += 1
 
+    for h in hubs:
+        h.update(_hub_grade(c4, atr, h, s))
+
     # --- breakouts and outcomes
     trades = []
     for h in hubs:
@@ -181,13 +184,43 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
         events.append(dict(type="breakout" if t["direction"] == 1 else "breakdown",
                            time=idx[t["i0"]], close=float(close.iloc[t["i0"]]),
                            low=h["low"], high=h["high"], sessions=h["sessions"], target=t["target"],
-                           shelf=t["shelf"]))
+                           shelf=t["shelf"], grade=h["grade"], grade_score=h["score"]))
         if t["outcome"] != "pending":
             events.append(dict(type=t["outcome"], time=idx[t["oi"]], close=float(close.iloc[t["oi"]]),
                                low=h["low"], high=h["high"], target=t["target"], shelf=t["shelf"],
                                direction=t["direction"], candles=t["oi"] - t["i0"]))
     events.sort(key=lambda e: e["time"])
     return dict(close=close, atr=atr, hubs=hubs, trades=trades, events=events)
+
+
+def _hub_grade(c4: pd.DataFrame, atr: pd.Series, h: dict, s: Settings) -> dict:
+    """Warehouse vs ledge, scored 0-6 from sessions + width + volume. Missing data
+    scores a component neutral (1) rather than blocking the grade.
+    Volume is a proxy (no volume profile): candles traded during the hub vs the 20 candles
+    before it started, so the hub isn't compared with itself."""
+    base = s.min_sessions
+    sess = h["sessions"]
+    sess_pts = 0 if sess < base + 2 else 1 if sess <= base + 4 else 2
+    a = atr.iloc[h["end_i"]] if h["end_i"] < len(atr) else None
+    width_atr = (h["high"] - h["low"]) / a if a and a == a and a > 0 else None
+    width_pts = 1 if width_atr is None else 0 if width_atr < 0.75 else 1 if width_atr <= 1.5 else 2
+    ratio = None
+    try:
+        if "Volume" in c4.columns:
+            vol = c4["Volume"]
+            si, ei = max(h["start_i"], 0), h["end_i"]
+            before = vol.iloc[max(0, si - 20):si]
+            avg = float(before.mean()) if len(before) >= 10 else None
+            got = float(vol.iloc[si:ei + 1].mean())
+            ratio = got / avg if avg and avg > 0 and got == got else None
+    except Exception:
+        ratio = None
+    vol_pts = 1 if ratio is None else 0 if ratio < 1.0 else 1 if ratio <= 1.5 else 2
+    score = sess_pts + width_pts + vol_pts
+    return dict(grade="warehouse" if score >= 4 else "ledge", score=score,
+                parts=dict(sessions=sess_pts, width=width_pts, volume=vol_pts),
+                width_atr=None if width_atr is None else round(float(width_atr), 2),
+                vol_ratio=None if ratio is None else round(ratio, 2))
 
 
 RVOL_STRONG, RVOL_NORMAL = 1.5, 1.0   # breakout volume vs a normal candle in the same slot
@@ -285,6 +318,7 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         return st
     h = res["hubs"][-1]
     st["hub"] = dict(low=round(h["low"], 2), high=round(h["high"], 2), sessions=h["sessions"],
+                     grade=h.get("grade"), score=h.get("score"), parts=h.get("parts"),
                      start=close.index[h["start_i"]].isoformat(), end=close.index[h["end_i"]].isoformat(),
                      spark_from=h["start_i"] - (n - len(st["spark"])), spark_to=h["end_i"] - (n - len(st["spark"])))
     atr_now = float(res["atr"].iloc[-1])

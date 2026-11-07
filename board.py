@@ -1,6 +1,7 @@
 """Hub Board (market-wide scan), public track record, and chart data for ticker pages."""
 from __future__ import annotations
 
+import dataclasses
 import json
 import logging
 import os
@@ -51,6 +52,79 @@ def _board_status(c4: pd.DataFrame, res: dict) -> dict:
     return st
 
 
+# ---------------------------------------------------------------- hub-rule changes vs the record
+# The record is rebuilt from price history on every sweep. When the hub rules change (MIN_SESSIONS 5 -> 7),
+# the new rules would "find" different past breakouts and quietly rewrite history. So: past signals keep
+# their old outcomes (resolved with the rules they were logged under), and only breakouts after the change
+# are logged under the new rules.
+_RULE_KEYS = ("min_sessions", "k", "horizon", "target_atr", "shelf_min_atr")
+
+
+def _rules_now() -> dict:
+    return {k: getattr(scanner.SETTINGS, k) for k in _RULE_KEYS}
+
+
+def _rules_check():
+    cur = _rules_now()
+    try:
+        stored = json.loads(db.get_setting("record_rules") or "null")
+    except Exception:
+        stored = None
+    if stored is None:
+        # first run with this tracking: the stored record was built under the previous default (5 sessions)
+        stored = dict(cur, min_sessions=5) if cur["min_sessions"] != 5 else cur
+    if stored != cur:
+        db.set_setting("record_rules_prev", json.dumps(stored))
+        try:      # from the last sweep under the old rules, so breakouts since then get logged under the new ones
+            last = json.loads(db.get_setting("lab") or "{}").get("updated")
+        except Exception:
+            last = None
+        db.set_setting("rules_changed_at", pd.Timestamp(last or pd.Timestamp.now(tz="UTC")).tz_convert("UTC").isoformat())
+        log.info("hub rules changed %s -> %s: past signals keep their old outcomes", stored, cur)
+    db.set_setting("record_rules", json.dumps(cur))
+
+
+def _rules_changed_at():
+    v = db.get_setting("rules_changed_at")
+    return pd.Timestamp(v) if v else None
+
+
+def _legacy_settings():
+    try:
+        prev = json.loads(db.get_setting("record_rules_prev") or "null")
+        return dataclasses.replace(scanner.SETTINGS, **prev) if prev else None
+    except Exception:
+        return None
+
+
+def _resolve_orphans(sym: str, c4: pd.DataFrame, start: pd.Timestamp, produced: set):
+    """Pending signals the current rules no longer produce (logged under the old rules, or a name the
+    universe filter now skips): finish them with the rules they were logged under. Never logs new ones."""
+    pend = {i for i in db.pending_signal_ids(sym) - produced if not i.startswith("T|")}
+    if not pend:
+        return
+    legacy = _legacy_settings()
+    for st in ([legacy] if legacy else []) + [scanner.SETTINGS]:      # the rules they were logged under first
+        if not pend:
+            break
+        try:
+            res = engine.analyze(c4, st)
+            idx = res["close"].index
+            hub = [t for t in res["trades"] if f"{sym}|{idx[t['i0']].isoformat()}" in pend]
+            if hub:
+                _record(sym, c4, res, start, trades=hub, only_existing=True)
+            pa = patterns.analyze_all(c4, res, st)
+            for kind in patterns.KINDS:
+                if kind != "hub":
+                    tr = [x for x in pa["trades"] if x["kind"] == kind and f"{kind}|{sym}|{idx[x['i0']].isoformat()}" in pend]
+                    if tr:
+                        _record(sym, c4, res, start, kind, tr, only_existing=True)
+            pend = {i for i in db.pending_signal_ids(sym) - produced if not i.startswith("T|")}
+        except Exception as e:
+            log.warning("orphan resolve failed for %s: %s", sym, e)
+            return
+
+
 def _regime_tag(direction: int, bt=None) -> str | None:
     """"with" if the breakout runs with the stored market regime, "against" if it fights it,
     None when no regime is stored yet (fail open: untagged signals stay in the stats).
@@ -67,16 +141,26 @@ def _regime_tag(direction: int, bt=None) -> str | None:
     return "with" if (rg["regime"] == "up") == (direction == 1) else "against"
 
 
-def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern: str = "hub", trades: list | None = None):
+def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern: str = "hub", trades: list | None = None,
+            only_existing: bool = False) -> set:
+    """Upsert this symbol's signals. Returns the signal ids it touched."""
     idx = res["close"].index
+    changed = _rules_changed_at()
+    ids = set()
     for t in (res["trades"] if trades is None else trades):
         bt = idx[t["i0"]]
         if bt <= start:
             continue
         h = t["hub"]
+        sid = (f"{sym}|{bt.isoformat()}" if pattern == "hub" else f"T|{sym}|{bt.isoformat()}" if pattern == "tightening"
+               else f"{pattern}|{sym}|{bt.isoformat()}")
+        if changed is not None and bt < changed and not only_existing:
+            continue       # before the rule change: never back-fill, never rewrite (old signals are finished by _resolve_orphans)
+        if only_existing and db.get_signal(sid) is None:
+            continue
+        ids.add(sid)
         db.upsert_signal(
-            id=(f"{sym}|{bt.isoformat()}" if pattern == "hub" else f"T|{sym}|{bt.isoformat()}" if pattern == "tightening"
-                else f"{pattern}|{sym}|{bt.isoformat()}"), pattern=pattern,
+            id=sid, pattern=pattern,
             symbol=sym, direction=t["direction"],
             hub_low=round(h["low"], 2), hub_high=round(h["high"], 2), hub_sessions=h["sessions"],
             breakout_time=bt.isoformat(), entry=round(t["entry"], 2), target=round(t["target"], 2),
@@ -84,7 +168,9 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             outcome=t["outcome"], outcome_time=idx[t["oi"]].isoformat() if t["oi"] is not None else None,
             ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=int(bool(t["chase"])),
             regime=_regime_tag(t["direction"], bt),
+            grade=t["hub"].get("grade"),
             rvol=engine.rvol(c4, t["i0"]))
+    return ids
 
 
 def _dollar_volume_20d(bars) -> float | None:
@@ -137,6 +223,7 @@ def _scan_board() -> int:
         now = pd.Timestamp.now(tz="UTC")
         SCAN.update(running=True, done=0, total=len(syms), current="loading prices", found=[],
                     started=pd.Timestamp.now(tz="UTC").isoformat())
+        _rules_check()
         done = 0
         skipped_illiquid = 0
         skipped_smallcap = 0
@@ -165,25 +252,10 @@ def _scan_board() -> int:
                     else:
                         skipped_smallcap += 1
                     db.delete_board(sym)          # not shown, not counted (and no stale row left behind)
-                    pend = db.pending_signal_ids(sym)
-                    if pend:                      # signals already logged still get their outcome; no new ones
+                    if db.pending_signal_ids(sym):   # signals already logged still get their outcome; no new ones
                         c4 = engine.to_4h(raw, now=now)
-                        if len(c4) >= scanner.SETTINGS.window + 15:
-                            res = engine.analyze(c4, scanner.SETTINGS)
-                            idx = res["close"].index
-                            _record(sym, c4, res, start, trades=[t for t in res["trades"]
-                                                                 if f"{sym}|{idx[t['i0']].isoformat()}" in pend])
-                            if any(not i.startswith(f"{sym}|") for i in pend):     # beta patterns too
-                                try:
-                                    pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
-                                    for kind in patterns.KINDS:
-                                        if kind != "hub":
-                                            tr = [x for x in pa["trades"] if x["kind"] == kind
-                                                  and f"{kind}|{sym}|{idx[x['i0']].isoformat()}" in pend]
-                                            if tr:
-                                                _record(sym, c4, res, start, kind, tr)
-                                except Exception:
-                                    pass
+                        if len(c4) >= 30:
+                            _resolve_orphans(sym, c4, start, set())
                     continue
                 c4 = engine.to_4h(raw, now=now)
                 if len(c4) < scanner.SETTINGS.window + 15:
@@ -205,7 +277,7 @@ def _scan_board() -> int:
                     kind = "at edge"
                 if kind:
                     SCAN["found"].append(dict(symbol=sym, kind=kind))
-                _record(sym, c4, res, start)
+                produced = _record(sym, c4, res, start)
                 lab_hub += res["trades"]
                 try:      # more setups: triangles, channels, support & resistance
                     pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
@@ -215,7 +287,7 @@ def _scan_board() -> int:
                         if kind == "hub":
                             continue
                         tr = [x for x in pa["trades"] if x["kind"] == kind]
-                        _record(sym, c4, res, start, kind, tr)
+                        produced |= _record(sym, c4, res, start, kind, tr)
                         lab_pat.setdefault(kind, []).extend(tr)
                     for st in bs["setups"]:
                         if st["state"] in ("breakout_up", "breakdown"):
@@ -229,6 +301,7 @@ def _scan_board() -> int:
                     lab_live += _tri_live(sym, c4, res, tri)
                 except Exception as e:
                     log.warning("tightening scan failed for %s: %s", sym, e)
+                _resolve_orphans(sym, c4, start, produced)    # signals from the old rules: finish them, don't drop them
                 done += 1
             except Exception as e:
                 log.warning("board scan failed for %s: %s", sym, e)
@@ -352,6 +425,18 @@ def by_pattern() -> dict:
     return {k: dict(_summary(db.all_signals(1000, k)), name=patterns.KINDS[k]) for k in patterns.KINDS}
 
 
+def _by_grade(closed: list[dict]) -> dict:
+    """Did warehouse hubs follow through better than ledges? (labels only until the gate is on)"""
+    out = {}
+    for name in ("warehouse", "ledge"):
+        g = [s for s in closed if s.get("grade") == name]
+        rets = [s["ret_pct"] for s in g if s["ret_pct"] is not None]
+        out[name] = dict(n=len(g), reached=sum(1 for s in g if s["outcome"] == "follow-through"),
+                         win_rate=round(100 * sum(1 for r in rets if r > 0) / len(rets), 1) if rets else None,
+                         avg_ret=round(sum(rets) / len(rets), 2) if rets else None)
+    return out
+
+
 def _by_volume(closed: list[dict]) -> dict:
     """Did breakouts on strong volume do better than light ones? (labels only, the rules don't use volume)"""
     out = {}
@@ -380,7 +465,7 @@ def track_record(pattern: str = "hub") -> dict:
                    avg_win=round(sum(wins) / len(wins), 2) if wins else None,
                    avg_loss=round(sum(r for r in rets if r <= 0) / max(1, len(rets) - len(wins)), 2)
                    if len(rets) > len(wins) else None,
-                   by_outcome=by, by_volume=_by_volume(closed)),
+                   by_outcome=by, by_volume=_by_volume(closed), by_grade=_by_grade(closed)),
         signals=sigs[:200], pattern=pattern, patterns=by_pattern(), by_symbol=_by_symbol(closed))
 
 

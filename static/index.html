@@ -2937,7 +2937,7 @@ function briefHTML(sym, st, chart) {
   // ---- game plan in plain words
   const steps = [];
   if (key === "forming") {
-    steps.push(["#9fb3ff", `It's been closing inside <b>${money(h.low)}–${money(h.high)}</b> for ${h.sessions} sessions. Inside the hub there's <b>no trade</b>. Let it come to you.`]);
+    steps.push(["#9fb3ff", `It's been closing inside <b>${money(h.low)}–${money(h.high)}</b> for ${h.sessions} sessions${h.grade ? ` (hub grade: <b>${gradeWord(h)}</b>)` : ""}. Inside the hub there's <b>no trade</b>. Let it come to you.`]);
     steps.push(["#3DD68C", `A 4-hour <b>close above ${money(h.high)}</b> starts a long setup${up ? `, aiming for the shelf at <b>${money(up.level)}</b>` : ""}.`]);
     steps.push(["#FF6B5E", `A 4-hour <b>close below ${money(h.low)}</b> starts a short setup${dn ? `, aiming for the shelf at <b>${money(dn.level)}</b>` : ""}.`]);
   } else if (live) {
@@ -2952,7 +2952,7 @@ function briefHTML(sym, st, chart) {
     if (lv) { const u = lv.state === "breakout_up";
       steps.push([u ? "#3DD68C" : "#FF6B5E", `The trade in play is the <b>${esc(lv.name)} ${u ? "breakout ↑" : "breakdown ↓"}</b> (${u ? "bullish" : "bearish"}): it closed ${u ? "above" : "below"} <b>${money(lv.edge)}</b>, aiming for <b>${money(lv.target)}</b>.`]);
       steps.push(["#F2C14E", `It's wrong if a 4-hour candle <b>closes back ${u ? "below" : "above"} ${money(lv.edge)}</b>.`]); }
-    steps.push(["#9AA0AC", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 5+ sessions." : "The last hub breakout has played out."]);
+    steps.push(["#9AA0AC", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 7+ sessions." : "The last hub breakout has played out."]);
     if (up || dn) steps.push(["#9fb3ff", `Shelves to keep in mind: ${[up && `<b>${money(up.level)}</b> above`, dn && `<b>${money(dn.level)}</b> below`].filter(Boolean).join(" and ")}.`]);
   }
   const plan = `<div class="gp">${steps.map(([c, t], i) => `<div data-n="${i + 1}" style="--c:${c}"><span>${t}</span></div>`).join("")}</div>`;
@@ -3129,7 +3129,7 @@ function bRow(r, kind) {
     d = `Near the <b class="u-${up ? "up" : "down"}">${up ? "top" : "bottom"}</b> of its hub ${money(h.low)}–${money(h.high).slice(1)} · ${dist}% to ${up ? "breakout" : "breakdown"}` +
         (sh ? ` · next shelf <span class="u-${up ? "up" : "down"}">${money(sh.level)}</span>` : "");
   } else if (kind === "forming") {
-    d = `Hub ${money(h.low)}–${money(h.high).slice(1)} · ${h.sessions} sessions` + (r.state === "watching" ? " · just ended" : "");
+    d = `Hub ${money(h.low)}–${money(h.high).slice(1)} · ${h.sessions} sessions` + (h.grade ? ` · ${gradeWord(h)}` : "") + (r.state === "watching" ? " · just ended" : "");
   } else {
     d = `${{"follow-through": "Hit shelf", "snap-back": "Failed breakout", stalled: "Timed out"}[r.state]}`;
   }
@@ -3146,6 +3146,15 @@ function bGroup(title, rows, kind, empty) {
 let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
 const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
 function volChip(r) { const w = rvolWord(r); return w ? `<span class="vol-chip ${w}" title="Breakout-candle volume vs a normal candle at that time of day">Vol ${Number(r).toFixed(2)}× · ${w}</span>` : ""; }
+const gradeWord = (h) => h && h.grade ? `${h.grade === "warehouse" ? "Warehouse" : "Ledge"} · ${h.score}/6` : "";
+function gradeSplit(v) {
+  if (!v) return "";
+  const rows = ["warehouse", "ledge"].filter(k => v[k] && v[k].n);
+  if (!rows.length) return `<p class="note">Every new hub is now graded Warehouse or Ledge. Once some of those breakouts close, this shows whether warehouses did better.</p>`;
+  return `<div class="vol-split"><b>By hub grade</b>${rows.map(k => `<div><span class="vol-chip ${k === "warehouse" ? "strong" : "light"}">${k === "warehouse" ? "Warehouse 4–6" : "Ledge 0–3"}</span>
+    <span>${v[k].n} closed · reached the shelf ${v[k].reached} · win rate ${v[k].win_rate ?? "–"}${v[k].win_rate == null ? "" : "%"} · avg ${v[k].avg_ret == null ? "–" : (v[k].avg_ret > 0 ? "+" : "") + v[k].avg_ret + "%"}</span></div>`).join("")}
+    <p class="note" style="margin:6px 0 0">Labels only: the grade (base length, width and volume, scored 0–6) doesn't change the rules yet. If warehouses clearly win, it can become one.</p></div>`;
+}
 function volSplit(v) {
   if (!v) return "";
   const rows = ["strong", "normal", "light"].filter(k => v[k] && v[k].n);
@@ -3193,7 +3202,7 @@ function renderInstitutionalBoard(){
   const html=rows.map(r=>{
     const kind=r._kind,status=boardStatus(r,kind),h=r.hub||{},dist=boardDistance(r,kind),shelf=boardShelf(r,kind);
     const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
-    const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions":kind==="recent"?"Completed setup":"—";
+    const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"—";
     return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
       '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
@@ -3796,7 +3805,7 @@ async function loadRecord() {
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
     ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}${st.against_trend ? ` · ${st.against_trend} skipped (fought the market regime)` : ""}</div>` : ""}
-    ${volSplit(st.by_volume)}
+    ${volSplit(st.by_volume)}${gradeSplit(st.by_grade)}
     ${winRankHTML(r.by_symbol || [])}
     ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every signal</div><div class="tbl" style="margin-top:0"><table>
       <tr><th>Breakout</th><th>Stock</th><th></th><th>Entry</th><th>Target</th><th>Result</th><th>Return</th></tr>
