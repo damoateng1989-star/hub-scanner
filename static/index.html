@@ -977,12 +977,29 @@ html[data-theme="light"] body .board-actions .plain-btn, html[data-theme="light"
 html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !important; border-color: #0d1117 !important; color: #0d1117 !important; }
 .plain-row[hidden] { display: none !important; }
 .plain-panel { font-size: 14px; line-height: 1.55; color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; text-align: left; white-space: normal; }
-.plain-panel .plain-k { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.sika-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.sika-ava { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #2B2C2F; font-size: 14px; }
+html[data-theme="light"] .sika-ava { background: #E9E8E2; }
+.sika-name { font-size: 14px; font-weight: 800; }
+.sika-live { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; color: #22C55E; border: 1px solid #22C55E; border-radius: 999px; padding: 2px 7px; }
+.sika-live i { width: 6px; height: 6px; border-radius: 50%; background: #22C55E; display: inline-block; }
+.sika-analyzing { font-size: 13px; color: #9AA0AC; line-height: 1.9; }
+.sika-step { opacity: 0; transition: opacity .3s ease; }
+.sika-step.on { opacity: 1; }
+.sika-step.done { color: #646B78; }
+.sika-step.done::after { content: " ✓"; color: #22C55E; }
+.plain-body { display: none; }
+.plain-body.on { display: block; animation: sikaFade .35s ease; }
+@keyframes sikaFade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .plain-body.on { animation: none; } .sika-step { transition: none; } }
 .plain-panel b { font-weight: 700; }
 @media (max-width: 760px) {
   .board-table tr.plain-row { margin-top: -6px; padding-top: 0 !important; border-top: 0 !important; border-radius: 0 0 14px 14px; }
   .board-table tr.plain-row td { grid-column: 1 / -1; padding: 0 !important; }
   .board-table tr.plain-row td::before { content: none !important; }
+  /* 37a: iOS keeps :hover on the tapped row, and the global tr:hover td wash outranks the card's
+     td { background: none !important } — so opening a panel lit up the whole card. Phones only. */
+  .board-table tbody tr:hover td { background: none !important; }
 }
 .board-table .board-actions { flex-wrap: wrap; row-gap: 6px; } .board-table .board-actions .btnx { white-space: nowrap; flex: none; }
 </style>
@@ -2052,15 +2069,30 @@ function plainEnglish(r, kind) {
   return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 7+ sessions.";
 }
 function plainRow(r, kind) {
-  return `<tr class="plain-row" hidden><td colspan="9"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="plain-k">Plain English · Sika</div>${plainEnglish(r, kind)}</div></td></tr>`;
+  return `<tr class="plain-row" hidden><td colspan="9"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">🤖</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div></div></td></tr>`;
 }
 function togglePlain(btn) {
   const row = btn.closest("tr").nextElementSibling;
   if (!row || !row.classList.contains("plain-row")) return;
   const open = row.hidden;
+  const myRun = (btn.dataset.plainRun = (+btn.dataset.plainRun || 0) + 1);
   row.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
   btn.classList.toggle("on", open);
+  if (!open) return;
+  // staged reveal: the text is already built from the row; the steps are presentation (~1.6s, no network).
+  // The run guard ignores stale timers if the panel is closed and reopened mid-sequence.
+  const steps = row.querySelectorAll(".sika-analyzing .sika-step");
+  const body = row.querySelector(".plain-body");
+  const an = row.querySelector(".sika-analyzing");
+  an.style.display = "";
+  body.classList.remove("on");
+  steps.forEach(s => s.classList.remove("on", "done"));
+  steps.forEach((s, i) => {
+    setTimeout(() => { if (+btn.dataset.plainRun !== myRun) return; s.classList.add("on"); }, 300 + i * 450);
+    setTimeout(() => { if (+btn.dataset.plainRun !== myRun) return; s.classList.add("done"); }, 300 + (i + 1) * 450);
+  });
+  setTimeout(() => { if (+btn.dataset.plainRun !== myRun) return; an.style.display = "none"; body.classList.add("on"); }, 300 + steps.length * 450 + 350);
 }
 function summary(sym, st, key) {
   const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down;
