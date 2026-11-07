@@ -81,6 +81,19 @@
   .kv div { background: var(--surface); padding: 12px 14px; }
   .kv small { display: block; font-size: 12px; color: var(--muted); }
   .kv b { font: 500 18px var(--mono); }
+  /* Patch 33 — results redesign */
+  .scope { font-size: 12px; color: var(--muted); margin: -6px 0 10px; }
+  .kv.hero { grid-template-columns: repeat(2, 1fr); }
+  .kv.hero b { font-size: 26px; }
+  .reach { margin-top: 12px; }
+  .reach small, .winline small { display: block; font-size: 12px; color: var(--muted); }
+  .reach b, .winline b { font: 700 18px var(--sans); }
+  .reach .rbar { height: 6px; background: var(--line) !important; border: 0 !important; border-radius: 3px; margin-top: 6px; overflow: hidden; }
+  .reach .rbar i { display: block; height: 100%; background: var(--ft) !important; border-radius: 3px; }
+  .winline { margin-top: 10px; }
+  .winline .why { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .kv .tiny b { color: var(--muted) !important; font-weight: 600 !important; font-size: 15px !important; }
+  .tiny-tag { font-size: 11px; color: var(--snap); font-weight: 600; }
   .note { font-size: 13px; color: var(--muted); margin-top: 10px; }
   button { font: 500 14px var(--sans); border-radius: 10px; border: 1px solid var(--line-2); background: var(--ink);
            color: var(--bg); padding: 9px 14px; cursor: pointer; }
@@ -402,17 +415,27 @@ function render(d) {
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
     <h2>Past <em>results</em></h2>
-    ${s.n ? `<div class="kv">
+    <p class="scope">This ticker only · 4H breakouts</p>
+    ${s.n ? `<div class="kv hero">
       <div><small>Breakouts</small><b>${s.n}</b></div>
-      <div><small>Reached shelf</small><b style="color:var(--ft)">${s["follow-through"]}%</b></div>
-      <div><small>Win rate (entered at close)</small><b>${s.win_rate ?? "–"}%</b></div>
       <div><small>Avg per trade</small><b style="color:var(${(s.expectancy_pct ?? 0) > 0 ? "--up" : "--down"})">${sign(s.expectancy_pct)}</b></div>
-    </div><p class="note">Based on 4H breakouts. Past results don't guarantee future ones.</p>`
+    </div>
+    <div class="reach"><small>Reached shelf</small><b>${Math.round(s["follow-through"] * s.n / 100)} of ${s.n} · ${s["follow-through"]}%</b><div class="rbar"><i style="width:${s["follow-through"]}%"></i></div></div>
+    <div class="winline"><small>Win rate (entered at close)</small><b>${s.win_rate ?? "–"}%${s.trades != null ? ` <span style="font-size:12px;font-weight:500;color:var(--muted)">of ${s.trades} trade${s.trades === 1 ? "" : "s"}</span>` : ""}</b><p class="why">Reached shelf counts every breakout that got to the shelf, including ones already there on the breakout candle, too late to enter. Win rate counts only the trades you could have entered at the close, and how many of them finished in profit.</p></div>
+    <p class="note">Past results don't guarantee future ones.</p>`
     : `<p class="note">No completed breakouts in this period yet.</p>`}
-    ${d.setups ? `<h2>Other <em>setups</em> <small style="font-size:12px;color:var(--snap)">beta</small></h2><div class="kv">
-      ${[["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]].map(([k, l]) => {
-        const x = d.setups.stats[k] || {}; return `<div><small>${l}</small><b>${x.n ? `${x.win_rate ?? "–"}% <span style="font-size:12px;color:var(--muted)">win · ${x.n} breaks</span>` : "–"}</b></div>`; }).join("")}
-      </div><p class="note">Same rules as hubs: act on a 4-hour close outside the pattern, target the next shelf. Based on this chart only.</p>` : ""}
+    ${d.setups ? `<h2>Other <em>setups</em> <small style="font-size:12px;color:var(--snap)">beta</small></h2>
+      ${(() => {
+        const rows = [["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"]];
+        const withN = [], zero = [];
+        rows.forEach(([k, l]) => { const x = d.setups.stats[k] || {}; (x.n ? withN : zero).push([k, l, x]); });
+        const rowHtml = withN.map(([k, l, x]) => x.n < 5
+          ? `<div class="tiny"><small>${l}</small><b>${x.n} break${x.n === 1 ? "" : "s"} · <span>win ${x.win_rate ?? "–"}%</span> <span class="tiny-tag">tiny sample</span></b></div>`
+          : `<div><small>${l}</small><b>${x.win_rate ?? "–"}% <span style="font-size:12px;color:var(--muted)">win · ${x.n} breaks</span></b></div>`).join("");
+        const zeroLine = zero.length ? `<p class="note">No ${zero.map(([, l]) => l.toLowerCase()).join(", ")} in this period yet.</p>` : "";
+        return (rowHtml ? `<div class="kv">${rowHtml}</div>` : "") + zeroLine;
+      })()}
+      <p class="note">Same rules as hubs: act on a 4-hour close outside the pattern, target the next shelf. Based on this chart only.</p>` : ""}
     ${d.tightening_stats ? `<h2>Lab · <em>tightening hubs</em></h2><div class="kv">
       <div><small>Breakouts</small><b>${d.tightening_stats.n}</b></div>
       <div><small>Reached shelf</small><b>${d.tightening_stats["follow-through"]}%</b></div>
