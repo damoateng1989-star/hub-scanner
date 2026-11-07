@@ -333,6 +333,13 @@ def volume_line(c4: pd.DataFrame, t) -> str:
 
 
 def format_pattern_event(sym: str, e: dict) -> str:
+    if e["kind"] == "gapfade":
+        risk = e["close"] - (e.get("stop") or e["close"])
+        return (f"🔄 Post-earnings gap fade & rip: {sym} gapped up {e.get('gap_pct', 0) * 100:.1f}% on {e.get('gap_day', 'the gap day')}, "
+                f"faded to {_money(e.get('stop'))}, and just closed back above the gap-day high {_money(e['edge'])}.\n"
+                f"Entry {_money(e['close'])}, stop {_money(e.get('stop'))} (−1R), target {_money(e['target'])} (+2R).\n"
+                f"Size off the risk ({_money(risk)} a share), not a fixed %. Beta: the shape is measured, the earnings link isn't.\n"
+                f"Day closed: {candle_close(e['time'])}")
     up = e["type"] == "breakout"
     d = 1 if up else -1
     name = patterns.KINDS[e["kind"]].lower()
@@ -470,9 +477,24 @@ def add_symbol(raw: str, uid: int | None = None) -> dict:
     return dict(symbol=sym, status=status, created=True)
 
 
-def backtest(raw: str) -> dict:
+def backtest(raw: str, pattern: str = "hub") -> dict:
     sym = clean_symbol(raw)
     c4 = load_4h(sym, BACKTEST_DAYS)
+    if pattern == "gapfade":          # Patch 38: daily candles from the 4H frame, 2R / stop / 10-day walk
+        daily = engine.complete_days(c4)
+        res = engine.analyze_gapfade(daily, SETTINGS)
+        idx = daily.index
+        trades = [dict(time=idx[t["i0"]].isoformat(), direction="up", gap_pct=round(t["pattern"]["gap_pct"] * 100, 1),
+                       gap_high=round(t["edge"], 2), close=round(t["entry"], 2), stop=round(t["stop"], 2),
+                       target=round(t["target"], 2), target_kind="2R", outcome=t["outcome"],
+                       ret_pct=None if t["ret"] is None else round(t["ret"], 2),
+                       ret_r=None if t["ret_r"] is None else round(t["ret_r"], 2), chase=False)
+                  for t in res["trades"]]
+        rs = [t["ret_r"] for t in res["trades"] if t["ret_r"] is not None]
+        st = engine.stats(res["trades"])
+        st["avg_r"] = round(sum(rs) / len(rs), 2) if rs else None
+        return dict(symbol=sym, pattern="gapfade", period=f"{idx[0].date()} to {idx[-1].date()}" if len(idx) else "",
+                    stats=st, trades=trades[::-1])
     res = engine.analyze(c4, SETTINGS)
     trades = [dict(time=res["close"].index[t["i0"]].isoformat(),
                    direction="up" if t["direction"] == 1 else "down",
@@ -494,7 +516,8 @@ HELP = (
     "/status NVDA: one ticker\n"
     "/scan: scan everything now\n"
     "/precheck: run the pre-close check now\n"
-    "/backtest NVDA: breakout stats (~2 years)\n\n"
+    "/backtest NVDA: breakout stats (~2 years)\n"
+    "/backtest NVDA gapfade: post-earnings gap fade & rip stats\n\n"
     "Pre-close warnings come ~15 min before each 4H close; scans run after it. Not financial advice."
 )
 
@@ -538,6 +561,14 @@ def handle_command(cmd: str, args: list[str]) -> str:
     if cmd == "/backtest":
         if not args:
             return "Usage: /backtest NVDA"
+        if len(args) > 1 and args[1].lower() in ("gapfade", "gap"):
+            r = backtest(args[0], "gapfade")
+            s = r["stats"]
+            if not s["n"]:
+                return f"{r['symbol']}: no gap fade & rip setups in {r['period']}"
+            return (f"{r['symbol']} post-earnings gap fade & rip, {r['period']}\nSetups entered: {s['n']}\n"
+                    f"Hit 2R {s['follow-through']}% · stopped {s['snap-back']}% · ran out of time {s['stalled']}%\n"
+                    f"Avg {s['avg_r'] if s['avg_r'] is not None else '–'}R per trade (close-based; real stops trigger on the low, so live is worse)")
         r = backtest(args[0])
         s = r["stats"]
         if not s["n"]:

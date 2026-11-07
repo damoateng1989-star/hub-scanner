@@ -22,9 +22,11 @@ KINDS = {
     "flag_bear":  "Bear flag",
     "double_top": "Double top",
     "double_bottom": "Double bottom",
+    "gapfade":  "Post-earnings gap fade & rip",
 }
 STYLE_OF = {"hub": "hub", "triangle": "triangle", "channel_down": "channel", "channel_up": "channel", "sr": "sr",
-            "flag_bull": "flag", "flag_bear": "flag", "double_top": "double", "double_bottom": "double"}
+            "flag_bull": "flag", "flag_bear": "flag", "double_top": "double", "double_bottom": "double",
+            "gapfade": "gapfade"}
 STYLES = {   # what members pick in Settings
     "hub":      ("Hubs", "Tight sideways ranges that break out. NextShelf's core setup."),
     "triangle": ("Triangles", "Lower highs and higher lows squeezing into a point."),
@@ -32,6 +34,8 @@ STYLES = {   # what members pick in Settings
     "sr":       ("Support & resistance", "Horizontal levels price has tested 3+ times."),
     "flag":     ("Flags", "A sharp move (the pole), then a short pause that drifts against it. Trades with the move."),
     "double":   ("Double tops & bottoms", "Two tests of the same high or low, then a close through the middle (the neckline)."),
+    "gapfade":  ("Post-earnings gap fade & rip", "A gap up that fades, then closes back above the gap-day high. Trades the reclaim. "
+                 "The classic case is an earnings gap, but it fires on the shape, whatever caused the gap."),
 }
 
 # ---------------------------------------------------------------- sloped patterns (triangles, channels)
@@ -406,9 +410,13 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
                                 upper=above["price"] if above else None, lower=below["price"] if below else None,
                                 upper_touches=above["touches"] if above else 0, lower_touches=below["touches"] if below else 0))
 
+    _gapfade(c4, close, n, s, out)
+
     # breakouts still in play (pending) become live too: the newest one per setup type
     newest = {}
     for t in out["trades"]:
+        if t["kind"] == "gapfade":
+            continue                         # daily clock: handled in _gapfade
         if t["outcome"] == "pending" and t["i0"] >= n - s.horizon and t["i0"] >= newest.get(t["kind"], {"i0": -1})["i0"]:
             newest[t["kind"]] = t
     for t in newest.values():
@@ -417,6 +425,49 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
                                     edge=t["edge"], target=t["target"], target_kind="shelf" if t["shelf"] else "atr",
                                     candles=n - 1 - t["i0"], since=close.index[t["i0"]].isoformat(), trade=t))
     return out
+
+
+def _gapfade(c4: pd.DataFrame, close: pd.Series, n: int, s: engine.Settings, out: dict):
+    """Post-earnings gap fade & rip (Patch 38): found on daily candles, mapped back onto the 4H frame so the
+    record, alerts and charts treat it like every other setup. A day maps to its last 4H candle (the close)."""
+    try:
+        daily = engine.complete_days(c4)
+        if len(daily) < engine.PEG_MIN_DAILY:
+            return
+        res_d = engine.analyze_gapfade(daily, s)
+    except Exception:
+        return
+    days = c4.index.tz_convert(engine.NY).normalize()
+    last_of = {}
+    first_of = {}
+    for j, dday in enumerate(days):
+        last_of[dday] = j
+        first_of.setdefault(dday, j)
+    dkey = daily.index.tz_convert(engine.NY).normalize() if daily.index.tz is not None else daily.index
+    to4 = lambda di: last_of.get(dkey[di])
+    for t in res_d["trades"]:
+        st = t["pattern"]
+        i0, g = to4(t["i0"]), first_of.get(dkey[st["gap_i"]])
+        if i0 is None or g is None:
+            continue
+        oi = to4(t["oi"]) if t["oi"] is not None else None
+        p = dict(a=g, end_i=max(g, i0 - 1), mh=0.0, ch=st["gap_high"], ml=0.0, cl=st["stop"], gap=st, gapfade=True)
+        out["trades"].append(dict(kind="gapfade", hub=dict(start_i=g, end_i=max(g, i0 - 1), low=st["stop"], high=st["gap_high"],
+                                                           sessions=t["i0"] - st["gap_i"] + 1),
+                                  p=p, i0=i0, direction=1, edge=st["gap_high"], target=t["target"], shelf=None, target_kind="2R",
+                                  outcome=t["outcome"], oi=oi, entry=t["entry"], ret=t["ret"], ret_r=t["ret_r"], chase=False,
+                                  fwd=t["fwd"], stop=st["stop"], gap_pct=st["gap_pct"], gap_day=dkey[st["gap_i"]].strftime("%b %-d")))
+        if t["outcome"] == "pending":       # reclaim fired, trade still running: live as a breakout
+            out["live"].append(dict(kind="gapfade", state="breakout_up", edge=st["gap_high"], target=t["target"], target_kind="2R",
+                                    candles=len(daily) - 1 - t["i0"], since=close.index[i0].isoformat(), trade=out["trades"][-1]))
+    pend = res_d.get("pending")
+    if pend:                                # gapped and faded, reclaim not fired yet: watch it
+        g = first_of.get(dkey[pend["gap_i"]])
+        if g is not None:
+            p = dict(a=g, end_i=n - 1, mh=0.0, ch=pend["gap_high"], ml=0.0, cl=pend["fade_low"], gap=pend, gapfade=True)
+            out["live"].append(dict(kind="gapfade", state="forming", upper=pend["gap_high"], lower=pend["fade_low"],
+                                    sessions=len(daily) - 1 - pend["gap_i"], start_i=g, end_i=n - 1, p=p,
+                                    gap_pct=pend["gap_pct"], left=pend["left"]))
 
 
 def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
@@ -434,6 +485,9 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
             if k == "sr":
                 row.update(touches=t["level"]["touches"])
+            elif k == "gapfade":
+                row.update(stop=round(t["stop"], 2), gap_pct=round(t["gap_pct"] * 100, 1), gap_day=t["gap_day"],
+                           candles_unit="days", to_target_pct=round((t["target"] / last - 1) * 100, 2))
             else:
                 p = t["p"]
                 row["lines"] = _line_pts(p, idx, p["a"], p["end_i"])
@@ -453,6 +507,9 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             if k.startswith("flag"):
                 row.update(trigger="up" if k == "flag_bull" else "down", pole_pct=round(p["pole_height"] / last * 100, 1))
                 row["near_edge"] = row["near_edge"] if row["near_edge"] == row["trigger"] else None
+            if k == "gapfade":                   # the trigger is a daily close back above the gap-day high
+                row.update(trigger="up", gap_pct=round(L["gap_pct"] * 100, 1), days_left=L["left"], sessions_unit="days")
+                row["near_edge"] = "up" if pos >= 0.8 else None
         out.append(row)
     order = {"breakout_up": 0, "breakdown": 0, "testing": 1, "forming": 2, "between": 3}
     out.sort(key=lambda r: order.get(r["state"], 9))
@@ -477,5 +534,6 @@ def events(sym: str, res: dict, pa: dict) -> list[dict]:
     for t in pa["trades"]:
         ev.append(dict(type="breakout" if t["direction"] == 1 else "breakdown", kind=t["kind"], time=idx[t["i0"]],
                        close=t["entry"], edge=t["edge"], target=t["target"], shelf=t["shelf"],
-                       touches=t.get("level", {}).get("touches")))
+                       touches=t.get("level", {}).get("touches"), stop=t.get("stop"), gap_pct=t.get("gap_pct"),
+                       gap_day=t.get("gap_day")))
     return ev

@@ -647,3 +647,102 @@ def analyze_tightening(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         trades.append(dict(hub=p, i0=i0, direction=d, edge=edge, target=target, shelf=shelf,
                            outcome=outcome, oi=oi, fwd=fwd, entry=entry, ret=ret, chase=chase))
     return dict(patterns=pats, trades=trades)
+
+
+# ---------------------------------------------------------------- post-earnings gap fade & rip (daily candles), Patch 38
+PEG_GAP = 0.05           # gap up vs prior close (3% / 4% / 5% tested; 5% wins marginally; untested past 5%)
+PEG_FADE_WICK = 0.5      # gap-day upper wick must be at least this x the day's range
+PEG_RECLAIM_MAX = 5      # the reclaim (close back above the gap-day high) must come within this many sessions
+PEG_TARGET_R = 2.0       # target = entry + 2R
+PEG_MIN_DAILY = 60       # daily candles needed before the detector runs
+
+
+def _gapfade_scan(d: pd.DataFrame) -> tuple[list[dict], dict | None]:
+    """Daily candles -> (entered setups, the setup still pending at the last candle or None). Long only.
+    Gap day: open >= prior close x (1 + PEG_GAP) with an upper wick >= half the day's range. Entry: the first
+    close above the gap-day high within PEG_RECLAIM_MAX sessions. Dead: a close below the lowest low so far.
+    Stop: the lowest low from the gap day through the entry candle. A new gap while one is pending replaces it."""
+    n = len(d)
+    if n < PEG_MIN_DAILY:
+        return [], None
+    close, open_, high, low = (d[c].to_numpy(float) for c in ("Close", "Open", "High", "Low"))
+    setups, pending, i = [], None, 1
+    while i < n:
+        if not (open_[i] >= close[i - 1] * (1 + PEG_GAP) and high[i] > low[i]
+                and (high[i] - close[i]) >= PEG_FADE_WICK * (high[i] - low[i])):
+            i += 1
+            continue
+        g, gap_high, fade_low, i0, nxt = i, float(high[i]), float(low[i]), None, None
+        last_k = min(g + PEG_RECLAIM_MAX, n - 1)
+        state = "expired"
+        for k in range(g + 1, last_k + 1):
+            if (open_[k] >= close[k - 1] * (1 + PEG_GAP) and high[k] > low[k]
+                    and (high[k] - close[k]) >= PEG_FADE_WICK * (high[k] - low[k])):
+                nxt, state = k, "superseded"           # a new gap-and-fade replaces this one
+                break
+            if close[k] < fade_low:                    # closed below the lowest low so far: dead
+                state = "dead"
+                break
+            fade_low = min(fade_low, float(low[k]))
+            if close[k] > gap_high:                    # reclaim
+                i0, state = k, "entered"
+                break
+        if i0 is not None:
+            entry = float(close[i0])
+            stop = float(min(low[g:i0 + 1]))
+            R = entry - stop
+            if R > 0:
+                setups.append(dict(gap_i=g, i0=i0, entry=entry, stop=stop, target=entry + PEG_TARGET_R * R, risk=R,
+                                   gap_open=float(open_[g]), gap_high=gap_high, gap_pct=float(open_[g] / close[g - 1] - 1),
+                                   fade_low=stop))
+            i = i0 + 1
+            continue
+        if state == "expired" and g + PEG_RECLAIM_MAX > n - 1:     # window still open at the last candle: pending
+            pending = dict(gap_i=g, gap_open=float(open_[g]), gap_high=gap_high, fade_low=fade_low,
+                           gap_pct=float(open_[g] / close[g - 1] - 1), left=g + PEG_RECLAIM_MAX - (n - 1))
+        i = nxt if nxt is not None else g + 1
+    return setups, pending
+
+
+def find_gapfade(d: pd.DataFrame) -> list[dict]:
+    return _gapfade_scan(d)[0]
+
+
+def analyze_gapfade(daily: pd.DataFrame, s: Settings) -> dict:
+    """Daily frame -> gap fade & rip trades with the close-based 2R / stop / horizon walk.
+    Trades carry `ret` (%) for the record and `ret_r` (R units) for the backtest. Indices are daily."""
+    close = daily["Close"]
+    n = len(close)
+    setups, pending = _gapfade_scan(daily)
+    trades = []
+    for st in setups:
+        i0, entry, stop, target, R = st["i0"], st["entry"], st["stop"], st["target"], st["risk"]
+        outcome, oi, ret_r = "pending", None, None
+        for j in range(i0 + 1, min(i0 + 1 + s.horizon, n)):
+            c = close.iloc[j]
+            if c >= target:
+                outcome, oi, ret_r = "follow-through", j, PEG_TARGET_R
+                break
+            if c <= stop:
+                outcome, oi, ret_r = "snap-back", j, -1.0
+                break
+        else:
+            if i0 + s.horizon < n:
+                outcome, oi = "stalled", i0 + s.horizon
+                ret_r = (close.iloc[i0 + s.horizon] - entry) / R
+        trades.append(dict(pattern=st, i0=i0, direction=1, edge=st["gap_high"], target=target, shelf=None,
+                           outcome=outcome, oi=oi, entry=entry, ret=None if ret_r is None else ret_r * R / entry * 100,
+                           ret_r=ret_r, chase=False, stop=stop, risk=R,
+                           fwd=None if i0 + s.horizon >= n else float(close.iloc[i0 + s.horizon] / entry - 1) * 100))
+    return dict(patterns=[t["pattern"] for t in trades], trades=trades, pending=pending)
+
+
+def complete_days(c4: pd.DataFrame) -> pd.DataFrame:
+    """Daily candles from the 4H frame, dropping today's if its 1:30-4:00 candle hasn't closed yet
+    (a midday 'daily close' is just the 1:30 close)."""
+    d = to_daily(c4)
+    if len(d) and len(c4):
+        last = c4.index[-1].tz_convert(NY)
+        if last.hour < 13:
+            d = d.iloc[:-1]
+    return d

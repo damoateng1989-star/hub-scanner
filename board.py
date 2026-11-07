@@ -167,7 +167,7 @@ def _record(sym: str, c4: pd.DataFrame, res: dict, start: pd.Timestamp, pattern:
             symbol=sym, direction=t["direction"],
             hub_low=round(h["low"], 2), hub_high=round(h["high"], 2), hub_sessions=h["sessions"],
             breakout_time=bt.isoformat(), entry=round(t["entry"], 2), target=round(t["target"], 2),
-            target_kind="shelf" if t["shelf"] else "atr",
+            target_kind=t.get("target_kind") or ("shelf" if t["shelf"] else "atr"),
             outcome=t["outcome"], outcome_time=idx[t["oi"]].isoformat() if t["oi"] is not None else None,
             ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=int(bool(t["chase"])),
             regime=_regime_tag(t["direction"], bt),

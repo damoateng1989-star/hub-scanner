@@ -1022,9 +1022,9 @@ def admin_lab(u: dict = Admin):
 
 
 @app.get("/api/backtest/{symbol}")
-async def backtest(symbol: str, u: dict = Pro):
+async def backtest(symbol: str, pattern: str = "hub", u: dict = Pro):
     try:
-        return await run_in_threadpool(scanner.backtest, symbol)
+        return await run_in_threadpool(scanner.backtest, symbol, "gapfade" if pattern == "gapfade" else "hub")
     except Exception as e:
         raise HTTPException(400, str(e))
 
