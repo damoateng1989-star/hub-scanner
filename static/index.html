@@ -971,6 +971,20 @@ body.brief-open .sf-hello { display: none; }
 .gw-row small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
 .gw-row .gw-cap { color: #b8860b; } .gw-wait { color: var(--muted); }
 footer .foot-brand{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:600}
+html body .board-actions .plain-btn, .plain-btn { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #0E0F12 !important; }
+html body .board-actions .plain-btn.on, .plain-btn.on { background: var(--ink) !important; border-color: var(--ink) !important; color: var(--bg) !important; }
+html[data-theme="light"] body .board-actions .plain-btn, html[data-theme="light"] .plain-btn { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
+html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !important; border-color: #0d1117 !important; color: #0d1117 !important; }
+.plain-row[hidden] { display: none !important; }
+.plain-panel { font-size: 14px; line-height: 1.55; color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; text-align: left; white-space: normal; }
+.plain-panel .plain-k { font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.plain-panel b { font-weight: 700; }
+@media (max-width: 760px) {
+  .board-table tr.plain-row { margin-top: -6px; padding-top: 0 !important; border-top: 0 !important; border-radius: 0 0 14px 14px; }
+  .board-table tr.plain-row td { grid-column: 1 / -1; padding: 0 !important; }
+  .board-table tr.plain-row td::before { content: none !important; }
+}
+.board-table .board-actions { flex-wrap: wrap; row-gap: 6px; } .board-table .board-actions .btnx { white-space: nowrap; flex: none; }
 </style>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
@@ -1999,6 +2013,55 @@ function spark(st, color) {
 
 const pctFrom = (lvl, p) => { const v = (lvl / p - 1) * 100; return (v > 0 ? "+" : "") + v.toFixed(1) + "%"; };
 
+// Plain-English explainer for a hub-board row. Same words as the brief's game plan, cut down to the card.
+// Uses only fields the row has: no fetch, no record stats, no buy/sell language.
+function plainEnglish(r, kind) {
+  const S = esc(r.symbol), p = Number(r.last_close), h = r.hub || {};
+  const up = r.shelf_up, dn = r.shelf_down;
+  const shelf = (sh) => sh ? `the shelf at <b>${money(sh.level)}</b>, the next price where a lot of past trading piled up` : null;
+  const grade = h.grade ? ` This one is graded <b>${gradeWord(h)}</b>.` : "";
+  const candle = (() => { const m = /(\d+)\/(\d+)/.exec(r.label || ""); return m ? ` This is candle ${m[1]} of the ${m[2]} it gets to reach the target.` : ""; })();
+  if (kind === "forming" && h.low != null && h.high != null && p) {
+    const dHigh = Math.abs(h.high / p - 1) * 100, dLow = Math.abs(p / h.low - 1) * 100;
+    const near = dHigh <= dLow ? ["top", dHigh] : ["bottom", dLow];
+    return `${S} has been trading in a tight range between <b>${money(h.low)}</b> and <b>${money(h.high)}</b> for <b>${h.sessions} sessions</b>. ` +
+      `That range is called a hub: buyers and sellers keep meeting at the same prices, so the stock moves sideways instead of trending.${grade} ` +
+      `It's at <b>${money(p)}</b> right now, about ${near[1].toFixed(1)}% from the ${near[0]} of the range. There's no trade yet. ` +
+      `A 4-hour candle closing above <b>${money(h.high)}</b> would start an upward move${up ? `, heading for ${shelf(up)}` : ""}; ` +
+      `a close below <b>${money(h.low)}</b> would start a downward one${dn ? `, heading for ${shelf(dn)}` : ""}.`;
+  }
+  if (kind === "near" && h.low != null) {
+    const isUp = r.near_edge === "up", edge = isUp ? h.high : h.low, sh = isUp ? up : dn;
+    return `${S} is sitting right on the <b>${isUp ? "top" : "bottom"} edge</b> of its range. The hub runs <b>${money(h.low)}</b> to <b>${money(h.high)}</b>, and price is testing the ${isUp ? "top" : "bottom"} line after ${h.sessions} sessions.${grade} ` +
+      `One 4-hour close ${isUp ? "above" : "below"} <b>${money(edge)}</b> breaks it ${isUp ? "upward" : "downward"}${sh ? `, toward ${shelf(sh)}` : ""}. ` +
+      `If it closes back inside the range instead, nothing has happened yet: it's still just ranging.`;
+  }
+  if (kind === "live" && h.low != null) {
+    const isUp = r.state === "breakout_up", edge = isUp ? h.high : h.low;
+    const aim = r.target_kind === "shelf"
+      ? `the shelf at <b>${money(r.target)}</b>, the next price where a lot of past trading piled up`
+      : `a target of <b>${money(r.target)}</b>, one ATR (the stock's typical 4-hour move) past the range, since there's no shelf nearby`;
+    return `${S} closed <b>${isUp ? "above" : "below"} its range at ${money(edge)}</b>. The breakout counts because a 4-hour candle closed there, not because a wick poked through.${candle} ` +
+      `It's heading for ${aim} (${pctFrom(r.target, p)} from here). ` +
+      `The idea is wrong if a 4-hour candle closes back ${isUp ? "below" : "above"} <b>${money(edge)}</b>.`;
+  }
+  const done = { "follow-through": "The last breakout reached its target shelf. Now it's waiting for a new range to form.",
+    "snap-back": "The last breakout failed: price closed back inside the range. Now it's waiting for a new range to form.",
+    stalled: "The last breakout ran out of time without reaching its shelf. Now it's waiting for a new range to form.",
+    watching: h.low != null ? `The range just ended without a breakout. A 4-hour close above <b>${money(h.high)}</b> or below <b>${money(h.low)}</b> in the next few candles would still count.` : null }[r.state];
+  return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 7+ sessions.";
+}
+function plainRow(r, kind) {
+  return `<tr class="plain-row" hidden><td colspan="9"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="plain-k">Plain English · Sika</div>${plainEnglish(r, kind)}</div></td></tr>`;
+}
+function togglePlain(btn) {
+  const row = btn.closest("tr").nextElementSibling;
+  if (!row || !row.classList.contains("plain-row")) return;
+  const open = row.hidden;
+  row.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+  btn.classList.toggle("on", open);
+}
 function summary(sym, st, key) {
   const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down;
   const lvl = (sh, word) => sh ? `the next shelf is <b class="u-${word}">${money(sh.level)}</b> (${pctFrom(sh.level, p)})` : `there's no shelf ${word === "up" ? "above" : "below"} yet`;
@@ -3207,7 +3270,7 @@ function renderInstitutionalBoard(){
       '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
-      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>';
+      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
   const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
@@ -3385,7 +3448,7 @@ async function saveStyles() {
 function labelTable(scope) {
   (scope || document).querySelectorAll("table.board-table").forEach(t => {
     const heads = [...t.querySelectorAll("thead th")].map(th => th.textContent.replace(/[↕]/g, "").trim());
-    t.querySelectorAll("tbody tr").forEach(tr => [...tr.children].forEach((td, i) => { if (heads[i] != null) td.dataset.label = heads[i]; }));
+    t.querySelectorAll("tbody tr").forEach(tr => { if (tr.classList.contains("plain-row")) return; [...tr.children].forEach((td, i) => { if (heads[i] != null) td.dataset.label = heads[i]; }); });
   });
 }
 let SETUP_TAB = "hub";
