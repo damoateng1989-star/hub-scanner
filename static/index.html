@@ -982,7 +982,7 @@ body.brief-open .sf-hello { display: none; }
 .gw-row .gw-cap { color: #b8860b; } .gw-wait { color: var(--muted); }
 footer .foot-brand{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:600}
 html body .board-actions .plain-btn, .plain-btn { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #0E0F12 !important; }
-html body .board-actions .plain-btn.on, .plain-btn.on { background: var(--ink) !important; border-color: var(--ink) !important; color: var(--bg) !important; }
+html body .board-actions .plain-btn.on, .plain-btn.on { background: var(--ink) !important; border-color: var(--ink) !important; color: var(--bg) !important; box-shadow: 0 0 0 2px #7f9ec7 !important; }
 html[data-theme="light"] body .board-actions .plain-btn, html[data-theme="light"] .plain-btn { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
 html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !important; border-color: #0d1117 !important; color: #0d1117 !important; }
 .plain-row[hidden] { display: none !important; }
@@ -2084,8 +2084,12 @@ function plainEnglish(r, kind) {
   return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 7+ sessions.";
 }
 function plainRow(r, kind) {
-  return `<tr class="plain-row" hidden><td colspan="9"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">🤖</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div></div></td></tr>`;
+  // Live + near rows open by default: the lesson is the product, the button is the collapse.
+  // Forming/finished rows stay collapsed (dozens of them, all "no trade yet").
+  const open = plainOpenFor(kind);
+  return `<tr class="plain-row"${open ? "" : " hidden"}><td colspan="9"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">🤖</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"${open ? ' style="display:none"' : ""}><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body${open ? " on" : ""}">${plainEnglish(r, kind)}</div></div></td></tr>`;
 }
+const plainOpenFor = (kind) => kind === "live" || kind === "near";     // one condition for the panel and its button
 function togglePlain(btn) {
   const row = btn.closest("tr").nextElementSibling;
   if (!row || !row.classList.contains("plain-row")) return;
@@ -3332,7 +3336,7 @@ function renderInstitutionalBoard(){
       '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
-      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
+      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn'+(plainOpenFor(kind)?' on':'')+'" onclick="togglePlain(this)" aria-expanded="'+plainOpenFor(kind)+'">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
   const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
