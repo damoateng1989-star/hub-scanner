@@ -156,7 +156,7 @@ within 30 days, except where we must keep records by law.</p>
 
 def disclaimer() -> str:
     return f"""
-<p class="lead">Trading stocks involves substantial risk, including the possible loss of all the money you invest. Please read this before using NextShelf's signals.</p>
+<p class="lead">Trading stocks involves substantial risk, including the possible loss of all the money you invest. Please read this before using NextShelf's setups.</p>
 
 <h2>Educational information only</h2>
 <p>Everything on NextShelf, including alerts, setups, targets, game plans, options swing plans, the Sika assistant, lessons and track records, is general
@@ -168,7 +168,7 @@ NextShelf is not a registered investment adviser or broker-dealer.</p>
 at the target, on a close back inside the pattern, or at a time limit. They don't include commissions, slippage, taxes, gaps, or the
 fact that real fills can differ from closing prices. Real trading results will differ, sometimes a lot.</p>
 
-<h2>Signals can be wrong or late</h2>
+<h2>Setups can be wrong or late</h2>
 <p>Breakouts fail often. Market data can be delayed or inaccurate, and alerts can arrive late or not at all. Never rely on a single alert
 or tool to make a decision.</p>
 

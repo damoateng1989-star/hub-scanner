@@ -1104,7 +1104,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 
 <!-- RESULTS -->
 <section data-view="results" hidden>
-  <div class="vh"><h1>Results</h1><p>How every signal turned out. Nothing is removed.</p></div>
+  <div class="vh"><h1>Results</h1><p>How every setup turned out. Nothing is removed.</p></div>
   <div id="record"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
@@ -1161,7 +1161,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 </section>
 
   <footer>
-    <span>Educational tool. Signals describe past price behaviour, not financial advice.</span>
+    <span>Educational tool. Setups describe past price behaviour, not financial advice.</span>
     <span class="app-legal"><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></span>
     <span id="sched"></span>
   </footer>
@@ -1235,7 +1235,7 @@ async function api(path, opts = {}) {
     const found = syms.slice(0, k).filter(x => live[x]).map(x => ({symbol: x, kind: live[x]}));
     return {running: true, done: k, total: syms.length, current: syms[k], found, found_count: found.length, next};
   }
-  if (path.startsWith("/api/record")) { const k = (path.split("pattern=")[1] || "hub"); return k === "hub" ? DEMO.record : {...DEMO.record, stats: {signals: 0, closed: 0, open: 0, chases: 0, by_outcome: {}}, signals: [], pattern: k}; }
+  if (path.startsWith("/api/record")) { const k = (path.split("pattern=")[1] || "hub"); return k === "hub" ? DEMO.record : {...DEMO.record, stats: {signals: 0, closed: 0, open: 0, chases: 0, by_outcome: {}}, setups: [], pattern: k}; }
   if (path === "/api/paper/toggle") { DEMO.paper.enabled = JSON.parse(opts.body).on; return {}; }
   if (path === "/api/tickers" && m === "POST") {
     const sym = JSON.parse(opts.body).symbol.trim().toUpperCase().replace(/^\$/, "");
@@ -2278,7 +2278,7 @@ function boardStatus(r,kind){
   if(kind==="near") return ["At the edge","near"];
   if(kind==="forming") return ["Inside hub","hub"];
   const map={"follow-through":["Hit shelf","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
-  return map[r.state]||[String(r.state||"No signal").replaceAll("_"," "),"neutral"];
+  return map[r.state]||[String(r.state||"No setup").replaceAll("_"," "),"neutral"];
 }
 function boardDistance(r,kind){
   if(kind==="near"){const v=r.near_edge==="up"?r.to_high_pct:r.to_low_pct;return Number.isFinite(Number(v))?Math.abs(Number(v)):null;}
@@ -2607,7 +2607,7 @@ function renderRule() {
     <div><div class="r1-k">Rule #1</div><div class="r1-t">Don't force trades. Let the trade come to you.</div><div class="r1-s">${msg}</div></div>`;
 }
 
-// ---------------------------------------------------------------- live prices (for watching; signals still need a 4-hour CLOSE)
+// ---------------------------------------------------------------- live prices (for watching; breakouts still need a 4-hour CLOSE)
 let LIVE = {}, LIVE_OPEN = false, LIVE_T = null, LIVE_AT = null;
 function liveSymbols() { return [...new Set([...TICKERS.map(t => t.symbol), BRIEF_SYM].filter(Boolean))]; }
 async function pollLive() {
@@ -2833,9 +2833,9 @@ async function loadRecord() {
       return `<button class="${RECORD_PAT === k ? "on" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${x.closed ? `${x.win_rate ?? "–"}% winners · ${x.closed} done` : "no results yet"}</small></button>`; }).join("")}</div>
     <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout the Hub Board detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.</p>
     <div class="stats" style="margin-top:0">
-      <div><b>${st.closed}</b><span>Completed signals</span></div>
+      <div><b>${st.closed}</b><span>Completed setups</span></div>
       <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
-      <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>Avg per signal</span></div>
+      <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>Avg per setup</span></div>
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
     ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}</div>` : ""}
@@ -2848,7 +2848,7 @@ async function loadRecord() {
         <td>${money(x.entry)}</td><td>${money(x.target)}</td>
         <td style="color:var(${c})">${w}</td>
         <td style="color:var(${x.ret_pct == null ? "--muted" : x.ret_pct > 0 ? "--up" : "--down"})">${sign(x.ret_pct)}</td></tr>`; }).join("")}
-    </table></div>` : `<div class="empty" style="margin-top:14px">No signals yet. The first ones appear after the next breakout on the board.</div>`}`;
+    </table></div>` : `<div class="empty" style="margin-top:14px">No setups yet. The first ones appear after the next breakout on the board.</div>`}`;
 }
 
 LESSON.init();

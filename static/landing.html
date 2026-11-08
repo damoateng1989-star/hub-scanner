@@ -679,7 +679,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     <div class="cmp-row" role="row"><div><b>Hubs, fully ruled</b></div><div><span class="x">✕</span>You build every alert by hand</div><div><span class="x">✕</span>Patterns made for screen-watchers</div><div><span class="chk">✓</span>Hub → close → shelf, every rule spelled out</div></div>
     <div class="cmp-row" role="row"><div><b>Warns before the close</b></div><div><span class="x">✕</span>After the move</div><div><span class="x">✕</span>After the move</div><div><span class="chk">✓</span>About 15 minutes before the candle closes (Pro)</div></div>
     <div class="cmp-row" role="row"><div><b>Flags earnings</b></div><div><span class="x">✕</span>Your problem</div><div><span class="x">✕</span>Your problem</div><div><span class="chk">✓</span>Earnings dates shown on every card and alert</div></div>
-    <div class="cmp-row" role="row"><div><b>Shows its record</b></div><div><span class="x">✕</span>None</div><div><span class="x">✕</span>Cherry-picked</div><div><span class="chk">✓</span>Every signal logged, wins and losses</div></div>
+    <div class="cmp-row" role="row"><div><b>Shows its record</b></div><div><span class="x">✕</span>None</div><div><span class="x">✕</span>Cherry-picked</div><div><span class="chk">✓</span>Every setup logged, wins and losses</div></div>
   </div>
 </div></section>
 
@@ -723,7 +723,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
           <line x1="238" y1="66" x2="238" y2="102" stroke="#12805C"/><rect x="231" y="72" width="14" height="24" fill="#12805C"/>
         </g>
         <circle cx="238" cy="84" r="30" fill="none" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="4 3"/>
-        <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#9A998F">wick: not a signal</text>
+        <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#9A998F">wick: not a setup</text>
         <text x="238" y="186" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#141412">close: breakout</text>
       </svg></div>
       <h3>A candle <em>closes</em> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
@@ -791,9 +791,9 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
   <div class="rec">
     <div class="stat"><div class="big" id="recN">–</div><div class="cap" id="recNc">hub breakouts logged</div></div>
     <div class="stat"><div class="big" id="recHit" style="color:var(--up)">–</div><div class="cap">reached the shelf target</div></div>
-    <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed signal</div></div>
+    <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed setup</div></div>
   </div>
-  <p class="honest" id="recNote">These are the board's signals, not trading advice, and past signals don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/board">See every signal →</a></p>
+  <p class="honest" id="recNote">These are the board's setups, not trading advice, and past setups don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/board">See every setup →</a></p>
 </div></section>
 
 <section id="pricing"><div class="wrap">
@@ -827,9 +827,9 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
     <details><summary>When do alerts arrive?</summary><p>Pre-close warnings (Pro) come about 15 minutes before each 4-hour close, at 1:15 and 3:45 PM ET. For the 1:30 PM close you get an early read at about 1:31 PM from the real-time feed, confirmed (or corrected) at about 1:47 PM with the full market data, so you can still enter that afternoon. The 4:00 PM close is confirmed after the market shuts, and you can choose to skip those alerts in Settings. Regular trading hours only.</p></details>
     <details><summary>Which setups does NextShelf find?</summary><p>Hubs are the core setup. NextShelf also finds bull and bear flags, double tops and bottoms, triangles, channels, and support and resistance tested 3 or more times. They follow the same rule: act on a 4-hour close outside the pattern, aim for the next shelf. The hub track record is public below; the other patterns are in beta and their records publish here as they fill in.</p></details>
     <details><summary>Does NextShelf check gamma walls?</summary><p>Yes, on confirmed breakouts. NextShelf finds the strike with the most options gamma stacked near the price, from the Cboe delayed options chain, refreshed daily. If that wall sits between the breakout and the next shelf, the Shelf card and the alert flag it, because dealer hedging tends to slow price there. It is a flag, not a veto: the setup still counts.</p></details>
-    <details><summary>Does NextShelf trade its own signals?</summary><p>On paper only. NextShelf paper-trades one setup a day in a paper account, with no real money, to test its rules in real time. The public track record above counts every hub signal NextShelf logs, not just the paper trades. Members can open any setup in Webull or Robinhood straight from the setups list or the chart.</p></details>
+    <details><summary>Does NextShelf trade its own setups?</summary><p>On paper only. NextShelf paper-trades one setup a day in a paper account, with no real money, to test its rules in real time. The public track record above counts every hub setup NextShelf logs, not just the paper trades. Members can open any setup in Webull or Robinhood straight from the setups list or the chart.</p></details>
     <details><summary>Which stocks are covered?</summary><p>Every S&amp;P 500 and Nasdaq-100 stock plus major ETFs, over 540 in all. You can also add any US-listed ticker to your own watchlist.</p></details>
-    <details><summary>Is this financial advice?</summary><p>No. NextShelf is an educational tool describing past price behavior. Signals fail. Do your own research and never risk money you can't afford to lose.</p></details>
+    <details><summary>Is this financial advice?</summary><p>No. NextShelf is an educational tool describing past price behavior. Setups fail. Do your own research and never risk money you can't afford to lose.</p></details>
   </div>
 </div></section>
 
@@ -917,7 +917,7 @@ html[data-theme="light"] .run .live-pill::before { background: #fff; }
       if (s.avg_ret != null) $("recAvg").style.color = s.avg_ret >= 0 ? "var(--up)" : "var(--down)";
     } else {
       $("recN").textContent = "0"; $("recNc").textContent = "hub breakouts logged so far";
-      $("recNote").insertAdjacentHTML("afterbegin", "The record fills in as live signals close. ");
+      $("recNote").insertAdjacentHTML("afterbegin", "The record fills in as live setups close. ");
     }
   }).catch(() => {});
 

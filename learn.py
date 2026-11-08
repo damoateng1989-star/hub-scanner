@@ -31,17 +31,17 @@ MODULES = [
         ("why-4-hour-candles", "Why NextShelf uses 4-hour candles", 3, """
 <p>A candle is just a summary of price over a stretch of time: where it opened, where it closed, and its high and low. The stretch you pick changes what you see.</p>
 <ul><li><b>1-minute and 5-minute candles</b> are mostly noise. They demand constant attention and punish anyone with a job.</li>
-<li><b>Daily candles</b> are calm, but signals arrive slowly and stops have to be wide.</li>
+<li><b>Daily candles</b> are calm, but setups arrive slowly and stops have to be wide.</li>
 <li><b>4-hour candles</b> sit in between: clear enough to ignore the noise, fast enough to catch a move within days.</li></ul>
 <h2>Only two decision points a day</h2>
-<p>US stocks trade from 9:30 AM to 4:00 PM Eastern. NextShelf splits that into two 4-hour candles: one that closes at <b>1:30 PM</b> and one that closes at <b>4:00 PM</b>. Those two closes are the only moments a NextShelf signal can confirm.</p>
+<p>US stocks trade from 9:30 AM to 4:00 PM Eastern. NextShelf splits that into two 4-hour candles: one that closes at <b>1:30 PM</b> and one that closes at <b>4:00 PM</b>. Those two closes are the only moments a NextShelf setup can confirm.</p>
 <p>That's the whole point for someone at work: you don't need to watch the screen all day. NextShelf warns you about 15 minutes before each close if a stock is outside its hub, and confirms the result after the close.</p>""",
          ["4-hour candles filter out most intraday noise.",
           "There are two closes a day: 1:30 PM and 4:00 PM Eastern.",
-          "Signals only confirm at those closes, so you don't need to watch all day."],
+          "Setups only confirm at those closes, so you don't need to watch all day."],
          ("When can a NextShelf breakout be confirmed?",
           ["Any minute price trades above the hub", "Only at a 4-hour close (1:30 PM or 4:00 PM ET)", "Only at the market open"],
-          1, "The signal is a 4-hour close outside the hub, and those closes happen at 1:30 PM and 4:00 PM.")),
+          1, "The setup is a 4-hour close outside the hub, and those closes happen at 1:30 PM and 4:00 PM.")),
         ("close-not-wick", "Close, not wick: what counts as a breakout", 3, """
 <p>During a candle, price can poke above the hub top and fall back before the candle ends. That poke shows up as a thin line on the chart, called a <b>wick</b>. A wick is an attempt that failed.</p>
 <p>NextShelf only counts a breakout when the candle <b>closes</b> outside the hub. The close is where the buyers and sellers left things after four hours of arguing. It's a much stronger statement than a brief spike.</p>
@@ -69,9 +69,9 @@ MODULES = [
           ["$112, the bigger move", "$104, the nearest shelf in the direction of the break", "There is no aim"],
           1, "NextShelf aims for the nearest shelf in the direction of the breakout.")),
     ]),
-    ("Trading the setup", "Turning a signal into a plan you can stick to.", [
+    ("Trading the setup", "Turning a setup into a plan you can stick to.", [
         ("the-game-plan", "The game plan: aim, and where you're wrong", 3, """
-<p>Every NextShelf setup comes with the same three parts. Knowing all three <i>before</i> you trade is what turns a signal into a plan.</p>
+<p>Every NextShelf setup comes with the same three parts. Knowing all three <i>before</i> you trade is what turns a setup into a plan.</p>
 <ul><li><b>The trigger:</b> a 4-hour close outside the hub.</li>
 <li><b>The aim:</b> the next shelf (or the ATR target).</li>
 <li><b>Where you're wrong:</b> a 4-hour close back inside the hub. The breakout didn't hold, so the reason for the trade is gone.</li></ul>
@@ -197,7 +197,7 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
 <p>Most brokers offer a <b>bracket order</b>: one entry order, with a stop-loss and a profit target attached. NextShelf's "Set it before work" plan gives you all three numbers:</p>
 <ul><li><b>Entry:</b> a stop order just past the hub edge.</li><li><b>Stop-loss:</b> the middle of the hub.</li><li><b>Target:</b> the next shelf.</li></ul>
 <h2>The trade-off, honestly</h2>
-<p>A stop order fires the moment price <b>touches</b> it, including on a wick that closes back inside the hub. NextShelf's own signal waits for the close. So this version will catch some false breakouts the alert would have skipped. It's a trade-off between convenience and accuracy.</p>
+<p>A stop order fires the moment price <b>touches</b> it, including on a wick that closes back inside the hub. NextShelf's own setup waits for the close. So this version will catch some false breakouts the alert would have skipped. It's a trade-off between convenience and accuracy.</p>
 <h2>Keep it fresh</h2>
 <p>Use a <b>day order</b> and set it again each morning. A forgotten order can fill weeks later, long after the setup changed.</p>""",
          ["A bracket order = entry + stop-loss + target in one go.",
@@ -207,19 +207,19 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
           ["Stop orders wait for the close", "Stop orders fire when price touches them, even on a wick", "Brokers ignore stop orders"],
           1, "A stop order triggers on a touch. NextShelf's alert waits for the 4-hour close.")),
         ("reading-the-track-record", "Reading a track record honestly", 3, """
-<p>The Results page logs every signal NextShelf finds, with its outcome. Nothing is removed. That's useful only if you read it carefully.</p>
+<p>The Results page logs every setup NextShelf finds, with its outcome. Nothing is removed. That's useful only if you read it carefully.</p>
 <h2>Win rate isn't everything</h2>
-<p>A method can win 40% of the time and still make money if the wins are bigger than the losses. Another can win 70% and lose money if the losses are huge. Look at the <b>average per signal</b> next to the win rate.</p>
+<p>A method can win 40% of the time and still make money if the wins are bigger than the losses. Another can win 70% and lose money if the losses are huge. Look at the <b>average per setup</b> next to the win rate.</p>
 <h2>Small samples lie</h2>
-<p>A stock with 2 signals can show 100% or 0% by pure luck. Trust patterns that hold up over many signals, and use the minimum-signals filter on the win-rate ranking.</p>
+<p>A stock with 2 setups can show 100% or 0% by pure luck. Trust patterns that hold up over many setups, and use the minimum-setups filter on the win-rate ranking.</p>
 <h2>Past results aren't a promise</h2>
 <p>Markets change. A setup that worked in a calm market can struggle in a wild one. The track record tells you how things went, not how they will go.</p>""",
-         ["Read win rate together with the average per signal.",
-          "Ignore results from just a handful of signals.",
+         ["Read win rate together with the average per setup.",
+          "Ignore results from just a handful of setups.",
           "A track record describes the past, not the future."],
-         ("Setup A wins 70% but averages -0.4% per signal. Setup B wins 45% and averages +0.8%. Which made money?",
+         ("Setup A wins 70% but averages -0.4% per setup. Setup B wins 45% and averages +0.8%. Which made money?",
           ["Setup A", "Setup B", "Both"],
-          1, "Average per signal is what you'd have made or lost. B's wins were bigger than its losses.")),
+          1, "Average per setup is what you'd have made or lost. B's wins were bigger than its losses.")),
         ("rule-one", "Rule #1: don't force trades", 3, """
 <p>Most of the damage in trading comes from trades nobody needed to take: boredom trades, revenge trades after a loss, trades taken because a chat room was excited.</p>
 <h2>Waiting is a position</h2>
