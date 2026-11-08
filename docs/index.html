@@ -2742,17 +2742,7 @@ function renderScout() {
   $("sfBadge").hidden = !badge || !pop.hidden; $("sfBadge").textContent = badge;
 }
 
-// Scout says hi once per visit, then gets out of the way
-setTimeout(() => {
-  try { if (sessionStorage.getItem("hs_scout_hi")) return; sessionStorage.setItem("hs_scout_hi", "1"); } catch (e) {}
-  if (!$("scoutPop").hidden || document.body.classList.contains("brief-open")) return;
-  const guest = !ME || ME.guest, n = TICKERS.length;
-  $("sfHello").innerHTML = guest ? `Hi, I'm Scout 👋<small>Tap me to see what's setting up today.</small>`
-    : n ? `Hi${ME.name ? " " + esc(ME.name.split(" ")[0]) : ""}, I'm Scout 👋<small>Tap me and I'll scan your ${n} ticker${n === 1 ? "" : "s"} right now.</small>`
-    : `Hi, I'm Scout 👋<small>Add a few tickers and I'll watch them for you.</small>`;
-  $("sfHello").hidden = false;
-  setTimeout(() => { $("sfHello").hidden = true; }, 7000);
-}, 2500);
+// Sika never pops up on her own: the button is the only way in (calm by default)
 async function scoutScanMine() {
   MY_SCANNING = true; renderScout();
   try { MY_SCAN = await api("/api/scan/mine", {method: "POST"}); await loadTickers(); }
