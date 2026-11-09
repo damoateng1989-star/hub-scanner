@@ -461,6 +461,45 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
 .fl-nb { margin-top: 2px; font-size: 12px; line-height: 1.4; color: #374151; }
 .fl-pro { font-style: normal; margin-left: 5px; padding: 1px 5px; border-radius: 4px; background: #0d1117; color: #fff; font-size: 9px; letter-spacing: .08em; vertical-align: 1px; }
 @keyframes flIn { from { opacity: 0; transform: translateY(-14px) scale(.94); } }
+/* alerts section: text + call */
+#alerts .kicker, #alerts h2, #alerts .sub { text-align: center; margin-left: auto; margin-right: auto; }
+#alerts h2 { max-width: 26ch; }
+.al-phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 44px; }
+.al-phone { background: #141412; color: #F6F6F3; border-radius: 28px; padding: 12px 14px 20px; min-height: 420px; position: relative; box-shadow: 0 18px 40px rgba(20,20,18,.18); }
+.al-time { font: 500 12px var(--mono); letter-spacing: .06em; color: #B9B8B0; text-align: center; margin-top: 26px; }
+.al-app { font-weight: 600; font-size: 13px; text-align: center; margin-top: 4px; letter-spacing: -0.01em; }
+.al-app small { display: block; font-weight: 400; font-size: 11px; color: #B9B8B0; margin-top: 1px; }
+.al-notif { background: #262622; border-radius: 14px; padding: 12px 14px; margin-top: 14px; text-align: left; }
+.al-notif .n-head { display: flex; justify-content: space-between; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: #B9B8B0; }
+.al-notif .n-head .al-live { color: #3DD68C; }
+.al-notif p { font-size: 13px; line-height: 1.5; margin-top: 6px; }
+.al-notif .n-meta { font: 400 11px var(--mono); color: #8d8c85; margin-top: 8px; }
+.al-notif .n-meta .up { color: #3DD68C; }
+.al-bubble { background: #262622; border-radius: 16px 16px 16px 4px; padding: 11px 13px; font-size: 13px; line-height: 1.5; margin-top: 10px; max-width: 92%; text-align: left; }
+.al-bubble .b-time { display: block; font: 400 10.5px var(--mono); color: #8d8c85; margin-top: 5px; }
+.al-bubble.out { background: #2F54EB; color: #fff; border-radius: 16px 16px 4px 16px; margin-left: auto; }
+.al-bubble.out .b-time { color: rgba(255,255,255,.72); }
+html[data-theme="dark"] .al-phone { border: 1px solid #23262E; box-shadow: none; }
+.al-call { text-align: center; margin-top: 26px; }
+.al-avatar { width: 76px; height: 76px; border-radius: 50%; margin: 0 auto; background: #2F54EB; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 26px; letter-spacing: -0.02em; box-shadow: 0 0 0 6px rgba(47,84,235,.22), 0 0 0 12px rgba(47,84,235,.08); }
+.al-call-name { font-weight: 650; font-size: 19px; margin-top: 16px; letter-spacing: -0.01em; }
+.al-call-sub { font-size: 12.5px; color: #B9B8B0; margin-top: 3px; }
+.al-call-line { margin: 22px 8px 0; background: #262622; border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.5; text-align: left; }
+.al-call-line .who { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #3DD68C; }
+.al-call-line p { margin-top: 5px; }
+.al-call-btns { display: flex; justify-content: space-between; margin: 26px 18px 0; }
+.al-call-btns span { width: 58px; height: 58px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.al-decline { background: #D1352B; }
+.al-answer { background: #12805C; }
+.al-cap { margin-top: 18px; text-align: left; }
+.al-cap h3 { font-size: 16px; letter-spacing: -0.01em; font-weight: 650; }
+.al-tag { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; color: var(--ink2); vertical-align: 2px; margin-left: 6px; }
+.al-tag.pro { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.al-cap p { color: var(--ink2); font-size: 13.5px; margin-top: 5px; max-width: 34ch; }
+.al-note { font-size: 11.5px; color: var(--ink3); margin-top: 36px; text-align: center; }
+@media (max-width: 860px) {
+  .al-phones { grid-template-columns: 1fr; max-width: 340px; margin-left: auto; margin-right: auto; }
+}
 /* steps */
 .fl-steps { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0 0; padding: 0; counter-reset: fl; }
 .fl-steps li { position: relative; padding: 12px 12px 14px; border-radius: 14px; border: 1px solid var(--fl-line); cursor: pointer; color: var(--fl-mut);
@@ -767,6 +806,74 @@ html[data-theme="light"] .run .live-pill::after { background: linear-gradient(90
     <ol class="fl-steps" id="flSteps"></ol>
   </div>
   <p class="stage-note">Example setup, for illustration.</p>
+</div></section>
+
+
+<section id="alerts"><div class="wrap">
+  <div class="kicker">Pro alerts</div>
+  <h2>The tap on the shoulder, <em>three ways.</em></h2>
+  <p class="sub">Telegram is free. On Pro, the same alert also arrives as a <b>text</b> — and the important ones as a <b>phone call</b> that reads it aloud. Quiet hours keep the night silent.</p>
+  <div class="al-phones">
+
+    <div class="col">
+      <div class="al-phone">
+        <div class="fl-notch"></div>
+        <div class="al-time">1:47 PM</div>
+        <div class="al-app">Telegram<small>NextShelf alerts</small></div>
+        <div class="al-notif">
+          <div class="n-head"><span>Pre-close warning</span><span class="al-live">● Live</span></div>
+          <p><b>AMD</b> is at the edge of its hub with 15 min to the close. A close outside confirms the breakout.</p>
+          <div class="n-meta">4H close 1:30 PM ET</div>
+        </div>
+        <div class="al-notif">
+          <div class="n-head"><span>Breakout confirmed</span><span class="al-live">● Live</span></div>
+          <p><b>AMD</b> closed outside its hub at $485. Target $514, stop $466.</p>
+          <div class="n-meta">Confirmed 1:47 PM ET · <span class="up">Target: next shelf</span></div>
+        </div>
+      </div>
+      <div class="al-cap">
+        <h3>Telegram <span class="al-tag">Free</span></h3>
+        <p>Every alert, the moment a 4-hour candle closes outside a hub. Nothing on quiet days — that&rsquo;s the discipline.</p>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="al-phone">
+        <div class="fl-notch"></div>
+        <div class="al-time">1:48 PM</div>
+        <div class="al-app">Messages<small>NextShelf</small></div>
+        <div class="al-bubble"><b>Pre-close warning:</b> AMD at the edge of its hub, 15 min to the 1:30 PM close.<span class="b-time">1:15 PM · NextShelf</span></div>
+        <div class="al-bubble"><b>AMD broke out of its hub.</b> Closed $485. Target $514, stop $466. Next shelf is the target; a close back inside means it failed.<span class="b-time">1:47 PM · NextShelf</span></div>
+        <div class="al-bubble out">Got it — watching the close.<span class="b-time">1:48 PM · You</span></div>
+      </div>
+      <div class="al-cap">
+        <h3>Text message <span class="al-tag pro">Pro</span></h3>
+        <p>The same alert as Telegram, as a text — every alert, same words, no app to open.</p>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="al-phone">
+        <div class="fl-notch"></div>
+        <div class="al-call">
+          <div class="al-avatar">N</div>
+          <div class="al-call-name">NextShelf</div>
+          <div class="al-call-sub">Pre-close warning &middot; AMD &middot; mobile</div>
+          <div class="al-call-line">
+            <div class="who">The call reads aloud</div>
+            <p>&ldquo;AMD is at the edge of its hub, fifteen minutes to the close. A close outside confirms the breakout.&rdquo;</p>
+          </div>
+          <div class="al-call-btns"><span class="al-decline">✕</span><span class="al-answer"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span></div>
+        </div>
+      </div>
+      <div class="al-cap">
+        <h3>Phone call <span class="al-tag pro">Pro</span></h3>
+        <p>Only the ones that can&rsquo;t wait — pre-close warnings and breakouts. The voice reads the alert; details are in Telegram.</p>
+      </div>
+    </div>
+
+  </div>
+  <p class="al-note">Example alert, for illustration. Quiet hours: no texts or calls overnight — Telegram arrives silent.</p>
 </div></section>
 
 
