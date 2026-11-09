@@ -991,13 +991,10 @@ html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !i
 .sika-ava { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #2B2C2F; font-size: 14px; }
 html[data-theme="light"] .sika-ava { background: #E9E8E2; }
 .sika-name { font-size: 14px; font-weight: 800; }
-.sika-live { position: relative; overflow: hidden; isolation: isolate; display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #3DD68C; border: 1px solid rgba(61,214,140,.55); border-radius: 999px; padding: 3px 10px; background: #0E1512; box-shadow: 0 0 12px rgba(61,214,140,.28); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.sika-live { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #3DD68C; border: 1px solid rgba(61,214,140,.55); border-radius: 999px; padding: 3px 10px; background: #0E1512; box-shadow: 0 0 12px rgba(61,214,140,.28); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 .sika-live i { width: 6px; height: 6px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); display: inline-block; flex: none; }
-.sika-live::after { content: ""; position: absolute; top: 0; bottom: 0; left: -34%; width: 34%; background: linear-gradient(90deg, transparent, rgba(61,214,140,.30), transparent); animation: sikaScan 2.4s ease-in-out infinite; pointer-events: none; }
-@keyframes sikaScan { 0% { left: -34%; } 60%, 100% { left: 100%; } }
 html[data-theme="light"] .sika-live { background: #fff; border-color: rgba(18,128,92,.55); color: #12805C; box-shadow: 0 0 12px rgba(18,128,92,.18); }
 html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
-html[data-theme="light"] .sika-live::after { background: linear-gradient(90deg, transparent, rgba(18,128,92,.28), transparent); }
 .sika-analyzing { font-size: 13px; color: #9AA0AC; line-height: 1.9; }
 .sika-step { opacity: 0; transition: opacity .3s ease; }
 .sika-step.on { opacity: 1; }
@@ -1006,7 +1003,7 @@ html[data-theme="light"] .sika-live::after { background: linear-gradient(90deg, 
 .plain-body { display: none; }
 .plain-body.on { display: block; animation: sikaFade .35s ease; }
 @keyframes sikaFade { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .plain-body.on { animation: none; } .sika-step { transition: none; } .sika-live::after { display: none; } .sweep-btn::after { display: none !important; } }
+@media (prefers-reduced-motion: reduce) { .plain-body.on { animation: none; } .sika-step { transition: none; } }
 .plain-panel b { font-weight: 700; }
 @media (max-width: 760px) {
   .board-table tr.plain-row { margin-top: -6px; padding-top: 0 !important; border-top: 0 !important; border-radius: 0 0 14px 14px; }
@@ -1370,15 +1367,16 @@ html[data-theme="light"] .ox-closed { color: #55606e; background: #f4f5f7; borde
 @keyframes nsShine { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
 html .live-pill { position: relative; display: inline-flex !important; align-items: center; gap: 7px; overflow: hidden; isolation: isolate; padding: 4px 11px 4px 9px !important; border-radius: 999px !important; vertical-align: 2px; font: 700 11px/1.3 ui-monospace, "SF Mono", Menlo, Consolas, monospace !important; letter-spacing: .12em !important; text-transform: uppercase; color: #3DD68C !important; border: 1px solid rgba(61,214,140,.55) !important; background: #0E1512 !important; box-shadow: 0 0 12px rgba(61,214,140,.28) !important; }
 html .live-pill::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); animation: none; }
-html .live-pill::after { content: ""; position: absolute; inset: 0; z-index: -1; width: 45%; background: linear-gradient(90deg, transparent, rgba(61,214,140,.30), transparent); animation: sikaScan 2.4s ease-in-out infinite; }
-html .run .live-pill, html .live-pill.run { color: #3DD68C !important; background: #0E1512 !important; border-color: rgba(61,214,140,.55) !important; box-shadow: 0 0 18px rgba(61,214,140,.45) !important; }
-html .run .live-pill::before, html .live-pill.run::before { background: #3DD68C; box-shadow: 0 0 10px rgba(61,214,140,1); animation: none; }
-html .run .live-pill::after, html .live-pill.run::after { animation-duration: 1.2s; }
-html[data-theme="light"] .live-pill { color: #12805C !important; border-color: rgba(18,128,92,.55) !important; background: #fff !important; box-shadow: 0 0 12px rgba(18,128,92,.18) !important; }
+html .live-pill::after { content: ""; position: absolute; inset: 0; z-index: -1; width: 45%; background: linear-gradient(90deg, transparent, rgba(18,128,92,.30), transparent); animation: none; opacity: 0; }
+@keyframes sikaScan { 0% { left: -34%; } 60%, 100% { left: 100%; } }
+/* the older ".agent.run .ag-state / .scout-pop.run .sp-head small" rule (!important) would repaint the pill while running; these selectors outrank it so the background never changes */
+html .agent.run .live-pill, html .scout-pop.run .live-pill { color: #3DD68C !important; border-color: rgba(61,214,140,.55) !important; background: #0E1512 !important; }
+html .run .live-pill, html .live-pill.run { box-shadow: 0 0 18px rgba(61,214,140,.45) !important; }
+html .run .live-pill::after, html .live-pill.run::after { opacity: 1; animation: sikaScan 1.2s ease-in-out infinite; }
+html[data-theme="light"] .live-pill, html[data-theme="light"] .sp-head small.live-pill, html[data-theme="light"] .agent.run .live-pill, html[data-theme="light"] .scout-pop.run .live-pill { color: #12805C !important; border-color: rgba(18,128,92,.55) !important; background: #fff !important; box-shadow: 0 0 12px rgba(18,128,92,.18) !important; }
 html[data-theme="light"] .live-pill::before { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
 html[data-theme="light"] .live-pill::after { background: linear-gradient(90deg, transparent, rgba(18,128,92,.28), transparent); }
-html[data-theme="light"] .run .live-pill, html[data-theme="light"] .live-pill.run { color: #12805C !important; background: #fff !important; border-color: rgba(18,128,92,.55) !important; box-shadow: 0 0 18px rgba(18,128,92,.30) !important; }
-html[data-theme="light"] .run .live-pill::before { background: #12805C; }
+html[data-theme="light"] .run .live-pill, html[data-theme="light"] .live-pill.run, html[data-theme="light"] .agent.run .live-pill, html[data-theme="light"] .scout-pop.run .live-pill { box-shadow: 0 0 18px rgba(18,128,92,.30) !important; }
 @media (prefers-reduced-motion: reduce) { .live-pill::before { animation: none !important; } .live-pill::after { display: none !important; } }
 
 /* Sweep now: animated gradient ring */
@@ -1630,16 +1628,13 @@ html body .chip, html body .board-filter { border-radius: 10px !important; }
 html body .sweep-btn { background: #F2F3F5 !important; color: #0E0F12 !important; border: 0 !important; border-radius: 10px !important; box-shadow: none !important; }
 html body .sweep-btn::before, html body .sweep-btn::after { display: none !important; }
 html[data-theme="light"] body .chip.on, html[data-theme="light"] body .board-filter.active, html[data-theme="light"] body .rank-ctl .seg button.on, html[data-theme="light"] body .sweep-btn { background: #141412 !important; color: #F6F6F3 !important; border-color: #141412 !important; }
-/* Sweep now: Live-rooms glow pill (replaces the overridden conic ring) */
-html body .sweep-btn { position: relative; overflow: hidden; isolation: isolate; display: inline-flex !important; align-items: center; gap: 8px; padding: 9px 18px !important; border-radius: 999px !important; border: 1px solid rgba(61,214,140,.55) !important; background: #0E1512 !important; color: #3DD68C !important; font: 700 13px ui-monospace, "SF Mono", Menlo, Consolas, monospace !important; letter-spacing: .04em; box-shadow: 0 0 18px rgba(61,214,140,.30), 0 10px 28px rgba(61,214,140,.20) !important; cursor: pointer; }
+/* Sweep now: Live-rooms glow pill (replaces the overridden conic ring). No band — the button never animates. */
+html body .sweep-btn { display: inline-flex !important; align-items: center; gap: 8px; padding: 9px 18px !important; border-radius: 999px !important; border: 1px solid rgba(61,214,140,.55) !important; background: #0E1512 !important; color: #3DD68C !important; font: 700 13px ui-monospace, "SF Mono", Menlo, Consolas, monospace !important; letter-spacing: .04em; box-shadow: 0 0 18px rgba(61,214,140,.30), 0 10px 28px rgba(61,214,140,.20) !important; cursor: pointer; }
 html body .sweep-btn::before { content: ""; display: block !important; position: static; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); animation: none; z-index: auto; }
-html body .sweep-btn::after { content: ""; display: block !important; position: absolute; top: 0; bottom: 0; left: -34%; width: 34%; border-radius: 0; background: linear-gradient(90deg, transparent, rgba(61,214,140,.30), transparent); animation: none; opacity: 0; pointer-events: none; }
 html body .sweep-btn:hover { box-shadow: 0 0 28px rgba(61,214,140,.45), 0 10px 28px rgba(61,214,140,.25) !important; }
-html body .sweep-btn:disabled { opacity: 1 !important; cursor: default; }
-html .run .sweep-btn::after { opacity: 1; animation: sikaScan 2.4s ease-in-out infinite; }
+html body .sweep-btn:disabled { cursor: default; }
 html[data-theme="light"] body .sweep-btn { background: #fff !important; border-color: rgba(18,128,92,.55) !important; color: #12805C !important; box-shadow: 0 0 18px rgba(18,128,92,.20), 0 10px 28px rgba(18,128,92,.14) !important; }
 html[data-theme="light"] body .sweep-btn::before { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
-html[data-theme="light"] body .sweep-btn::after { background: linear-gradient(90deg, transparent, rgba(18,128,92,.28), transparent); }
 
 /* the Shelf card stays out of the way when it's closed */
 body:not(.brief-open) .brief { visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s .28s; }
@@ -3930,7 +3925,7 @@ function renderAgent(sc) {
   const el = $("agent"); if (!el) return;
   el.classList.toggle("run", !!sc.running);
   $("agState").textContent = sc.running ? "Sweeping" : "Live";
-  const bs = $("bScan"); if (bs) { bs.disabled = !!sc.running; bs.querySelector("span").textContent = sc.running ? "Sweeping…" : "Sweep now"; }
+  const bs = $("bScan"); if (bs) { bs.disabled = !!sc.running; }
   if (sc.running) {
     const pct = sc.total ? Math.round(sc.done / sc.total * 100) : 2;
     $("agBar").style.width = Math.max(2, pct) + "%";
