@@ -463,6 +463,10 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-state.hub{color:#a8b9e8;background:#242528}.board-state.near{color:#d8b878;background:#2b2519}
 .board-state.neutral{color:#9eacbb;background:#222326}.board-distance{font-weight:700;color:#dce6ef}.board-shelf{font-weight:700;color:#b6c9dc}
 .sr-side{display:block;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.sr-side.sup{color:#00C898}
+.sr-side.res{color:#F00060}
+html[data-theme="light"] .sr-side.sup{color:#007F61}
+html[data-theme="light"] .sr-side.res{color:#DC0058}
 .board-actions{display:flex;justify-content:flex-end;gap:7px}.board-actions a{font-size:10px!important;padding:6px 8px!important;border-radius:4px!important}
 .board-actions .btnx { border-radius: 999px !important; }
 .board-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}.board-lockrow{font-size:14px;padding:18px}.board-table tr:has(.board-lockrow) td{grid-column:1/-1}.board-table tr:has(.board-lockrow) td::before{display:none}.board-lockrow a{color:#8EA2FF;font-weight:700;text-decoration:none}
@@ -1731,6 +1735,11 @@ html body .board-state.board-state.hub.hub { color: #7C93FF !important; backgrou
 html body .board-state.board-state.neutral.neutral { color: #9AA0AC !important; background: rgba(154,160,172,.12) !important; }
 html[data-theme="light"] body .board-state.board-state.hub.hub { color: #2F54EB !important; background: rgba(47,84,235,.08) !important; }
 html[data-theme="light"] body .board-state.board-state.neutral.neutral { color: #5C5B55 !important; background: rgba(92,91,85,.08) !important; }
+/* Patch 62: Testing pills split by side — Webull chart colors */
+html body .board-state.board-state.near-sup.near-sup { color: #00C898 !important; background: rgba(0,200,152,.12) !important; border: 0 !important; border-radius: 4px !important; }
+html body .board-state.board-state.near-res.near-res { color: #F00060 !important; background: rgba(240,0,96,.12) !important; border: 0 !important; border-radius: 4px !important; }
+html[data-theme="light"] body .board-state.board-state.near-sup.near-sup { color: #007F61 !important; background: rgba(0,127,97,.08) !important; border: 0 !important; border-radius: 4px !important; }
+html[data-theme="light"] body .board-state.board-state.near-res.near-res { color: #DC0058 !important; background: rgba(220,0,88,.08) !important; border: 0 !important; border-radius: 4px !important; }
 /* earnings: the light purple pill */
 /* Patch 50: earnings tag is a quiet violet line under the ticker, not a pill */
 html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 3px 0 0 !important; flex-basis: 100% !important;
@@ -3165,7 +3174,7 @@ function briefHTML(sym, st, chart) {
     : `<button class="btnx bf-addbtn" onclick="briefAdd('${esc(sym)}', this)">☆ Add ${esc(sym)} to my watchlist</button>`;
   const others = (st.setups || []).filter(x => x.state !== "between" || x.kind === "sr");
   const setupsHTML = others.length ? `<div class="bf-h">Other setups on ${esc(sym)} <span class="beta-tag">Beta</span></div><p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
-      const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", hub: "#9fb3ff"}[c];
+      const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
       if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).`;
       else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
@@ -3605,7 +3614,7 @@ let SETUP_TAB = "hub";
 function setupWord(x) {
   if (x.state === "breakout_up") return ["Breakout ↑", "up"];
   if (x.state === "breakdown") return ["Breakdown ↓", "down"];
-  if (x.state === "testing") return [x.near === "resistance" ? "Testing resistance" : "Testing support", "near"];
+  if (x.state === "testing") return [x.near === "resistance" ? "Testing resistance" : "Testing support", x.near === "resistance" ? "near-res" : "near-sup"];
   if (x.kind && x.kind.startsWith("double")) return x.near_edge ? ["Near the neckline", "near"] : ["Second peak in", "hub"];
   if (x.kind && x.kind.startsWith("flag")) return x.near_edge ? ["Pressing the flag", "near"] : ["Flag forming", "hub"];
   if (x.kind === "gapfade") return x.near_edge ? ["Near the gap-day high", "near"] : ["Gapped and faded", "hub"];
@@ -3640,7 +3649,7 @@ function renderSetupBoard() {
         : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>${x.kind === "gapfade" ? "1D" : "4H"}</small></div></td>
         <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
-        <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
+        <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side res">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side sup">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
     </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" ? "daily" : "4-hour"} close.</div>`)
     + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup is in beta. It works on daily closes with a fixed 2× risk target, not the hub rules." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
