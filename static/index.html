@@ -427,6 +427,7 @@ nav .wrap{min-height:62px}
 .chip,.badge,.tag,.plan,.pro-badge{border-radius:4px!important}
 .chip,.sec,.tvbtn,.ghost,.helpbtn,.signout,.more-link{background:#1B1C1F!important;border-color:var(--line-2)!important;color:var(--muted)!important}
 .chip.on,.chip.active,.tabs .on{background:#2B2C2F!important;border-color:#49617c!important;color:#d9e6f4!important}
+#scanBtn { border-radius: 999px; }
 .primary,.btn.solid,.pro button{background:#C3C7CF!important;border:1px solid #C3C7CF!important;color:#151619!important;font-weight:650!important}
 .primary:hover,.btn.solid:hover{background:#d5e0eb!important}
 th{color:var(--faint)!important;font-size:10px!important;letter-spacing:.09em!important;text-transform:uppercase}
@@ -1052,7 +1053,7 @@ td, .mono, .kpi b, .stats b, .tiles b, .lm-row b, .board-table td, .px, .lacct b
 /* ================= MONOCHROME: black & white interface, colour only for market signals ================= */
 :root { --shelf: #F4F6F9; --accent: #F4F6F9; --mono-w: #F4F6F9; }
 /* buttons */
-button.primary, .btnx.primary, .primary, .sp-go, #addBtn { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #0E0F12 !important; }
+button.primary, .btnx.primary, .primary, .sp-go { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #0E0F12 !important; }
 button.primary:hover, .sp-go:hover { background: #fff !important; box-shadow: 0 0 0 3px rgba(255,255,255,.12) !important; filter: none !important; }
 /* sidebar & nav */
 .sb-item.on svg { color: #fff !important; }
@@ -1129,7 +1130,7 @@ html[data-theme="light"] .sb-motto { color: #4b5563 !important; border-left-colo
 html[data-theme="light"] .sb-foot a, html[data-theme="light"] .sb-foot button, html[data-theme="light"] .sb-min { color: #6b7280 !important; } html[data-theme="light"] .sb-foot a:hover, html[data-theme="light"] .sb-foot button:hover { background: rgba(15,23,42,.06) !important; color: #0d1117 !important; }
 html[data-theme="light"] .sb-brand svg rect:first-child, html[data-theme="light"] nav .brand svg rect:first-child { fill: #0d1117; } html[data-theme="light"] .sb-brand svg path, html[data-theme="light"] nav .brand svg path { stroke: #fff; }
 /* buttons, chips, inputs */
-html[data-theme="light"] button.primary, html[data-theme="light"] .btnx.primary, html[data-theme="light"] .primary, html[data-theme="light"] .sp-go, html[data-theme="light"] #addBtn { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
+html[data-theme="light"] button.primary, html[data-theme="light"] .btnx.primary, html[data-theme="light"] .primary, html[data-theme="light"] .sp-go { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
 html[data-theme="light"] .btnx, html[data-theme="light"] .chip, html[data-theme="light"] button.sec, html[data-theme="light"] .ghost, html[data-theme="light"] .helpbtn, html[data-theme="light"] .signout, html[data-theme="light"] .sec, html[data-theme="light"] .tvbtn, html[data-theme="light"] .tv, html[data-theme="light"] .broker, html[data-theme="light"] .board-filter, html[data-theme="light"] .board-sort, html[data-theme="light"] .more, html[data-theme="light"] .sp-alt, html[data-theme="light"] .bf-x, html[data-theme="light"] .theme-btn {
   background: rgba(255,255,255,.8) !important; border-color: rgba(15,23,42,.12) !important; color: #0d1117 !important; }
 html[data-theme="light"] .chip.on, html[data-theme="light"] .board-filter.active, html[data-theme="light"] .setup-tabs button.on, html[data-theme="light"] .rec-tabs button.on, html[data-theme="light"] .bf-seg button.on, html[data-theme="light"] .theme-seg .on { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
@@ -1827,14 +1828,14 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
   <form class="cmd" id="add" autocomplete="off">
     <span class="pre">$</span>
     <input id="sym" placeholder="Add a ticker, e.g. NVDA" autocapitalize="characters" maxlength="10" aria-label="Ticker">
-    <button class="primary" id="addBtn">Add to watchlist</button>
+    <button type="button" id="scanBtn">Scan now</button>
+    <button class="ghost" id="addBtn">+ Add</button>
   </form>
   <div class="err" id="err"></div>
   <div class="chips" id="chips" style="margin:6px 0 14px">
     <button class="chip on" data-f="all">All</button>
     <button class="chip" data-f="hub">Inside a hub</button>
     <button class="chip" data-f="live">Breaking out</button>
-    <button class="chip" id="scanBtn">Scan now</button>
   </div>
   <div id="list"><div class="loading"><span class="spin"></span>Loading…</div></div>
   <div class="stats" hidden><b id="sWatch"></b><b id="sHub"></b><b id="sLive"></b><b id="sAlerts"></b></div>
@@ -2182,18 +2183,18 @@ const OPEN = new Set();
 function oneLine(st, key) {
   const h = st.hub, up = st.shelf_up, dn = st.shelf_down;
   switch (key) {
-    case "forming": return `Resting in a range. Watch for a close <b class="u-up">above ${money(h.high)}</b> or <b class="u-down">below ${money(h.low)}</b>`;
-    case "watching": return `Range just ended. A close above ${money(h.high)} or below ${money(h.low)} still counts`;
-    case "breakout_up": return `<b class="u-up">Broke out ↑</b> · heading for ${money(st.target)} (${pctFrom(st.target, st.last_close)})`;
-    case "breakdown": return `<b class="u-down">Broke down ↓</b> · heading for ${money(st.target)} (${pctFrom(st.target, st.last_close)})`;
-    case "follow-through": return "Reached its target. Waiting for the next range";
-    case "snap-back": return "Breakout failed. Waiting for the next range";
-    case "stalled": return "Breakout ran out of time. Waiting for the next range";
+    case "forming": return `Watch for a close <b class="u-up">above ${money(h.high)}</b> or <b class="u-down">below ${money(h.low)}</b>`;
+    case "watching": return `A close above ${money(h.high)} or below ${money(h.low)} still counts`;
+    case "breakout_up": return `Heading for <b class="u-up">${money(st.target)} (${pctFrom(st.target, st.last_close)})</b>`;
+    case "breakdown": return `Heading for <b class="u-down">${money(st.target)} (${pctFrom(st.target, st.last_close)})</b>`;
+    case "follow-through": return "Waiting for the next range";
+    case "snap-back": return "Waiting for the next range";
+    case "stalled": return "Waiting for the next range";
     case "error": return esc(st.error || "Couldn't load");
     default: {
       const live = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
-      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${esc(live.name)}: ${live.state === "breakout_up" ? "broke out ↑" : "broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}`;
-      return "No hub yet" + (up || dn ? ` · nearest shelves ${[up && money(up.level) + " above", dn && money(dn.level) + " below"].filter(Boolean).join(" / ")}` : "");
+      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${live.state === "breakout_up" ? "Broke out ↑" : "Broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}`;
+      return up || dn ? `Nearest shelves ${[up && money(up.level) + " above", dn && money(dn.level) + " below"].filter(Boolean).join(" / ")}` : "";
     }
   }
 }
@@ -2226,7 +2227,10 @@ function details(t) {
 function listRow(t) {
   const st = t.status || {};
   const key = st.error ? "error" : (st.state || "none");
-  const [label, color] = STATES[key] || [key, "--idle"];
+  const liveSetup = key === "none" ? (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown") : null;
+  const [label, color] = liveSetup
+    ? [esc(liveSetup.name), liveSetup.state === "breakout_up" ? "--up" : "--down"]
+    : (STATES[key] || [key, "--idle"]);
   const S = esc(t.symbol);
   return `<details class="lrow" id="c-${S}"${OPEN.has(t.symbol) ? " open" : ""} ontoggle="this.open ? OPEN.add('${S}') : OPEN.delete('${S}')">
     <summary><span class="s">${S}<small>${money(st.last_close)}</small></span>
@@ -2298,23 +2302,24 @@ $("add").addEventListener("submit", async (e) => {
         toast(`${sym.toUpperCase()} added to your watchlist`); } }
   catch (err) { $("err").innerHTML = esc(friendly(err)) + (/Upgrade/.test(err.message) ? ` <a class="upsell" style="margin:0" href="#account">See Pro →</a>` : ""); }
   clearTimeout(slowMsg); if ($("err").textContent.startsWith("Still working")) $("err").textContent = ""; $("err").style.color = "";
-  $("addBtn").disabled = false; $("addBtn").textContent = "Add to watchlist";
+  $("addBtn").disabled = false; $("addBtn").textContent = "+ Add";
 });
 $("sym").addEventListener("input", () => { $("err").textContent = ""; });
 
 $("chips").addEventListener("click", async (e) => {
-  const b = e.target.closest("button"); if (!b) return;
-  if (b.id === "scanBtn") {
-    b.disabled = true; b.textContent = "Scanning…";
-    try { const r = await api("/api/scan", {method: "POST"}); b.textContent = r.alerts ? `${r.alerts} new` : "Up to date"; }
-    catch { b.textContent = "Scan failed"; }
-    await Promise.all([loadTickers(), loadAlerts()]);
-    setTimeout(() => { b.disabled = false; b.textContent = "Scan now"; }, 2500);
-    return;
-  }
+  const b = e.target.closest("button[data-f]"); if (!b) return;
   FILTER = b.dataset.f;
   document.querySelectorAll(".chip[data-f]").forEach(c => c.classList.toggle("on", c === b));
   render();
+});
+
+$("scanBtn").addEventListener("click", async () => {
+  const b = $("scanBtn");
+  b.disabled = true; b.textContent = "Scanning…";
+  try { const r = await api("/api/scan", {method: "POST"}); b.textContent = r.alerts ? `${r.alerts} new` : "Up to date"; }
+  catch { b.textContent = "Scan failed"; }
+  await Promise.all([loadTickers(), loadAlerts()]);
+  setTimeout(() => { b.disabled = false; b.textContent = "Scan now"; }, 2500);
 });
 
 const armed = new Set();
