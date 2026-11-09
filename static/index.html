@@ -1714,7 +1714,7 @@ html body .board-table .board-state.board-state.up, html body .board-table .boar
 html[data-theme="light"] #closesCard .seg { background: #F6F6F3; border-color: #E4E3DC; }
 html[data-theme="light"] #closesCard .seg button.on { background: #141412 !important; color: #F6F6F3 !important; }
 html[data-theme="light"] body .board-state.board-state.board-state { background: transparent !important; border: 1px solid currentColor !important; }
-/* Patch 61: "near" pills (Testing support/resistance, Near the neckline, ...) and the Breakout/Breakdown pills
+/* Patch 61: all board state pills (near/Testing, Breakout/Breakdown, Inside a hub, neutral)
    are flat rectangles: coloured text on a soft tint of the same colour, no border, 4px corners */
 html body .board-state.board-state.near.near, html body .board-state.board-state.up.up, html body .board-state.board-state.down.down { border: 0 !important; border-radius: 4px !important; }
 html body .board-state.board-state.near.near { color: #7C93FF !important; background: rgba(124,147,255,.12) !important; }
@@ -1724,6 +1724,13 @@ html[data-theme="light"] body .board-state.board-state.near.near, html[data-them
 html[data-theme="light"] body .board-state.board-state.near.near { color: #2F54EB !important; background: rgba(47,84,235,.08) !important; }
 html[data-theme="light"] body .board-state.board-state.up.up { color: #12805C !important; background: rgba(18,128,92,.08) !important; }
 html[data-theme="light"] body .board-state.board-state.down.down { color: #D1352B !important; background: rgba(209,53,43,.08) !important; }
+/* …and the rest of the state pills (Inside a hub, Hub ended, Timed out) match: flat rectangles too */
+html body .board-state.board-state.hub.hub, html body .board-state.board-state.neutral.neutral,
+html[data-theme="light"] body .board-state.board-state.hub.hub, html[data-theme="light"] body .board-state.board-state.neutral.neutral { border: 0 !important; border-radius: 4px !important; }
+html body .board-state.board-state.hub.hub { color: #7C93FF !important; background: rgba(124,147,255,.12) !important; }
+html body .board-state.board-state.neutral.neutral { color: #9AA0AC !important; background: rgba(154,160,172,.12) !important; }
+html[data-theme="light"] body .board-state.board-state.hub.hub { color: #2F54EB !important; background: rgba(47,84,235,.08) !important; }
+html[data-theme="light"] body .board-state.board-state.neutral.neutral { color: #5C5B55 !important; background: rgba(92,91,85,.08) !important; }
 /* earnings: the light purple pill */
 /* Patch 50: earnings tag is a quiet violet line under the ticker, not a pill */
 html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 3px 0 0 !important; flex-basis: 100% !important;
