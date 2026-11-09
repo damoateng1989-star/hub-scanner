@@ -93,6 +93,8 @@
   button.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
   button:disabled { opacity: .5; cursor: default; }
   .err { color: var(--down); font-size: 13px; min-height: 20px; margin-top: 6px; }
+  .scan-note { font-size: 12px; color: var(--muted); margin: 6px 2px 0; }
+  .scan-note[hidden] { display: none; }
 
   .sec { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin: 26px 0 14px; flex-wrap: wrap; }
   h2 { font: 500 26px/1.1 var(--sans); letter-spacing: -0.025em; margin: 0; }
@@ -1831,6 +1833,7 @@ html[data-theme="light"] #brief.bf-collapsed .bf-seemore { background: #141412; 
     <button type="button" id="scanBtn">Scan now</button>
     <button class="ghost" id="addBtn">+ Add</button>
   </form>
+  <div class="scan-note" id="scanNote">Scan now re-checks every watched ticker against the latest 4-hour candles — not just the ones on this list.</div>
   <div class="err" id="err"></div>
   <div class="chips" id="chips" style="margin:6px 0 14px">
     <button class="chip on" data-f="all">All</button>
@@ -2315,11 +2318,21 @@ $("chips").addEventListener("click", async (e) => {
 
 $("scanBtn").addEventListener("click", async () => {
   const b = $("scanBtn");
+  const note = $("scanNote");
+  const NOTE = note.textContent;   // the explanation, read from the markup — one source of truth
   b.disabled = true; b.textContent = "Scanning…";
-  try { const r = await api("/api/scan", {method: "POST"}); b.textContent = r.alerts ? `${r.alerts} new` : "Up to date"; }
-  catch { b.textContent = "Scan failed"; }
+  try {
+    const r = await api("/api/scan", {method: "POST"});
+    b.textContent = r.alerts ? `${r.alerts} new` : "Up to date";
+    note.textContent = r.alerts
+      ? `Checked every watched ticker · ${r.alerts} new alert${r.alerts === 1 ? "" : "s"}`
+      : "Checked every watched ticker · up to date";
+  } catch {
+    b.textContent = "Scan failed";
+    note.textContent = "Scan failed — try again in a moment.";
+  }
   await Promise.all([loadTickers(), loadAlerts()]);
-  setTimeout(() => { b.disabled = false; b.textContent = "Scan now"; }, 2500);
+  setTimeout(() => { b.disabled = false; b.textContent = "Scan now"; note.textContent = NOTE; }, 2500);
 });
 
 const armed = new Set();
@@ -2481,14 +2494,14 @@ async function loadMe() {
   renderSide();
   if (ME.guest) {
     $("planPill").textContent = "Sign in"; $("planPill").href = "/login"; $("planPill").className = "plan pro";
-    $("tabPaper").hidden = true; $("scanBtn").hidden = true; $("bScan").hidden = true;
+    $("tabPaper").hidden = true; $("scanBtn").hidden = true; $("scanNote").hidden = true; $("bScan").hidden = true;
     return;
   }
   $("planPill").href = "#account";
   $("planPill").textContent = isPro() ? "Pro" : "Free";
   $("planPill").className = "plan" + (isPro() ? " pro" : "");
   $("tabPaper").hidden = !ME.is_admin;
-  $("scanBtn").hidden = !ME.is_admin;
+  $("scanBtn").hidden = !ME.is_admin; $("scanNote").hidden = !ME.is_admin;
   $("bScan").hidden = !ME.is_admin;
   if (!ME.is_admin && location.hash === "#paper") location.hash = "#watch";
 }
