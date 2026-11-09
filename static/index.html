@@ -2525,7 +2525,7 @@ async function loadAccount() {
         <div class="tier"><b>Free · your plan</b><ul><li>Watch up to ${m.ticker_limit} tickers</li><li>Telegram alerts after each breakout</li>
           <li>Setups: stocks inside a hub</li><li>Track record and charts</li></ul></div>
         <div class="tier pro"><b>Pro</b><ul><li>Unlimited watchlist</li><li><b style="display:inline;font-size:inherit">Pre-close warnings</b> 15 min before the candle closes</li>
-          <li>All setups: live breakouts and stocks at the edge</li><li>Phone-call alerts</li><li>Options swing plans on every breakout</li><li>Backtests on any ticker</li></ul></div>
+          <li>All setups: live breakouts and stocks at the edge</li><li>Text &amp; phone-call alerts</li><li>Options swing plans on every breakout</li><li>Backtests on any ticker</li></ul></div>
       </div></div>`}
 
     <div class="acct"><h3>Appearance</h3><p>Light, dark, or match your device.</p>
@@ -2545,12 +2545,12 @@ async function loadAccount() {
          <p style="margin-top:8px">Then come back and refresh this page.</p>`}
     </div>
 
-    <div class="acct"><h3>Phone-call alerts ${isPro() ? "" : "· Pro"}</h3>
-      ${!isPro() ? `<p>Your phone rings and reads the alert aloud, for pre-close warnings and breakouts. Available on Pro.</p>` :
-        !m.calls_available ? `<p>Phone calls aren't set up on this site yet.</p>` :
-        `<p>We'll call this number for pre-close warnings and breakouts on your watchlist.</p>
+    <div class="acct"><h3>Text &amp; call alerts ${isPro() ? "" : "· Pro"}</h3>
+      ${!isPro() ? `<p>Every alert as a text message, and your phone rings and reads pre-close warnings and breakouts aloud. Available on Pro.</p>` :
+        !m.calls_available ? `<p>Text and call alerts aren't set up on this site yet.</p>` :
+        `<p>We'll text this number every alert on your watchlist, and call it for pre-close warnings and breakouts. Nothing is sent during your quiet hours.</p>
          <form class="row" id="phoneForm"><input id="phoneIn" type="tel" placeholder="+1 617 555 0123" value="${esc(m.phone || "")}">
-           <button>Save</button>${m.phone ? `<button type="button" onclick="testCall(this)">Test call</button>` : ""}</form>
+           <button>Save</button>${m.phone ? `<button type="button" onclick="testText(this)">Test text</button><button type="button" onclick="testCall(this)">Test call</button>` : ""}</form>
          <div class="err" id="phoneMsg"></div>`}
     </div>
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
@@ -2645,6 +2645,10 @@ async function toggleInvite(code, on) {
 async function signOut() { await fetch("/auth/logout", {method: "POST"}); location.href = "/"; }
 async function unlinkTg() { await api("/api/me/telegram", {method: "DELETE"}); await loadMe(); loadAccount(); }
 async function setPlan(id, plan) { await api(`/api/admin/users/${id}/plan`, {method: "POST", body: JSON.stringify({plan})}); }
+async function testText(btn) {
+  btn.disabled = true;
+  try { await api("/api/testsms", {method: "POST"}); btn.textContent = "Text sent"; } catch (e) { $("phoneMsg").textContent = e.message; btn.disabled = false; }
+}
 async function testCall(btn) {
   btn.disabled = true;
   try { await api("/api/testcall", {method: "POST"}); btn.textContent = "Calling…"; } catch (e) { $("phoneMsg").textContent = e.message; }

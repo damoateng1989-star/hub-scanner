@@ -724,6 +724,14 @@ def test_call(u: dict = Pro):
         raise HTTPException(400, str(e))
 
 
+@app.post("/api/testsms")
+def test_sms(u: dict = Pro):
+    try:
+        return {"sid": phone.text("NextShelf test text. SMS alerts are working.", u["phone"])}
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/api/admin/users")
 def admin_users(u: dict = Admin):
     return [dict(id=x["id"], email=x["email"], name=x["name"], plan=x["plan"], is_admin=bool(x["is_admin"]),
