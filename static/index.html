@@ -993,6 +993,9 @@ html[data-theme="light"] .sika-ava { background: #E9E8E2; }
 .sika-name { font-size: 14px; font-weight: 800; }
 .sika-live { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; color: var(--ink); border: 1px solid var(--line-2, rgba(255,255,255,.3)); border-radius: 999px; padding: 2px 7px; }
 .sika-live i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink); display: inline-block; }
+.sika-live i { position: relative; }
+.sika-live i::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1px solid var(--ink); animation: sikaRipple 2s ease-out infinite; }
+@keyframes sikaRipple { 0% { transform: scale(.5); opacity: .8; } 100% { transform: scale(1.9); opacity: 0; } }
 .sika-analyzing { font-size: 13px; color: #9AA0AC; line-height: 1.9; }
 .sika-step { opacity: 0; transition: opacity .3s ease; }
 .sika-step.on { opacity: 1; }
@@ -1001,7 +1004,7 @@ html[data-theme="light"] .sika-ava { background: #E9E8E2; }
 .plain-body { display: none; }
 .plain-body.on { display: block; animation: sikaFade .35s ease; }
 @keyframes sikaFade { from { opacity: 0; } to { opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .plain-body.on { animation: none; } .sika-step { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .plain-body.on { animation: none; } .sika-step { transition: none; } .sika-live i::after { display: none; } }
 .plain-panel b { font-weight: 700; }
 @media (max-width: 760px) {
   .board-table tr.plain-row { margin-top: -6px; padding-top: 0 !important; border-top: 0 !important; border-radius: 0 0 14px 14px; }
