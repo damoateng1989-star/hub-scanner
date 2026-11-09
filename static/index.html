@@ -471,18 +471,15 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-table th,.board-table td{box-sizing:border-box;vertical-align:middle}
 .board-table th{height:42px;padding:10px 12px;text-align:right}
 .board-table td{height:58px;padding:10px 12px;text-align:right;line-height:1.35}
-.board-table th:nth-child(1),.board-table td:nth-child(1){width:12%;text-align:left;padding-left:18px}
-.board-table th:nth-child(2),.board-table td:nth-child(2){width:13%;text-align:left}
-.board-table th:nth-child(3),.board-table td:nth-child(3){width:10%;text-align:right}
-.board-table th:nth-child(4),.board-table td:nth-child(4){width:10%;text-align:right}
-.board-table th:nth-child(5),.board-table td:nth-child(5){width:10%;text-align:right}
-.board-table th:nth-child(6),.board-table td:nth-child(6){width:13%;text-align:right}
-.board-table th:nth-child(7),.board-table td:nth-child(7){width:13%;text-align:right}
-.board-table th:nth-child(8),.board-table td:nth-child(8){width:10%;text-align:center}
-.board-table th:nth-child(9),.board-table td:nth-child(9){width:9%;text-align:right;padding-right:16px}
-.board-table th:nth-child(3),.board-table td:nth-child(3),.board-table th:nth-child(4),.board-table td:nth-child(4),.board-table th:nth-child(5),.board-table td:nth-child(5){width:9%}
-.board-table th:nth-child(6),.board-table td:nth-child(6),.board-table th:nth-child(7),.board-table td:nth-child(7){width:11%}
-.board-table th:nth-child(9),.board-table td:nth-child(9){width:16%}
+.board-table th:nth-child(1),.board-table td:nth-child(1){width:10%;text-align:left;padding-left:18px}
+.board-table th:nth-child(2),.board-table td:nth-child(2){width:12%;text-align:left}
+.board-table th:nth-child(3),.board-table td:nth-child(3){width:9%;text-align:right}
+.board-table th:nth-child(4),.board-table td:nth-child(4){width:9%;text-align:right}
+.board-table th:nth-child(5),.board-table td:nth-child(5){width:9%;text-align:right}
+.board-table th:nth-child(6),.board-table td:nth-child(6){width:10%;text-align:right}
+.board-table th:nth-child(7),.board-table td:nth-child(7){width:10%;text-align:right}
+.board-table th:nth-child(8),.board-table td:nth-child(8){width:15%;text-align:center}
+.board-table th:nth-child(9),.board-table td:nth-child(9){width:16%;text-align:right;padding-right:16px}
 .board-table td:nth-child(8){overflow:hidden;text-overflow:ellipsis}
 .board-table th:nth-child(2) .board-sort{display:block;text-align:left}
 .board-table th:nth-child(3) .board-sort,.board-table th:nth-child(6) .board-sort{display:block;width:100%;text-align:right}
@@ -880,13 +877,16 @@ body.brief-open .sf-hello { display: none; }
   .board-actions .tv span { display: none; } .board-actions .tv { padding: 6px 8px !important; }
   .board-table { min-width: 900px !important; }
   .board-table td:last-child, .board-table th:last-child { overflow: visible !important; }
-  /* Patch 40: room for Analyze + Plain English + broker logos on one line */
+  /* Patch 40: room for Analyze + Plain English + broker logos on one line. Patch 45: 4H context 10→15% (from Next shelf 14→9) so the hub grade is not clipped */
   .board-table th:nth-child(1), .board-table td:nth-child(1) { width: 8% !important; }
   .board-table th:nth-child(3), .board-table td:nth-child(3), .board-table th:nth-child(4), .board-table td:nth-child(4),
   .board-table th:nth-child(5), .board-table td:nth-child(5) { width: 8% !important; }
   .board-table th:nth-child(6), .board-table td:nth-child(6) { width: 9% !important; }
-  .board-table th:nth-child(7), .board-table td:nth-child(7) { width: 14% !important; }
-  .board-table th:nth-child(8), .board-table td:nth-child(8) { width: 10% !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .board-table th:nth-child(2), .board-table td:nth-child(2) { width: 13% !important; }
+  .board-table th:nth-child(7), .board-table td:nth-child(7) { width: 9% !important; }
+  .board-table th:nth-child(8), .board-table td:nth-child(8) { width: 15% !important; }
+  .board-table td:nth-child(8) { white-space: normal !important; line-height: 1.3; overflow: visible; text-overflow: clip; padding-right: 22px !important; }
+  .board-table th:nth-child(7) { white-space: normal !important; }
   .board-table th:nth-child(9), .board-table td:nth-child(9) { width: 22% !important; }
   .board-actions { gap: 5px !important; }
 }
@@ -1018,6 +1018,11 @@ html[data-theme="light"] .sika-live::after { background: linear-gradient(90deg, 
 }
 .board-table .board-actions { flex-wrap: nowrap; } .board-table .board-actions .btnx { white-space: nowrap; flex: none; }
 @media (min-width: 1280px) { .board-table th.nowrap-th { white-space: nowrap !important; } }
+/* Patch 45: "Next shelf / target" header may wrap at its narrower 9%; the 4H context cell keeps clear of the
+   Analysis buttons, which spill left of their column on narrower windows (pre-existing) */
+@media (min-width: 761px) { html body .board-table th.nowrap-th:nth-child(7), html body .board-table th:nth-child(7) { white-space: normal !important; } }
+@media (min-width: 761px) and (max-width: 1279px) { html body .board-table td:nth-child(8) { padding-right: 54px !important; } }
+@media (min-width: 1280px) and (max-width: 1439px) { html body .board-table td:nth-child(8) { padding-right: 38px !important; } }
 .board-table th .board-sort { white-space: normal !important; text-align: inherit; }
 </style>
 <style>
