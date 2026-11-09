@@ -981,10 +981,11 @@ body.brief-open .sf-hello { display: none; }
 .gw-row small { display: block; margin-top: 4px; font-size: 11.5px; color: var(--muted); }
 .gw-row .gw-cap { color: #b8860b; } .gw-wait { color: var(--muted); }
 footer .foot-brand{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:600}
-html body .board-actions .plain-btn, .plain-btn { background: #F4F6F9 !important; border-color: #F4F6F9 !important; color: #0E0F12 !important; }
-html body .board-actions .plain-btn.on, .plain-btn.on { background: var(--ink) !important; border-color: var(--ink) !important; color: var(--bg) !important; box-shadow: 0 0 0 2px #7f9ec7 !important; }
+html body .board-actions .plain-btn, .plain-btn { background: #F4F6F9 !important; border-color: #0E0F12 !important; color: #0E0F12 !important; display: inline-flex !important; align-items: center; gap: 6px; }
+.plain-btn .sika-ava { width: 18px; height: 18px; font-size: 11px; flex: none; }
+html body .board-actions .plain-btn.on, .plain-btn.on { background: var(--ink) !important; border-color: #0E0F12 !important; color: var(--bg) !important; box-shadow: 0 0 0 2px #7f9ec7 !important; }
 html[data-theme="light"] body .board-actions .plain-btn, html[data-theme="light"] .plain-btn { background: #0d1117 !important; border-color: #0d1117 !important; color: #fff !important; }
-html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !important; border-color: #0d1117 !important; color: #0d1117 !important; }
+html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !important; border-color: #0E0F12 !important; color: #0d1117 !important; }
 .plain-row[hidden] { display: none !important; }
 .plain-panel { font-size: 14px; line-height: 1.55; color: var(--ink); background: var(--sunk); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; text-align: left; white-space: normal; }
 .sika-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
@@ -3344,7 +3345,7 @@ function renderInstitutionalBoard(){
       '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
-      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
+      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false"><span class="sika-ava">🤖</span>Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
   const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
