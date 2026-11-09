@@ -489,16 +489,14 @@ html:not([data-theme="light"]) .board-caption { border-bottom-color: #1E2A1E; co
 .term-dots i { width: 10px; height: 10px; border-radius: 50%; display: block; }
 .term-dots i:nth-child(1) { background: #FF5F57; } .term-dots i:nth-child(2) { background: #FEBC2E; } .term-dots i:nth-child(3) { background: #28C840; }
 .term-title { display: inline-flex; align-items: center; gap: 10px; }
-html:not([data-theme="light"]) .board-table { font-family: var(--mono); }
+/* mono where it helps (numbers, tickers, headers, caption); words stay in the sans so they read easily */
 html:not([data-theme="light"]) body .board-table th { background: transparent !important; color: #5C665C !important; font-family: var(--mono) !important; }
-html:not([data-theme="light"]) body .board-table td { color: #C9D1C9 !important; border-bottom-color: #1E2A1E !important; font-family: var(--mono) !important; }
-html:not([data-theme="light"]) body .board-table .board-state, html:not([data-theme="light"]) body .board-table .vol-chip, html:not([data-theme="light"]) body .earn-tag.earn-tag.board-state.board-state { font-family: var(--mono) !important; }
-html:not([data-theme="light"]) body .board-search input { font-family: var(--mono) !important; }
-html:not([data-theme="light"]) body .board-table td *:not(.board-actions, .board-actions *, .term-dots i) { font-family: var(--mono) !important; }
-/* mono runs wider: tighten the two longest strings so they keep the sans layout's fit */
-html:not([data-theme="light"]) body .board-table .board-state .bs-sub { letter-spacing: -.09em; font-size: 10px; }
-html:not([data-theme="light"]) body .board-table td:nth-child(6) { letter-spacing: -.04em; }
-html:not([data-theme="light"]) body .board-table .vol-chip { letter-spacing: -.05em; }
+html:not([data-theme="light"]) body .board-table td { color: #C9D1C9 !important; border-bottom-color: #1E2A1E !important; }
+html:not([data-theme="light"]) body .board-table td:nth-child(1) *:not(.earn-tag),
+html:not([data-theme="light"]) body .board-table td:nth-child(3), html:not([data-theme="light"]) body .board-table td:nth-child(3) *,
+html:not([data-theme="light"]) body .board-table td:nth-child(4), html:not([data-theme="light"]) body .board-table td:nth-child(4) *,
+html:not([data-theme="light"]) body .board-table td:nth-child(5), html:not([data-theme="light"]) body .board-table td:nth-child(5) *,
+html:not([data-theme="light"]) body .board-table td:nth-child(7), html:not([data-theme="light"]) body .board-table td:nth-child(7) * { font-family: var(--mono) !important; }
 .board-table th:nth-child(2) .board-sort{display:block;text-align:left}
 .board-table th:nth-child(3) .board-sort,.board-table th:nth-child(6) .board-sort{display:block;width:100%;text-align:right}
 .board-table th:first-child,.board-table td:first-child{text-align:left}
