@@ -462,6 +462,7 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-state.up{color:var(--up);background:#232427}.board-state.down{color:var(--down);background:#2b191d}
 .board-state.hub{color:#a8b9e8;background:#242528}.board-state.near{color:#d8b878;background:#2b2519}
 .board-state.neutral{color:#9eacbb;background:#222326}.board-distance{font-weight:700;color:#dce6ef}.board-shelf{font-weight:700;color:#b6c9dc}
+.sr-side{display:block;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:2px}
 .board-actions{display:flex;justify-content:flex-end;gap:7px}.board-actions a{font-size:10px!important;padding:6px 8px!important;border-radius:4px!important}
 .board-actions .btnx { border-radius: 999px !important; }
 .board-empty{padding:28px;text-align:center;color:var(--muted);font-size:12px}.board-lockrow{font-size:14px;padding:18px}.board-table tr:has(.board-lockrow) td{grid-column:1/-1}.board-table tr:has(.board-lockrow) td::before{display:none}.board-lockrow a{color:#8EA2FF;font-weight:700;text-decoration:none}
@@ -3622,7 +3623,7 @@ function renderSetupBoard() {
         : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>${x.kind === "gapfade" ? "1D" : "4H"}</small></div></td>
         <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
-        <td>${up == null ? "—" : money(up)}</td><td>${lo == null ? "—" : money(lo)}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
+        <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
     </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" ? "daily" : "4-hour"} close.</div>`)
     + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup is in beta. It works on daily closes with a fixed 2× risk target, not the hub rules." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
