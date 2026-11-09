@@ -482,19 +482,6 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-table th:nth-child(8),.board-table td:nth-child(8){width:15%;text-align:center}
 .board-table th:nth-child(9),.board-table td:nth-child(9){width:16%;text-align:right;padding-right:16px}
 .board-table td:nth-child(8){overflow:hidden;text-overflow:ellipsis}
-/* Patch 52: terminal touches — board only, dark theme only: window dots + mono for numbers/tickers/headers/caption (original colours kept) */
-html:not([data-theme="light"]) .board-caption { font-family: var(--mono); letter-spacing: .12em; }
-.term-dots { display: inline-flex; gap: 6px; }
-.term-dots i { width: 10px; height: 10px; border-radius: 50%; display: block; }
-.term-dots i:nth-child(1) { background: #FF5F57; } .term-dots i:nth-child(2) { background: #FEBC2E; } .term-dots i:nth-child(3) { background: #28C840; }
-.term-title { display: inline-flex; align-items: center; gap: 10px; }
-/* mono where it helps (numbers, tickers, headers, caption); words stay in the sans so they read easily */
-html:not([data-theme="light"]) body .board-table th { font-family: var(--mono) !important; }
-html:not([data-theme="light"]) body .board-table td:nth-child(1) *:not(.earn-tag),
-html:not([data-theme="light"]) body .board-table td:nth-child(3), html:not([data-theme="light"]) body .board-table td:nth-child(3) *,
-html:not([data-theme="light"]) body .board-table td:nth-child(4), html:not([data-theme="light"]) body .board-table td:nth-child(4) *,
-html:not([data-theme="light"]) body .board-table td:nth-child(5), html:not([data-theme="light"]) body .board-table td:nth-child(5) *,
-html:not([data-theme="light"]) body .board-table td:nth-child(7), html:not([data-theme="light"]) body .board-table td:nth-child(7) * { font-family: var(--mono) !important; }
 .board-table th:nth-child(2) .board-sort{display:block;text-align:left}
 .board-table th:nth-child(3) .board-sort,.board-table th:nth-child(6) .board-sort{display:block;width:100%;text-align:right}
 .board-table th:first-child,.board-table td:first-child{text-align:left}
@@ -3405,7 +3392,7 @@ async function loadBoard() {
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
     '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')" title="Breakouts that already reached their target, failed or ran out of time">Finished</button></div></div>'+
-    '<div class="board-frame"><div class="board-caption"><span class="term-title"><span class="term-dots"><i></i><i></i><i></i></span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
+    '<div class="board-frame"><div class="board-caption"><span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
