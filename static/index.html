@@ -1638,6 +1638,9 @@ html body .board-state.board-state { background: transparent !important; border:
 html body .board-state.board-state::before { display: none !important; }
 html body .board-state.hub.hub { color: #7C93FF !important; } html body .board-state.near { color: #E5A13D !important; } html body .board-state.neutral { color: #9AA0AC !important; }
 html[data-theme="light"] body .board-state.hub.hub { color: #2F54EB !important; } html[data-theme="light"] body .board-state.up.up { color: #12805C !important; } html[data-theme="light"] body .board-state.down.down { color: #D1352B !important; } html[data-theme="light"] body .board-state.near { color: #B7791F !important; } html[data-theme="light"] body .board-state.neutral { color: #5C5B55 !important; }
+/* Patch 61: "near" pills use the hub blue, not amber */
+html body .board-state.near { color: #7C93FF !important; }
+html[data-theme="light"] body .board-state.near { color: #2F54EB !important; }
 /* active chips and the sweep button: solid white on dark, ink on light */
 html body .chip.on, html body .board-filter.active, html body .rank-ctl .seg button.on { background: #F2F3F5 !important; color: #0E0F12 !important; border-color: #F2F3F5 !important; border-radius: 10px !important; }
 html body .chip, html body .board-filter { border-radius: 10px !important; }
