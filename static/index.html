@@ -1638,9 +1638,6 @@ html body .board-state.board-state { background: transparent !important; border:
 html body .board-state.board-state::before { display: none !important; }
 html body .board-state.hub.hub { color: #7C93FF !important; } html body .board-state.near { color: #E5A13D !important; } html body .board-state.neutral { color: #9AA0AC !important; }
 html[data-theme="light"] body .board-state.hub.hub { color: #2F54EB !important; } html[data-theme="light"] body .board-state.up.up { color: #12805C !important; } html[data-theme="light"] body .board-state.down.down { color: #D1352B !important; } html[data-theme="light"] body .board-state.near { color: #B7791F !important; } html[data-theme="light"] body .board-state.neutral { color: #5C5B55 !important; }
-/* Patch 61: "near" pills use the hub blue, not amber */
-html body .board-state.near { color: #7C93FF !important; }
-html[data-theme="light"] body .board-state.near { color: #2F54EB !important; }
 /* active chips and the sweep button: solid white on dark, ink on light */
 html body .chip.on, html body .board-filter.active, html body .rank-ctl .seg button.on { background: #F2F3F5 !important; color: #0E0F12 !important; border-color: #F2F3F5 !important; border-radius: 10px !important; }
 html body .chip, html body .board-filter { border-radius: 10px !important; }
@@ -1717,6 +1714,16 @@ html body .board-table .board-state.board-state.up, html body .board-table .boar
 html[data-theme="light"] #closesCard .seg { background: #F6F6F3; border-color: #E4E3DC; }
 html[data-theme="light"] #closesCard .seg button.on { background: #141412 !important; color: #F6F6F3 !important; }
 html[data-theme="light"] body .board-state.board-state.board-state { background: transparent !important; border: 1px solid currentColor !important; }
+/* Patch 61: "near" pills (Testing support/resistance, Near the neckline, ...) and the Breakout/Breakdown pills
+   are flat rectangles: coloured text on a soft tint of the same colour, no border, 4px corners */
+html body .board-state.board-state.near.near, html body .board-state.board-state.up.up, html body .board-state.board-state.down.down { border: 0 !important; border-radius: 4px !important; }
+html body .board-state.board-state.near.near { color: #7C93FF !important; background: rgba(124,147,255,.12) !important; }
+html body .board-state.board-state.up.up { color: #7EE2AD !important; background: rgba(61,214,140,.12) !important; }
+html body .board-state.board-state.down.down { color: #FF9A90 !important; background: rgba(255,107,94,.12) !important; }
+html[data-theme="light"] body .board-state.board-state.near.near, html[data-theme="light"] body .board-state.board-state.up.up, html[data-theme="light"] body .board-state.board-state.down.down { border: 0 !important; border-radius: 4px !important; }
+html[data-theme="light"] body .board-state.board-state.near.near { color: #2F54EB !important; background: rgba(47,84,235,.08) !important; }
+html[data-theme="light"] body .board-state.board-state.up.up { color: #12805C !important; background: rgba(18,128,92,.08) !important; }
+html[data-theme="light"] body .board-state.board-state.down.down { color: #D1352B !important; background: rgba(209,53,43,.08) !important; }
 /* earnings: the light purple pill */
 /* Patch 50: earnings tag is a quiet violet line under the ticker, not a pill */
 html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 3px 0 0 !important; flex-basis: 100% !important;
