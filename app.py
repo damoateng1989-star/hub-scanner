@@ -55,6 +55,8 @@ log = logging.getLogger("app")
 # Scan a few minutes after each 4H close (13:30 and 16:00 ET). The delay covers the
 # free Alpaca plan's 15-minute delay on full-market (SIP) data.
 SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:47,16:17").split(",") if t.strip()]
+# Premarket gap-onto-a-shelf alert, weekdays before the open. Empty = off.
+PREMARKET_TIME = os.getenv("PREMARKET_TIME", "09:00").strip()
 # Pre-close warning ~15 minutes before each 4H close (uses Alpaca's free real-time IEX price). Empty = off.
 EARLY_TIMES = [t.strip() for t in os.getenv("EARLY_TIMES", "13:31").split(",") if t.strip()]   # early read after the 1:30 PM close
 PRECLOSE_TIMES = [t.strip() for t in os.getenv("PRECLOSE_TIMES", "13:15,15:45").split(",") if t.strip()]
@@ -135,6 +137,11 @@ async def lifespan(_app: FastAPI):
         sched.add_job(scanner.scan_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                     timezone="America/New_York"),
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
+    if PREMARKET_TIME:
+        h, m = PREMARKET_TIME.split(":")
+        sched.add_job(scanner.premarket_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
+                                                         timezone="America/New_York"),
+                      misfire_grace_time=900, coalesce=True, max_instances=1)
     for t in EARLY_TIMES:
         h, m = t.split(":")
         sched.add_job(scanner.early_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),

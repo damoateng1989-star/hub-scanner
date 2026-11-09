@@ -369,6 +369,101 @@ def scan_all() -> list[str]:
         return sent
 
 
+def premarket_levels(c4: pd.DataFrame) -> tuple[list[dict], float]:
+    """The levels a premarket gap can land on, from regular-session 4H bars only (to_4h drops premarket by design):
+    the live hub's edges (resting or just ended) and every tested support/resistance level. Returns (levels, ATR)."""
+    res = engine.analyze(c4, SETTINGS)
+    status = engine.current_status(c4, res, SETTINGS)
+    A = float(res["atr"].iloc[-1])
+    levels = []
+    h = status.get("hub")
+    if h and status.get("state") in ("forming", "watching"):
+        levels.append(dict(price=float(h["high"]), kind="hub", touches=None, sessions=h.get("sessions")))
+        levels.append(dict(price=float(h["low"]), kind="hub", touches=None, sessions=h.get("sessions")))
+    try:
+        pa = patterns.analyze_all(c4, res, SETTINGS)
+        for L in pa.get("levels_now", []):
+            if all(abs(float(L["price"]) - x["price"]) > 0.25 * A for x in levels):   # a hub edge and an S&R level are often the same level: name the hub edge
+                levels.append(dict(price=float(L["price"]), kind="sr", touches=L.get("touches"), sessions=None))
+    except Exception as ex:
+        log.warning("premarket levels: S&R failed: %s", ex)
+    return levels, A
+
+
+def premarket_check(sym: str, bars: pd.DataFrame, now: pd.Timestamp | None = None) -> list[dict]:
+    """Levels a premarket gap moved this ticker onto. A level counts when the last premarket price is within
+    0.25 ATR of it (the same 'testing' rule the S&R board uses) and yesterday's close was NOT (the gap did it).
+    Above yesterday's close it's resistance (the trade is a close up through it); below, support (a close down through it)."""
+    if bars is None or bars.empty:
+        return []
+    now = (now or pd.Timestamp.now(tz="UTC")).tz_convert("America/New_York")
+    ny = bars.tz_convert("America/New_York")
+    mins = ny.index.hour * 60 + ny.index.minute
+    today = now.normalize()
+    pm = ny[(ny.index.normalize() == today) & (mins >= 240) & (mins < 570)]
+    if pm.empty:
+        log.warning("premarket: no premarket bars for %s (feed check)", sym)
+        return []
+    reg = ny[(ny.index.normalize() < today) & (mins >= 570) & (mins < 960)]
+    if reg.empty:
+        return []
+    pre_last, yest = float(pm["Close"].iloc[-1]), float(reg["Close"].iloc[-1])
+    c4 = engine.to_4h(bars[bars.index < today.tz_convert("UTC")])        # yesterday's structure, no premarket
+    if len(c4) < SETTINGS.window + 15:
+        return []
+    levels, A = premarket_levels(c4)
+    if not A or A != A:
+        return []
+    out = []
+    for L in levels:
+        lv = L["price"]
+        if abs(pre_last - lv) > 0.25 * A or abs(yest - lv) <= 0.25 * A:
+            continue
+        side = "resistance" if yest < lv else "support"
+        out.append(dict(L, side=side, direction=1 if side == "resistance" else -1, pre_last=pre_last, yest=yest,
+                        pre_high=float(pm["High"].max()), pre_low=float(pm["Low"].min()), bars=len(pm)))
+    return out
+
+
+def format_premarket(sym: str, h: dict) -> str:
+    gap = (h["pre_last"] / h["yest"] - 1) * 100
+    lv = _money(h["price"])
+    if h["kind"] == "hub":
+        what = f"Sitting on its hub's {'top' if h['side'] == 'resistance' else 'bottom'} edge {lv} ({h['sessions']} sessions)"
+    else:
+        what = f"Testing {h['side']} {lv}" + (f" ({h['touches']} touches)" if h.get("touches") else "")
+    through = "above" if h["side"] == "resistance" else "below"
+    return (f"🔔 {sym} gapped onto a shelf premarket\n"
+            f"Last {_money(h['pre_last'])} premarket (gap {gap:+.1f}% vs yesterday's close {_money(h['yest'])}) · "
+            f"premarket range {_money(h['pre_low'])}–{_money(h['pre_high'])}\n"
+            f"{what}. It opens on the level. Nothing counts until a 4-hour close: a close {through} {lv} is the break, "
+            f"and the 1:30 PM close is the first one that can decide it.")
+
+
+def premarket_all(now: pd.Timestamp | None = None) -> list[str]:
+    """Weekday mornings before the open: alert only when the overnight gap moved a watched ticker onto a shelf.
+    The morning brief can't see this (it's built on yesterday's close). Information only: no entries, no calls."""
+    with _scan_lock:
+        sent, seen = [], 0
+        day = (now or pd.Timestamp.now(tz="UTC")).tz_convert("America/New_York").date().isoformat()
+        for row in db.list_tickers():
+            sym = row["symbol"]
+            try:
+                hits = premarket_check(sym, data.get_bars(sym, SCAN_DAYS), now)
+                seen += 1
+                for h in hits:
+                    if not regime_allows(h["direction"]):
+                        continue           # fights the market regime: no alert, same as breakouts
+                    msg = format_premarket(sym, h) + earnings.alert_line(sym)
+                    if db.add_alert(f"{sym}|premarket_gap|{day}|{h['price']:.2f}", sym, "premarket_gap", day, msg):
+                        notify.symbol_alert(sym, "premarket_gap", msg, None)
+                        sent.append(msg)
+            except Exception as e:
+                log.warning("premarket failed for %s: %s", sym, e)
+        log.info("premarket done: %d tickers checked, %d alerts", seen, len(sent))
+        return sent
+
+
 def early_all(now: pd.Timestamp | None = None) -> list[str]:
     """Right after the 1:30 PM close: an early read from the real-time feed, so members can act ~15 minutes sooner.
     The regular scan confirms it with the full (delayed) data, or sends a correction."""
