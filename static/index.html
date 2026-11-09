@@ -589,6 +589,11 @@ footer{color:#718397!important;border-color:#292A2D!important}
   .sb-shelf:hover, .sb-shelf.on { background: #1C1D20 !important; }
   .sb-shelf small { grid-column: 1 / -1; color: var(--t-mut); font: 500 11.5px var(--sans); margin-top: -2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .sb-shelves { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .sb-shelf-row { display: flex; align-items: stretch; gap: 2px; }
+  .sb-shelf-row .sb-shelf { flex: 1; min-width: 0; }
+  .sb-rm { flex: none; align-self: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 8px; background: transparent; color: #646B78; font: 400 17px/1 var(--sans); cursor: pointer; }
+  .sb-rm:hover { background: #1C1D20; color: #E9EBEF; }
+  .sb-rm.armed { color: #F28B82; background: rgba(242,139,130,.12); }
   .sb-gauge { position: relative; height: 16px; }
   .sb-gauge::before { content: ""; position: absolute; left: 0; right: 0; top: 7px; height: 2px; background: #313235; border-radius: 2px; }
   .sb-gauge b { position: absolute; top: 3px; height: 10px; border-radius: 3px; background: rgba(124,147,255,.28); border: 1px solid rgba(124,147,255,.6); }
@@ -1117,7 +1122,7 @@ html[data-theme="light"] .sb-item { color: #4b5563 !important; } html[data-theme
 html[data-theme="light"] .sb-item.on { background: #ffffff !important; color: #0d1117 !important; box-shadow: 0 4px 14px rgba(15,23,42,.08); }
 html[data-theme="light"] .sb-item.on svg { color: #0d1117 !important; } html[data-theme="light"] .sb-item.on::after { background: linear-gradient(90deg, #0d1117, transparent 70%) !important; }
 html[data-theme="light"] .sb-label { color: #8a93a2 !important; } html[data-theme="light"] .sb-label a { color: #4b5563 !important; }
-html[data-theme="light"] .sb-shelf small { color: #6b7280 !important; } html[data-theme="light"] .sb-shelf:hover, html[data-theme="light"] .sb-shelf.on { background: rgba(15,23,42,.05) !important; }
+html[data-theme="light"] .sb-rm:hover { background: rgba(15,23,42,.05); color: #0d1117; } html[data-theme="light"] .sb-rm.armed { color: #b42318; background: rgba(180,35,24,.08); } html[data-theme="light"] .sb-shelf small { color: #6b7280 !important; } html[data-theme="light"] .sb-shelf:hover, html[data-theme="light"] .sb-shelf.on { background: rgba(15,23,42,.05) !important; }
 html[data-theme="light"] .sb-gauge::before { background: rgba(15,23,42,.12) !important; }
 html[data-theme="light"] .sb-plan { background: rgba(15,23,42,.04) !important; color: #4b5563 !important; } html[data-theme="light"] .sb-plan b, html[data-theme="light"] .sb-plan a { color: #0d1117 !important; }
 html[data-theme="light"] .sb-motto { color: #4b5563 !important; border-left-color: #0d1117 !important; } html[data-theme="light"] .sb-motto b { color: #0d1117 !important; }
@@ -2314,9 +2319,12 @@ $("chips").addEventListener("click", async (e) => {
 
 const armed = new Set();
 async function removeTicker(sym, btn) {
+  const mini = btn.classList.contains("sb-rm");
   if (!armed.has(sym)) {
-    armed.add(sym); btn.textContent = "Tap to confirm";
-    setTimeout(() => { if (armed.delete(sym)) btn.textContent = "Remove"; }, 3000);
+    armed.add(sym);
+    if (mini) { btn.textContent = "✓"; btn.classList.add("armed"); }
+    else btn.textContent = "Tap to confirm";
+    setTimeout(() => { if (armed.delete(sym)) { if (mini) { btn.textContent = "×"; btn.classList.remove("armed"); } else btn.textContent = "Remove"; } }, 3000);
     return;
   }
   armed.delete(sym);
@@ -2903,8 +2911,8 @@ function gaugeHTML(st) {
 function renderStrip() {
   const el = $("sbShelves"); if (!el) return;
   const rows = TICKERS.filter(t => t.status && !t.status.error);
-  el.innerHTML = rows.length ? rows.map(t => `<button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(LIVE[t.symbol] ? {...t.status, last_close: LIVE[t.symbol].price} : t.status)}
-      <small>${STATE_WORD[t.status.state] || "No setup yet"}</small></button>`).join("")
+  el.innerHTML = rows.length ? rows.map(t => `<div class="sb-shelf-row"><button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(LIVE[t.symbol] ? {...t.status, last_close: LIVE[t.symbol].price} : t.status)}
+      <small>${STATE_WORD[t.status.state] || "No setup yet"}</small></button><button class="sb-rm" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">×</button></div>`).join("")
     : `<p style="color:#646B78;font-size:13px;margin:4px 8px">Add tickers to see where each one sits against its hub.</p>`;
 }
 function findStatus(sym) {
