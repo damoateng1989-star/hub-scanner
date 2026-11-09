@@ -78,7 +78,7 @@ def handle_command(cmd: str, args: list[str], u: dict) -> str:
         text = ("NextShelf commands:\n/add NVDA TSLA: watch tickers\n/remove NVDA: stop watching\n"
                 "/list: your watchlist\n/status NVDA: one ticker")
         if pro:
-            text += "\n/backtest NVDA: past breakout results\n/testcall: test phone-call alerts"
+            text += "\n/backtest NVDA: past breakout results\n/testcall: test phone-call alerts\n/testsms: test text-message alerts"
         if admin:
             text += "\n\nAdmin:\n/scan, /precheck: run now\n/paper, /paper on, /paper off"
         return text + ("" if pro else "\n\nUpgrade to Pro for pre-close warnings, calls and backtests.") + "\nNot financial advice."
@@ -113,6 +113,11 @@ def handle_command(cmd: str, args: list[str], u: dict) -> str:
             return "Phone alerts are a Pro feature."
         phone.call("Next Shelf test call. Phone alerts are working.", u["phone"])
         return "Calling you now."
+    if cmd == "/testsms":
+        if not pro:
+            return "Phone alerts are a Pro feature."
+        phone.text("NextShelf test text. SMS alerts are working.", u["phone"])
+        return "Texting you now."
     if cmd in ("/scan", "/precheck") and admin:
         return scanner.handle_command(cmd, args)
     if cmd == "/paper" and admin:

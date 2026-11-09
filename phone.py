@@ -69,3 +69,27 @@ def safe_call(speech: str, to: str | None = None):
         log.info("call placed %s", cid)
     except Exception as e:
         log.warning("call failed: %s", e)
+
+
+def text(body: str, to: str | None = None) -> str:
+    """Send a text. Returns the Twilio message id."""
+    sid, token, from_, default_to = _cfg()
+    to = to or default_to
+    if not all((sid, token, from_)):
+        raise RuntimeError("Text alerts aren't set up on this site yet (Twilio)")
+    if not to:
+        raise RuntimeError("Add your phone number first")
+    r = requests.post(f"https://api.twilio.com/2010-04-01/Accounts/{sid}/Messages.json", auth=(sid, token),
+                      data={"To": to, "From": from_, "Body": body}, timeout=20)
+    if r.status_code >= 300:
+        raise RuntimeError(f"Twilio error {r.status_code}: {r.text[:200]}")
+    return r.json().get("sid", "")
+
+
+def safe_text(body: str, to: str | None = None):
+    """Text, but never let a phone problem break scanning."""
+    try:
+        mid = text(body, to)
+        log.info("text sent %s", mid)
+    except Exception as e:
+        log.warning("text failed: %s", e)

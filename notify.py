@@ -19,7 +19,7 @@ def _pro(u: dict) -> bool:
 
 
 def quiet_now(u: dict, now=None) -> bool:
-    """Inside the member's quiet hours (New York time)? Then no phone calls, and Telegram arrives without a sound."""
+    """Inside the member's quiet hours (New York time)? Then no phone calls or texts, and Telegram arrives without a sound."""
     q = (u.get("quiet") or "").strip()
     if not q or "-" not in q:
         return False
@@ -51,7 +51,7 @@ def late_close(candle_start) -> bool:
 
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
                  pro_extra=None, candle_start=None):
-    """Telegram to every watcher (Pro-only types to Pro users); phone calls to Pro users with a number.
+    """Telegram to every watcher (Pro-only types to Pro users); texts to Pro users with a number; phone calls to Pro users with a number (preclose + breakouts only).
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea."""
     extra_cache = {}
     for u in db.watchers(symbol):
@@ -74,6 +74,8 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
         if u["telegram_chat"]:
             telegram_bot.send(msg, u["telegram_chat"], silent=quiet)
         _push(u["id"], msg, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
+        if _pro(u) and u["phone"] and not quiet:
+            phone.safe_text(msg, to=u["phone"])
         if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
             phone.safe_call(speech, to=u["phone"])
 
