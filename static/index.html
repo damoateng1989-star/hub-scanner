@@ -1830,6 +1830,71 @@ html body .wordmark em, html body .brand em { font-weight: 500 !important; font-
   html body .board-table .board-actions { width:100% !important; justify-content:flex-start !important; }
 }
 
+
+/* FINAL MOBILE SETUP CARD LAYOUT — no horizontal clipping */
+@media (max-width: 760px) {
+  #hubBoard .board-scroll { overflow: visible !important; }
+  #hubBoard .board-table { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; }
+  #hubBoard .board-table thead { display: none !important; }
+  #hubBoard .board-table, #hubBoard .board-table tbody { display: block !important; width: 100% !important; }
+  #hubBoard .board-table tbody > tr:not(.plain-row) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0 !important;
+    width: 100% !important;
+    margin: 0 0 14px !important;
+    padding: 18px !important;
+    height: auto !important;
+    background: var(--surface) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 18px !important;
+    overflow: hidden !important;
+  }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    padding: 10px 8px 10px 0 !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    text-align: left !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td::before {
+    content: attr(data-label) !important;
+    display: block !important;
+    margin-bottom: 5px !important;
+    color: var(--muted) !important;
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+  }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1) {
+    grid-column: 1 / -1 !important;
+    padding: 0 0 12px !important;
+    border-bottom: 1px solid var(--line) !important;
+    margin-bottom: 4px !important;
+  }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1)::before { display:none !important; }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2) { grid-column: 1 / -1 !important; }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(9) {
+    grid-column: 1 / -1 !important;
+    padding: 14px 0 0 !important;
+    border-top: 1px solid var(--line) !important;
+    margin-top: 4px !important;
+  }
+  #hubBoard .board-actions { width:100% !important; justify-content:flex-start !important; flex-wrap:wrap !important; }
+  #hubBoard .board-symbol a { font-size: 22px !important; }
+  #hubBoard .board-state { max-width:100% !important; }
+  #hubBoard .board-frame { overflow: visible !important; }
+}
+
 </style>
 </head>
 <body class="term">
@@ -3540,11 +3605,11 @@ function renderInstitutionalBoard(){
     const kind=r._kind,status=boardStatus(r,kind),h=r.hub||{},dist=boardDistance(r,kind),shelf=boardShelf(r,kind);
     const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"—";
-    return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
-      '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
-      '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
-      '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
+    return '<tr><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+'</td>'+
+      '<td data-label="Hub low">'+(h.low==null?"—":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"—":money(h.high))+'</td>'+
+      '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
+      '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
   const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
