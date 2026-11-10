@@ -268,6 +268,80 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
           ["Find another trade quickly", "Wait for a real setup; don't force a trade", "Double the size on the next one"],
           1, "Revenge trading is forcing it. The next trade should come from a setup, not from the loss.")),
     ]),
+    ("More setups (beta)", "The other patterns on the board, read the same way: a 4-hour close, an aim, and where you're wrong.", [
+        ("flags", "Flags: a sharp move, then a short pause", 3, """
+<p>A flag starts with a <b>pole</b>: a fast, mostly one-way move of at least 3 times the stock's normal 4-hour range (its ATR), over 2 to 6 four-hour candles. Then price <b>pauses</b> for 2 to 6 sessions in a small band that drifts slightly against the move, or sideways. That pause is the flag.</p>
+<h2>The trigger</h2>
+<p>A 4-hour <b>close outside the flag in the direction of the pole</b>. A bull flag breaks up; a bear flag breaks down. A flag that gives back more than half the pole isn't a flag any more, and NextShelf drops it.</p>
+<h2>Aim and wrong</h2>
+<p>The aim is the next shelf in that direction (or one ATR if there isn't one). You're wrong on a close back inside the flag.</p>""",
+         ["Pole first: a fast move of 3+ ATR.",
+          "Flag: a short pause that drifts against the pole or sideways.",
+          "Trade the close out of the flag, with the pole's direction."],
+         ("A stock rallies hard, then drifts down gently for three sessions. A 4-hour candle closes above the drift. What is it?",
+          ["A bull flag breakout", "A double top", "No setup"],
+          0, "A sharp move up, a short drift against it, then a close out the top: that's a bull flag breaking out.")),
+        ("double-tops-and-bottoms", "Double tops and bottoms", 3, """
+<p>A <b>double top</b> is two tests of the same high, a few sessions apart, with a real dip between them. A <b>double bottom</b> is the mirror: two tests of the same low with a bounce between.</p>
+<h2>What NextShelf checks</h2>
+<ul><li>A real move into the first peak (a rally into a top, a drop into a bottom).</li><li>The two peaks within about a third of an ATR of each other, 3 to 30 sessions apart.</li><li>A dip (or bounce) between them at least 2 ATR deep. The low of that dip is the <b>neckline</b>.</li></ul>
+<h2>The trigger</h2>
+<p>A 4-hour <b>close through the neckline</b> within about 10 sessions of the second peak. A double top breaks down; a double bottom breaks up. If price makes a new high (or low) first, the pattern is void.</p>""",
+         ["Two tests of the same level, with a real dip between.",
+          "The neckline is the middle low (or high).",
+          "Trade the close through the neckline, not the second peak."],
+         ("Where does a double top trigger?",
+          ["At the second peak", "On a 4-hour close below the neckline", "On any red candle"],
+          1, "The second peak is only a test. The setup confirms on a close through the neckline.")),
+        ("triangles", "Triangles: a squeeze into a point", 3, """
+<p>A symmetrical triangle forms when <b>highs keep getting lower and lows keep getting higher</b>, so the range narrows toward a point. It's like a hub that's being squeezed from both sides.</p>
+<h2>What NextShelf checks</h2>
+<p>Lines fitted to the highs and lows over 4 to 14 sessions, the top sloping down and the bottom sloping up, with the range shrinking to well under two-thirds of where it started.</p>
+<h2>The trigger</h2>
+<p>A 4-hour <b>close outside either line</b>. Triangles can break either way, so the direction comes from the close, not from a guess. The aim is the next shelf; you're wrong on a close back inside.</p>""",
+         ["Lower highs plus higher lows = a narrowing triangle.",
+          "It can break either way: let the close decide.",
+          "Same plan as a hub: aim for the next shelf, out on a close back inside."],
+         ("A triangle is squeezing toward its point. Which way will it break?",
+          ["Always up", "Always down", "Wait for a 4-hour close outside a line"],
+          2, "Triangles don't tell you the direction in advance. The close does.")),
+        ("channels", "Channels: trending between two lines", 3, """
+<p>A channel is a trend that stays between <b>two roughly parallel lines</b>. In an ascending channel both lines slope up; in a descending channel both slope down. NextShelf looks for channels lasting 6 to 20 sessions.</p>
+<h2>The trigger</h2>
+<p>A 4-hour <b>close outside the channel</b>. A close below a rising channel, or above a falling one, says the trend has broken. A close out the other side says it's speeding up.</p>
+<h2>Aim and wrong</h2>
+<p>The aim is the next shelf beyond the break (or one ATR). You're wrong on a close back inside the channel.</p>""",
+         ["Two parallel lines, both sloping the same way.",
+          "A close outside means the trend changed pace or broke.",
+          "Out on a close back inside the channel."],
+         ("A stock in a rising channel closes a 4-hour candle below the lower line. What does that suggest?",
+          ["The uptrend has broken", "The trend is speeding up", "Nothing"],
+          0, "Closing below the bottom of a rising channel means price left the trend.")),
+        ("support-and-resistance", "Support and resistance", 3, """
+<p>Some prices keep coming back. A level that price has turned at <b>three or more times</b> is support (below price) or resistance (above). NextShelf tracks those levels and forgets ones that haven't been touched in about 80 sessions.</p>
+<h2>The trigger</h2>
+<p>A 4-hour <b>close through a tested level</b>, after the level held for at least the previous 4 sessions. Breaking resistance is a long; breaking support is a short.</p>
+<h2>Near a level</h2>
+<p>The board also shows stocks <b>sitting near</b> support or resistance before they break. That's a heads-up, not a trade. The setup starts on the close through.</p>""",
+         ["A level needs 3+ touches to count.",
+          "Trade the close through it, after it held for a while.",
+          "Near a level is a heads-up, not a trade."],
+         ("A stock has bounced off $40 four times and is at $40.30. Is that a trade?",
+          ["Yes, buy the bounce", "Not yet; it's a heads-up until a close through a level", "Yes, short it"],
+          1, "Being near support is a heads-up. NextShelf's setup starts on a close through the level.")),
+        ("gap-fade-and-rip", "Post-earnings gap fade and rip", 3, """
+<p>This one uses <b>daily</b> candles. A stock gaps up at least 5% at the open, often on earnings, then <b>fades</b>: it closes well off the high, leaving a long upper wick.</p>
+<h2>The trigger</h2>
+<p>A daily <b>close back above the gap-day high</b> within 5 sessions. That's the "rip": buyers took back the whole fade. It's long only.</p>
+<h2>Aim and wrong</h2>
+<p>You're wrong on a close below the lowest low since the gap. The aim is twice the distance from entry to that low (2R). Earnings gaps can swing hard, so size small.</p>""",
+         ["Gap up 5%+, then a fade with a long upper wick.",
+          "Trigger: a daily close back above the gap-day high within 5 sessions.",
+          "Stop: below the lowest low since the gap. Aim: 2R."],
+         ("A stock gaps up 8% on earnings and closes near its low. Two days later it closes above the gap-day high. What happened?",
+          ["A gap fade and rip triggered", "A double top formed", "Nothing; it's too late"],
+          0, "Gap, fade, then a close back above the gap-day high within 5 sessions: that's the reclaim.")),
+    ]),
 ]
 
 LESSONS = [(m, l) for m in MODULES for l in m[2]]
@@ -281,7 +355,7 @@ def index_body() -> str:
     n = len(LESSONS)
     mins = sum(l[2] for _, l in LESSONS)
     parts = [f'<p class="lu-lede">Short, free lessons on the NextShelf method: hubs, shelves and closes, the game plan, options basics, '
-             f'and how to trade around a day job. {n} lessons · about {mins} minutes in total.</p>']
+             f'how to trade around a day job, and the other setups on the board. {n} lessons · about {mins} minutes in total.</p>']
     k = 0
     for mi, (title, blurb, lessons) in enumerate(MODULES, 1):
         rows = []
@@ -289,7 +363,7 @@ def index_body() -> str:
             k += 1
             rows.append(f'<a class="lu-l" href="/learn/{slug}"><span class="lu-n">{k:02d}</span><span class="lu-t">{_e(t)}</span>'
                         f'<span class="lu-m">{m} min</span></a>')
-        parts.append(f'<section class="lu-mod"><div class="lu-mh"><small>Module {mi}</small><h2>{_e(title)}</h2><p>{_e(blurb)}</p></div>'
+        parts.append(f'<section class="lu-mod" id="m{mi}"><div class="lu-mh"><small>Module {mi}</small><h2>{_e(title)}</h2><p>{_e(blurb)}</p></div>'
                      f'<div class="lu-ls">{"".join(rows)}</div></section>')
     parts.append('<div class="lu-cta"><b>Want it in your inbox?</b> Join the waitlist and get the free 5-day Hub Breakout Course by email.'
                  ' <a href="/#join">Join the waitlist →</a></div>')
