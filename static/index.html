@@ -1875,14 +1875,24 @@ html body .wordmark em, html body .brand em { font-weight: 500 !important; font-
     letter-spacing: .08em !important;
     text-transform: uppercase !important;
   }
+  /* Ticker and Setup share the same top row */
   #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1) {
-    grid-column: 1 / -1 !important;
-    padding: 0 0 12px !important;
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    padding: 0 8px 14px 0 !important;
     border-bottom: 1px solid var(--line) !important;
     margin-bottom: 4px !important;
   }
   #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1)::before { display:none !important; }
-  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2) { grid-column: 1 / -1 !important; }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2) {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    align-items:flex-end !important;
+    padding: 0 0 14px 8px !important;
+    border-bottom: 1px solid var(--line) !important;
+    margin-bottom: 4px !important;
+  }
+  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2)::before { align-self:flex-end !important; }
   #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(9) {
     grid-column: 1 / -1 !important;
     padding: 14px 0 0 !important;
