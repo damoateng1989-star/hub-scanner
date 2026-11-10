@@ -975,7 +975,10 @@ def public_summary():
     rec = board.track_record("hub")["stats"]
     by = rec.get("by_outcome") or {}
     closed = rec.get("closed") or 0
-    return dict(updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
+    done = [x for x in (board.track_record("hub").get("signals") or []) if x.get("outcome") not in (None, "pending")]
+    done.sort(key=lambda x: x.get("outcome_time") or x.get("breakout_time") or "", reverse=True)
+    recent = [dict(symbol=x["symbol"], direction=x.get("direction"), outcome=x["outcome"]) for x in done[:14]]
+    return dict(recent=recent, updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
                 signals=rec.get("signals"), closed=closed, open=rec.get("open"), reached=by.get("follow-through", 0),
                 reached_pct=round(100 * by.get("follow-through", 0) / closed) if closed else None,
                 win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), next=_next_sweep(), times=sorted(BOARD_TIMES))

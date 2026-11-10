@@ -767,6 +767,31 @@ html body i, html body cite, html body address { font-style: normal !important; 
 html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
 html body section h2 em, html body .final h2 em { color: var(--ink2) !important; }
 .hero .hx-2 { color: #2F54EB; } html[data-theme="dark"] .hero .hx-2 { color: #7C93FF; }
+
+/* Hero background: price shelves instead of dots, and a tape of finished setups inside the hub band */
+.hero.ns::before { display: none !important; }
+.hero.ns { overflow: hidden; }
+.hx-text { position: relative; padding-top: 34px; }
+.hx-lv { position: absolute; left: -50vw; right: -50vw; height: 0; border-top: 1px dashed rgba(47,84,235,.32); pointer-events: none; }
+.hx-lv span { position: absolute; right: calc(50vw + 0px); top: -19px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #2F54EB; opacity: .8; white-space: nowrap; }
+.hx-lv.nx { top: 0; border-top-color: rgba(0,127,97,.38); } .hx-lv.nx span { color: #007F61; }
+.hx-band { position: relative; margin-top: 46px; height: 46px; display: flex; align-items: center; }
+.hx-band::before { content: ""; position: absolute; left: -50vw; right: -50vw; top: 0; bottom: 0; background: rgba(47,84,235,.05); }
+.hx-lv.ht { top: 0; } .hx-lv.hb { bottom: 0; } .hx-lv.hb span { top: 6px; }
+.hx-tape { position: relative; width: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.hx-track { display: inline-flex; gap: 34px; white-space: nowrap; font: 500 12.5px var(--mono); color: var(--ink2); animation: hxTape 60s linear infinite; }
+.hx-track.static { animation: none; justify-content: center; width: 100%; }
+.hx-it b { color: var(--ink); font-weight: 600; margin-right: 6px; }
+.hx-it .ok { color: #007F61; } .hx-it .no { color: #D1352B; } .hx-it .to { color: var(--ink2); }
+@keyframes hxTape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .hx-track { animation: none; } }
+html[data-theme="dark"] .hx-lv { border-top-color: rgba(124,147,255,.30); } html[data-theme="dark"] .hx-lv span { color: #7C93FF; }
+html[data-theme="dark"] .hx-lv.nx { border-top-color: rgba(0,200,152,.32); } html[data-theme="dark"] .hx-lv.nx span { color: #00C898; }
+html[data-theme="dark"] .hx-band::before { background: rgba(124,147,255,.06); }
+html[data-theme="dark"] .hx-it .ok { color: #00C898; } html[data-theme="dark"] .hx-it .no { color: #FF7A8A; }
+.hero.hcx + * {}
+.hero.hcx .bp { margin-top: 56px !important; }
+@media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
 </style>
 </head>
 <body>
@@ -779,11 +804,14 @@ html body section h2 em, html body .final h2 em { color: var(--ink2) !important;
 </div></nav>
 
 <header class="hero ns hcx"><div class="wrap">
+  <div class="hx-text"><div class="hx-lv nx" aria-hidden="true"><span>Next shelf · $186.10</span></div>
   <div class="eyebrow">Hub-breakout playbook for swing traders</div>
   <h1>Pick a setup.<br><span class="hx-2">Trade it for years.</span></h1>
   <p class="lede">One playbook, the hub breakout, done the same way every time. You live your day; NextShelf watches every 4&#8209;hour close and tells you when price steps off one shelf and heads for the next.</p>
   <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#how">See how it works</a></div>
   <div class="micro">Free tier · No card needed · Educational, not financial advice</div>
+  </div>
+  <div class="hx-band" aria-label="Recently finished setups from the track record"><div class="hx-lv ht" aria-hidden="true"><span>Hub top · $178.01</span></div><div class="hx-lv hb" aria-hidden="true"><span>Hub bottom · $170.40</span></div><div class="hx-tape"><div class="hx-track" id="hxTrack"><span class="hx-it">Every hub breakout is logged with its result</span></div></div></div>
   <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
     <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
     <div class="bp-in">
@@ -1151,6 +1179,12 @@ html body section h2 em, html body .final h2 em { color: var(--ink2) !important;
     const n = (v) => Number(v || 0).toLocaleString();
     if (s.universe) {
       const inPlay = (s.forming || 0) + (s.live || 0);
+      if ($("hxTrack") && s.recent && s.recent.length) {
+        const it = s.recent.map(x => { const cls = x.outcome === "follow-through" ? "ok" : (x.outcome === "failed" || x.outcome === "snap-back") ? "no" : "to";
+          const word = x.outcome === "follow-through" ? "reached its shelf ✓" : (x.outcome === "failed" || x.outcome === "snap-back") ? "closed back inside ✗" : "ran out of time";
+          return `<span class="hx-it"><b>${x.symbol}</b><span class="${cls}">${x.direction < 0 ? "short · " : ""}${word}</span></span>`; }).join("");
+        $("hxTrack").innerHTML = it + it;
+      }
       $("bpHubs").textContent = n(inPlay);
       if ($("hxSika")) $("hxSika").innerHTML = `swept <b>${n(s.universe)}</b> stocks at the last 4-hour close · <b class="g">${n(s.live)}</b> breakouts · <b>${n(s.near)}</b> at a hub edge`;
       $("bpLine").innerHTML = `Swept <b>${n(s.universe)}</b> stocks: <b class="g">${n(s.live)}</b> breaking out now, <b>${n(inPlay)}</b> hubs in play (${n(s.forming)} resting + ${n(s.live)} breaking out) · <b class="y">${n(s.near)}</b> of the resting ones at a hub edge.`;
