@@ -686,6 +686,14 @@ html[data-theme="dark"] .ns-chart .cg, html[data-theme="dark"] .ns-dot { fill: #
 html[data-theme="dark"] .ns-chart .wk.g, html[data-theme="dark"] .ns-chart .trigline { stroke: #00C898; }
 html[data-theme="dark"] .ns-clock { border-top-color: #2E323B; }
 @media (max-width: 900px) { .ns-grid { grid-template-columns: 1fr; gap: 36px; } .ns-clock { grid-template-columns: 1fr; } .ns-clock li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; } }
+
+/* Hero background: blue glow with a dot grid that fades out toward the board preview */
+.hero.ns { position: relative; isolation: isolate; background: radial-gradient(75% 60% at 50% 0%, #DCE3FF 0%, #EEF0FA 45%, rgba(246,246,243,0) 100%); }
+.hero.ns::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(rgba(47,84,235,.20) 1px, transparent 1.3px) 0 0/20px 20px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); }
+html[data-theme="dark"] .hero.ns { background: radial-gradient(75% 60% at 50% 0%, rgba(70,98,255,.22) 0%, rgba(70,98,255,.07) 45%, transparent 100%); }
+html[data-theme="dark"] .hero.ns::before { background-image: radial-gradient(rgba(150,170,255,.16) 1px, transparent 1.3px); }
 </style>
 </head>
 <body>
