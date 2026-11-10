@@ -15,7 +15,8 @@ CLOSE_MIN = 16 * 60        # 16:00
 
 @dataclass
 class Settings:
-    min_sessions: int = 5      # hub must last at least this many sessions
+    min_sessions: int = 2      # hub must last at least this many sessions
+    min_candles: int = 4       # ... and at least this many 4H candles (the binding floor)
     k: float = 1.5             # closes must stay within k x 4H ATR(14)
     horizon: int = 10          # 4H candles to judge a breakout
     target_atr: float = 1.0    # fallback target beyond hub edge, in ATR, when there is no shelf
@@ -25,12 +26,13 @@ class Settings:
 
     @property
     def window(self) -> int:
-        return 2 * self.min_sessions   # two 4H candles per regular session
+        return self.min_candles       # the hub window is counted in candles now, not sessions
 
     @classmethod
     def from_env(cls) -> "Settings":
         return cls(
-            min_sessions=int(os.getenv("MIN_SESSIONS", 7)),
+            min_sessions=int(os.getenv("MIN_SESSIONS", 2)),
+            min_candles=int(os.getenv("MIN_HUB_CANDLES", 4)),
             k=float(os.getenv("HUB_K", 1.5)),
             horizon=int(os.getenv("HORIZON", 10)),
             target_atr=float(os.getenv("TARGET_ATR", 1.0)),

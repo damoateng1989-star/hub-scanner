@@ -16,8 +16,8 @@ def show(name, sub):
           f"avg {round(sum(s['ret_pct'] for s in done) / len(done), 2) if done else '–'}%")
 
 
-show("5-6 sessions", [s for s in sigs if (s["hub_sessions"] or 0) <= 6])
-show("7+ sessions", [s for s in sigs if (s["hub_sessions"] or 0) >= 7])
+show("2 sessions", [s for s in sigs if (s["hub_sessions"] or 0) <= 2])
+show("3+ sessions", [s for s in sigs if (s["hub_sessions"] or 0) >= 3])
 widths = sorted((s["hub_high"] - s["hub_low"]) / s["entry"] for s in sigs if s["entry"])
 med = widths[len(widths) // 2] if widths else 0.02
 show(f"wide hubs (>={med:.1%})", [s for s in sigs if s["entry"] and (s["hub_high"] - s["hub_low"]) / s["entry"] >= med])

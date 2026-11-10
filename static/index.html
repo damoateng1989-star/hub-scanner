@@ -2143,7 +2143,7 @@ function plainEnglish(r, kind) {
     "snap-back": "The last breakout failed: price closed back inside the range. Now it's waiting for a new range to form.",
     stalled: "The last breakout ran out of time without reaching its shelf. Now it's waiting for a new range to form.",
     watching: h.low != null ? `The range just ended without a breakout. A 4-hour close above <b>${money(h.high)}</b> or below <b>${money(h.low)}</b> in the next few candles would still count.` : null }[r.state];
-  return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 7+ sessions.";
+  return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 4+ four-hour candles.";
 }
 function plainRow(r, kind) {
   return `<tr class="plain-row" hidden><td colspan="9"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">🤖</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div></div></td></tr>`;
@@ -3157,7 +3157,7 @@ function briefHTML(sym, st, chart) {
     if (lv) { const u = lv.state === "breakout_up";
       steps.push([u ? "#3DD68C" : "#FF6B5E", `The trade in play is the <b>${esc(lv.name)} ${u ? "breakout ↑" : "breakdown ↓"}</b> (${u ? "bullish" : "bearish"}): it closed ${u ? "above" : "below"} <b>${money(lv.edge)}</b>, aiming for <b>${money(lv.target)}</b>.`]);
       steps.push(["#F2C14E", `It's wrong if a 4-hour candle <b>closes back ${u ? "below" : "above"} ${money(lv.edge)}</b>.`]); }
-    steps.push(["#9AA0AC", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 7+ sessions." : "The last hub breakout has played out."]);
+    steps.push(["#9AA0AC", key === "none" ? "No hub right now. NextShelf will flag it once price settles into a tight range for 4+ four-hour candles." : "The last hub breakout has played out."]);
     if (up || dn) steps.push(["#9fb3ff", `Shelves to keep in mind: ${[up && `<b>${money(up.level)}</b> above`, dn && `<b>${money(dn.level)}</b> below`].filter(Boolean).join(" and ")}.`]);
   }
   const plan = `<div class="gp">${steps.map(([c, t], i) => `<div data-n="${i + 1}" style="--c:${c}"><span>${t}</span></div>`).join("")}</div>`;

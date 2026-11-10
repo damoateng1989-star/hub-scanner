@@ -802,7 +802,7 @@ def info(u: dict | None = Maybe):
                 phone=bool(u and u["phone"]) and phone.enabled() and auth.is_pro(u), call_on=sorted(phone.call_on()),
                 scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],
                 entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
-                settings=dict(min_sessions=s.min_sessions, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
+                settings=dict(min_sessions=s.min_sessions, min_candles=s.min_candles, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
                               shelf_min_atr=s.shelf_min_atr))
 
 

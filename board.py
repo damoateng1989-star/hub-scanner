@@ -53,11 +53,11 @@ def _board_status(c4: pd.DataFrame, res: dict) -> dict:
 
 
 # ---------------------------------------------------------------- hub-rule changes vs the record
-# The record is rebuilt from price history on every sweep. When the hub rules change (MIN_SESSIONS 5 -> 7),
+# The record is rebuilt from price history on every sweep. When the hub rules change (MIN_SESSIONS 5 -> 7, Patch 70: 4-candle floor),
 # the new rules would "find" different past breakouts and quietly rewrite history. So: past signals keep
 # their old outcomes (resolved with the rules they were logged under), and only breakouts after the change
 # are logged under the new rules.
-_RULE_KEYS = ("min_sessions", "k", "horizon", "target_atr", "shelf_min_atr", "vol_mult", "vol_window")
+_RULE_KEYS = ("min_sessions", "min_candles", "k", "horizon", "target_atr", "shelf_min_atr", "vol_mult", "vol_window")
 _OLD_DEFAULTS = dict(min_sessions=5, vol_mult=0.0)     # the rules the record was built under before tracking began
 
 
@@ -71,11 +71,14 @@ def _rules_check():
         stored = json.loads(db.get_setting("record_rules") or "null")
     except Exception:
         stored = None
+    had_candles = bool(stored) and "min_candles" in stored
     if stored is None:
         # first run with this tracking: the stored record was built under the previous default (5 sessions)
         stored = dict(cur, **_OLD_DEFAULTS)
     else:
         stored = dict(cur, **{k: v for k, v in _OLD_DEFAULTS.items() if k not in stored}, **stored)   # keys added later: old values
+    if not had_candles:      # before Patch 70 the hub window was always 2 candles per session
+        stored["min_candles"] = 2 * int(stored["min_sessions"])
     if stored != cur:
         db.set_setting("record_rules_prev", json.dumps(stored))
         try:      # from the last sweep under the old rules, so breakouts since then get logged under the new ones
@@ -95,7 +98,9 @@ def _rules_changed_at():
 def _legacy_settings():
     try:
         prev = json.loads(db.get_setting("record_rules_prev") or "null")
-        return dataclasses.replace(scanner.SETTINGS, **prev) if prev else None
+        if prev and "min_candles" not in prev and "min_sessions" in prev:
+            prev["min_candles"] = 2 * int(prev["min_sessions"])      # pre-Patch-70 rules: window = 2 x sessions
+        return dataclasses.replace(scanner.SETTINGS, **{k: v for k, v in prev.items() if k in _RULE_KEYS}) if prev else None
     except Exception:
         return None
 
