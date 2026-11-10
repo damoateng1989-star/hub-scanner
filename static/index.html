@@ -1792,6 +1792,44 @@ html body em, html body h1 em, html body h2 em, html body h3 em, html body secti
   font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; }
 html body i, html body cite, html body address { font-style: normal !important; }
 html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
+
+/* Mobile board fix: never allow the market table to overflow the phone viewport */
+@media (max-width: 760px) {
+  html, body { max-width:100%; overflow-x:hidden; }
+  html body .wrap { width:100%; max-width:100%; box-sizing:border-box; padding-left:14px !important; padding-right:14px !important; }
+  html body .board-frame, html body .board-table-wrap { width:100% !important; max-width:100% !important; min-width:0 !important; overflow:visible !important; }
+  html body .board-table { width:100% !important; min-width:0 !important; table-layout:auto !important; border-collapse:separate !important; border-spacing:0 12px !important; }
+  html body .board-table thead { display:none !important; }
+  html body .board-table, html body .board-table tbody { display:block !important; }
+  html body .board-table tbody tr:not(.plain-row) {
+    display:grid !important; grid-template-columns:minmax(0,1fr) minmax(0,1fr) !important;
+    width:100% !important; box-sizing:border-box !important; margin:0 !important;
+    padding:16px !important; border:1px solid var(--line) !important; border-radius:18px !important;
+    background:var(--surface) !important; overflow:hidden !important;
+  }
+  html body .board-table tbody tr:not(.plain-row) td {
+    display:flex !important; flex-direction:column !important; align-items:flex-start !important;
+    justify-content:flex-start !important; min-width:0 !important; width:auto !important;
+    padding:8px 12px 8px 0 !important; border:0 !important; white-space:normal !important;
+    overflow:hidden !important;
+  }
+  html body .board-table tbody tr:not(.plain-row) td::before {
+    content:attr(data-label) !important; display:block !important; margin-bottom:4px !important;
+    font-size:10px !important; font-weight:600 !important; letter-spacing:.08em !important;
+    text-transform:uppercase !important; color:var(--muted) !important;
+  }
+  html body .board-table tbody tr:not(.plain-row) td:first-child {
+    grid-column:1 / -1 !important; padding-top:0 !important; padding-bottom:10px !important;
+  }
+  html body .board-table tbody tr:not(.plain-row) td:first-child::before { display:none !important; }
+  html body .board-table tbody tr:not(.plain-row) td:last-child {
+    grid-column:1 / -1 !important; padding-right:0 !important; padding-top:12px !important;
+    border-top:1px solid var(--line) !important;
+  }
+  html body .board-table .board-symbol { max-width:100% !important; }
+  html body .board-table .board-actions { width:100% !important; justify-content:flex-start !important; }
+}
+
 </style>
 </head>
 <body class="term">
