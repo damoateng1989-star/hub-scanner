@@ -723,6 +723,12 @@ html[data-theme="dark"] .lm-panel a b { color: #ECEDEF; } html[data-theme="dark"
   .lm-panel { position: static; transform: none; width: auto; grid-template-columns: 1fr; box-shadow: none; margin: 4px 0 8px; }
   .lm-col + .lm-col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line, #e3e2dc); padding-top: 4px; }
 }
+
+/* Hero headline: no italic; second line in a quieter tone */
+.hero.ns h1 em { font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; display: block; color: #8A8984; }
+.hero.ns h1 { max-width: none; font-size: clamp(36px, 4.3vw, 64px); }
+@media (min-width: 901px) { .hero.ns h1 em { white-space: nowrap; } }
+html[data-theme="dark"] .hero.ns h1 em { color: #6F737C; }
 </style>
 </head>
 <body>
