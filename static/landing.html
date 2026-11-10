@@ -688,11 +688,11 @@ html[data-theme="dark"] .ns-clock { border-top-color: #2E323B; }
 @media (max-width: 900px) { .ns-grid { grid-template-columns: 1fr; gap: 36px; } .ns-clock { grid-template-columns: 1fr; } .ns-clock li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; } }
 
 /* Hero background: blue glow with a dot grid that fades out toward the board preview */
-.hero.ns { position: relative; isolation: isolate; background: radial-gradient(70% 55% at 50% 0%, #E7EBFC 0%, #F1F2F8 45%, rgba(246,246,243,0) 100%); }
+.hero.ns { position: relative; isolation: isolate; background: radial-gradient(70% 55% at 50% 0%, #F0F3FE 0%, #F4F5F9 45%, rgba(246,246,243,0) 100%); }
 .hero.ns::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(rgba(47,84,235,.13) 1px, transparent 1.3px) 0 0/20px 20px;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); }
-html[data-theme="dark"] .hero.ns { background: radial-gradient(70% 55% at 50% 0%, rgba(70,98,255,.11) 0%, rgba(70,98,255,.035) 45%, transparent 100%); }
+html[data-theme="dark"] .hero.ns { background: radial-gradient(70% 55% at 50% 0%, rgba(70,98,255,.07) 0%, rgba(70,98,255,.02) 45%, transparent 100%); }
 html[data-theme="dark"] .hero.ns::before { background-image: radial-gradient(rgba(150,170,255,.10) 1px, transparent 1.3px); }
 
 /* Learn menu: course + one entry per setup */
@@ -766,7 +766,8 @@ html body em, html body h1 em, html body h2 em, html body h3 em, html body secti
 html body i, html body cite, html body address { font-style: normal !important; }
 html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
 html body section h2 em, html body .final h2 em { color: var(--ink2) !important; }
-.hero .hx-2 { color: #2F54EB; } html[data-theme="dark"] .hero .hx-2 { color: #7C93FF; }
+.hero .hx-2 { background: linear-gradient(90deg, #55554F 0%, #8E8E87 55%, #B9B9B2 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .06em; }
+html[data-theme="dark"] .hero .hx-2 { background-image: linear-gradient(90deg, #C9CCD3 0%, #9499A3 55%, #6C717B 100%); }
 
 /* Hero background: price shelves instead of dots, and a tape of finished setups inside the hub band */
 .hero.ns::before { display: none !important; }
@@ -776,10 +777,10 @@ html body section h2 em, html body .final h2 em { color: var(--ink2) !important;
 .hx-lv span { position: absolute; right: calc(50vw + 0px); top: -19px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #2F54EB; opacity: .8; white-space: nowrap; }
 .hx-lv.nx { top: 0; border-top-color: rgba(0,127,97,.38); } .hx-lv.nx span { color: #007F61; }
 .hx-band { position: relative; margin-top: 46px; height: 46px; display: flex; align-items: center; }
-.hx-band::before { content: ""; position: absolute; left: -50vw; right: -50vw; top: 0; bottom: 0; background: rgba(47,84,235,.05); }
+.hx-band::before { content: ""; position: absolute; left: -50vw; right: -50vw; top: 0; bottom: 0; background: rgba(47,84,235,.03); }
 .hx-lv.ht { top: 0; } .hx-lv.hb { bottom: 0; } .hx-lv.hb span { top: 6px; }
 .hx-tape { position: relative; width: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
-.hx-track { display: inline-flex; gap: 34px; white-space: nowrap; font: 500 12.5px var(--mono); color: var(--ink2); animation: hxTape 60s linear infinite; }
+.hx-track { display: inline-flex; gap: 34px; white-space: nowrap; font: 500 12.5px var(--mono); color: var(--ink2); animation: hxTape 34s linear infinite; }
 .hx-track.static { animation: none; justify-content: center; width: 100%; }
 .hx-it b { color: var(--ink); font-weight: 600; margin-right: 6px; }
 .hx-it .ok { color: #007F61; } .hx-it .no { color: #D1352B; } .hx-it .to { color: var(--ink2); }
