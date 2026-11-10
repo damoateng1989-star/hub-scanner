@@ -225,16 +225,21 @@ def describe(sym: str, st: dict) -> str:
 WAREHOUSE_ONLY = os.getenv("WAREHOUSE_ONLY", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
-def regime_allows(direction: int) -> bool:
-    """True when a breakout's direction runs with the stored market regime.
-    No regime stored yet (first sweep after deploy): fail open, allow everything."""
+def regime_line(direction: int) -> str:
+    """One line for an alert when the breakout fights the market regime.
+    Empty when the breakout runs with the trend or no regime is stored yet.
+    The regime stays a label, never a gate (Patch 68)."""
     try:
         rg = json.loads(db.get_setting("regime") or "null")
     except Exception:
-        return True
+        return ""
     if not rg or rg.get("regime") not in ("up", "down"):
-        return True
-    return (rg["regime"] == "up") == (direction == 1)
+        return ""
+    if (rg["regime"] == "up") == (direction == 1):
+        return ""
+    nums = f" ({_money(rg['close'])} vs {_money(rg['sma'])})" if rg.get("close") and rg.get("sma") else ""
+    return (f"\n⚠️ Against the tape — {rg.get('index', 'SPY')} "
+            f"{'above' if rg['regime'] == 'up' else 'below'} its {rg.get('days', 50)}-day{nums}")
 
 
 def scan_symbol(sym: str) -> tuple[dict, list[str]]:
@@ -263,8 +268,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                       "target": e["target"], "price": e["close"]})
                     if (gl := gamma.line(g)):
                         msg += "\n" + gl
-                if e["type"] in ("breakout", "breakdown") and not regime_allows(1 if e["type"] == "breakout" else -1):
-                    continue       # fights the market regime: no alert (the board still shows it)
+                if e["type"] in ("breakout", "breakdown"):
+                    msg += regime_line(1 if e["type"] == "breakout" else -1)
                 if WAREHOUSE_ONLY and e.get("grade") == "ledge":
                     continue       # thin hub: graded, not gated, until the split proves it
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
@@ -296,8 +301,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 msg = format_pattern_event(sym, e)
                 if e["type"] in ("breakout", "breakdown"):
                     msg += earnings.alert_line(sym)
-                if e["type"] in ("breakout", "breakdown") and not regime_allows(1 if e["type"] == "breakout" else -1):
-                    continue       # fights the market regime: no alert
+                if e["type"] in ("breakout", "breakdown"):
+                    msg += regime_line(1 if e["type"] == "breakout" else -1)
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
                     notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"])
                     sent.append(msg)
@@ -452,9 +457,8 @@ def premarket_all(now: pd.Timestamp | None = None) -> list[str]:
                 hits = premarket_check(sym, data.get_bars(sym, SCAN_DAYS), now)
                 seen += 1
                 for h in hits:
-                    if not regime_allows(h["direction"]):
-                        continue           # fights the market regime: no alert, same as breakouts
                     msg = format_premarket(sym, h) + earnings.alert_line(sym)
+                    msg += regime_line(h["direction"])
                     if db.add_alert(f"{sym}|premarket_gap|{day}|{h['price']:.2f}", sym, "premarket_gap", day, msg):
                         notify.symbol_alert(sym, "premarket_gap", msg, None)
                         sent.append(msg)
@@ -485,8 +489,6 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                 sig = engine.preclose_check(res, close, SETTINGS)
                 if not sig:
                     continue
-                if not regime_allows(sig["direction"]):
-                    continue       # its confirmation would be silenced by the regime filter: no early read either
                 up = sig["direction"] == 1
                 typ = "breakout" if up else "breakdown"
                 msg = (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if sig.get('shelf') else 'target'} (early read)\n"
@@ -495,6 +497,7 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                        + plan_lines(close, sig["edge"], sig["target"], sig["direction"], sig["reached"], sig.get("shelf"))
                        + "\nFrom the real-time feed. The full market data confirms it, with the breakout volume, at about 1:47 PM; you'll get a note either way."
                        + earnings.alert_line(sym))
+                msg += regime_line(sig["direction"])
                 if db.add_alert(f"{sym}|early|{start.isoformat()}", sym, typ, start.isoformat(), msg):
                     speech = None if sig["reached"] else (
                         f"Next Shelf. {phone.spell(sym)} closed {'above' if up else 'below'} its hub at 1 30. Early read. "

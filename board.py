@@ -429,7 +429,7 @@ def board() -> dict:
 
 
 def _summary(sigs: list) -> dict:
-    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"] and s.get("regime") != "against"]
+    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
     rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
     return dict(signals=len(sigs), closed=len(closed),
                 reached=round(100 * sum(s["outcome"] == "follow-through" for s in closed) / len(closed), 1) if closed else None,
@@ -467,7 +467,7 @@ def _by_volume(closed: list[dict]) -> dict:
 
 def track_record(pattern: str = "hub") -> dict:
     sigs = db.all_signals(1000, pattern)
-    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"] and s.get("regime") != "against"]
+    closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
     rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
     wins = [r for r in rets if r > 0]
     by = {o: sum(1 for s in closed if s["outcome"] == o) for o in ("follow-through", "snap-back", "stalled")}
