@@ -44,6 +44,11 @@ FILTERS = [   # key, label, test(features) -> bool
     ("tight", "Tight hub (1 ATR wide or less)", lambda f: f["width"] <= 1.0),
     ("long", "Long hub (4+ sessions)", lambda f: f["sessions"] >= 4),
     ("pm", "4:00 PM closes only", lambda f: f["pm"]),
+    ("board", "Passes today's board filters ($10M/day, $25B cap)", lambda f: f["board_ok"]),
+    ("dv100", "Trades $100M+ a day", lambda f: f["dv"] is not None and f["dv"] >= 100e6),
+    ("dv250", "Trades $250M+ a day", lambda f: f["dv"] is not None and f["dv"] >= 250e6),
+    ("dv500", "Trades $500M+ a day", lambda f: f["dv"] is not None and f["dv"] >= 500e6),
+    ("dvlow", "Thinner names: under $100M a day", lambda f: f["dv"] is not None and f["dv"] < 100e6),
     ("up", "Longs only", lambda f: f["d"] == 1),
     ("down", "Shorts only", lambda f: f["d"] == -1),
     ("combo", "Volume + with the market + not chasing",
@@ -105,6 +110,11 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     close = res["close"].to_numpy(float)
     atr = res["atr"].to_numpy(float)
     idx = c4.index
+    dvol = None
+    if "Volume" in c4.columns:      # daily dollar volume, to judge liquidity as it was before each breakout
+        day = idx.tz_convert(engine.NY).normalize()
+        dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum()
+    mc = universe.market_cap(sym)
     out = []
     for t in res["trades"]:
         if t["outcome"] == "pending" or t["chase"]:      # chase here = target already hit on the entry close: no trade
@@ -124,7 +134,14 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
             if len(past):
                 up = bool(past.iloc[-1])
                 with_mkt = up if d == 1 else not up
-        f = dict(sym=sym, t=str(idx[i0]), d=d,
+        dv = None
+        if dvol is not None:
+            prior = dvol[dvol.index < idx[i0].tz_convert(engine.NY).normalize()]
+            prior = prior[prior > 0].tail(20)
+            dv = float(prior.mean()) if len(prior) >= 5 else None
+        import board
+        f = dict(sym=sym, t=str(idx[i0]), d=d, dv=dv,
+                 board_ok=board.quality_skip(sym, dv, mc) is None,
                  rvol=engine.rvol(c4, i0),
                  with_mkt=with_mkt,
                  chase=d * (entry - edge) > 0.5 * d * (target - edge),
