@@ -297,6 +297,12 @@ html[data-theme="light"] { --bg: #F6F6F3; --ink: #141412; --muted: #5C5B55; --fa
 html[data-theme="light"] body { background: #F6F6F3; }
 html[data-theme="light"] .card, html[data-theme="light"] .auth-card { border-radius: 16px !important; }
 .btn.primary, button.primary, form button[type=submit] { border-radius: 10px !important; }
+
+/* No italics anywhere: emphasised words keep the quieter colour, in the regular font */
+html body em, html body h1 em, html body h2 em, html body h3 em, html body section h2 em, html body .pitch h1 em, html body .g-head h2 em, html body .final h2 em, html body .mf-h span, html body .bp-h em {
+  font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; }
+html body i, html body cite, html body address { font-style: normal !important; }
+html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
 </style>
 </head>
 <body>

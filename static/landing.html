@@ -435,7 +435,7 @@ html[data-theme="dark"] .h2-alert { box-shadow: 0 24px 60px rgba(0,0,0,.5); }
 
 /* Sections match the hero: left-aligned, larger headings */
 section:not(.final) > .wrap > .kicker, section:not(.final) > .wrap > h2, section:not(.final) > .wrap > .sub,
-.sc-copy .kicker, .sc-copy h2, .sc-copy .sub { text-align: left !important; margin-left: 0 !important; margin-right: 0 !important; }
+.sc-copy .kicker, .sc-copy h2, .sc-copy .sub { text-align: center !important; margin-left: auto !important; margin-right: auto !important; }
 section:not(.final) > .wrap > h2, .sc-copy h2 { font-size: clamp(30px, 4.6vw, 58px); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; margin-top: 14px; }
 section:not(.final) > .wrap > .sub, .sc-copy .sub { font-size: clamp(15px, 1.3vw, 17px); margin-top: 18px; max-width: 56ch; }
 .final h2 { font-size: clamp(30px, 4.6vw, 58px); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; margin-left: auto; margin-right: auto; }
@@ -752,6 +752,20 @@ html[data-theme="dark"] .hx-chip i { background: #7C93FF; } html[data-theme="dar
 .hx-chip.l1, .hx-chip.l2 { transform: translateX(-30%); } .hx-chip.r1, .hx-chip.r2 { transform: translateX(30%); }
 @media (max-width: 1180px) { .hx-chips { display: none; } }
 @media (max-width: 640px) { .hx-pill { font-size: 12.5px; } }
+
+.hero.hcx .eyebrow { margin-top: 0; }
+.hx-sika { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 30px; font: 500 12.5px var(--mono); color: var(--ink2); padding-top: 18px; border-top: 1px solid var(--line); }
+.hx-sika > b { color: var(--ink); font-family: var(--sans); font-weight: 700; font-size: 13px; }
+.hx-sika b.g { color: #007F61; } html[data-theme="dark"] .hx-sika b.g { color: #00C898; }
+.hx-dot { width: 7px; height: 7px; border-radius: 50%; background: #007F61; box-shadow: 0 0 0 3px rgba(0,127,97,.15); }
+html[data-theme="dark"] .hx-dot { background: #00C898; box-shadow: 0 0 0 3px rgba(0,200,152,.18); }
+
+/* No italics anywhere: emphasised words keep the quieter colour, in the regular font */
+html body em, html body h1 em, html body h2 em, html body h3 em, html body section h2 em, html body .pitch h1 em, html body .g-head h2 em, html body .final h2 em, html body .mf-h span, html body .bp-h em {
+  font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; }
+html body i, html body cite, html body address { font-style: normal !important; }
+html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
+html body section h2 em, html body .final h2 em { color: var(--ink2) !important; }
 </style>
 </head>
 <body>
@@ -764,14 +778,7 @@ html[data-theme="dark"] .hx-chip i { background: #7C93FF; } html[data-theme="dar
 </div></nav>
 
 <header class="hero ns hcx"><div class="wrap">
-  <div class="hx-chips" aria-hidden="true">
-    <span class="hx-chip l1"><i></i>Hub forming</span>
-    <span class="hx-chip l2"><i></i>Heads-up · 3:45 PM</span>
-    <span class="hx-chip r1"><i class="g"></i>4H close above the hub</span>
-    <span class="hx-chip r2"><i></i>Next shelf $186.10</span>
-    <svg class="hx-lines" viewBox="0 0 1000 300" preserveAspectRatio="none"><path d="M110 40 C 160 40, 170 90, 215 95"/><path d="M80 210 C 140 210, 165 185, 215 182"/><path d="M890 40 C 840 40, 830 90, 785 95"/><path d="M920 210 C 860 210, 835 185, 785 182"/></svg>
-  </div>
-  <div class="hx-pill"><span class="hx-num" id="hxNum">543</span><span id="hxTxt">stocks checked after every 4-hour close</span></div>
+  <div class="eyebrow">Hub-breakout playbook for swing traders</div>
   <h1>Pick a setup.<br>Trade it for years.</h1>
   <p class="lede">One playbook, the hub breakout, done the same way every time. You live your day; NextShelf watches every 4&#8209;hour close and tells you when price steps off one shelf and heads for the next.</p>
   <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#how">See how it works</a></div>
@@ -1144,7 +1151,7 @@ html[data-theme="dark"] .hx-chip i { background: #7C93FF; } html[data-theme="dar
     if (s.universe) {
       const inPlay = (s.forming || 0) + (s.live || 0);
       $("bpHubs").textContent = n(inPlay);
-      if ($("hxNum")) { $("hxNum").textContent = n(s.live); $("hxTxt").textContent = innerWidth < 640 ? "breakouts at the last 4-hour close" : `breakouts at the last 4-hour close, across ${n(s.universe)} stocks`; }
+      if ($("hxSika")) $("hxSika").innerHTML = `swept <b>${n(s.universe)}</b> stocks at the last 4-hour close · <b class="g">${n(s.live)}</b> breakouts · <b>${n(s.near)}</b> at a hub edge`;
       $("bpLine").innerHTML = `Swept <b>${n(s.universe)}</b> stocks: <b class="g">${n(s.live)}</b> breaking out now, <b>${n(inPlay)}</b> hubs in play (${n(s.forming)} resting + ${n(s.live)} breaking out) · <b class="y">${n(s.near)}</b> of the resting ones at a hub edge.`;
     }
     if (s.next) {

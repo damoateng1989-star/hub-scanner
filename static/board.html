@@ -66,6 +66,12 @@ footer { margin-top: 56px; padding: 26px 0; border-top: 1px solid var(--line); f
 footer .wrap { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; } footer a { color: var(--ink2); text-decoration: none; margin-left: 14px; }
 @media (max-width: 720px) { .tiles { grid-template-columns: 1fr 1fr; } .how { grid-template-columns: 1fr; } .row { grid-template-columns: 1fr 1.6fr; } .row > :nth-child(3) { display: none; } .navend .si { display: none; } .navlinks { display: none; } }
 .navlinks { display: flex; gap: 18px; font-size: 14px; } .navlinks a { text-decoration: none; color: var(--ink2); }
+
+/* No italics anywhere: emphasised words keep the quieter colour, in the regular font */
+html body em, html body h1 em, html body h2 em, html body h3 em, html body section h2 em, html body .pitch h1 em, html body .g-head h2 em, html body .final h2 em, html body .mf-h span, html body .bp-h em {
+  font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; }
+html body i, html body cite, html body address { font-style: normal !important; }
+html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
 </style>
 </head>
 <body>
