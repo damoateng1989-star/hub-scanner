@@ -792,6 +792,26 @@ html[data-theme="dark"] .hx-it .ok { color: #00C898; } html[data-theme="dark"] .
 .hero.hcx + * {}
 .hero.hcx .bp { margin-top: 56px !important; }
 @media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
+
+/* Hero animation: price coils in the hub band, then climbs the shelves to the next shelf line */
+.hx-anim { position: absolute; left: 0; top: 0; width: 100%; pointer-events: none; z-index: 0; overflow: visible; }
+.hero.ns > .wrap > * { position: relative; z-index: 1; }
+.hx-anim .pl { fill: none; stroke: #2F54EB; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.hx-anim .pl.up { stroke: #007F61; }
+.hx-anim .hd { fill: #007F61; opacity: 0; }
+.hx-anim .rg { fill: none; stroke: #007F61; stroke-width: 1.5; opacity: 0; }
+html[data-theme="dark"] .hx-anim .pl { stroke: #7C93FF; } html[data-theme="dark"] .hx-anim .pl.up { stroke: #00C898; }
+html[data-theme="dark"] .hx-anim .hd { fill: #00C898; } html[data-theme="dark"] .hx-anim .rg { stroke: #00C898; }
+.hx-anim.go .pl.co { animation: hxDraw 2.2s ease-in-out forwards; }
+.hx-anim.go .pl.up { animation: hxDraw 1.8s 2.1s ease-in-out forwards; }
+.hx-anim.go .hd { animation: hxPop .4s 3.8s forwards; }
+.hx-anim.go .rg { animation: hxRing 1.6s 3.9s ease-out infinite; }
+.hx-lv.nx.hit span { animation: hxFlash 1.2s ease-out; }
+@keyframes hxDraw { to { stroke-dashoffset: 0; } }
+@keyframes hxPop { to { opacity: 1; } }
+@keyframes hxRing { 0% { opacity: .7; r: 4; } 100% { opacity: 0; r: 18; } }
+@keyframes hxFlash { 0%, 100% { opacity: .8; } 30% { opacity: 1; text-shadow: 0 0 12px currentColor; } }
+@media (prefers-reduced-motion: reduce) { .hx-anim .pl { stroke-dashoffset: 0 !important; animation: none !important; } .hx-anim .hd { opacity: 1; animation: none !important; } .hx-anim .rg { display: none; } }
 </style>
 </head>
 <body>
@@ -1423,6 +1443,44 @@ document.querySelectorAll(".lm").forEach(function (m) {
   document.addEventListener("click", function (e) { if (!m.contains(e.target)) { m.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") { m.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
 });
+</script>
+<script>
+(function () {
+  var hero = document.querySelector(".hero.hcx"); if (!hero) return;
+  var NS = "http://www.w3.org/2000/svg", svg, timer;
+  function el(n, a) { var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; }
+  function build() {
+    if (svg) svg.remove(); clearTimeout(timer);
+    var wrap = hero.querySelector(".wrap"), nx = hero.querySelector(".hx-lv.nx"), band = hero.querySelector(".hx-band");
+    if (!wrap || !nx || !band) return;
+    var H = hero.getBoundingClientRect(), W = H.width, text = hero.querySelector(".hx-text").getBoundingClientRect();
+    var bb = band.getBoundingClientRect(), ys = nx.getBoundingClientRect().top - H.top;
+    var yt = bb.top - H.top, yb = bb.bottom - H.top, ym = (yt + yb) / 2;
+    var wr = wrap.getBoundingClientRect().right - H.left + 12, room = W - wr - 16;
+    if (room < 110) return;                                     // phones and narrow windows: no room beside the content
+    var x0 = wr, n = 6, cw = room * 0.38, step = cw / n;
+    var co = "M" + x0 + " " + ym;
+    for (var i = 1; i <= n; i++) co += " L" + (x0 + i * step) + " " + (i % 2 ? yt + 8 + (i % 3) * 3 : yb - 8 - (i % 3) * 3);
+    var xb = x0 + cw, flats = 3, fw = (room - cw - 8) / (flats + 0.6), rise = (yb - 8 - ys) / flats;
+    var cx = xb, cy = yb - 8, up = "M" + cx + " " + cy;
+    for (var k = 1; k <= flats; k++) { cy -= rise; up += " L" + cx + " " + cy; cx += fw; up += " L" + cx + " " + cy; }
+    svg = el("svg", {class: "hx-anim", width: W, height: H.height, viewBox: "0 0 " + W + " " + H.height, "aria-hidden": "true"});
+    svg.appendChild(el("path", {class: "pl co", d: co, pathLength: 1}));
+    svg.appendChild(el("path", {class: "pl up", d: up, pathLength: 1}));
+    svg.appendChild(el("circle", {class: "rg", cx: cx, cy: cy, r: 4}));
+    svg.appendChild(el("circle", {class: "hd", cx: cx, cy: cy, r: 4}));
+    hero.insertBefore(svg, hero.firstChild);
+    var loop = function () {
+      svg.classList.remove("go"); void svg.getBoundingClientRect(); svg.classList.add("go");
+      setTimeout(function () { nx.classList.remove("hit"); void nx.offsetWidth; nx.classList.add("hit"); }, 3800);
+      timer = setTimeout(loop, 11000);
+    };
+    if (!matchMedia("(prefers-reduced-motion: reduce)").matches) loop(); else svg.classList.add("go");
+  }
+  var t; addEventListener("resize", function () { clearTimeout(t); t = setTimeout(build, 200); });
+  if (document.readyState === "complete") build(); else addEventListener("load", build);
+  if (document.fonts) document.fonts.ready.then(build);
+})();
 </script>
 </body>
 </html>
