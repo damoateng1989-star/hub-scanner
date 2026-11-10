@@ -212,10 +212,23 @@ def scan_board() -> int:
     if not _lock.acquire(blocking=False):      # a sweep is already running
         return 0
     try:
-        return _scan_board()
+        n = _scan_board()
     finally:
         SCAN.update(running=False, current=None, finished=pd.Timestamp.now(tz="UTC").isoformat())
         _lock.release()
+    try:      # tell the owner it's done (after the lock is released, so a slow send never blocks the next sweep)
+        import notify as _notify
+        found = SCAN.get("found") or []
+        live = sum(1 for f in found if f.get("kind") in ("breakout", "breakdown"))
+        mins = ""
+        try:
+            mins = f" · {round((pd.Timestamp(SCAN['finished']) - pd.Timestamp(SCAN['started'])).total_seconds() / 60)} min"
+        except Exception:
+            pass
+        _notify.admins(f"🧹 Sweep done: {SCAN.get('done', n)}/{SCAN.get('total', n)} tickers · {len(found)} setups · {live} live breakouts{mins}")
+    except Exception as e:
+        log.warning("sweep-done note failed: %s", e)
+    return n
 
 
 def _scan_board() -> int:
