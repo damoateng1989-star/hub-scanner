@@ -158,7 +158,7 @@ async def lifespan(_app: FastAPI):
                                                    timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1)
     # paper OPTIONS experiment (off unless switched on): same setups, same windows, its own journal
-    for h_, m_, w_ in ((10, 15, "morning"), (13, 55, "midday")):
+    for h_, m_, w_ in ((10, 15, "morning"), (15, 51, "midday")):
         sched.add_job(paper_opt.enter_daily_opt, CronTrigger(day_of_week="mon-fri", hour=h_, minute=m_, timezone="America/New_York"),
                       kwargs={"window": w_}, misfire_grace_time=900, coalesce=True, max_instances=1, id=f"paper_opt_{w_}", replace_existing=True)
     sched.add_job(paper_opt.sync_opt, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5", timezone="America/New_York"),
@@ -170,7 +170,7 @@ async def lifespan(_app: FastAPI):
     # paper trading: one confirmed breakout a day from the whole board
     sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=9, minute=35, timezone="America/New_York"),
                   args=["morning"], misfire_grace_time=600, coalesce=True, max_instances=1, id="paper_morning", replace_existing=True)
-    sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=13, minute=54, timezone="America/New_York"),
+    sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=15, minute=50, timezone="America/New_York"),
                   args=["midday"], misfire_grace_time=900, coalesce=True, max_instances=1, id="paper_midday", replace_existing=True)
     sched.add_job(earnings.refresh, CronTrigger(hour="6,12,18", minute=5, timezone="America/New_York"),
                   kwargs={"force": True}, id="earnings", replace_existing=True)

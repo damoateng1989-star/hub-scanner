@@ -373,7 +373,7 @@ def _record(window: str, traded: bool, reason: str):
         morning = m.get("reason") if m.get("at") == _today_ny() and not m.get("traded") else None
         notify.admins("🧪 No paper trade today.\n"
                       + (f"9:35 AM: {morning}\n" if morning else "")
-                      + f"1:54 PM: {reason}")
+                      + f"3:50 PM: {reason}")
     except Exception as e:
         log.warning("no-trade note failed: %s", e)
 
