@@ -2615,7 +2615,7 @@ async function loadAccount() {
 
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
-      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab: tightening hubs</a>` : ""}</div></div>`;
+      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a>` : ""}</div></div>`;
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }
@@ -2949,6 +2949,7 @@ async function loadLab() {
   const kindName = { symmetric: "Symmetric ◇", ascending: "Ascending ◢", descending: "Descending ◥" };
   const live = (S.live || []);
   $("lab").innerHTML = `
+    <div id="labExits"></div>
     <div class="panel"><div class="ph"><h2>What's being tested</h2></div>
       <p class="note" style="padding:0 18px 16px;margin:0">A <b>tightening hub</b> is a range that narrows: highs falling and/or lows rising, so the end of the range is at most 60% as wide as the start. The rules are the same as for hubs: breakout = a 4-hour close outside the lines, target = next shelf, failed = close back inside.</p></div>
     <div class="panel"><div class="ph"><h2>Last ${S.days || 200} days, ${S.symbols || 0} stocks</h2><span class="note">${S.updated ? "updated " + when(S.updated) : "runs with each Discover scan"}</span></div>
@@ -2964,6 +2965,50 @@ async function loadLab() {
           ? `tightening for ${x.sessions} days · lines ${money(x.lower)}–${money(x.upper).slice(1)}`
           : `${x.state === "breakout_up" ? "broke out ↑" : "broke down ↓"} at ${money(x.edge)} · target ${money(x.target)} · ${x.outcome}`}</span></span><span class="go">›</span></a>`).join("")
         : `<div class="empty">None right now.</div>`}</div>`;
+  loadLabExits();
+}
+// ---------------------------------------------------------------- Lab: which breakouts work, and which exit works
+let LABX = null, LABX_EXIT = "edge", LABX_POLL = null;
+async function loadLabExits() {
+  const box = $("labExits"); if (!box) return;
+  try { LABX = await api("/api/admin/lab/exits"); } catch (e) { box.innerHTML = failedHTML("the exit test", e, "loadLabExits()"); return; }
+  renderLabExits();
+  clearTimeout(LABX_POLL);
+  if (LABX.status === "running") LABX_POLL = setTimeout(loadLabExits, 5000);
+}
+async function runLabExits(btn) {
+  btn.disabled = true; btn.textContent = "Starting…";
+  try { await api("/api/admin/lab/exits/run", {method: "POST"}); } catch (e) { btn.textContent = "Couldn't start"; return; }
+  setTimeout(loadLabExits, 1200);
+}
+function renderLabExits() {
+  const box = $("labExits"), L = LABX || {}, R = L.result;
+  const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+  const col = (v) => v == null || v === 0 ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
+  const head = `<div class="ph"><h2>Which breakouts work, and which exit</h2>
+      <button class="btnx sm" onclick="runLabExits(this)" ${L.status === "running" ? "disabled" : ""}>${L.status === "running" ? `Running… ${L.done || 0} / ${L.total || "?"} stocks` : R ? "Run again" : "Run the test"}</button></div>`;
+  const intro = `<p class="note" style="padding:0 18px 12px;margin:0">Replays every hub breakout in the last ${L.days || 720} days across the board's stocks with the live rules, entering at the breakout close.
+    Each row keeps only the breakouts that pass that filter; each exit rule scores the same trades a different way. <b>Avg per trade</b> is what decides it, not win rate.
+    <b>Early / later</b> splits the trades in time: a filter that only works in one half is probably luck.</p>`;
+  if (L.status === "error") { box.innerHTML = `<div class="panel">${head}${intro}<p class="note" style="padding:0 18px 16px;color:var(--down)">The last run failed: ${esc(L.error || "")}</p></div>`; return; }
+  if (!R) { box.innerHTML = `<div class="panel">${head}${intro}<p class="note" style="padding:0 18px 16px;margin:0">Not run yet. It downloads two years of 4-hour candles for every stock, so it takes a few minutes. Live alerts aren't affected.</p></div>`; return; }
+  const exits = R.exits, ex = exits.find(e => e.key === LABX_EXIT) || exits[0];
+  const all = R.filters[0].exits;
+  const best = Math.max(...exits.map(e => (all[e.key] || {}).avg ?? -99));
+  const exitRows = exits.map(e => { const v = all[e.key]; return v ? `<tr${e.key === LABX_EXIT ? ' style="background:var(--sunk)"' : ""}><td><a href="#" onclick="LABX_EXIT='${e.key}';renderLabExits();return false"><b>${esc(e.label)}</b></a>${v.avg === best ? " ★" : ""}</td>
+      <td>${v.n}</td><td>${v.win}%</td><td>${v.reached}%</td><td style="${col(v.avg)}"><b>${sign(v.avg)}</b></td><td style="color:var(--up)">${sign(v.avg_win)}</td><td style="color:var(--down)">${sign(v.avg_loss)}</td><td>${v.pf ?? "–"}</td></tr>` : ""; }).join("");
+  const base = (all[ex.key] || {}).avg;
+  const filtRows = R.filters.map(f => { const v = f.exits[ex.key]; if (!v) return ""; const better = base != null && v.avg > base;
+    const thin = v.n < 100;
+    return `<tr${thin ? ' style="opacity:.55"' : ""}><td><b>${esc(f.label)}</b>${thin ? ' <span class="note">few</span>' : ""}</td><td>${v.n}</td><td>${v.win}%</td><td>${v.reached}%</td>
+      <td style="${col(v.avg)}"><b>${sign(v.avg)}</b>${f.key !== "all" && better ? " ↑" : ""}</td><td>${v.pf ?? "–"}</td><td style="${col(v.early)}">${sign(v.early)}</td><td style="${col(v.late)}">${sign(v.late)}</td></tr>`; }).join("");
+  box.innerHTML = `<div class="panel">${head}${intro}
+    <p class="note" style="padding:0 18px 10px;margin:0">${L.trades} breakouts · ${L.symbols} stocks · ${L.first ? new Date(L.first).toLocaleDateString() : ""} to ${L.last ? new Date(L.last).toLocaleDateString() : ""} · run ${L.finished ? when(L.finished) : ""}${L.regime_ok === false ? " · market filter unavailable (no SPY data)" : ""}</p>
+    <h3 style="padding:4px 18px 6px;margin:0;font-size:14px">Exit rules, every breakout</h3>
+    <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Exit</th><th>Trades</th><th>Win rate</th><th>Reached shelf</th><th>Avg per trade</th><th>Avg win</th><th>Avg loss</th><th>Profit factor</th></tr>${exitRows}</table></div>
+    <h3 style="padding:4px 18px 6px;margin:0;font-size:14px">Filters, scored with: ${esc(ex.label)} <span class="note">(tap an exit above to switch)</span></h3>
+    <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Only breakouts that are…</th><th>Trades</th><th>Win rate</th><th>Reached shelf</th><th>Avg per trade</th><th>Profit factor</th><th>Early half</th><th>Later half</th></tr>${filtRows}</table></div>
+    <p class="note" style="padding:0 18px 16px;margin:0">Profit factor = total won ÷ total lost (above 1 makes money). Rows with under 100 trades are faded: too few to trust. Returns are before commissions and slippage. A historical test, not a promise.</p></div>`;
 }
 
 // ---------------------------------------------------------------- terminal shell: sidebar, ticker strip, hub brief
