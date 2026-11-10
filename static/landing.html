@@ -431,8 +431,18 @@ html[data-theme="dark"] .h2-alert { box-shadow: 0 24px 60px rgba(0,0,0,.5); }
 .h2-ah { display: flex; justify-content: space-between; gap: 10px; font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
 .h2-alert b { display: block; font-size: 19px; letter-spacing: -0.02em; margin-top: 8px; }
 .h2-alert p { color: var(--ink2); font-size: 14px; margin-top: 4px; }
-.hero .bp { margin-top: 72px; }
 @media (max-width: 640px) { .h2-stairs .st small { display: none; } .h2-alert { margin-top: 16px; max-width: none; } }
+
+/* Sections match the hero: left-aligned, larger headings */
+section:not(.final) > .wrap > .kicker, section:not(.final) > .wrap > h2, section:not(.final) > .wrap > .sub,
+.sc-copy .kicker, .sc-copy h2, .sc-copy .sub { text-align: left !important; margin-left: 0 !important; margin-right: 0 !important; }
+section:not(.final) > .wrap > h2, .sc-copy h2 { font-size: clamp(30px, 4.6vw, 58px); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; margin-top: 14px; }
+section:not(.final) > .wrap > .sub, .sc-copy .sub { font-size: clamp(15px, 1.3vw, 17px); margin-top: 18px; max-width: 56ch; }
+.final h2 { font-size: clamp(30px, 4.6vw, 58px); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; margin-left: auto; margin-right: auto; }
+section { padding: 104px 0; }
+#board .bp { margin: 44px 0 0 !important; max-width: none !important; }
+.hero { padding-bottom: 96px; }
+@media (max-width: 640px) { section { padding: 72px 0; } }
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
@@ -667,6 +677,12 @@ html[data-theme="light"] .run .live-pill::after { background: linear-gradient(90
   <p class="h2-note">Example levels, for illustration.</p>
   <div class="h2-alert"><div class="h2-ah"><span>NextShelf alert · 4:01 PM</span><span>Example, for illustration</span></div><b>AMD: 4H close above hub</b><p>Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</p></div>
 
+</div></header>
+
+<section id="board" class="band"><div class="wrap">
+  <div class="kicker">Inside NextShelf</div>
+  <h2>Every setup, <em>on one board.</em></h2>
+  <p class="sub">S&amp;P 500, Nasdaq-100 and major ETFs, checked after every 4-hour close.</p>
   <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
     <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
     <div class="bp-in">
@@ -734,7 +750,7 @@ html[data-theme="light"] .run .live-pill::after { background: linear-gradient(90
       <p class="bp-note">Example rows and card. Members see every stock on the board, updated after each 4-hour close, and tap Analyze for its Shelf card.</p>
     </div>
   </div>
-</div></header>
+</div></section>
 
 <section id="why"><div class="wrap">
   <div class="kicker">Why NextShelf</div>
