@@ -1947,6 +1947,16 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table .plain-row{display:block!important;width:100%!important}
  #hubBoard .board-table .plain-row td{display:block!important;width:100%!important}
 }
+
+/* Patch 72 desktop widths: the two mobile-only cells are hidden */
+@media(min-width:761px){
+ .board-table th:nth-child(6),.board-table td:nth-child(6){width:9%!important}
+ .board-table th:nth-child(7),.board-table td:nth-child(7){width:9%!important}
+ .board-table th:nth-child(8),.board-table td:nth-child(8){width:10%!important}
+ .board-table th:nth-child(9),.board-table td:nth-child(9){width:10%!important}
+ .board-table th:nth-child(10),.board-table td:nth-child(10){width:15%!important}
+ .board-table th:nth-child(11),.board-table td:nth-child(11){width:16%!important}
+}
 </style>
 </head>
 <body class="term">
