@@ -648,27 +648,44 @@ html[data-theme="light"] .run .live-pill::after { background: linear-gradient(90
 @media (prefers-reduced-motion: reduce) { .live-pill::before, .live-pill::after { animation: none !important; } .live-pill::after { display: none !important; } }
 
 
-/* Centred hero (replaces the left-aligned staircase hero) */
-.hero.hc { text-align: center; padding: 88px 0 0; overflow: hidden; position: relative;
-  background: radial-gradient(60% 50% at 50% 0%, rgba(47,84,235,.10), transparent 70%), radial-gradient(rgba(20,20,18,.10) 1px, transparent 1px) 0 0/22px 22px; }
-html[data-theme="dark"] .hero.hc { background: radial-gradient(60% 50% at 50% 0%, rgba(91,123,255,.16), transparent 70%), radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px) 0 0/22px 22px; }
-.hero.hc h1 { font-size: clamp(38px, 6.4vw, 92px); line-height: 1; letter-spacing: -0.045em; margin: 22px auto 0; max-width: none; font-style: normal; }
-.hero.hc h1 .grad { display: block; background: linear-gradient(90deg, #2F54EB 0%, #4B3FE0 55%, #7A3FC7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .08em; }
-html[data-theme="dark"] .hero.hc h1 .grad { background-image: linear-gradient(90deg, #6E8BFF 0%, #8C7CFF 55%, #B58CFF 100%); }
-.hero.hc .lede { margin: 28px auto 0; max-width: 60ch; font-size: clamp(16px, 1.5vw, 19px); text-align: center; }
-.hero.hc .ctas { justify-content: center; margin-top: 34px; gap: 12px; }
-.btn.dark { background: #141412; color: #fff; border-color: #141412; }
-html[data-theme="dark"] .btn.dark { background: #F3F3F0; color: #141412; border-color: #F3F3F0; }
-.hero.hc .trust { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 22px; margin-top: 34px; font-size: 13.5px; color: var(--ink2); }
-.hero.hc .trust span { display: inline-flex; align-items: center; gap: 7px; }
-.hero.hc .trust svg { color: #2F54EB; flex: 0 0 auto; }
-html[data-theme="dark"] .hero.hc .trust svg { color: #7C93FF; }
-.hero.hc .micro { margin-top: 14px; }
-.hero.hc .bp { margin: 64px auto -2px !important; max-width: 1100px !important; text-align: left; border-bottom-left-radius: 0 !important; border-bottom-right-radius: 0 !important; }
-/* Section headings centred again to match the hero */
-section:not(.final) > .wrap > .kicker, section:not(.final) > .wrap > h2, section:not(.final) > .wrap > .sub,
-.sc-copy .kicker, .sc-copy h2, .sc-copy .sub { text-align: center !important; margin-left: auto !important; margin-right: auto !important; }
 @media (max-width: 640px) { .hero.hc { padding-top: 56px; } .hero.hc .trust { flex-direction: column; align-items: center; gap: 8px; } .hero.hc .ctas .btn { width: 100%; justify-content: center; } }
+
+/* NextShelf hero: copy left, live-style 4H chart right, close clock below */
+.hero.ns { text-align: left; padding: 76px 0 0; }
+.ns-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+.hero.ns h1 { font-size: clamp(40px, 5.6vw, 80px); line-height: .98; letter-spacing: -0.045em; margin: 20px 0 0; max-width: 12ch; }
+.hero.ns .lede { margin: 24px 0 0; max-width: 44ch; font-size: clamp(16px, 1.4vw, 18px); text-align: left; }
+.hero.ns .ctas { justify-content: flex-start; align-items: center; gap: 22px; margin-top: 30px; }
+.ns-link { font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+.hero.ns .micro { margin-top: 16px; }
+.ns-card { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 14px; }
+.ns-card-h { display: flex; justify-content: space-between; align-items: baseline; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+.ns-card-h b { font: 700 15px var(--sans); letter-spacing: -0.01em; text-transform: none; color: var(--ink); }
+.ns-chart { display: block; width: 100%; height: auto; margin-top: 8px; }
+.ns-chart .lb { font: 500 10.5px var(--mono); letter-spacing: .08em; fill: var(--ink2); }
+.ns-chart .lb.hb { fill: #2F54EB; }
+.ns-chart .shelf { stroke: var(--ink2); stroke-width: 1.2; stroke-dasharray: 5 5; }
+.ns-chart .hubbox { fill: rgba(47,84,235,.08); stroke: #2F54EB; stroke-width: 1.2; stroke-dasharray: 5 4; }
+.ns-chart .wk { stroke: #8A8A84; stroke-width: 1.4; } .ns-chart .wk.g { stroke: #007F61; }
+.ns-chart .cu { fill: #8A8A84; } .ns-chart .cd { fill: #141412; } .ns-chart .cg { fill: #007F61; }
+.ns-chart .trigline { stroke: #007F61; stroke-width: 1; stroke-dasharray: 2 3; }
+.ns-alert { display: flex; gap: 10px; align-items: flex-start; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
+.ns-alert b { display: block; font-size: 14px; } .ns-alert small { display: block; font-size: 12.5px; color: var(--ink2); margin-top: 2px; }
+.ns-dot { width: 8px; height: 8px; border-radius: 50%; background: #007F61; margin-top: 6px; flex: 0 0 auto; }
+.ns-clock { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); margin: 64px 0 0; padding: 0; border-top: 2px solid var(--ink); }
+.ns-clock li { padding: 16px 20px 0 0; display: flex; flex-direction: column; gap: 4px; }
+.ns-clock li + li { padding-left: 20px; border-left: 1px solid var(--line); }
+.ns-clock span { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #2F54EB; }
+.ns-clock b { font-size: 17px; letter-spacing: -0.02em; } .ns-clock small { font-size: 13px; color: var(--ink2); }
+.hero.ns .bp { margin: 64px 0 0 !important; max-width: none !important; }
+html[data-theme="dark"] .ns-chart .lb.hb, html[data-theme="dark"] .ns-clock span { fill: #7C93FF; color: #7C93FF; }
+html[data-theme="dark"] .ns-chart .hubbox { fill: rgba(124,147,255,.12); stroke: #7C93FF; }
+html[data-theme="dark"] .ns-chart .cd { fill: #ECEDEF; } html[data-theme="dark"] .ns-chart .cu, html[data-theme="dark"] .ns-chart .wk { fill: #5C616B; stroke: #5C616B; }
+html[data-theme="dark"] .ns-chart .cu { stroke: none; }
+html[data-theme="dark"] .ns-chart .cg, html[data-theme="dark"] .ns-dot { fill: #00C898; background: #00C898; }
+html[data-theme="dark"] .ns-chart .wk.g, html[data-theme="dark"] .ns-chart .trigline { stroke: #00C898; }
+html[data-theme="dark"] .ns-clock { border-top-color: #2E323B; }
+@media (max-width: 900px) { .ns-grid { grid-template-columns: 1fr; gap: 36px; } .ns-clock { grid-template-columns: 1fr; } .ns-clock li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; } }
 </style>
 </head>
 <body>
@@ -680,13 +697,31 @@ section:not(.final) > .wrap > .kicker, section:not(.final) > .wrap > h2, section
   <div class="navend"><span id="themeSlot"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></span><span id="navEnd" class="navend"><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
-<header class="hero hc"><div class="wrap">
-  <div class="eyebrow">Hub-breakout playbook for swing traders</div>
-  <h1>Watch the setup <span class="grad">while you live your day.</span></h1>
-  <p class="lede">NextShelf checks every 4-hour close across the market, and tells you when price steps off one shelf and heads for the next. A warning before the close, the confirmation on it, and the target when it hits.</p>
-  <div class="ctas"><a class="btn dark" href="#join" data-cta>Join the waitlist <span aria-hidden="true">→</span></a><a class="btn ghost" href="#how">See how it works <span aria-hidden="true">→</span></a></div>
-  <div class="trust"><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Checked after every 4-hour close</span><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 15l3-3 2 2 3-4"/></svg>S&amp;P 500, Nasdaq-100 and major ETFs</span><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10 21a2 2 0 0 0 4 0"/></svg>Telegram, text and call alerts</span><span><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>Every setup logged</span></div>
-  <div class="micro">Free tier · No card needed · Educational, not financial advice</div>
+<header class="hero ns"><div class="wrap ns-grid">
+  <div class="ns-copy">
+    <div class="eyebrow">Hub-breakout playbook for swing traders</div>
+    <h1>NextShelf watches the setup <em>while you go do other things.</em></h1>
+    <p class="lede">You live your day. NextShelf watches every 4-hour close, and tells you when price steps off one shelf and heads for the next.</p>
+    <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="ns-link" href="#record">See the track record →</a></div>
+    <div class="micro">Free tier · No card needed · Educational, not financial advice</div>
+  </div>
+  <figure class="ns-card">
+    <div class="ns-card-h"><b>AMD</b><span>4-hour · example</span></div>
+    <svg class="ns-chart" viewBox="0 0 520 300" role="img" aria-label="Example 4-hour chart: candles coil inside a hub between 170.40 and 178.01, one candle closes above the hub, and price climbs to the next shelf at 186.10">
+<line x1="20" y1="70" x2="500" y2="70" class="shelf"/><text x="20" y="60" class="lb">NEXT SHELF · $186.10</text>
+<rect x="40" y="186" width="300" height="54" class="hubbox"/><text x="40" y="178" class="lb hb">HUB · $178.01</text><text x="40" y="258" class="lb hb">$170.40</text>
+<line x1="60" y1="197" x2="60" y2="233" class="wk"/><rect x="53" y="205" width="14" height="21" rx="2" class="cd"/><line x1="92" y1="192" x2="92" y2="229" class="wk"/><rect x="85" y="200" width="14" height="22" rx="2" class="cu"/><line x1="124" y1="200" x2="124" y2="237" class="wk"/><rect x="117" y="208" width="14" height="22" rx="2" class="cd"/><line x1="156" y1="190" x2="156" y2="227" class="wk"/><rect x="149" y="198" width="14" height="22" rx="2" class="cu"/><line x1="188" y1="196" x2="188" y2="235" class="wk"/><rect x="181" y="204" width="14" height="24" rx="2" class="cd"/><line x1="220" y1="188" x2="220" y2="225" class="wk"/><rect x="213" y="196" width="14" height="22" rx="2" class="cu"/><line x1="252" y1="198" x2="252" y2="233" class="wk"/><rect x="245" y="206" width="14" height="20" rx="2" class="cd"/><line x1="284" y1="191" x2="284" y2="228" class="wk"/><rect x="277" y="199" width="14" height="22" rx="2" class="cu"/><line x1="316" y1="195" x2="316" y2="231" class="wk"/><rect x="309" y="203" width="14" height="21" rx="2" class="cu"/><line x1="356" y1="142" x2="356" y2="206" class="wk g"/><rect x="349" y="150" width="14" height="50" rx="2" class="cg trig"/><line x1="388" y1="120" x2="388" y2="162" class="wk g"/><rect x="381" y="128" width="14" height="28" rx="2" class="cg"/><line x1="420" y1="96" x2="420" y2="140" class="wk g"/><rect x="413" y="104" width="14" height="30" rx="2" class="cg"/><line x1="452" y1="76" x2="452" y2="116" class="wk g"/><rect x="445" y="84" width="14" height="26" rx="2" class="cg"/>
+<line x1="356" y1="186" x2="356" y2="276" class="trigline"/><text x="364" y="276" class="lb">4H CLOSE ABOVE THE HUB</text>
+</svg>
+    <div class="ns-alert"><span class="ns-dot"></span><div><b>AMD broke out of its hub</b><small>Close $179.76 · aim $186.10 (+3.5%) · wrong below $178.01</small></div></div>
+  </figure>
+</div>
+<div class="wrap"><ol class="ns-clock">
+  <li><span>3:45 PM</span><b>Heads-up</b><small>15 min before the close (Pro)</small></li>
+  <li><span>4:00 PM</span><b>Confirmed close</b><small>Outside the hub, not a wick</small></li>
+  <li><span>Next sessions</span><b>Next shelf</b><small>Target hit, logged in the record</small></li>
+</ol></div>
+<div class="wrap">
   <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
     <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
     <div class="bp-in">
