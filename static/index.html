@@ -1740,6 +1740,10 @@ html body .board-state.board-state.near-sup.near-sup { color: #00C898 !important
 html body .board-state.board-state.near-res.near-res { color: #F00060 !important; background: rgba(240,0,96,.12) !important; border: 0 !important; border-radius: 4px !important; }
 html[data-theme="light"] body .board-state.board-state.near-sup.near-sup { color: #007F61 !important; background: rgba(0,127,97,.08) !important; border: 0 !important; border-radius: 4px !important; }
 html[data-theme="light"] body .board-state.board-state.near-res.near-res { color: #DC0058 !important; background: rgba(220,0,88,.08) !important; border: 0 !important; border-radius: 4px !important; }
+/* Patch 67: NEW badge — broke out on the latest 4H close (0 candles since) */
+html body .board-state.board-state.new.new { border: 0 !important; border-radius: 4px !important; color: #7C93FF !important; background: rgba(124,147,255,.12) !important; }
+.board-table td .board-state.new { display: block !important; width: max-content; margin-top: 5px; padding: 1px 7px !important; font-size: 10.5px !important; letter-spacing: .06em; }
+html[data-theme="light"] body .board-state.board-state.new.new { border: 0 !important; border-radius: 4px !important; color: #2F54EB !important; background: rgba(47,84,235,.08) !important; }
 /* earnings: the light purple pill */
 /* Patch 50: earnings tag is a quiet violet line under the ticker, not a pill */
 html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 3px 0 0 !important; flex-basis: 100% !important;
@@ -3402,6 +3406,8 @@ function boardShelf(r,kind){
   if(kind==="forming"){const p=Number(r.last_close),a=r.shelf_up?.level,b=r.shelf_down?.level;if(a==null)return b;if(b==null)return a;return Math.abs(a-p)<=Math.abs(p-b)?a:b;}
   return null;
 }
+// candles since the breakout: the row's own count, else parsed from its label ("Breakout up, 0/10 candles"), like paper.py _fresh
+function boardCandles(r){if(Number.isFinite(Number(r.candles))&&r.candles!==null&&r.candles!=="")return Number(r.candles);const m=/(\d+)\/\d+/.exec(r.label||"");return m?Number(m[1]):null;}
 function boardRows(){
   const rows=[];
   const seen=new Set();   // a stock "at the edge" is also "in a hub": list it once, under its most urgent state
@@ -3411,8 +3417,14 @@ function boardRows(){
 }
 function renderInstitutionalBoard(){
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
+    // Patch 67: in the Broke out view, fresh breakouts (0/10 candles) sort first, then by candle count ascending.
+    // Not flipped by the column-sort direction; rows without a count sort last.
+    if(BOARD_KIND==="live"&&a._kind==="live"&&b._kind==="live"){
+      const ca=boardCandles(a)??99, cb=boardCandles(b)??99;
+      if(ca!==cb) return ca-cb;
+    }
     let av,bv;
     if(BOARD_SORT==="symbol"){av=a.symbol;bv=b.symbol;}
     else if(BOARD_SORT==="price"){av=Number(a.last_close)||0;bv=Number(b.last_close)||0;}
@@ -3425,13 +3437,13 @@ function renderInstitutionalBoard(){
     const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"—";
     return '<tr><td><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
+      '<td><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?volChip(r.rvol):'')+'</td><td>'+money(r.last_close)+'</td>'+
       '<td>'+(h.low==null?"—":money(h.low))+'</td><td>'+(h.high==null?"—":money(h.high))+'</td>'+
       '<td><span class="board-distance">'+edge+'</span></td><td><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td>'+esc(context)+'</td><td><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
-  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
+  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new")?'<tr><td colspan="9"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
   const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="9"><div class="board-empty">No symbols match this view.</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
@@ -3464,6 +3476,7 @@ async function loadBoard() {
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
     '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
+    '<button class="board-filter" data-kind="new" onclick="filterInstitutionalBoard(\'new\')">New</button>'+
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
     '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')" title="Breakouts that already reached their target, failed or ran out of time">Finished</button></div></div>'+
     '<div class="board-frame"><div class="board-caption"><span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
@@ -3648,7 +3661,7 @@ function renderSetupBoard() {
         : live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches`
         : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>${x.kind === "gapfade" ? "1D" : "4H"}</small></div></td>
-        <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span></td><td>${money(x.last_close)}</td>
+        <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</td><td>${money(x.last_close)}</td>
         <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side res">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side sup">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
     </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" ? "daily" : "4-hour"} close.</div>`)
