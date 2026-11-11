@@ -341,6 +341,20 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
          ("A stock gaps up 8% on earnings and closes near its low. Two days later it closes above the gap-day high. What happened?",
           ["A gap fade and rip triggered", "A double top formed", "Nothing; it's too late"],
           0, "Gap, fade, then a close back above the gap-day high within 5 sessions: that's the reclaim.")),
+        ("flush-and-reclaim", "Flush and reclaim", 3, """
+<p>This one uses <b>daily</b> candles. A stock drops <b>5% or more in a day</b>, often on earnings. Sellers rush out. Then, over the next days, buyers walk it all the way back.</p>
+<h2>The level</h2>
+<p>The level is where it fell from: the <b>highest close of the 5 days before the drop</b>. That's the price the sellers were sure was too high.</p>
+<h2>The trigger</h2>
+<p>A <b>daily close back above that level within 10 sessions</b> of the drop, on normal volume or better. A wick above it during the day doesn't count; the close does. It's long only.</p>
+<h2>Aim and wrong</h2>
+<p>You're wrong on a daily close back below the level. The aim is the next shelf above. These moves can be fast, so size small.</p>""",
+         ["A 5%+ down day, often on earnings.",
+          "Trigger: a daily close back above the level it fell from, within 10 sessions.",
+          "Wrong: a daily close back below that level. Aim: the next shelf."],
+         ("A stock closed at $100, dropped 8% on earnings, and six days later trades at $101 midday but closes at $99.50. Is it a setup?",
+          ["Yes, it traded above $100", "Not yet; it needs a daily close above $100", "No, it's too late"],
+          1, "Only the daily close counts. A close above $100 within 10 sessions is the trigger.")),
         ("failed-breakdowns", "Failed breakdowns and breakouts", 3, """
 <p>Sometimes a hub breaks the wrong way first. Price closes a 4-hour candle <b>below</b> the hub, sellers pile in, stops get hit... and then it turns straight back up. Those trapped sellers have to buy back, and that fuels the move.</p>
 <h2>The trigger</h2>

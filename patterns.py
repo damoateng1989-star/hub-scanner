@@ -25,10 +25,11 @@ KINDS = {
     "gapfade":  "Post-earnings gap fade & rip",
     "fail_down": "Failed breakdown",
     "fail_up":  "Failed breakout",
+    "flush":    "Flush & reclaim",
 }
 STYLE_OF = {"hub": "hub", "triangle": "triangle", "channel_down": "channel", "channel_up": "channel", "sr": "sr",
             "flag_bull": "flag", "flag_bear": "flag", "double_top": "double", "double_bottom": "double",
-            "gapfade": "gapfade", "fail_down": "fakeout", "fail_up": "fakeout"}
+            "gapfade": "gapfade", "fail_down": "fakeout", "fail_up": "fakeout", "flush": "flush"}
 STYLES = {   # what members pick in Settings
     "hub":      ("Hubs", "Tight sideways ranges that break out. NextShelf's core setup."),
     "triangle": ("Triangles", "Lower highs and higher lows squeezing into a point."),
@@ -38,10 +39,15 @@ STYLES = {   # what members pick in Settings
     "double":   ("Double tops & bottoms", "Two tests of the same high or low, then a close through the middle (the neckline)."),
     "gapfade":  ("Post-earnings gap fade & rip", "A gap up that fades, then closes back above the gap-day high. Trades the reclaim. "
                  "The classic case is an earnings gap, but it fires on the shape, whatever caused the gap."),
+    "flush":    ("Flush & reclaim", "A 5%+ down day (often earnings), then within 10 sessions a daily close back above the level "
+                 "it fell from. Trades the reclaim; wrong on a daily close back below it."),
     "fakeout":  ("Failed breakdowns & breakouts", "A hub breaks one way, then within 3 candles closes back through the other side "
                  "on strong volume. The trapped traders fuel the move. Wrong below the fake-out low (or above its high)."),
 }
 
+FLUSH_DROP = 0.05       # flush day: a daily close 5%+ below the day before (often earnings)
+FLUSH_FROM = 5          # the level to reclaim = the highest close of the 5 sessions before the flush
+FLUSH_WITHIN = 10       # the reclaim (a daily close back above that level) must come within 10 sessions
 FAKE_WITHIN = 3         # the fake-out must come within this many candles of the hub, and the reclaim within this many of the fake-out
 FAKE_VOL = 1.2          # the reclaim candle needs this much of normal volume for its time slot
 
@@ -422,16 +428,17 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings, vol_gate: bool 
                                 upper_touches=above["touches"] if above else 0, lower_touches=below["touches"] if below else 0))
 
     _gapfade(c4, close, n, s, out)
+    _flush(c4, res, close, n, s, out)
     _fakeouts(c4, res, close, atr, n, s, out)
 
     # light-volume breakouts don't count (gap fades run on daily candles; S&R was checked above)
-    out["trades"] = [t for t in out["trades"] if t["kind"] in ("gapfade", "sr") or vol_ok(t["i0"])]
+    out["trades"] = [t for t in out["trades"] if t["kind"] in ("gapfade", "sr", "flush") or vol_ok(t["i0"])]
 
     # breakouts still in play (pending) become live too: the newest one per setup type
     newest = {}
     for t in out["trades"]:
-        if t["kind"] == "gapfade":
-            continue                         # daily clock: handled in _gapfade
+        if t["kind"] in ("gapfade", "flush"):
+            continue                         # daily clock: handled in _gapfade / _flush
         if t["outcome"] == "pending" and t["i0"] >= n - s.horizon and t["i0"] >= newest.get(t["kind"], {"i0": -1})["i0"]:
             newest[t["kind"]] = t
     for t in newest.values():
@@ -498,6 +505,89 @@ def _fakeouts(c4: pd.DataFrame, res: dict, close: pd.Series, atr: np.ndarray, n:
                                   p=p, i0=i0, direction=d, edge=edge, target=target, shelf=shelf, stop=stop, **o))
 
 
+def _flush(c4: pd.DataFrame, res: dict, close: pd.Series, n: int, s: engine.Settings, out: dict):
+    """Flush & reclaim (long, daily candles): a 5%+ down day, then within FLUSH_WITHIN sessions a daily close back above
+    the level it fell from (the highest close of the FLUSH_FROM sessions before) on normal volume or better.
+    Wrong on a daily close back below that level. Aim: the next shelf above (else 2 ATR). Mapped onto the 4H frame."""
+    try:
+        daily = engine.complete_days(c4)
+    except Exception:
+        return
+    if len(daily) < 40:
+        return
+    dc, dl = daily["Close"].to_numpy(float), daily["Low"].to_numpy(float)
+    dv = daily["Volume"].to_numpy(float) if "Volume" in daily.columns else None
+    nd = len(daily)
+    days = c4.index.tz_convert(engine.NY).normalize()
+    last_of, first_of = {}, {}
+    for j, dday in enumerate(days):
+        last_of[dday] = j
+        first_of.setdefault(dday, j)
+    dkey = daily.index.tz_convert(engine.NY).normalize() if daily.index.tz is not None else daily.index
+    atr = res["atr"].to_numpy(float)
+    f = FLUSH_FROM
+    while f < nd:
+        if not (dc[f] <= dc[f - 1] * (1 - FLUSH_DROP)):
+            f += 1
+            continue
+        level = float(dc[f - FLUSH_FROM:f].max())
+        i0d = None
+        for k in range(f + 1, min(f + 1 + FLUSH_WITHIN, nd)):
+            if dc[k] > level:
+                if dv is None or k < 21 or dv[k] >= np.nanmean(dv[k - 20:k]):
+                    i0d = k
+                break                              # the first close back above decides it
+        g = first_of.get(dkey[f])
+        if i0d is None:
+            win_end = f + FLUSH_WITHIN
+            low = float(dl[f:].min())
+            if win_end > nd - 1 and g is not None and dc[-1] <= level and dc[-1] >= (level + low) / 2:
+                p = dict(a=g, end_i=n - 1, mh=0.0, ch=level, ml=0.0, cl=low, flush=True)
+                out["live"] = [L for L in out["live"] if not (L["kind"] == "flush" and L["state"] == "forming")]   # newest flush only
+                out["live"].append(dict(kind="flush", state="forming", upper=level, lower=low, sessions=nd - 1 - f,
+                                        start_i=g, end_i=n - 1, p=p, left=win_end - (nd - 1),
+                                        drop_pct=float(round((dc[f] / dc[f - 1] - 1) * 100, 1)), flush_day=dkey[f].strftime("%b %-d")))
+            f += 1
+            continue
+        fd = f
+        i0, g = last_of.get(dkey[i0d]), first_of.get(dkey[fd])
+        f = i0d + 1
+        if i0 is None or g is None:
+            continue
+        low = float(dl[fd:i0d + 1].min())
+        entry = float(dc[i0d])
+        A = float(atr[i0]) if atr[i0] == atr[i0] else entry * 0.02
+        target, shelf = _target(res, g, 1, level, A, s)
+        if shelf is None:
+            target = entry + 2 * A
+        # walk daily closes: target first = follow-through, a close back below the level = snap-back
+        outcome, oid, ret = "pending", None, None
+        for j in range(i0d + 1, min(i0d + 1 + s.horizon, nd)):
+            if dc[j] >= target:
+                outcome, oid = "follow-through", j
+                break
+            if dc[j] <= level:
+                outcome, oid = "snap-back", j
+                break
+        else:
+            if i0d + s.horizon < nd:
+                outcome, oid = "stalled", i0d + s.horizon
+        chase = entry >= target
+        if outcome != "pending" and not chase:
+            ret = ((target if outcome == "follow-through" else float(dc[oid])) / entry - 1) * 100
+        oi = last_of.get(dkey[oid]) if oid is not None else None
+        p = dict(a=g, end_i=max(g, i0 - 1), mh=0.0, ch=level, ml=0.0, cl=low, flush=True)
+        t = dict(kind="flush", hub=dict(start_i=g, end_i=max(g, i0 - 1), low=low, high=level, sessions=i0d - fd),
+                 p=p, i0=i0, direction=1, edge=level, target=target, shelf=shelf, target_kind="shelf" if shelf else "atr",
+                 outcome=outcome, oi=oi, entry=entry, ret=ret, chase=chase, stop=low,
+                 fwd=None if i0d + s.horizon >= nd else float(dc[i0d + s.horizon] / entry - 1) * 100,
+                 drop_pct=float(round((dc[fd] / dc[fd - 1] - 1) * 100, 1)), flush_day=dkey[fd].strftime("%b %-d"), days_in=i0d - fd)
+        out["trades"].append(t)
+        if outcome == "pending":
+            out["live"].append(dict(kind="flush", state="breakout_up", edge=level, target=target, target_kind=t["target_kind"],
+                                    candles=nd - 1 - i0d, since=close.index[i0].isoformat(), trade=t))
+
+
 def _gapfade(c4: pd.DataFrame, close: pd.Series, n: int, s: engine.Settings, out: dict):
     """Post-earnings gap fade & rip (Patch 38): found on daily candles, mapped back onto the 4H frame so the
     record, alerts and charts treat it like every other setup. A day maps to its last 4H candle (the close)."""
@@ -554,10 +644,13 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             t = L["trade"]
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
-            if k != "gapfade":                   # gap fades run on daily candles
+            if k not in ("gapfade", "flush"):    # these run on daily candles
                 row["strength"] = engine.break_strength(c4, res["atr"], t["i0"], t["direction"], t["edge"], float(close.iloc[t["i0"]]))
             if k == "sr":
                 row.update(touches=t["level"]["touches"])
+            elif k == "flush":
+                row.update(stop=round(t["stop"], 2), drop_pct=t["drop_pct"], flush_day=t["flush_day"], candles_unit="days",
+                           lines=_line_pts(t["p"], idx, t["p"]["a"], t["p"]["end_i"]))
             elif k in ("fail_down", "fail_up"):
                 row.update(stop=round(t["stop"], 2), hub_top=round(t["hub"]["high"], 2), hub_bottom=round(t["hub"]["low"], 2))
             elif k == "gapfade":
@@ -587,6 +680,9 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
                 row.update(trigger=tr, trigger_px=round(L["trigger_px"], 2), stop=round(L["stop"], 2), candles_left=L["left"],
                            hub_top=round(p["ch"], 2), hub_bottom=round(p["cl"], 2))
                 row["near_edge"] = tr if (last - L["trigger_px"]) * (1 if tr == "up" else -1) >= -0.25 * float(res["atr"].iloc[-1]) else None
+            if k == "flush":                     # the trigger is a daily close back above the level it fell from
+                row.update(trigger="up", drop_pct=L["drop_pct"], flush_day=L["flush_day"], days_left=L["left"], sessions_unit="days")
+                row["near_edge"] = "up" if pos >= 0.8 else None
             if k == "gapfade":                   # the trigger is a daily close back above the gap-day high
                 row.update(trigger="up", gap_pct=round(L["gap_pct"] * 100, 1), days_left=L["left"], sessions_unit="days")
                 row["near_edge"] = "up" if pos >= 0.8 else None
@@ -616,5 +712,6 @@ def events(sym: str, res: dict, pa: dict) -> list[dict]:
                        direction=t["direction"],
                        close=t["entry"], edge=t["edge"], target=t["target"], shelf=t["shelf"],
                        touches=t.get("level", {}).get("touches"), stop=t.get("stop"), gap_pct=t.get("gap_pct"),
+                       drop_pct=t.get("drop_pct"), flush_day=t.get("flush_day"),
                        gap_day=t.get("gap_day")))
     return ev

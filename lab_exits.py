@@ -44,6 +44,7 @@ GROUPS = [  # key, label, pattern kinds
     ("sr", "Support & resistance", ("sr",)),
     ("gapfade", "Gap fade & rip", ("gapfade",)),
     ("fakeout", "Failed breakdowns & breakouts", ("fail_down", "fail_up")),
+    ("flush", "Flush & reclaim", ("flush",)),
 ]
 GROUP_OF = {k: g for g, _, kinds in GROUPS for k in kinds}
 
@@ -209,7 +210,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
                  pm=engine.candle_end(idx[i0].tz_convert(engine.NY)).hour == 16)
         if grp == "flag":
             f.update(_flag_feats(c4, t["p"], d))
-        if grp == "gapfade":                                  # daily clock with its own stop and 2R target: scored as recorded
+        if grp in ("gapfade", "flush"):                       # daily clock with its own exit rule: scored as recorded
             if t.get("ret") is None:
                 continue
             f["ex"] = {"edge": (round(float(t["ret"]), 3), "target" if t["outcome"] == "follow-through" else "stop")}

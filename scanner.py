@@ -366,7 +366,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 if e["time"] <= b or e["time"] != c4.index[-1]:
                     continue                 # only the newest candle: no burst of old breaks after downtime
                 msg = format_pattern_event(sym, e)
-                if e["kind"] != "gapfade" and e.get("i0") is not None:
+                if e["kind"] not in ("gapfade", "flush") and e.get("i0") is not None:
                     msg += strength_line(c4, res, e["i0"], e["direction"], e["edge"], e["close"])
                 if e["type"] in ("breakout", "breakdown"):
                     msg += earnings.alert_line(sym)
@@ -426,6 +426,14 @@ def format_pattern_event(sym: str, e: dict) -> str:
                 f"Entry {_money(e['close'])}, stop {_money(e.get('stop'))} (−1R), target {_money(e['target'])} (+2R).\n"
                 f"Size off the risk ({_money(risk)} a share), not a fixed %. Beta: the shape is measured, the earnings link isn't.\n"
                 f"Day closed: {candle_close(e['time'])}")
+    if e["kind"] == "flush":
+        reached = e["close"] >= e["target"]
+        return (f"🔁 {sym}: Flush & reclaim. It dropped {abs(e.get('drop_pct') or 0):.1f}% on {e.get('flush_day', 'the flush day')}, "
+                f"and the daily candle just closed back ABOVE the level it fell from, {_money(e['edge'])}.\n"
+                f"Setup: Flush & reclaim (beta: daily candles, too few results to judge yet)\n"
+                + plan_lines(e["close"], e["edge"], e["target"], 1, reached, e.get("shelf")).replace("4H close", "daily close")
+                + f"\nFlush low: {_money(e.get('stop'))}. Beta: the shape is measured, the earnings link isn't."
+                + f"\nDay closed: {candle_close(e['time'])}")
     if e["kind"] in ("fail_down", "fail_up"):
         up = e["kind"] == "fail_down"
         d = 1 if up else -1
