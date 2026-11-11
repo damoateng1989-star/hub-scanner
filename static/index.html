@@ -802,7 +802,7 @@ body.side-min .sb-motto { display: none; }
 .scout-fab:hover .sf-bot { animation: sfWave .6s ease-in-out 2; }
 @keyframes sfWave { 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
 .sf-bot { inset: 7px !important; }
-.scout-fab .ag-eyes circle { fill: #ffffff; filter: drop-shadow(0 0 3px #ffffff); }
+.scout-fab .ag-eyes circle { fill: #7C93FF; filter: drop-shadow(0 0 3px rgba(124,147,255,.8)); }
 .scout-fab .ag-ant { filter: drop-shadow(0 0 4px currentColor); }
 .sf-name { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); padding: 2px 9px; border-radius: 99px; background: #3DD68C; color: #04140b;
   font: 800 11px/1.4 var(--sans); letter-spacing: .02em; box-shadow: 0 4px 12px rgba(0,0,0,.4); pointer-events: none; }
@@ -1004,6 +1004,9 @@ html[data-theme="light"] body .board-actions .plain-btn.on { background: #fff !i
 .sika-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
 .sika-ava { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #2B2C2F; font-size: 14px; }
 html[data-theme="light"] .sika-ava { background: #E9E8E2; }
+.sika-ava svg { width: 19px; height: 19px; display: block; }
+.ag-name .sika-ava, .sp-head .sika-ava { margin-right: 8px; vertical-align: middle; flex: 0 0 auto; }
+.sp-head > div:first-child { display: flex; align-items: center; gap: 0; }
 .sika-name { font-size: 14px; font-weight: 800; }
 .sika-live { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #3DD68C; border: 1px solid rgba(61,214,140,.55); border-radius: 999px; padding: 3px 10px; background: #0E1512; box-shadow: 0 0 12px rgba(61,214,140,.28); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 .sika-live i { width: 6px; height: 6px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); display: inline-block; flex: none; }
@@ -1087,7 +1090,7 @@ button.primary:hover, .sp-go:hover { background: #fff !important; box-shadow: 0 
 .scout-fab { box-shadow: 0 16px 44px rgba(0,0,0,.55), 0 0 28px rgba(255,255,255,.12) !important; }
 .scout-fab:hover { box-shadow: 0 20px 50px rgba(0,0,0,.6), 0 0 40px rgba(255,255,255,.2) !important; }
 .sf-halo { background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%) !important; }
-.scout-fab .ag-eyes circle { fill: #ffffff !important; filter: drop-shadow(0 0 3px rgba(255,255,255,.8)) !important; }
+.scout-fab .ag-eyes circle { fill: #7C93FF !important; filter: drop-shadow(0 0 3px rgba(124,147,255,.8)) !important; }
 .scout-fab .ag-ant { fill: #9AA0AC !important; } .scout-fab.run .ag-ant { fill: #fff !important; }
 .sf-name, .sf-hello, .sf-badge { background: #F4F6F9 !important; color: #0E0F12 !important; }
 .sf-radar { border-color: rgba(255,255,255,.5) !important; }
@@ -2127,7 +2130,7 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
     <p><span id="bUni">The S&amp;P 500, Nasdaq-100 and major ETFs</span>, checked after each 4-hour close. <span class="note" id="bMeta"></span></p></div>
   <div class="agent" id="agent">
     <div class="ag-main">
-      <div class="ag-name">Sika <small>your setup scout</small><span class="ag-state live-pill" id="agState">Live</span></div>
+      <div class="ag-name"><span class="sika-ava" id="agAva"></span>Sika <small>your setup scout</small><span class="ag-state live-pill" id="agState">Live</span></div>
       <div class="ag-line" id="agLine">Getting ready…</div>
       <div class="ag-bar"><i id="agBar"></i></div>
       <div class="ag-finds" id="agFinds"></div>
@@ -2227,7 +2230,7 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
 </button>
 <div class="sf-hello" id="sfHello" hidden onclick="this.hidden=true;toggleScout(true)"></div>
 <div class="scout-pop" id="scoutPop" hidden role="dialog" aria-label="Sika">
-  <div class="sp-head"><div><b>Sika</b><small id="spState" class="live-pill">Live</small></div><button class="bf-x" onclick="toggleScout(false)" aria-label="Close">✕</button></div>
+  <div class="sp-head"><div><span class="sika-ava" id="spAva"></span><b>Sika</b><small id="spState" class="live-pill">Live</small></div><button class="bf-x" onclick="toggleScout(false)" aria-label="Close">✕</button></div>
   <p class="sp-line" id="spLine">Checking in…</p>
   <div class="ag-bar sp-bar"><i id="spBar"></i></div>
   <div class="sp-acts" id="spActs"></div>
@@ -2384,7 +2387,7 @@ function plainEnglish(r, kind) {
   return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 4+ four-hour candles.";
 }
 function plainRow(r, kind) {
-  return `<tr class="plain-row" hidden><td colspan="11"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">🤖</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div></div></td></tr>`;
+  return `<tr class="plain-row" hidden><td colspan="11"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">${ROBOT_SVG}</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div></div></td></tr>`;
 }
 function togglePlain(btn) {
   const row = btn.closest("tr").nextElementSibling;
@@ -4261,14 +4264,15 @@ function paintInstall() {
 function hideInstall() { try { localStorage.setItem("ns_install_off", "1"); } catch (e) {} paintInstall(); }
 // ---------------------------------------------------------------- Scout floating robot
 const ROBOT_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
-  <line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle class="ag-ant" cx="32" cy="5" r="3.4" fill="#fff"/>
-  <rect x="10" y="14" width="44" height="36" rx="11" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
-  <rect x="5" y="26" width="5" height="12" rx="2.5" fill="#353639"/><rect x="54" y="26" width="5" height="12" rx="2.5" fill="#353639"/>
-  <rect x="16" y="22" width="32" height="15" rx="7.5" fill="#0B0C0F"/>
-  <g class="ag-eyes"><circle cx="25" cy="29.5" r="3.4" fill="#7C93FF"/><circle cx="39" cy="29.5" r="3.4" fill="#7C93FF"/></g>
-  <rect class="ag-beam" x="17" y="23" width="3" height="13" rx="1.5" fill="#fff" opacity=".75"/>
-  <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#353639"/></svg>`;
+  <line x1="32" y1="7" x2="32" y2="14" stroke="#4a5a70" stroke-width="1.5" stroke-linecap="round"/><circle class="ag-ant" cx="32" cy="5.5" r="3" fill="#7C93FF"/>
+  <rect x="11" y="15" width="42" height="34" rx="15" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="17" y="23" width="30" height="14" rx="7" fill="#0B0C0F"/>
+  <g class="ag-eyes"><circle cx="25.5" cy="29.5" r="3.6" fill="#7C93FF"/><circle cx="38.5" cy="29.5" r="3.6" fill="#7C93FF"/></g>
+  <rect x="19.5" y="25" width="3" height="10" rx="1.5" fill="#ffffff" opacity="0.3"/>
+  <path d="M27 43 Q32 47 37 43" stroke="#565A61" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
 $("sfBot").innerHTML = ROBOT_SVG;
+if ($("agAva")) $("agAva").innerHTML = ROBOT_SVG;
+if ($("spAva")) $("spAva").innerHTML = ROBOT_SVG;
 let SCOUT_SC = {running: false}, MY_SCAN = null, MY_SCANNING = false;
 function toggleScout(force) {
   const pop = $("scoutPop"), open = force ?? pop.hidden;
