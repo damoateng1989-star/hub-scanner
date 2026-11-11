@@ -28,36 +28,61 @@ CHUNK = 20
 _LOCK = threading.Lock()
 
 EXITS = [   # key, label
-    ("edge", "Current: out on a close back inside the hub"),
-    ("mid", "Out on a close past the hub middle"),
-    ("far", "Out on a close past the far side of the hub"),
+    ("edge", "Current: out on a close back inside the pattern"),
+    ("mid", "Out on a close past the middle of the pattern"),
+    ("far", "Out on a close past the far side of the pattern"),
     ("half", "Half off at 1R, rest stopped at entry"),
     ("edge20", "Current, but 20 candles before giving up"),
 ]
 
+GROUPS = [  # key, label, pattern kinds
+    ("hub", "Hubs", ("hub",)),
+    ("flag", "Flags", ("flag_bull", "flag_bear")),
+    ("double", "Double tops & bottoms", ("double_top", "double_bottom")),
+    ("triangle", "Triangles", ("triangle",)),
+    ("channel", "Channels", ("channel_up", "channel_down")),
+    ("sr", "Support & resistance", ("sr",)),
+    ("gapfade", "Gap fade & rip", ("gapfade",)),
+]
+GROUP_OF = {k: g for g, _, kinds in GROUPS for k in kinds}
+
+_has = lambda f, k, test: f.get(k) is not None and test(f[k])
 FILTERS = [   # key, label, test(features) -> bool
     ("all", "Every breakout", lambda f: True),
-    ("vol", "Volume 1.2× normal or more", lambda f: f["rvol"] is not None and f["rvol"] >= 1.2),
+    ("vol", "Volume 1.2× normal or more", lambda f: _has(f, "rvol", lambda v: v >= 1.2)),
     ("mkt", "With the market (SPY vs 50-day)", lambda f: f["with_mkt"] is True),
     ("against", "Against the market", lambda f: f["with_mkt"] is False),
+    ("trend", "With the stock's own trend (vs its 50-day)", lambda f: f["with_trend"] is True),
     ("nochase", "Not chasing (entry in the first half)", lambda f: not f["chase"]),
     ("margin", "Close clears the edge by 0.2 ATR+", lambda f: f["margin"] >= 0.2),
-    ("rr", "Room to the shelf: reward:risk 1.5+", lambda f: f["rr"] is not None and f["rr"] >= 1.5),
-    ("tight", "Tight hub (1 ATR wide or less)", lambda f: f["width"] <= 1.0),
-    ("long", "Long hub (4+ sessions)", lambda f: f["sessions"] >= 4),
+    ("rr", "Room to the target: reward:risk 1.5+", lambda f: _has(f, "rr", lambda v: v >= 1.5)),
+    ("tight", "Tight pattern (1 ATR wide or less)", lambda f: f["width"] <= 1.0),
+    ("long", "Long pattern (4+ sessions)", lambda f: f["sessions"] >= 4),
     ("pm", "4:00 PM closes only", lambda f: f["pm"]),
     ("board", "Passes today's board filters ($10M/day, $25B cap)", lambda f: f["board_ok"]),
-    ("dv100", "Trades $100M+ a day", lambda f: f["dv"] is not None and f["dv"] >= 100e6),
-    ("dv250", "Trades $250M+ a day", lambda f: f["dv"] is not None and f["dv"] >= 250e6),
-    ("dv500", "Trades $500M+ a day", lambda f: f["dv"] is not None and f["dv"] >= 500e6),
-    ("dvlow", "Thinner names: under $100M a day", lambda f: f["dv"] is not None and f["dv"] < 100e6),
+    ("dv100", "Trades $100M+ a day", lambda f: _has(f, "dv", lambda v: v >= 100e6)),
+    ("dv250", "Trades $250M+ a day", lambda f: _has(f, "dv", lambda v: v >= 250e6)),
+    ("dv500", "Trades $500M+ a day", lambda f: _has(f, "dv", lambda v: v >= 500e6)),
+    ("dvlow", "Thinner names: under $100M a day", lambda f: _has(f, "dv", lambda v: v < 100e6)),
     ("up", "Longs only", lambda f: f["d"] == 1),
     ("down", "Shorts only", lambda f: f["d"] == -1),
     ("combo", "Volume + with the market + not chasing",
-     lambda f: f["rvol"] is not None and f["rvol"] >= 1.2 and f["with_mkt"] is True and not f["chase"]),
-    ("combo2", "With the market + not chasing + room to the shelf",
-     lambda f: f["with_mkt"] is True and not f["chase"] and f["rr"] is not None and f["rr"] >= 1.5),
+     lambda f: _has(f, "rvol", lambda v: v >= 1.2) and f["with_mkt"] is True and not f["chase"]),
+    ("combo2", "With the market + not chasing + room to the target",
+     lambda f: f["with_mkt"] is True and not f["chase"] and _has(f, "rr", lambda v: v >= 1.5)),
+    ("combo3", "With the market + with the stock's trend + volume",
+     lambda f: f["with_mkt"] is True and f["with_trend"] is True and _has(f, "rvol", lambda v: v >= 1.2)),
 ]
+EXTRA = {   # filters that only make sense for one pattern
+    "flag": [
+        ("polevol", "Pole on heavy volume (1.3× the candles before it)", lambda f: _has(f, "pole_vol", lambda v: v >= 1.3)),
+        ("shallow", "Shallow flag (gives back a third of the pole or less)", lambda f: _has(f, "retrace", lambda v: v <= 0.34)),
+        ("quiet", "Quiet flag (volume dries up during the pause)", lambda f: _has(f, "flag_quiet", lambda v: v <= 0.75)),
+        ("flagbest", "Heavy pole + shallow flag + with the market",
+         lambda f: _has(f, "pole_vol", lambda v: v >= 1.3) and _has(f, "retrace", lambda v: v <= 0.34) and f["with_mkt"] is True),
+    ],
+    "sr": [("touch4", "Level tested 4+ times", lambda f: f["sessions"] >= 4)],
+}
 
 
 def _spy_regime() -> pd.Series | None:
@@ -105,53 +130,88 @@ def _exit_half(close: np.ndarray, i0: int, d: int, entry: float, target: float, 
     return None
 
 
+def _flag_feats(c4: pd.DataFrame, p: dict, d: int) -> dict:
+    """Pole volume vs the candles before it, how much of the pole the flag gave back, and how quiet the flag was."""
+    try:
+        v = c4["Volume"].to_numpy(float)
+        ps, a, b = p["pole_start"], p["a"], p["b"]
+        pole, before, flag = v[ps + 1:a], v[max(0, ps - 19):ps + 1], v[a:b + 1]
+        pole_m, before_m, flag_m = pole[pole > 0].mean(), before[before > 0].mean(), flag[flag > 0].mean()
+        hi, lo = c4["High"].to_numpy(float), c4["Low"].to_numpy(float)
+        top = hi[ps:a].max() if d == 1 else lo[ps:a].min()
+        back = (top - lo[a:b + 1].min()) if d == 1 else (hi[a:b + 1].max() - top)
+        return dict(pole_vol=float(pole_m / before_m) if before_m > 0 else None,
+                    flag_quiet=float(flag_m / pole_m) if pole_m > 0 else None,
+                    retrace=float(back / p["pole_height"]) if p["pole_height"] else None)
+    except Exception:
+        return {}
+
+
 def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series | None) -> list[dict]:
     if c4 is None or len(c4) < 60:
         return []
+    import board
+    import patterns
     res = engine.analyze(c4, s)
+    try:
+        other = patterns.analyze_all(c4, res, s)["trades"]
+    except Exception:
+        traceback.print_exc()
+        other = []
     close = res["close"].to_numpy(float)
     atr = res["atr"].to_numpy(float)
     idx = c4.index
-    dvol = None
-    if "Volume" in c4.columns:      # daily dollar volume, to judge liquidity as it was before each breakout
-        day = idx.tz_convert(engine.NY).normalize()
-        dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum()
+    day = idx.tz_convert(engine.NY).normalize()
+    dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum() if "Volume" in c4.columns else None
+    dclose = res["close"].groupby(day).last()                 # the stock's own 50-day trend
+    own = (dclose > dclose.rolling(50).mean()).where(dclose.rolling(50).count() >= 50)
     mc = universe.market_cap(sym)
     out = []
-    for t in res["trades"]:
-        if t["outcome"] == "pending" or t["chase"]:      # chase here = target already hit on the entry close: no trade
-            continue
+    for t in [dict(x, kind="hub") for x in res["trades"]] + other:
+        kind = t.get("kind", "hub")
+        grp = GROUP_OF.get(kind)
+        if not grp or t["outcome"] == "pending" or t.get("chase") or t.get("i0") is None:
+            continue                                          # chase = target already hit on the entry close: no trade
         h, i0, d = t["hub"], t["i0"], t["direction"]
-        entry, edge, target = t["entry"], t["edge"], t["target"]
+        entry, edge, target = float(t["entry"]), float(t["edge"]), float(t["target"])
         A = atr[i0]
         if not A or A != A:
             continue
-        mid = (h["low"] + h["high"]) / 2
-        far = h["low"] if d == 1 else h["high"]
+        w = (h["high"] - h["low"]) if h["high"] > h["low"] else A   # a single level (S&R) has no width: use 1 ATR
+        mid, far = edge - d * w / 2, edge - d * w
         risk_mid = d * (entry - mid)
-        with_mkt = None
-        if regime is not None:
-            day = idx[i0].tz_convert(engine.NY).normalize()
-            past = regime[regime.index <= day].dropna()
-            if len(past):
-                up = bool(past.iloc[-1])
-                with_mkt = up if d == 1 else not up
+        today = day[i0]
+
+        def _as_of(series):
+            if series is None:
+                return None
+            past = series[series.index < today].dropna()
+            return bool(past.iloc[-1]) if len(past) else None
+        mkt_up, own_up = _as_of(regime), _as_of(own)
         dv = None
         if dvol is not None:
-            prior = dvol[dvol.index < idx[i0].tz_convert(engine.NY).normalize()]
+            prior = dvol[dvol.index < today]
             prior = prior[prior > 0].tail(20)
             dv = float(prior.mean()) if len(prior) >= 5 else None
-        import board
-        f = dict(sym=sym, t=str(idx[i0]), d=d, dv=dv,
+        f = dict(sym=sym, grp=grp, t=str(idx[i0]), d=d, dv=dv,
                  board_ok=board.quality_skip(sym, dv, mc) is None,
                  rvol=engine.rvol(c4, i0),
-                 with_mkt=with_mkt,
+                 with_mkt=None if mkt_up is None else (mkt_up if d == 1 else not mkt_up),
+                 with_trend=None if own_up is None else (own_up if d == 1 else not own_up),
                  chase=d * (entry - edge) > 0.5 * d * (target - edge),
                  margin=d * (entry - edge) / A,
                  rr=(d * (target - entry) / risk_mid) if risk_mid > 0 else None,
                  width=(h["high"] - h["low"]) / A,
-                 sessions=h["sessions"],
+                 sessions=h.get("sessions") or 0,
                  pm=engine.candle_end(idx[i0].tz_convert(engine.NY)).hour == 16)
+        if grp == "flag":
+            f.update(_flag_feats(c4, t["p"], d))
+        if grp == "gapfade":                                  # daily clock with its own stop and 2R target: scored as recorded
+            if t.get("ret") is None:
+                continue
+            f["ex"] = {"edge": (round(float(t["ret"]), 3), "target" if t["outcome"] == "follow-through" else "stop")}
+            out.append(f)
+            continue
         ex = {}
         for key, stop, hz in (("edge", edge, s.horizon), ("mid", mid, s.horizon), ("far", far, s.horizon),
                               ("edge20", edge, 20)):
@@ -184,11 +244,15 @@ def _score(rows: list[dict], key: str) -> dict | None:
 
 
 def summarize(rows: list[dict]) -> dict:
-    table = []
-    for fk, flabel, test in FILTERS:
-        sub = [r for r in rows if test(r)]
-        table.append(dict(key=fk, label=flabel, exits={ek: _score(sub, ek) for ek, _ in EXITS}))
-    return dict(filters=table, exits=[dict(key=k, label=l) for k, l in EXITS])
+    groups = []
+    for gk, glabel, _ in GROUPS:
+        mine = [r for r in rows if r["grp"] == gk]
+        table = []
+        for fk, flabel, test in FILTERS + EXTRA.get(gk, []):
+            sub = [r for r in mine if test(r)]
+            table.append(dict(key=fk, label=flabel, exits={ek: _score(sub, ek) for ek, _ in EXITS}))
+        groups.append(dict(key=gk, label=glabel, trades=len(mine), filters=table))
+    return dict(groups=groups, exits=[dict(key=k, label=l) for k, l in EXITS])
 
 
 def _set(**kw):

@@ -3223,7 +3223,7 @@ async function loadLab() {
   loadLabExits();
 }
 // ---------------------------------------------------------------- Lab: which breakouts work, and which exit works
-let LABX = null, LABX_EXIT = "edge", LABX_POLL = null;
+let LABX = null, LABX_EXIT = "edge", LABX_GROUP = "hub", LABX_POLL = null;
 async function loadLabExits() {
   const box = $("labExits"); if (!box) return;
   try { LABX = await api("/api/admin/lab/exits"); } catch (e) { box.innerHTML = failedHTML("the exit test", e, "loadLabExits()"); return; }
@@ -3240,30 +3240,33 @@ async function runLabExits(btn) {
   setTimeout(loadLabExits, 1500);
 }
 function renderLabExits() {
-  const box = $("labExits"), L = LABX || {}, R = L.result;
+  const box = $("labExits"), L = LABX || {}, R = L.result && L.result.groups ? L.result : null;
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
   const col = (v) => v == null || v === 0 ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
   const head = `<div class="ph"><h2>Which breakouts work, and which exit</h2>
       <button class="btnx sm" onclick="runLabExits(this)" ${L.status === "running" ? "disabled" : ""}>${L.status === "running" ? `Running… ${L.done || 0} / ${L.total || "?"} stocks` : R ? "Run again" : "Run the test"}</button></div>`
     + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");
-  const intro = `<p class="note" style="padding:0 18px 12px;margin:0">Replays every hub breakout in the last ${L.days || 720} days across the board's stocks with the live rules, entering at the breakout close.
+  const intro = `<p class="note" style="padding:0 18px 12px;margin:0">Replays every breakout of each pattern (hubs, flags, double tops and bottoms, triangles, channels, support and resistance, gap fades) in the last ${L.days || 720} days across the board's stocks with the live rules, entering at the breakout close.
     Each row keeps only the breakouts that pass that filter; each exit rule scores the same trades a different way. <b>Avg per trade</b> is what decides it, not win rate.
     <b>Early / later</b> splits the trades in time: a filter that only works in one half is probably luck.</p>`;
   if (L.status === "error") { box.innerHTML = `<div class="panel">${head}${intro}<p class="note" style="padding:0 18px 16px;color:var(--down)">The last run failed: ${esc(L.error || "")}</p></div>`; return; }
   if (!R) { box.innerHTML = `<div class="panel">${head}${intro}<p class="note" style="padding:0 18px 16px;margin:0">Not run yet. It downloads two years of 4-hour candles for every stock, so it takes a few minutes. Live alerts aren't affected.</p></div>`; return; }
-  const exits = R.exits, ex = exits.find(e => e.key === LABX_EXIT) || exits[0];
-  const all = R.filters[0].exits;
+  const G = R.groups.find(g => g.key === LABX_GROUP) || R.groups[0];
+  const tabs = `<div class="tabs" style="padding:0 18px 12px;display:flex;flex-wrap:wrap;gap:6px">${R.groups.map(g => `<button class="btnx sm${g.key === G.key ? " on" : ""}" style="${g.key === G.key ? "background:#2F54EB!important;color:#fff!important;border-color:#2F54EB!important" : ""}" onclick="LABX_GROUP='${g.key}';renderLabExits()">${esc(g.label)} <span style="opacity:.6">${g.trades}</span></button>`).join("")}</div>`;
+  if (!G.trades) { box.innerHTML = `<div class="panel">${head}${intro}${tabs}<p class="note" style="padding:0 18px 16px;margin:0">No finished ${esc(G.label.toLowerCase())} in the test window.</p></div>`; return; }
+  const exits = R.exits.filter(e => G.filters[0].exits[e.key]), ex = exits.find(e => e.key === LABX_EXIT) || exits[0];
+  const all = G.filters[0].exits;
   const best = Math.max(...exits.map(e => (all[e.key] || {}).avg ?? -99));
   const exitRows = exits.map(e => { const v = all[e.key]; return v ? `<tr${e.key === LABX_EXIT ? ' style="background:var(--sunk)"' : ""}><td><a href="#" onclick="LABX_EXIT='${e.key}';renderLabExits();return false"><b>${esc(e.label)}</b></a>${v.avg === best ? " ★" : ""}</td>
       <td>${v.n}</td><td>${v.win}%</td><td>${v.reached}%</td><td style="${col(v.avg)}"><b>${sign(v.avg)}</b></td><td style="color:var(--up)">${sign(v.avg_win)}</td><td style="color:var(--down)">${sign(v.avg_loss)}</td><td>${v.pf ?? "–"}</td></tr>` : ""; }).join("");
   const base = (all[ex.key] || {}).avg;
-  const filtRows = R.filters.map(f => { const v = f.exits[ex.key]; if (!v) return ""; const better = base != null && v.avg > base;
+  const filtRows = G.filters.map(f => { const v = f.exits[ex.key]; if (!v) return ""; const better = base != null && v.avg > base;
     const thin = v.n < 100;
     return `<tr${thin ? ' style="opacity:.55"' : ""}><td><b>${esc(f.label)}</b>${thin ? ' <span class="note">few</span>' : ""}</td><td>${v.n}</td><td>${v.win}%</td><td>${v.reached}%</td>
       <td style="${col(v.avg)}"><b>${sign(v.avg)}</b>${f.key !== "all" && better ? " ↑" : ""}</td><td>${v.pf ?? "–"}</td><td style="${col(v.early)}">${sign(v.early)}</td><td style="${col(v.late)}">${sign(v.late)}</td></tr>`; }).join("");
   box.innerHTML = `<div class="panel">${head}${intro}
     <p class="note" style="padding:0 18px 10px;margin:0">${L.trades} breakouts · ${L.symbols} stocks · ${L.first ? new Date(L.first).toLocaleDateString() : ""} to ${L.last ? new Date(L.last).toLocaleDateString() : ""} · run ${L.finished ? when(L.finished) : ""}${L.regime_ok === false ? " · market filter unavailable (no SPY data)" : ""}</p>
-    <h3 style="padding:4px 18px 6px;margin:0;font-size:14px">Exit rules, every breakout</h3>
+    ${tabs}<h3 style="padding:4px 18px 6px;margin:0;font-size:14px">${esc(G.label)}: exit rules, every breakout</h3>${G.key === "gapfade" ? `<p class="note" style="padding:0 18px 8px;margin:0">Gap fades run on daily candles with their own stop and 2R target, so only the current rule is scored.</p>` : ""}
     <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Exit</th><th>Trades</th><th>Win rate</th><th>Reached shelf</th><th>Avg per trade</th><th>Avg win</th><th>Avg loss</th><th>Profit factor</th></tr>${exitRows}</table></div>
     <h3 style="padding:4px 18px 6px;margin:0;font-size:14px">Filters, scored with: ${esc(ex.label)} <span class="note">(tap an exit above to switch)</span></h3>
     <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Only breakouts that are…</th><th>Trades</th><th>Win rate</th><th>Reached shelf</th><th>Avg per trade</th><th>Profit factor</th><th>Early half</th><th>Later half</th></tr>${filtRows}</table></div>
