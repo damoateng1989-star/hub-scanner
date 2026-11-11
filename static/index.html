@@ -3476,13 +3476,13 @@ function vizScaleHTML(st) {
     `<span><i class="k-hub"></i>Hub ${money(h.low)}–${money(h.high).slice(1)}</span>`];
   if (up != null) key.push(`<span><i class="k-up"></i>Shelf ${money(up)}</span>`);
   if (dn != null) key.push(`<span><i class="k-dn"></i>Shelf ${money(dn)}</span>`);
-  walls.forEach(([n, v]) => key.push(`<span><i class="k-wall"></i>${n} ${money(v)}</span>`));
+  walls.forEach(([n, v]) => key.push(`<span><i class="k-wall ${n[0] === "C" ? "call" : "put"}"></i>${n} ${money(v)}</span>`));
   return `<div class="vz-scale" id="vzScale">
     <div class="vz-track">
       <i class="vz-hub" style="left:${hubL}%;width:${hubW}%"></i>
       ${dn != null ? `<i class="vz-tick dn" style="left:${pc(dn)}%"></i>` : ""}
       ${up != null ? `<i class="vz-tick up" style="left:${pc(up)}%"></i>` : ""}
-      ${walls.map(([n, v]) => `<i class="vz-tick wall" style="left:${pc(v)}%"></i>`).join("")}
+      ${walls.map(([n, v]) => `<i class="vz-tick wall ${n[0] === "C" ? "call" : "put"}" style="left:${pc(v)}%"></i>`).join("")}
       <i class="vz-dot" style="left:${pc(px)}%"></i>
     </div>
     <div class="vz-key">${key.join("")}</div>
@@ -4897,6 +4897,13 @@ html[data-theme="light"] body.brief-open .bf-scrim { background: rgba(15,23,42,.
 html[data-theme="light"] #brief .bf-hero { background: linear-gradient(180deg, #EEF2FF 0%, #FFFFFF 55%) !important; border-color: #D9DEEA !important;
   box-shadow: inset 0 3px 0 0 #2F54EB, 0 14px 34px rgba(15,23,42,.12) !important; }
 html[data-theme="light"] #brief .vz-card { background: #fff !important; border-color: #E2E5EB !important; box-shadow: 0 10px 26px rgba(15,23,42,.08); }
+/* call wall and put wall look different: gold C above the bar, violet P below it */
+#brief .vz-tick.wall.put { border-left-color: #B58CFF !important; }
+#brief .vz-key .k-wall.put { border-left-color: #B58CFF; }
+#brief .vz-tick.wall b { position: absolute; left: -4px; font: 700 9.5px var(--sans); line-height: 1; }
+#brief .vz-tick.wall.call b { top: -13px; color: #F2C14E; } #brief .vz-tick.wall.put b { bottom: -13px; color: #B58CFF; }
+html[data-theme="light"] #brief .vz-tick.wall.put, html[data-theme="light"] #brief .vz-key .k-wall.put { border-left-color: #7C3AED !important; }
+html[data-theme="light"] #brief .vz-tick.wall.call b { color: #B7791F; } html[data-theme="light"] #brief .vz-tick.wall.put b { color: #7C3AED; }
 </style>
 </body>
 </html>
