@@ -243,15 +243,69 @@ def _score(rows: list[dict], key: str) -> dict | None:
                 late=round(float(rets[half:].mean()), 2) if len(rets) - half >= 10 else None)
 
 
+ATOMS = ("vol", "mkt", "trend", "nochase", "margin", "rr", "tight", "long", "pm", "dv100", "dv250", "dv500", "up", "down",
+         "polevol", "shallow", "quiet", "touch4")
+MIN_BEST = 100          # a winning filter must keep at least this many trades
+
+
+def best_filters(mine: list[dict], filters: list) -> list[dict]:
+    """Search every combination of up to 3 simple filters, under every exit rule, for ones that made money in BOTH
+    halves of the test window with enough trades. Ranked by the weaker half, so one lucky stretch can't win."""
+    from itertools import combinations
+    if len(mine) < MIN_BEST:
+        return []
+    mine = sorted(mine, key=lambda r: r["t"])
+    atoms = [(k, l, np.array([bool(t(r)) for r in mine])) for k, l, t in filters if k in ATOMS]
+    atoms = [a for a in atoms if a[2].sum() >= MIN_BEST]
+    found = []
+    for ek, elabel in EXITS:
+        rets = np.array([r["ex"][ek][0] if ek in r["ex"] else np.nan for r in mine])
+        ok = ~np.isnan(rets)
+        if ok.sum() < MIN_BEST:
+            continue
+        for size in (1, 2, 3):
+            for combo in combinations(atoms, size):
+                keys = {c[0] for c in combo}
+                if {"up", "down"} <= keys or len(keys & {"dv100", "dv250", "dv500"}) > 1:
+                    continue
+                m = ok.copy()
+                for c in combo:
+                    m &= c[2]
+                n = int(m.sum())
+                if n < MIN_BEST:
+                    continue
+                x = rets[m]
+                early, late = float(x[:n // 2].mean()), float(x[n // 2:].mean())
+                if early <= 0 or late <= 0:
+                    continue
+                wins, losses = x[x > 0], x[x <= 0]
+                found.append(dict(filters=[c[1] for c in combo], keys=sorted(keys), exit=ek, exit_label=elabel, n=n,
+                                  win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
+                                  pf=round(float(wins.sum() / -losses.sum()), 2) if losses.sum() < 0 else None,
+                                  early=round(early, 2), late=round(late, 2), size=size))
+    found.sort(key=lambda f: (-min(f["early"], f["late"]), f["size"], -f["n"]))
+    out, seen = [], set()
+    for f in found:                       # top 3, no near-duplicates (same filters under another exit)
+        k = tuple(f["keys"])
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(f)
+        if len(out) == 3:
+            break
+    return out
+
+
 def summarize(rows: list[dict]) -> dict:
     groups = []
     for gk, glabel, _ in GROUPS:
         mine = [r for r in rows if r["grp"] == gk]
+        filters = FILTERS + EXTRA.get(gk, [])
         table = []
-        for fk, flabel, test in FILTERS + EXTRA.get(gk, []):
+        for fk, flabel, test in filters:
             sub = [r for r in mine if test(r)]
             table.append(dict(key=fk, label=flabel, exits={ek: _score(sub, ek) for ek, _ in EXITS}))
-        groups.append(dict(key=gk, label=glabel, trades=len(mine), filters=table))
+        groups.append(dict(key=gk, label=glabel, trades=len(mine), filters=table, best=best_filters(mine, filters)))
     return dict(groups=groups, exits=[dict(key=k, label=l) for k, l in EXITS])
 
 

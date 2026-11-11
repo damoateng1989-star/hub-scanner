@@ -3254,6 +3254,14 @@ function renderLabExits() {
   const G = R.groups.find(g => g.key === LABX_GROUP) || R.groups[0];
   const tabs = `<div class="tabs" style="padding:0 18px 12px;display:flex;flex-wrap:wrap;gap:6px">${R.groups.map(g => `<button class="btnx sm${g.key === G.key ? " on" : ""}" style="${g.key === G.key ? "background:#2F54EB!important;color:#fff!important;border-color:#2F54EB!important" : ""}" onclick="LABX_GROUP='${g.key}';renderLabExits()">${esc(g.label)} <span style="opacity:.6">${g.trades}</span></button>`).join("")}</div>`;
   if (!G.trades) { box.innerHTML = `<div class="panel">${head}${intro}${tabs}<p class="note" style="padding:0 18px 16px;margin:0">No finished ${esc(G.label.toLowerCase())} in the test window.</p></div>`; return; }
+  const bestBox = `<div style="margin:0 18px 14px;padding:14px 16px;border:1px solid var(--line);border-radius:12px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:6px">Best filters found for ${esc(G.label.toLowerCase())}</div>` +
+    ((G.best || []).length ? G.best.map((b, i) => `<div style="padding:8px 0;${i ? "border-top:1px solid var(--line)" : ""}">
+        <div><b>${i + 1}. ${b.filters.map(esc).join(" + ")}</b></div>
+        <div class="note" style="margin:3px 0 0">Exit: ${esc(b.exit_label)}</div>
+        <div style="margin-top:4px;font-size:13px">${b.n} trades · win rate ${b.win}% · <b style="color:var(--up)">${sign(b.avg)}</b> per trade · profit factor ${b.pf ?? "–"} · early half <span style="color:var(--up)">${sign(b.early)}</span> · later half <span style="color:var(--up)">${sign(b.late)}</span></div></div>`).join("")
+      + `<p class="note" style="margin:8px 0 0">The test tried every mix of up to three filters under each exit, and kept only those that made money in both halves with at least 100 trades. It searched hundreds of mixes, so the best one always looks better than it really is: expect less going forward.</p>`
+      : `<p class="note" style="margin:0">No mix of up to three filters made money in both halves of the test with at least 100 trades. For this pattern the honest answer is that these filters don't turn it positive.</p>`) + `</div>`;
   const exits = R.exits.filter(e => G.filters[0].exits[e.key]), ex = exits.find(e => e.key === LABX_EXIT) || exits[0];
   const all = G.filters[0].exits;
   const best = Math.max(...exits.map(e => (all[e.key] || {}).avg ?? -99));
@@ -3266,7 +3274,7 @@ function renderLabExits() {
       <td style="${col(v.avg)}"><b>${sign(v.avg)}</b>${f.key !== "all" && better ? " ↑" : ""}</td><td>${v.pf ?? "–"}</td><td style="${col(v.early)}">${sign(v.early)}</td><td style="${col(v.late)}">${sign(v.late)}</td></tr>`; }).join("");
   box.innerHTML = `<div class="panel">${head}${intro}
     <p class="note" style="padding:0 18px 10px;margin:0">${L.trades} breakouts · ${L.symbols} stocks · ${L.first ? new Date(L.first).toLocaleDateString() : ""} to ${L.last ? new Date(L.last).toLocaleDateString() : ""} · run ${L.finished ? when(L.finished) : ""}${L.regime_ok === false ? " · market filter unavailable (no SPY data)" : ""}</p>
-    ${tabs}<h3 style="padding:4px 18px 6px;margin:0;font-size:14px">${esc(G.label)}: exit rules, every breakout</h3>${G.key === "gapfade" ? `<p class="note" style="padding:0 18px 8px;margin:0">Gap fades run on daily candles with their own stop and 2R target, so only the current rule is scored.</p>` : ""}
+    ${tabs}${G.key === "gapfade" ? "" : bestBox}<h3 style="padding:4px 18px 6px;margin:0;font-size:14px">${esc(G.label)}: exit rules, every breakout</h3>${G.key === "gapfade" ? `<p class="note" style="padding:0 18px 8px;margin:0">Gap fades run on daily candles with their own stop and 2R target, so only the current rule is scored.</p>` : ""}
     <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Exit</th><th>Trades</th><th>Win rate</th><th>Reached shelf</th><th>Avg per trade</th><th>Avg win</th><th>Avg loss</th><th>Profit factor</th></tr>${exitRows}</table></div>
     <h3 style="padding:4px 18px 6px;margin:0;font-size:14px">Filters, scored with: ${esc(ex.label)} <span class="note">(tap an exit above to switch)</span></h3>
     <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Only breakouts that are…</th><th>Trades</th><th>Win rate</th><th>Reached shelf</th><th>Avg per trade</th><th>Profit factor</th><th>Early half</th><th>Later half</th></tr>${filtRows}</table></div>
