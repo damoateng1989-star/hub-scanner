@@ -2079,6 +2079,22 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
  #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){text-align:left!important;padding-left:6px!important;padding-right:8px!important}
  #hubBoard .board-table td:nth-child(11) .board-actions{justify-content:flex-start!important}
 }
+
+/* Shelf card: news */
+.nw-row{display:block;padding:10px 0;border-top:1px solid var(--line);text-decoration:none;color:inherit}
+.nw-row:first-child{border-top:0;padding-top:2px}
+.nw-row b{display:block;font-size:14px;font-weight:600;line-height:1.35;color:var(--ink)}
+.nw-row small{display:block;margin-top:3px;font-size:12px;color:var(--faint)}
+.nw-row.broad b{font-weight:500;color:var(--muted)}
+a.nw-row:hover b{text-decoration:underline}
+.nw-tag{display:inline-block;margin-bottom:5px;font:600 10.5px "JetBrains Mono",ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:4px;color:#F2C14E;background:rgba(242,193,78,.12)}
+.nw-tag.soft{color:var(--muted);background:rgba(127,133,144,.14)}
+.nw-row.hot{padding:12px;margin-bottom:4px;border:1px solid rgba(242,193,78,.35);border-radius:10px;background:rgba(242,193,78,.05)}
+.nw-row.hot + .nw-row{border-top:0}
+.nw-quiet{margin:0 0 6px;font-size:14px;color:var(--muted)}
+.nw-fine{margin:10px 0 0;font-size:11.5px;color:var(--faint)}
+html[data-theme="light"] .nw-tag{color:#8A5A00;background:rgba(183,121,31,.12)}
+html[data-theme="light"] .nw-row.hot{border-color:rgba(183,121,31,.35);background:rgba(183,121,31,.05)}
 </style>
 </head>
 <body class="term">
@@ -2283,7 +2299,7 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   <div class="bf-seg" id="bfCmds" role="tablist">
-    <button data-sec="levels" class="on">Levels</button><button data-sec="setup">Game plan</button><button data-sec="options">Options</button><button data-sec="history">Track record</button>
+    <button data-sec="levels" class="on">Levels</button><button data-sec="news">News</button><button data-sec="setup">Game plan</button><button data-sec="options">Options</button><button data-sec="history">Track record</button>
   </div>
   </div>
   <div class="bf-body" id="bfBody"></div>
@@ -3371,10 +3387,10 @@ async function openBrief(sym) {
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   BRIEF_SEC = "levels"; document.querySelectorAll("#bfCmds button").forEach(b => b.classList.toggle("on", b.dataset.sec === "levels"));
   $("brief").scrollTop = 0;
-  loadOptions(sym); loadGamma(sym);
+  loadOptions(sym); loadGamma(sym); loadNews(sym, st);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); }
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); }
   } catch (e) {
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
@@ -3487,6 +3503,37 @@ $("brief").addEventListener("scroll", () => {
 }, {passive: true});
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && BRIEF_SYM) closeBrief(); });
 
+// ---------------------------------------------------------------- news: what may be behind a move
+const NEWS = {}, NEWS_AT = {};
+async function loadNews(sym, st) {
+  if (!ME || ME.guest) return;
+  const k = st && st.state, live = k === "breakout_up" || k === "breakdown";
+  const m = /(\d+)\/(\d+)/.exec((st && st.label) || "");
+  const stale = !(sym in NEWS) || Date.now() - (NEWS_AT[sym] || 0) > 600000 || (NEWS[sym] !== "loading" && NEWS[sym].live !== live);
+  if (stale) {
+    if (!(sym in NEWS)) { NEWS[sym] = "loading"; paintNews(sym); }
+    try { NEWS[sym] = await api(`/api/news/${encodeURIComponent(sym)}${live ? `?candles=${m ? m[1] : 0}` : ""}`); NEWS[sym].live = live; NEWS[sym].rvol = st && st.rvol; }
+    catch (e) { NEWS[sym] = {ok: false, items: [], live}; }
+    NEWS_AT[sym] = Date.now();
+  }
+  paintNews(sym);
+}
+function paintNews(sym) { const el = $("bfNews"); if (el && BRIEF_SYM === sym) el.innerHTML = newsHTML(sym); }
+function newsHTML(sym) {
+  const n = NEWS[sym];
+  if (!n || n === "loading") return `<p class="nw-quiet">Checking the news…</p>`;
+  if (n.ok === false) return `<p class="nw-quiet">News isn't available right now.</p>`;
+  const row = (x, hot) => `<${x.url ? `a href="${esc(x.url)}" target="_blank" rel="noopener"` : "div"} class="nw-row${hot ? " hot" : ""}${x.broad ? " broad" : ""}">
+      ${hot ? `<span class="nw-tag">Possible catalyst · ${esc(x.tag_label)}</span>` : x.tag_label && !x.broad ? `<span class="nw-tag soft">${esc(x.tag_label)}</span>` : ""}
+      <b>${esc(x.headline)}</b><small>${esc(x.source)} · ${when(x.time)}</small></${x.url ? "a" : "div"}>`;
+  const c = n.live ? n.catalyst : null, rest = (n.items || []).filter(x => !c || x.headline !== c.headline).slice(0, c ? 3 : 4);
+  let top = "";
+  if (c) top = row(c, true);
+  else if (n.live) top = `<p class="nw-quiet">No headline found around this breakout${n.rvol >= 1.5 ? `, even though volume was ${n.rvol}× normal` : ""}. It may be a technical move, or news this feed doesn't carry.</p>`;
+  else if (!rest.length) top = `<p class="nw-quiet">No headlines in the last ${n.days || 10} days.</p>`;
+  return top + rest.map(x => row(x, false)).join("")
+    + `<p class="nw-fine">Headlines from Benzinga via Alpaca. A headline near a breakout is a possible reason, not a proven one.</p>`;
+}
 function briefHTML(sym, st, chart) {
   const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down, key = st.state || "none";
   const live = key === "breakout_up" || key === "breakdown", isUp = key === "breakout_up";
@@ -3558,6 +3605,7 @@ function briefHTML(sym, st, chart) {
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
       return `<div data-n="${setupIcon(x.style).length ? "" : ""}" class="gp-setup" style="--c:${col}"><span class="gp-ic">${setupIcon(x.style)}</span><span>${t}</span></div>`; }).join("")}</div>` : "";
   return `<section class="bf-card"><div class="bf-k" id="bf-levels">Level map</div>${map}${setupsHTML}</section>
+    <section class="bf-card"><div class="bf-k" id="bf-news">${live ? "Why it may be moving" : "News"}</div><div id="bfNews">${newsHTML(sym)}</div></section>
     <div class="bf-more"><section class="bf-card"><div class="bf-k" id="bf-setup">Game plan</div>${plan2}</section>
     <section class="bf-card"><div class="bf-k" id="bf-options">Options swing <span class="ox-edu">Educational</span></div><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div></section>
     <section class="bf-card"><div class="bf-k" id="bf-history">Track record</div><div id="bfRec">${rec}</div>${add}</section>

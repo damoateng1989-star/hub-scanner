@@ -14,6 +14,7 @@ import earnings
 import db
 import engine
 import gamma
+import news
 import options
 import patterns
 import notify
@@ -270,6 +271,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         msg += "\n" + gl
                 if e["type"] in ("breakout", "breakdown"):
                     msg += regime_line(1 if e["type"] == "breakout" else -1)
+                if e["type"] in ("breakout", "breakdown") and e["time"] == c4.index[-1]:
+                    msg += news.alert_line(sym, e["time"])       # newest candle only: one news lookup, never a burst
                 if WAREHOUSE_ONLY and e.get("grade") == "ledge":
                     continue       # thin hub: graded, not gated, until the split proves it
                 if db.add_alert(f"{sym}|{e['type']}|{e['time'].isoformat()}", sym, e["type"],
@@ -303,6 +306,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     msg += earnings.alert_line(sym)
                 if e["type"] in ("breakout", "breakdown"):
                     msg += regime_line(1 if e["type"] == "breakout" else -1)
+                    msg += news.alert_line(sym, e["time"])
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
                     notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"])
                     sent.append(msg)

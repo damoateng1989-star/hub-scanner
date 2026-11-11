@@ -1027,6 +1027,17 @@ async def gamma_walls(symbol: str, u: dict = User):
     return dict(symbol=sym, walls=w)
 
 
+@app.get("/api/news/{symbol}")
+async def news_for(symbol: str, candles: int | None = None, u: dict = User):
+    """Recent headlines for a stock and, when it has just broken out, the one that may explain it."""
+    import news
+    import re
+    sym = symbol.upper().strip()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
+        raise HTTPException(400, "Unknown symbol")
+    return await run_in_threadpool(lambda: news.for_card(sym, candles))
+
+
 @app.get("/api/chart/{symbol}")
 async def chart_data(symbol: str, tf: str = "4h", u: dict = User):
     try:
