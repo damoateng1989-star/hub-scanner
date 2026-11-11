@@ -1959,14 +1959,14 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table th:nth-child(8),#hubBoard .board-table td:nth-child(8){display:none!important}
  #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4),
  #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){display:table-cell!important}
- #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:9%!important}
- #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:13%!important}
- #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:8%!important}
- #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:15%!important;text-align:left!important;padding-left:22px!important;white-space:normal!important;font-size:12.5px;color:var(--muted)}
- #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:16%!important;padding-right:22px!important;text-align:left!important}
- #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:9%!important}
- #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:12%!important;padding-left:16px!important}
- #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:18%!important}
+ #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:8%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:12%!important}
+ #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:7%!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:14%!important;text-align:left!important;padding-left:22px!important;white-space:normal!important;font-size:12.5px;color:var(--muted)}
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:14%!important;padding-right:22px!important;text-align:left!important}
+ #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:8%!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:11%!important;padding-left:16px!important}
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:26%!important}
  #hubBoard .board-table th:nth-child(9){white-space:normal!important}
  #hubBoard .board-table td:nth-child(5) .msc-bar{margin:4px 7px 0!important}
  #hubBoard .board-table td:nth-child(5) .msc-meta{display:none!important}
@@ -1977,13 +1977,13 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  /* narrower windows: drop 4H context (the position line already says it) so the actions never spill */
  html body #hubBoard .board-table{min-width:0!important}
  #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){display:none!important}
- #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:11%!important}
- #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:15%!important}
+ #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:10%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:17%!important}
  #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:9%!important}
- #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:16%!important}
- #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:15%!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:20%!important}
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){display:none!important}
  #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:10%!important}
- #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:24%!important}
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:34%!important}
 }
 /* Patch 72 fix: the earlier mobile card block (tbody > tr) out-ranked the Patch 72 rules; same selectors, later, win */
 @media(max-width:760px){
@@ -2014,6 +2014,24 @@ html[data-theme="light"] .bg-gauge::before{background:rgba(15,23,42,.12)}
 html[data-theme="light"] .bg-gauge b{background:rgba(47,84,235,.10);border-color:rgba(47,84,235,.5)}
 html[data-theme="light"] .bg-gauge i{background:#141412;box-shadow:none}
 html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="light"] .bg-gauge i.down{background:#C81E1E}
+
+/* Hub board actions: never spill left over the 4H context */
+@media(min-width:761px){
+ #hubBoard .board-table td:nth-child(11){overflow:visible!important}
+ #hubBoard .board-table td:nth-child(11) .board-actions{display:flex!important;flex-wrap:nowrap!important;justify-content:flex-end!important;gap:6px!important}
+ #hubBoard .board-table td:nth-child(10){overflow:hidden!important;word-break:normal!important}
+}
+@media(min-width:761px) and (max-width:1100px){
+ /* small laptop windows: drop the range bar too, and let the buttons take two lines */
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){display:none!important}
+ #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:11%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:18%!important}
+ #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:10%!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:21%!important}
+ #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:10%!important}
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:30%!important}
+ #hubBoard .board-table td:nth-child(11) .board-actions{flex-wrap:wrap!important;row-gap:6px!important}
+}
 </style>
 </head>
 <body class="term">
