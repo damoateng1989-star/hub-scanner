@@ -1950,14 +1950,37 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
 
 /* Patch 72 desktop widths: the two mobile-only cells are hidden */
 @media(min-width:761px){
- #hubBoard .board-table th:nth-child(6),#hubBoard .board-table td:nth-child(6){width:8%!important}
- #hubBoard .board-table th:nth-child(7),#hubBoard .board-table td:nth-child(7){width:8%!important}
- #hubBoard .board-table th:nth-child(8),#hubBoard .board-table td:nth-child(8){width:9%!important}
- #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:11%!important}
- #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:9%!important}
- #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:19%!important}
+ /* Patch 72 on desktop: Position + a hub range bar replace Hub low, Hub high and Distance to edge */
+ #hubBoard .board-table th:nth-child(6),#hubBoard .board-table td:nth-child(6),
+ #hubBoard .board-table th:nth-child(7),#hubBoard .board-table td:nth-child(7),
+ #hubBoard .board-table th:nth-child(8),#hubBoard .board-table td:nth-child(8){display:none!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4),
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){display:table-cell!important}
+ #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:10%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:14%!important}
+ #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:8%!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:15%!important;text-align:left!important;padding-left:22px!important;white-space:normal!important;font-size:12.5px;color:var(--muted)}
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:17%!important;padding-right:22px!important;text-align:left!important}
+ #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:9%!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:9%!important;padding-left:16px!important}
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:18%!important}
  #hubBoard .board-table th:nth-child(9){white-space:normal!important}
- #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){padding-left:16px!important}
+ #hubBoard .board-table td:nth-child(5) .msc-bar{margin:4px 7px 0!important}
+ #hubBoard .board-table td:nth-child(5) .msc-meta{display:none!important}
+ #hubBoard .board-table td:nth-child(5) .msc-ends{font-size:11px}
+}
+@media(min-width:761px) and (max-width:1280px){
+ /* narrower windows: drop 4H context (the position line already says it) so the actions never spill */
+ html body #hubBoard .board-table{min-width:0!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){display:none!important}
+ #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:11%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:15%!important}
+ #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:9%!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:16%!important}
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:15%!important}
+ #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:10%!important}
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:24%!important}
+}
 }
 /* Patch 72 fix: the earlier mobile card block (tbody > tr) out-ranked the Patch 72 rules; same selectors, later, win */
 @media(max-width:760px){
@@ -3772,7 +3795,7 @@ async function loadBoard() {
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
-    '<th style="display:none">Position</th><th style="display:none">Range</th><th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
+    '<th class="th-pos"><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Position ↕</button></th><th class="th-rng">Hub range</th><th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
     '<th class="nowrap-th">Next shelf / target</th><th>4H context</th><th>Analysis</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
     '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels; unavailable values are shown as —.</div></div>';
   BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
