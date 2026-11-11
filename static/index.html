@@ -2039,6 +2039,14 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
 .mb-col .mb-row { flex-wrap: wrap; overflow: visible; }
 .mb-col .mb-chip { flex: 1 1 140px; max-width: 100%; }
 @media (min-width: 900px) { .mb-col + .mb-col { border-left: 1px solid var(--line); padding-left: 28px; } }
+
+/* Phone hub cards: the price always starts its own row, even when a short price would fit beside the pill */
+@media(max-width:760px){
+ #hubBoard .board-table tbody > tr:not(.plain-row)::before{content:""!important;display:block!important;position:static!important;flex:0 0 100%!important;width:100%!important;height:0!important;margin:0!important;padding:0!important;border:0!important;background:none!important;order:3!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1){order:1!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2){order:2!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(n+3){order:4!important}
+}
 </style>
 </head>
 <body class="term">
