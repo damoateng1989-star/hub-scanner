@@ -32,7 +32,7 @@ _lock = threading.Lock()
 KIND = "option"
 DAILY_MAX = int(os.getenv("PAPER_OPT_DAILY_MAX", 5))        # one per qualifying setup, capped on very busy days
 MAX_OPEN = int(os.getenv("PAPER_OPT_MAX_OPEN", 5))
-MAX_PREMIUM = float(os.getenv("PAPER_OPT_MAX_PREMIUM", 350))
+MAX_PREMIUM = float(os.getenv("PAPER_OPT_MAX_PREMIUM", 2000))
 MAX_SPREAD = float(os.getenv("PAPER_OPT_MAX_SPREAD_PCT", 0.15))
 MIN_DTE_ENTRY, EXIT_DTE = 14, 7
 
