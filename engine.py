@@ -23,6 +23,7 @@ class Settings:
     shelf_min_atr: float = 0.5 # a shelf must sit at least this far (in ATR) beyond the hub edge
     vol_mult: float = 1.0      # rule #5: breakout candle volume must clear this x the same-slot average (0 = off)
     vol_window: int = 20       # same-slot 4H candles averaged for the volume baseline
+    min_room_pct: float = 0.0  # skip a breakout whose target is closer than this (% from the breakout close); 0 = off
 
     @property
     def window(self) -> int:
@@ -39,6 +40,7 @@ class Settings:
             shelf_min_atr=float(os.getenv("SHELF_MIN_ATR", 0.5)),
             vol_mult=float(os.getenv("VOLUME_MULT", 1.0)),
             vol_window=int(os.getenv("VOLUME_WINDOW", 20)),
+            min_room_pct=float(os.getenv("MIN_ROOM_PCT", 0.0)),
         )
 
 
@@ -189,6 +191,10 @@ def analyze(c4: pd.DataFrame, s: Settings) -> dict:
         i0, d = brk
         edge = h["high"] if d == 1 else h["low"]
         target, shelf = target_for(hubs, h, d, float(atr.iloc[i0]), s)
+        room = d * (target / float(close.iloc[i0]) - 1) * 100
+        if s.min_room_pct > 0 and room < s.min_room_pct:
+            h["no_room"] = dict(i0=i0, direction=d, target=float(target), room=round(room, 2))
+            continue           # the target is too close to be worth it (or already passed): no trade
         outcome, oi = "pending", None
         # the breakout close itself can already reach the target
         for j in range(i0, min(i0 + 1 + s.horizon, n)):
@@ -391,13 +397,18 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
 
     if h["active"]:
         from_hub()
-        st.update(state="forming", label=f"Inside hub ({h['sessions']} sessions)")
+        st.update(state="forming", label=f"Inside hub ({h['sessions']} sessions)", min_room_pct=s.min_room_pct)
         if s.window > 1 and atr_now == atr_now and atr_now > 0:      # the close that would actually end the hub (not just widen it)
             prev = res["close"].iloc[-(s.window - 1):]
             st["trigger_up"] = round(max(h["high"], float(prev.min()) + s.k * atr_now), 2)
             st["trigger_down"] = round(min(h["low"], float(prev.max()) - s.k * atr_now), 2)
         return st
     trade = next((t for t in res["trades"] if t["hub"] is h), None)
+    if trade is None and h.get("no_room") and n - 1 - h["no_room"]["i0"] < s.horizon:
+        from_price()
+        nr = h["no_room"]
+        st.update(state="no_room", label=f"{'Broke out' if nr['direction'] == 1 else 'Broke down'}, but " + (f"the target was only {nr['room']:.1f}% away" if nr["room"] > 0 else "it closed past the target already") + ": no trade")
+        return st
     if trade is None:
         if n - 1 - h["end_i"] < s.horizon:
             from_hub()
@@ -480,6 +491,9 @@ def preclose_check(res: dict, price: float, s: Settings, forming_volume: float |
                 vol_ok = bool(forming_volume >= s.vol_mult * prev.mean())
         except Exception:
             vol_ok = None
+    est = max(price, trigger) if d == 1 else min(price, trigger)          # the soonest a counting close could be
+    if s.min_room_pct > 0 and d * (target / est - 1) * 100 < s.min_room_pct:
+        return None        # not enough room to the target: it wouldn't be a setup, so no heads-up
     return dict(direction=d, price=price, low=h["low"], high=h["high"], sessions=h["sessions"],
                 edge=edge, trigger=round(trigger, 2), widens=(price - trigger) * d <= 0,
                 target=target, shelf=shelf, reached=(price - target) * d >= 0, vol_ok=vol_ok)
@@ -489,16 +503,18 @@ GRADE_MIN = 5    # fewer finished setups than this: no grade
 
 
 def setup_grade(trades: list, d: int | None = None) -> dict:
-    """How this setup has done on this stock: graded on the average return per trade, not the win rate
-    (small wins and bigger losses can lose money at a decent win rate)."""
+    """How this setup has done on this stock, graded on profit factor (total won / total lost), not the win rate:
+    small wins and bigger losses can lose money at a decent win rate. A 1.5+, B 1.1+, C 0.9+ (about break-even), D below."""
     done = [t for t in trades if t["outcome"] != "pending" and t.get("ret") is not None and (d is None or t["direction"] == d)]
     n = len(done)
     if n < GRADE_MIN:
         return dict(grade="?", word="Not enough history", n=n)
     rets = [t["ret"] for t in done]
     avg = float(np.mean(rets)); win = 100 * sum(r > 0 for r in rets) / n
-    g, w = ("A", "Strong") if avg >= 1 else ("B", "Fair") if avg > 0 else ("C", "Weak") if avg >= -1 else ("D", "Poor")
-    return dict(grade=g, word=w, n=n, avg=round(avg, 2), win=round(win, 1),
+    won, lost = sum(r for r in rets if r > 0), -sum(r for r in rets if r <= 0)
+    pf = won / lost if lost > 0 else (9.99 if won > 0 else 0.0)     # total won / total lost; above 1 made money
+    g, w = ("A", "Strong") if pf >= 1.5 else ("B", "Fair") if pf >= 1.1 else ("C", "Weak") if pf >= 0.9 else ("D", "Poor")
+    return dict(grade=g, word=w, n=n, avg=round(avg, 2), win=round(win, 1), pf=round(pf, 2),
                 reached=sum(t["outcome"] == "follow-through" for t in done))
 
 

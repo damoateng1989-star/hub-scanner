@@ -136,8 +136,8 @@ def grade_line(sym: str, d: int) -> str:
     if g["grade"] == "?":
         return f"Setup grade: not enough history ({g['n']} past {what} on {sym})"
     verb = f"made {g['avg']:+.2f}%" if g["avg"] > 0 else f"lost {abs(g['avg']):.2f}%"
-    return (f"Setup grade {g['grade']} · {g['word']}: {what} on {sym} {verb} per trade on average "
-            f"({g['win']}% winners, {g['n']} trades, ~2y)")
+    return (f"Setup grade {g['grade']} · {g['word']}: {what} on {sym} won {g['pf']:.2f}× what they lost "
+            f"({g['win']}% winners, {verb} per trade, {g['n']} trades, ~2y)")
 
 
 def history_line(sym: str) -> str:

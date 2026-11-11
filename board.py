@@ -57,8 +57,8 @@ def _board_status(c4: pd.DataFrame, res: dict) -> dict:
 # the new rules would "find" different past breakouts and quietly rewrite history. So: past signals keep
 # their old outcomes (resolved with the rules they were logged under), and only breakouts after the change
 # are logged under the new rules.
-_RULE_KEYS = ("min_sessions", "min_candles", "k", "horizon", "target_atr", "shelf_min_atr", "vol_mult", "vol_window")
-_OLD_DEFAULTS = dict(min_sessions=5, vol_mult=0.0)     # the rules the record was built under before tracking began
+_RULE_KEYS = ("min_sessions", "min_candles", "k", "horizon", "target_atr", "shelf_min_atr", "vol_mult", "vol_window", "min_room_pct")
+_OLD_DEFAULTS = dict(min_sessions=5, vol_mult=0.0, min_room_pct=0.0)     # the rules the record was built under before tracking began
 
 
 def _rules_now() -> dict:
@@ -98,6 +98,8 @@ def _rules_changed_at():
 def _legacy_settings():
     try:
         prev = json.loads(db.get_setting("record_rules_prev") or "null")
+        if prev and "min_room_pct" not in prev:
+            prev["min_room_pct"] = 0.0                                     # before the room rule: every breakout counted
         if prev and "min_candles" not in prev and "min_sessions" in prev:
             prev["min_candles"] = 2 * int(prev["min_sessions"])      # pre-Patch-70 rules: window = 2 x sessions
         return dataclasses.replace(scanner.SETTINGS, **{k: v for k, v in prev.items() if k in _RULE_KEYS}) if prev else None

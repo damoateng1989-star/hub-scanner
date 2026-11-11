@@ -3529,9 +3529,9 @@ function heroStats(st) {
     const up = st.shelf_up, dn = st.shelf_down;
     const [nowL, nowV, nowS] = nowCell(st);
     cells = [
-      ["Long above", money(st.trigger_up || h.high), (st.trigger_up > h.high + 0.005 ? `top ${money(h.high)} · ` : "") + (up ? (up.level <= (st.trigger_up || h.high) ? `shelf ${money(up.level)} is inside the move` : "aim " + money(up.level)) : "no shelf above"), up && up.level > (st.trigger_up || h.high) ? "up" : ""],
+      ["Long above", money(st.trigger_up || h.high), (st.trigger_up > h.high + 0.005 ? `top ${money(h.high)} · ` : "") + roomNote(up, st.trigger_up || h.high, 1, st.min_room_pct, "above"), up && roomOk(up, st.trigger_up || h.high, 1, st.min_room_pct) ? "up" : ""],
       [nowL, nowV, nowS, "", "bfNow"],
-      ["Short below", money(st.trigger_down || h.low), (st.trigger_down < h.low - 0.005 ? `bottom ${money(h.low)} · ` : "") + (dn ? (dn.level >= (st.trigger_down || h.low) ? `shelf ${money(dn.level)} is inside the move` : "aim " + money(dn.level)) : "no shelf below"), dn && dn.level < (st.trigger_down || h.low) ? "dn" : ""]
+      ["Short below", money(st.trigger_down || h.low), (st.trigger_down < h.low - 0.005 ? `bottom ${money(h.low)} · ` : "") + roomNote(dn, st.trigger_down || h.low, -1, st.min_room_pct, "below"), dn && roomOk(dn, st.trigger_down || h.low, -1, st.min_room_pct) ? "dn" : ""]
     ];
     const d = st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : 0;
     GAMMA_CTX = {d, edge: d === 1 ? h.high : h.low, aim: d === 1 ? (up ? up.level : null) : d === -1 ? (dn ? dn.level : null) : null};
@@ -3539,6 +3539,15 @@ function heroStats(st) {
     ["Shelf above", st.shelf_up ? money(st.shelf_up.level) : "–", st.shelf_up ? pct(st.shelf_up.level, p) + " away" : "none in range", "up"],
     ["Shelf below", st.shelf_down ? money(st.shelf_down.level) : "–", st.shelf_down ? pct(st.shelf_down.level, p) + " away" : "none in range", "dn"]];
   return `<div class="bf-stats">${cells.map(([l, v, sub, c, id]) => `<div${id ? ` id="${id}"` : ""}><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div><div id="bfGrade">${gradeHTML(st)}</div>`;
+}
+// a setup needs room: the shelf at least min_room_pct beyond where the trigger close would be
+function roomOk(sh, trig, d, min) { return sh && d * (sh.level / trig - 1) * 100 >= (min || 0); }
+function roomNote(sh, trig, d, min, side) {
+  if (!sh) return `no shelf ${side}`;
+  const room = d * (sh.level / trig - 1) * 100;
+  if (room <= 0) return `shelf ${money(sh.level)} is inside the move`;
+  if (min && room < min) return `shelf ${money(sh.level)} only ${room.toFixed(1)}% away: no setup`;
+  return "aim " + money(sh.level);
 }
 // the middle number: live price when there is one, otherwise the last 4-hour close, said as such
 function nowCell(st) {
@@ -3577,8 +3586,10 @@ function gradeFor(st, dir) {
   const n = tr.length;
   if (n < 5) return {grade: "?", word: "Not enough history", n, short: true};
   const avg = tr.reduce((a, t) => a + t.ret, 0) / n, win = Math.round(1000 * tr.filter(t => t.ret > 0).length / n) / 10;
-  const [g, w] = avg >= 1 ? ["A", "Strong"] : avg > 0 ? ["B", "Fair"] : avg >= -1 ? ["C", "Weak"] : ["D", "Poor"];
-  return {grade: g, word: w, n, avg: Math.round(avg * 100) / 100, win, short: true};
+  const won = tr.filter(t => t.ret > 0).reduce((a, t) => a + t.ret, 0), lost = -tr.filter(t => t.ret <= 0).reduce((a, t) => a + t.ret, 0);
+  const pf = lost > 0 ? won / lost : won > 0 ? 9.99 : 0;
+  const [g, w] = pf >= 1.5 ? ["A", "Strong"] : pf >= 1.1 ? ["B", "Fair"] : pf >= 0.9 ? ["C", "Weak"] : ["D", "Poor"];
+  return {grade: g, word: w, n, avg: Math.round(avg * 100) / 100, win, pf: Math.round(pf * 100) / 100, short: true};
 }
 const gradeVerb = (g) => g.avg > 0 ? `made <b>${g.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(g.avg).toFixed(2)}%</b>`;
 function gradeHTML(st) {
@@ -3591,8 +3602,8 @@ function gradeHTML(st) {
   if (!g) return GRADE[BRIEF_SYM] === "loading" || !BRIEF_CHART ? `<div class="sg gq"><span class="sg-b">…</span><div><b>Setup grade</b><small>Checking how this setup has done on ${esc(BRIEF_SYM)}…</small></div></div>` : "";
   const what = dir === 1 ? "Long breakouts" : "Short breakdowns";
   const line = g.grade === "?" ? `Only ${g.n} past ${what.toLowerCase()} on ${esc(BRIEF_SYM)}, too few to grade.`
-    : `${what} on ${esc(BRIEF_SYM)} ${gradeVerb(g)} per trade on average (${g.win}% winners, ${g.n} trades, ${g.short ? "~9 months" : "~2 years"}).`;
-  const warn = g.grade === "D" ? " Small wins, bigger losses: treat a trigger here with extra caution." : g.grade === "C" ? " Slightly negative so far." : "";
+    : `${what} on ${esc(BRIEF_SYM)}: won <b>${g.pf >= 9.99 ? "every time" : g.pf.toFixed(2) + "×"}</b> what they lost${g.pf >= 9.99 ? "" : ""} (${g.win}% winners, ${gradeVerb(g)} per trade, ${g.n} trades, ${g.short ? "~9 months" : "~2 years"}).`;
+  const warn = g.grade === "D" ? " Losses outweighed wins: treat a trigger here with extra caution." : g.grade === "C" ? " About break-even so far." : "";
   return `<div class="sg ${GRADE_CLS[g.grade]}"><span class="sg-b">${g.grade}</span><div><b>Setup grade: ${g.word}</b><small>${line}${warn}</small></div></div>`;
 }
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
