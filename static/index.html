@@ -1982,7 +1982,6 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:10%!important}
  #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:24%!important}
 }
-}
 /* Patch 72 fix: the earlier mobile card block (tbody > tr) out-ranked the Patch 72 rules; same selectors, later, win */
 @media(max-width:760px){
  #hubBoard .board-table tbody > tr:not(.plain-row){display:flex!important;flex-wrap:wrap!important;align-items:center!important;padding:16px!important}
@@ -1999,6 +1998,19 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Hub low"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Hub high"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Distance to edge"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Next shelf / target"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="4H context"]{display:none!important}
  #hubBoard .board-table tbody > tr:not(.plain-row) > td:last-child{margin-top:14px!important;padding-top:12px!important;border-top:1px solid var(--line)!important}
 }
+
+/* Hub range: the sidebar gauge, bigger */
+.bg-gauge{position:relative;height:22px;margin:4px 0 0}
+.bg-gauge::before{content:"";position:absolute;left:0;right:0;top:10px;height:2px;background:#313235;border-radius:2px}
+.bg-gauge b{position:absolute;top:4px;height:14px;border-radius:4px;background:rgba(124,147,255,.24);border:1px solid rgba(124,147,255,.6);box-sizing:border-box}
+.bg-gauge i{position:absolute;top:2px;width:3px;height:18px;margin-left:-1.5px;border-radius:2px;background:#E9EBEF;box-shadow:0 0 6px rgba(233,235,239,.35)}
+.bg-gauge i.up{background:#3DD68C;box-shadow:0 0 6px rgba(61,214,140,.5)}.bg-gauge i.down{background:#FF6B5E;box-shadow:0 0 6px rgba(255,107,94,.5)}
+.bg-ends{position:relative;height:14px;margin-top:3px;font-size:10.5px;color:var(--faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+.bg-ends span{position:absolute;top:0}.bg-ends span.r{transform:translateX(-100%)}
+html[data-theme="light"] .bg-gauge::before{background:rgba(15,23,42,.12)}
+html[data-theme="light"] .bg-gauge b{background:rgba(47,84,235,.10);border-color:rgba(47,84,235,.5)}
+html[data-theme="light"] .bg-gauge i{background:#141412;box-shadow:none}
+html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="light"] .bg-gauge i.down{background:#C81E1E}
 </style>
 </head>
 <body class="term">
@@ -3695,6 +3707,16 @@ function boardPositionLine(r,kind,dist,dir){
   }
   return "Completed setup";
 }
+function boardGauge(r,kind,dir){
+  // same look as the sidebar shelf gauge: a thin price line, the hub as a blue box, a tick for the last price
+  const h=r.hub||{},lo=Number(h.low),hi=Number(h.high),p=Number(r.last_close);
+  if(!Number.isFinite(lo)||!Number.isFinite(hi)||!Number.isFinite(p)||hi<lo)return "";
+  const w=Math.max(hi-lo,p*0.002),a=lo-w*0.18,b=hi+w*0.18;
+  const x=v=>Math.max(1.5,Math.min(98.5,(v-a)/(b-a)*100));
+  const c=kind==="live"?(dir==="down"?" down":" up"):"";
+  return '<div class="bg-gauge"><b style="left:'+x(lo).toFixed(1)+'%;width:'+(x(hi)-x(lo)).toFixed(1)+'%"></b><i class="'+c.trim()+'" style="left:'+x(p).toFixed(1)+'%"></i></div>'+
+    '<div class="bg-ends"><span style="left:'+x(lo).toFixed(1)+'%">'+money(lo)+'</span><span class="r" style="left:'+x(hi).toFixed(1)+'%">'+money(hi)+'</span></div>';
+}
 function boardDotPct(r){
   const h=r.hub||{},lo=Number(h.low),hi=Number(h.high),p=Number(r.last_close);
   if(!Number.isFinite(lo)||!Number.isFinite(hi)||!Number.isFinite(p)||hi<=lo)return null;
@@ -3747,7 +3769,7 @@ function renderInstitutionalBoard(){
     const posLine=boardPositionLine(r,kind,dist,status[1]),dotPct=boardDotPct(r);
     const dotCls=kind==="live"?(status[1]==="up"?" up":status[1]==="down"?" down":""):"";
     const metaLine=boardMetaLine(r,kind,shelf);
-    const rangeCell=dotPct==null?"":'<div class="msc-bar"><div class="msc-track"></div><span class="msc-dot'+dotCls+'" style="left:'+dotPct.toFixed(1)+'%"></span></div><div class="msc-ends"><span>'+money(h.low)+'</span><span>'+money(h.high)+'</span></div>'+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
+    const rangeCell=boardGauge(r,kind,status[1])+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     return '<tr><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
       '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
