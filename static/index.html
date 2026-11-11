@@ -4941,6 +4941,18 @@ html[data-theme="light"] #brief .vz-card { background: #fff !important; border-c
 #brief .vz-tick.wall.call b { top: -13px; color: #F2C14E; } #brief .vz-tick.wall.put b { bottom: -13px; color: #B58CFF; }
 html[data-theme="light"] #brief .vz-tick.wall.put, html[data-theme="light"] #brief .vz-key .k-wall.put { border-left-color: #7C3AED !important; }
 html[data-theme="light"] #brief .vz-tick.wall.call b { color: #B7791F; } html[data-theme="light"] #brief .vz-tick.wall.put b { color: #7C3AED; }
+
+/* app footer: brand + links on top, the fine print + socials below, each row lined up */
+main footer, body footer { display: grid !important; grid-template-columns: 1fr auto; align-items: center; gap: 12px 24px; }
+footer > .foot-brand { grid-column: 1; grid-row: 1; }
+footer > span:nth-child(2) { grid-column: 1; grid-row: 2; }
+footer > .app-legal { margin-top: 0 !important; align-items: center; justify-content: flex-end; }
+footer > .app-legal:nth-child(3) { grid-column: 2; grid-row: 1; }
+footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
+@media (max-width: 760px) {
+  main footer, body footer { grid-template-columns: 1fr; padding-bottom: 80px; }
+  footer > .foot-brand, footer > span:nth-child(2), footer > .app-legal:nth-child(3), footer > .app-legal:nth-child(4) { grid-column: 1; grid-row: auto; justify-content: flex-start; }
+}
 </style>
 </body>
 </html>
