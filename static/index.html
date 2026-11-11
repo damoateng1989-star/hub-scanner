@@ -2100,6 +2100,21 @@ html[data-theme="light"] .nw-row.hot{border-color:rgba(183,121,31,.35);backgroun
 html body .bf-seg { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
 html body .bf-seg button { white-space: nowrap !important; min-width: 0; padding-left: 2px !important; padding-right: 2px !important; }
 @media (max-width: 480px) { html body .bf-seg button { font-size: 11.5px !important; letter-spacing: -.02em; } }
+
+/* Shelf card bar: a key with real prices under the bar; walls dashed */
+.vz-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; font-size: 12px; color: #9AA0AC; font-variant-numeric: tabular-nums; }
+.vz-key span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.vz-key i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; }
+.vz-key .k-px { width: 3px; background: #fff; } .vz-key .k-hub { background: rgba(91,123,255,.55); }
+.vz-key .k-up { width: 3px; background: #3DD68C; } .vz-key .k-dn { width: 3px; background: #FF6B5E; }
+.vz-key .k-wall { width: 0; border-left: 2px dashed #F2C14E; border-radius: 0; }
+.vz-tick.wall { background: none !important; border-left: 2px dashed #F2C14E; width: 0 !important; }
+.vz-scale { margin-right: 4px !important; }
+#bfWallTop:empty { display: none; } #bfWallTop .gw-row { margin-top: 14px; }
+html[data-theme="light"] .vz-key { color: #6b7280; } html[data-theme="light"] .vz-key .k-px { background: #141412; }
+html[data-theme="light"] .vz-key .k-up { background: #12805C; } html[data-theme="light"] .vz-key .k-dn { background: #C81E1E; }
+html[data-theme="light"] .vz-key .k-wall, html[data-theme="light"] .vz-tick.wall { border-left-color: #B7791F; }
+html[data-theme="light"] .vz-dot { background: #141412 !important; box-shadow: 0 0 0 2px #fff; }
 </style>
 </head>
 <body class="term">
@@ -3433,25 +3448,25 @@ function vizScaleHTML(st) {
   const inView = v => v != null && v >= d.min && v <= d.max;
   const L = LIVE[BRIEF_SYM];
   const px = (L && Math.abs(L.price - p) >= 0.01) ? L.price : p;
-  const w = GAMMA[BRIEF_SYM];
-  const side = st.near_edge === "down" ? -1 : 1;
-  const shelf = side === 1 ? st.shelf_up : st.shelf_down;
-  const wall = w && w !== "loading" ? (side === 1 ? w.call_wall : w.put_wall) : null;
-  const wallName = side === 1 ? "Call wall" : "Put wall";
+  const w = GAMMA[BRIEF_SYM], walls = [];
+  if (w && w !== "loading") [["Call wall", w.call_wall], ["Put wall", w.put_wall]].forEach(([n, v]) => { if (v != null && inView(v)) walls.push([n, v]); });
+  const up = st.shelf_up && inView(st.shelf_up.level) ? st.shelf_up.level : null;
+  const dn = st.shelf_down && inView(st.shelf_down.level) ? st.shelf_down.level : null;
   const hubL = pc(h.low), hubW = (pc(h.high) - pc(h.low)).toFixed(1);
-  const mid = (((h.low + h.high) / 2 - d.min) / (d.max - d.min) * 100).toFixed(1);
+  const key = [`<span><i class="k-px"></i>${L && Math.abs(L.price - p) >= 0.01 ? (LIVE_OPEN ? "Live" : "Last trade") : "Price"} ${money(px)}</span>`,
+    `<span><i class="k-hub"></i>Hub ${money(h.low)}–${money(h.high).slice(1)}</span>`];
+  if (up != null) key.push(`<span><i class="k-up"></i>Shelf ${money(up)}</span>`);
+  if (dn != null) key.push(`<span><i class="k-dn"></i>Shelf ${money(dn)}</span>`);
+  walls.forEach(([n, v]) => key.push(`<span><i class="k-wall"></i>${n} ${money(v)}</span>`));
   return `<div class="vz-scale" id="vzScale">
     <div class="vz-track">
       <i class="vz-hub" style="left:${hubL}%;width:${hubW}%"></i>
-      ${shelf && inView(shelf.level) ? `<i class="vz-tick ${side === 1 ? "up" : "dn"}" style="left:${pc(shelf.level)}%"></i>` : ""}
-      ${wall != null && inView(wall) ? `<i class="vz-tick wall" style="left:${pc(wall)}%"></i>` : ""}
+      ${dn != null ? `<i class="vz-tick dn" style="left:${pc(dn)}%"></i>` : ""}
+      ${up != null ? `<i class="vz-tick up" style="left:${pc(up)}%"></i>` : ""}
+      ${walls.map(([n, v]) => `<i class="vz-tick wall" style="left:${pc(v)}%"></i>`).join("")}
       <i class="vz-dot" style="left:${pc(px)}%"></i>
     </div>
-    <div class="vz-labels">
-      <span class="vz-lbl hub" style="left:${mid}%">Hub</span>
-      ${shelf && inView(shelf.level) ? `<span class="vz-lbl ${side === 1 ? "up" : "dn"}" style="left:${pc(shelf.level)}%">Shelf ${Math.round(shelf.level)}</span>` : ""}
-      ${wall != null && inView(wall) ? `<span class="vz-lbl wall">${wallName} ${Math.round(wall)}</span>` : ""}
-    </div>
+    <div class="vz-key">${key.join("")}</div>
   </div>`;
 }
 function paintVizScale() { const el = $("vzScale"); if (!el || !BRIEF_SYM || !VIZ_ST) return; el.outerHTML = vizScaleHTML(VIZ_ST); }
@@ -3474,7 +3489,7 @@ function briefHead(sym, st) {
   if (hubLive && st.rvol != null) tag += `<p class="bf-prev">${volChip(st.rvol)} on the breakout candle</p>`;
   $("bfHead").innerHTML = `<h3>${esc(sym)}</h3>${tag}
     <p class="vz-sum">${vizSummary(st)}</p><div class="bf-live" id="bfLive"></div>
-    ${heroStats(st)}${vizScaleHTML(st)}`;
+    ${heroStats(st)}${vizScaleHTML(st)}<div id="bfWallTop"></div>`;
   paintBriefLive(); paintGamma(sym);
 }
 // the three numbers that matter, at the top of the card
@@ -3521,13 +3536,8 @@ async function loadGamma(sym) {
 function paintGamma(sym) {
   const el = $("bfGamma"); if (!el || BRIEF_SYM !== sym) return;
   const row = $("bf-walls"), pv = $("vzWallPrev"), w = GAMMA[sym];
-  if (w === "loading") {
-    if (row) row.hidden = false;
-    if (pv) pv.textContent = "Checking options walls…";
-    el.innerHTML = `<div class="gw-row gw-wait">🧱 Checking options walls…</div>`;
-    paintVizScale(); return;
-  }
-  if (!w || (!w.call_wall && !w.put_wall)) {
+  const top = $("bfWallTop"); if (top) top.innerHTML = "";
+  if (w === "loading" || !w || (!w.call_wall && !w.put_wall)) {      // still loading, or no options data: say nothing
     el.innerHTML = "";
     if (row) row.hidden = true;
     paintVizScale(); return;
@@ -3535,15 +3545,20 @@ function paintGamma(sym) {
   if (row) row.hidden = false;
   const {d, edge, aim} = GAMMA_CTX, flip = w.flip ? ` · flip ${money(w.flip)}` : "";
   const exp = w.expiry ? ` · ${new Date(w.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})} expiry` : "";
-  let main;
+  let main, short, capped = false;
   if (d) {
     const wall = d === 1 ? w.call_wall : w.put_wall, name = d === 1 ? "Call wall" : "Put wall";
-    if (!wall) main = `<b>Open gamma</b> · no ${name.toLowerCase()} near the price`;
-    else if (aim != null && (d === 1 ? edge < wall && wall < aim : aim < wall && wall < edge))
-      main = `<b class="gw-cap">${name} ${money(wall)} sits before the aim.</b> Dealer hedging tends to slow price there, so the wall is the safer take-profit.`;
-    else main = `<b>Open gamma${aim != null ? ` to ${money(aim)}` : ""}</b> · ${name.toLowerCase()} ${money(wall)}`;
-  } else main = `<b>Call wall</b> ${w.call_wall ? money(w.call_wall) : "–"} · <b>put wall</b> ${w.put_wall ? money(w.put_wall) : "–"}`;
-  if (pv) pv.textContent = main.replace(/<[^>]+>/g, "");
+    if (!wall) { main = `<b>Open gamma</b> · no ${name.toLowerCase()} near the price`; short = `No ${name.toLowerCase()} near the price`; }
+    else if (aim != null && (d === 1 ? edge < wall && wall < aim : aim < wall && wall < edge)) {
+      capped = true; short = `${name} ${money(wall)}, before the aim`;
+      main = `<b class="gw-cap">${name} ${money(wall)} sits before the aim.</b> Dealer hedging tends to slow price there, so the wall is the safer take-profit.`; }
+    else { main = `<b>Open gamma${aim != null ? ` to ${money(aim)}` : ""}</b> · ${name.toLowerCase()} ${money(wall)}`; short = `${name} ${money(wall)}, past the aim`; }
+  } else { main = `<b>Call wall</b> ${w.call_wall ? money(w.call_wall) : "–"} · <b>put wall</b> ${w.put_wall ? money(w.put_wall) : "–"}`;
+    short = [w.call_wall && `Call ${money(w.call_wall)}`, w.put_wall && `put ${money(w.put_wall)}`].filter(Boolean).join(" · "); }
+  if (pv) pv.textContent = short;
+  if (capped && row && !row.dataset.touched) row.open = true;        // a wall that changes the plan opens itself
+  const e = EARN[sym];
+  if (capped && top && !(e && e.days <= 14)) top.innerHTML = `<div class="gw-row">🧱 ${main}</div>`;   // one warning on top: earnings wins
   el.innerHTML = `<div class="gw-row">🧱 ${main}<small>Biggest options open interest by strike${exp}${flip}. Delayed data, context only.</small></div>`;
   paintVizScale();
 }
@@ -3576,7 +3591,15 @@ async function loadNews(sym, st) {
   }
   paintNews(sym);
 }
-function paintNews(sym) { const el = $("bfNews"); if (el && BRIEF_SYM === sym) el.innerHTML = newsHTML(sym); }
+function paintNews(sym) { const el = $("bfNews"); if (el && BRIEF_SYM === sym) { el.innerHTML = newsHTML(sym); if ($("bfNewsSum")) $("bfNewsSum").textContent = newsSum(sym); } }
+function newsSum(sym) {
+  const n = NEWS[sym];
+  if (!n || n === "loading") return "Checking…";
+  if (n.ok === false) return "Not available right now";
+  if (n.live && n.catalyst) return "1 possible catalyst";
+  const c = (n.items || []).length;
+  return c ? `${c} headline${c === 1 ? "" : "s"}` : "No recent headlines";
+}
 function newsHTML(sym) {
   const n = NEWS[sym];
   if (!n || n === "loading") return `<p class="nw-quiet">Checking the news…</p>`;
@@ -3650,14 +3673,14 @@ function briefHTML(sym, st, chart) {
   const op = others[0];
   const otherPrev = op ? (op.state === "breakout_up" || op.state === "breakdown")
     ? `${op.kind === "gapfade" ? "Gap fade" : esc(op.name)}: ${op.state === "breakout_up" ? "broke out" : "broke down"}, aim ${money(op.target)}`
-    : `${esc(op.name)}: ${op.state}` : "";
+    : `${op.kind === "gapfade" ? "Gap fade" : esc(op.name)}: ${setupWord(op)[0].toLowerCase()}` : "";
   const row = (id, title, prev, body) => `<details class="vz-row" id="${id}"><summary><span class="vz-t">${title}</span><span class="vz-p">${prev}</span></summary><div class="vz-b">${body}</div></details>`;
   return `${row("bf-setup", "Game plan", planPrev, plan2)}
     ${others.length ? row("bf-other", "Other setups", otherPrev, setupsHTML) : ""}
-    <details class="vz-row" id="bf-walls"${!ME || ME.guest ? " hidden" : ""}><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev">Checking options walls…</span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
-    ${row("bf-news", live ? "Why it may be moving" : "News", "Latest headlines", `<div id="bfNews">${newsHTML(sym)}</div>`)}
+    <details class="vz-row" id="bf-walls" hidden ontoggle="this.dataset.touched=1"><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev"></span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
+    ${row("bf-news", live ? "Why it may be moving" : "News", `<span id="bfNewsSum">${newsSum(sym)}</span>`, `<div id="bfNews">${newsHTML(sym)}</div>`)}
     ${row("bf-options", `Options swing <span class="ox-edu">Educational</span>`, "Calls or puts for this setup", `<div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>`)}
-    ${row("bf-history", "Track record", `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>${add}`)}
+    ${row("bf-history", "Track record", chart && chart.stats ? (chart.stats.n ? `${chart.stats.n} breakouts · ${chart.stats["follow-through"] ?? "–"}% reached the shelf` : "No past breakouts yet") : `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>${add}`)}
     <p class="bf-fine bf-legal">Based on past price behavior and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
@@ -4698,6 +4721,7 @@ function earnPaint(root) {
     const e = EARN[el.dataset.earn]; const old = el.querySelector(":scope > .earn-tag, :scope > .bf-earn"); if (old) old.remove();
     if (!e || e.days > 14) return;
     if (el.id === "bfHead") {
+      if ($("bfWallTop")) $("bfWallTop").innerHTML = "";      // one warning on top: earnings wins over the options wall
       el.insertAdjacentHTML("beforeend", `<p class="bf-earn"><i>📅</i><span><b>Earnings ${esc(e.label)}.</b> Price can gap past the hub.</span></p>`);
     } else {
       const t = document.createElement("span"); t.className = "earn-tag board-state earn"; t.textContent = earnShort(e);
