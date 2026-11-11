@@ -326,9 +326,11 @@ def _target(res: dict, start_i: int, d: int, edge: float, atr_v: float, s: engin
 
 
 # ---------------------------------------------------------------- analysis
-def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
-    """All non-hub setups for one stock: patterns found, past breakouts with results, and what's live now."""
+def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings, vol_gate: bool = True) -> dict:
+    """All non-hub setups for one stock: patterns found, past breakouts with results, and what's live now.
+    vol_gate: like hubs, a breakout on light volume (under VOLUME_MULT x a normal candle at that time) doesn't count."""
     close, atr_s = res["close"], res["atr"]
+    vol_ok = (lambda i: engine._vol_ok(res.get("volume"), res.get("volume_avg"), i, s)) if vol_gate else (lambda i: True)
     atr = atr_s.to_numpy(float)
     n = len(close)
     out = dict(trades=[], live=[])
@@ -395,6 +397,8 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
             prior = close.iloc[j - SR_HELD:j]
             if not ((prior <= L["price"] + m).all() if d == 1 else (prior >= L["price"] - m).all()):
                 continue                     # the level must have actually held for a while before it broke
+            if not vol_ok(j):
+                continue                     # light volume: not counted (a later, stronger close can still count)
             cooldown[key] = j + s.horizon
             edge = L["price"]
             target, shelf = _target(res, L["first"], d, edge, float(A), s, lv_at[j - 1])
@@ -419,6 +423,9 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings) -> dict:
 
     _gapfade(c4, close, n, s, out)
     _fakeouts(c4, res, close, atr, n, s, out)
+
+    # light-volume breakouts don't count (gap fades run on daily candles; S&R was checked above)
+    out["trades"] = [t for t in out["trades"] if t["kind"] in ("gapfade", "sr") or vol_ok(t["i0"])]
 
     # breakouts still in play (pending) become live too: the newest one per setup type
     newest = {}

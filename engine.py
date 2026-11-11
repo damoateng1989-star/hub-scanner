@@ -312,7 +312,7 @@ def break_strength(c4: pd.DataFrame, atr, i: int, d: int, edge: float, close: fl
         why = []
         why.append(f"volume {r:.1f}× normal" if r is not None else "volume unknown")
         why.append(f"closed {m:.2f} ATR past the edge")
-        weak_bits = ([] if vol_ok else ["light volume"]) + ([] if m >= STRONG_MARGIN else ["barely cleared the edge"])
+        weak_bits = ([] if vol_ok else [f"volume under {STRONG_VOL}× normal"]) + ([] if m >= STRONG_MARGIN else ["barely cleared the edge"])
         return dict(word="strong" if strong else "weak", rvol=r, margin=m, why=", ".join(why),
                     weak_why=" and ".join(weak_bits) or None)
     except Exception:

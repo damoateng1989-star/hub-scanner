@@ -114,7 +114,8 @@ def _resolve_orphans(sym: str, c4: pd.DataFrame, start: pd.Timestamp, produced: 
     if not pend:
         return
     legacy = _legacy_settings()
-    for st in ([legacy] if legacy else []) + [scanner.SETTINGS]:      # the rules they were logged under first
+    for st, gate in ([(legacy, True)] if legacy else []) + [(scanner.SETTINGS, True), (scanner.SETTINGS, False)]:
+        # the rules they were logged under first; last pass without the pattern volume rule (signals logged before it)
         if not pend:
             break
         try:
@@ -123,7 +124,7 @@ def _resolve_orphans(sym: str, c4: pd.DataFrame, start: pd.Timestamp, produced: 
             hub = [t for t in res["trades"] if f"{sym}|{idx[t['i0']].isoformat()}" in pend]
             if hub:
                 _record(sym, c4, res, start, trades=hub, only_existing=True)
-            pa = patterns.analyze_all(c4, res, st)
+            pa = patterns.analyze_all(c4, res, st, vol_gate=gate)
             for kind in patterns.KINDS:
                 if kind != "hub":
                     tr = [x for x in pa["trades"] if x["kind"] == kind and f"{kind}|{sym}|{idx[x['i0']].isoformat()}" in pend]
