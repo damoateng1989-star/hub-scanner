@@ -42,10 +42,6 @@ STYLES = {   # what members pick in Settings
                  "on strong volume. The trapped traders fuel the move. Wrong below the fake-out low (or above its high)."),
 }
 
-# setups taken off the site (no board tab, alerts, card text or chart lines). Still found, so the Lab can keep testing them.
-import os
-OFF = {k.strip() for k in os.getenv("OFF_SETUPS", "triangle,channel_down,channel_up,sr").split(",") if k.strip()}
-OFF_STYLES = {STYLE_OF[k] for k in OFF if k in STYLE_OF} - {STYLE_OF[k] for k in KINDS if k not in OFF}
 FAKE_WITHIN = 3         # the fake-out must come within this many candles of the hub, and the reclaim within this many of the fake-out
 FAKE_VOL = 1.2          # the reclaim candle needs this much of normal volume for its time slot
 
@@ -546,8 +542,6 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
     out = []
     for L in pa["live"]:
         k = L["kind"]
-        if k in OFF:
-            continue
         row = dict(kind=k, name=KINDS[k], style=STYLE_OF[k], state=L["state"])
         if L["state"] in ("breakout_up", "breakdown"):
             t = L["trade"]
@@ -609,8 +603,6 @@ def events(sym: str, res: dict, pa: dict) -> list[dict]:
     idx = res["close"].index
     ev = []
     for t in pa["trades"]:
-        if t["kind"] in OFF:
-            continue
         ev.append(dict(type="breakout" if t["direction"] == 1 else "breakdown", kind=t["kind"], time=idx[t["i0"]],
                        close=t["entry"], edge=t["edge"], target=t["target"], shelf=t["shelf"],
                        touches=t.get("level", {}).get("touches"), stop=t.get("stop"), gap_pct=t.get("gap_pct"),

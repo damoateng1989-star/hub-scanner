@@ -3740,7 +3740,7 @@ function briefHTML(sym, st, chart) {
   const add = TICKERS.find(t => t.symbol === sym)
     ? `<button class="btnx bf-addbtn added" disabled>★ ${esc(sym)} is on your watchlist</button>`
     : `<button class="btnx bf-addbtn" onclick="briefAdd('${esc(sym)}', this)">☆ Add ${esc(sym)} to my watchlist</button>`;
-  const others = (st.setups || []).filter(x => x.state !== "between");
+  const others = (st.setups || []).filter(x => x.state !== "between" || x.kind === "sr");
   const setupsHTML = others.length ? `<p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
@@ -4207,7 +4207,7 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Estimates use Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["flag", "Flags"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"], ["fakeout", "Failed breakdowns"]];
+const SETUP_TABS = [["hub", "Hubs"], ["flag", "Flags"], ["double", "Double tops & bottoms"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"], ["fakeout", "Failed breakdowns"]];
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
@@ -4706,7 +4706,7 @@ async function loadRecord() {
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
   const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"],
-    ["gapfade", "Post-earnings gap fade & rip"],
+    ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"],
     ["fail_down", "Failed breakdowns"], ["fail_up", "Failed breakouts"]];
   $("record").innerHTML = `
     <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};

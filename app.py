@@ -579,7 +579,7 @@ def me(u: dict | None = Maybe):
                 google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, quiet=u.get("quiet") or "", closes=u.get("closes") or "both",
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
-                style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items() if k not in patterns.OFF_STYLES])
+                style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items()])
 
 
 class StylesBody(BaseModel):
@@ -704,7 +704,7 @@ def brief_test(request: Request, u: dict = User):
 
 @app.post("/api/me/styles")
 def set_styles(body: StylesBody, u: dict = User):
-    picked = [x for x in dict.fromkeys(body.styles) if x in patterns.STYLES and x not in patterns.OFF_STYLES]
+    picked = [x for x in dict.fromkeys(body.styles) if x in patterns.STYLES]
     if not picked:
         raise HTTPException(400, "Pick at least one setup")
     db.update_user(u["id"], styles=",".join(picked))
