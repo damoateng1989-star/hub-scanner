@@ -3422,7 +3422,7 @@ async function openBrief(sym) {
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   BRIEF_SEC = "levels";
   $("brief").scrollTop = 0;
-  loadOptions(sym); loadGamma(sym); loadNews(sym, st);
+  loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); }
@@ -3529,9 +3529,9 @@ function heroStats(st) {
     const up = st.shelf_up, dn = st.shelf_down;
     const [nowL, nowV, nowS] = nowCell(st);
     cells = [
-      ["Long above", money(h.high), up ? "aim " + money(up.level) : "no shelf above", up ? "up" : ""],
+      ["Long above", money(st.trigger_up || h.high), (st.trigger_up > h.high + 0.005 ? `top ${money(h.high)} · ` : "") + (up ? (up.level <= (st.trigger_up || h.high) ? `shelf ${money(up.level)} is inside the move` : "aim " + money(up.level)) : "no shelf above"), up && up.level > (st.trigger_up || h.high) ? "up" : ""],
       [nowL, nowV, nowS, "", "bfNow"],
-      ["Short below", money(h.low), dn ? "aim " + money(dn.level) : "no shelf below", dn ? "dn" : ""]
+      ["Short below", money(st.trigger_down || h.low), (st.trigger_down < h.low - 0.005 ? `bottom ${money(h.low)} · ` : "") + (dn ? (dn.level >= (st.trigger_down || h.low) ? `shelf ${money(dn.level)} is inside the move` : "aim " + money(dn.level)) : "no shelf below"), dn && dn.level < (st.trigger_down || h.low) ? "dn" : ""]
     ];
     const d = st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : 0;
     GAMMA_CTX = {d, edge: d === 1 ? h.high : h.low, aim: d === 1 ? (up ? up.level : null) : d === -1 ? (dn ? dn.level : null) : null};
@@ -3544,8 +3544,11 @@ function heroStats(st) {
 function nowCell(st) {
   const h = st.hub, L = LIVE[BRIEF_SYM], live = L && L.price != null, px = live ? L.price : st.last_close;
   let sub;
-  if (px > h.high) sub = `${((px / h.high - 1) * 100).toFixed(2)}% above the top · not closed yet`;
-  else if (px < h.low) sub = `${((1 - px / h.low) * 100).toFixed(2)}% below the bottom · not closed yet`;
+  const tu = st.trigger_up || h.high, td = st.trigger_down || h.low;
+  if (px > tu) sub = `${((px / h.high - 1) * 100).toFixed(2)}% above the top · not closed yet`;
+  else if (px < td) sub = `${((1 - px / h.low) * 100).toFixed(2)}% below the bottom · not closed yet`;
+  else if (px > h.high) sub = `above the top, but a close here only widens the hub`;
+  else if (px < h.low) sub = `below the bottom, but a close here only widens the hub`;
   else { const top = (h.high - px) <= (px - h.low); sub = `${((top ? h.high / px - 1 : 1 - h.low / px) * 100).toFixed(2)}% to the ${top ? "top" : "bottom"}`; }
   return [live ? (LIVE_OPEN ? "Now" : "Last trade") : "Last close", money(px), sub];
 }
@@ -3556,31 +3559,32 @@ function paintNowCell() {
   el.innerHTML = `<small>${l}</small><b>${v}</b><i>${sub}</i>`;
 }
 // ---------------------------------------------------------------- setup grade: how this setup has done on this stock before
-function setupGrade(n, hit) {
-  if (n < 5) return {g: "?", cls: "gq", word: "Not enough history", tip: `Only ${n} past setup${n === 1 ? "" : "s"} on this stock, too few to grade.`};
-  const r = hit / n;
-  if (r >= 0.5) return {g: "A", cls: "ga", word: "Strong", r};
-  if (r >= 0.35) return {g: "B", cls: "gb", word: "Fair", r};
-  if (r >= 0.2) return {g: "C", cls: "gc", word: "Weak", r};
-  return {g: "D", cls: "gd", word: "Poor", r};
+const GRADE = {};
+const GRADE_CLS = {A: "ga", B: "gb", C: "gc", D: "gd", "?": "gq"};
+async function loadGrade(sym) {
+  if (!ME || ME.guest || GRADE[sym]) return;
+  GRADE[sym] = "loading";
+  try { GRADE[sym] = await api(`/api/grade/${encodeURIComponent(sym)}`); } catch (e) { GRADE[sym] = null; }
+  if (BRIEF_SYM === sym) { if ($("bfGrade")) $("bfGrade").innerHTML = gradeHTML((BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym));
+    if (OPT_CACHE[sym] && $("bfOpt")) $("bfOpt").innerHTML = optionsHTML(OPT_CACHE[sym]); }
 }
 function gradeFor(st, dir) {
-  const tr = ((BRIEF_CHART && BRIEF_CHART.trades) || []).filter(t => t.outcome !== "pending" && (!dir || t.direction === dir));
-  if (!BRIEF_CHART || !BRIEF_CHART.trades) return null;
-  const hit = tr.filter(t => t.outcome === "follow-through" && !t.chase).length;
-  return Object.assign(setupGrade(tr.length, hit), {n: tr.length, hit});
+  const G = GRADE[BRIEF_SYM]; if (!G || G === "loading") return null;
+  return G[dir === -1 ? "down" : "up"];
 }
+const gradeVerb = (g) => g.avg > 0 ? `made <b>${g.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(g.avg).toFixed(2)}%</b>`;
 function gradeHTML(st) {
   if (!st || !st.hub) return "";
   const k = st.state, live = k === "breakout_up" || k === "breakdown";
+  if (!live && k !== "forming" && k !== "watching") return "";
   const L = LIVE[BRIEF_SYM], px = L && L.price != null ? L.price : st.last_close, h = st.hub;
   const dir = live ? (k === "breakout_up" ? 1 : -1) : st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : (h.high - px) <= (px - h.low) ? 1 : -1;   // in a hub: grade the side price is nearest
-  if (!live && k !== "forming" && k !== "watching") return "";
-  const G = gradeFor(st, dir); if (!G) return "";
-  const what = dir === 1 ? "Long breakouts" : dir === -1 ? "Short breakdowns" : "Hub breakouts";
-  const line = G.g === "?" ? G.tip : `${what} on ${esc(BRIEF_SYM)} reached the shelf <b>${G.hit} of ${G.n}</b> times in the last ~9 months.`;
-  const warn = G.g === "D" ? " Most failed: treat a trigger here with extra caution." : G.g === "C" ? " More failed than worked." : "";
-  return `<div class="sg ${G.cls}"><span class="sg-b">${G.g}</span><div><b>Setup grade: ${G.word}</b><small>${line}${warn}</small></div></div>`;
+  const g = gradeFor(st, dir); if (!g) return "";
+  const what = dir === 1 ? "Long breakouts" : "Short breakdowns";
+  const line = g.grade === "?" ? `Only ${g.n} past ${what.toLowerCase()} on ${esc(BRIEF_SYM)}, too few to grade.`
+    : `${what} on ${esc(BRIEF_SYM)} ${gradeVerb(g)} per trade on average (${g.win}% winners, ${g.n} trades, ~2 years).`;
+  const warn = g.grade === "D" ? " Small wins, bigger losses: treat a trigger here with extra caution." : g.grade === "C" ? " Slightly negative so far." : "";
+  return `<div class="sg ${GRADE_CLS[g.grade]}"><span class="sg-b">${g.grade}</span><div><b>Setup grade: ${g.word}</b><small>${line}${warn}</small></div></div>`;
 }
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
@@ -4139,9 +4143,9 @@ function optionsHTML(o) {
   const er = o.earnings && o.plans.some(p => o.earnings.date <= p.expiry) ? `<p class="ox-earn">📅 <b>Earnings ${esc(o.earnings.label)}</b>, before these contracts expire. Option prices usually drop right after earnings (the "IV crush"), even when the stock moves your way, and a gap can skip past your exit.</p>` : "";
   const ctr = (c, p, up, h, cond) => {
     const side = up ? "call" : "put", move = up ? "breakout" : "breakdown", good = (c.at_shelf_pct ?? 0) > 0;
-    const C = gradeFor(null, up ? 1 : -1);          // same count as the grade at the top of the card, when the chart is loaded
-    const n = C ? C.n : (h.n || 0), hit = C ? C.hit : (h.reached || 0), G = setupGrade(n, hit);
-    const odds = n ? `Setup grade ${G.g === "?" ? "not available yet" : `<b class="sg-in ${G.cls}">${G.g} · ${G.word}</b>`}: reached the aim in ${hit} of ${n} past setups.${G.g === "D" ? " Most failed, so this contract is more likely to lose than win." : ""}` : "Too few past setups to judge the odds yet.";
+    const g = gradeFor(null, up ? 1 : -1);          // same grade as the top of the card and the alerts
+    const odds = g && g.grade !== "?" ? `Setup grade <b class="sg-in ${GRADE_CLS[g.grade]}">${g.grade} · ${g.word}</b>: ${up ? "long breakouts" : "short breakdowns"} ${gradeVerb(g)} per trade on the stock (${g.win}% winners, ${g.n} trades).${g.grade === "D" ? " The stock usually lost on this setup, so this contract is more likely to lose than win." : ""}`
+      : h.n ? `Reached the aim in ${h.reached} of ${h.n} past setups.` : "Too few past setups to judge the odds yet.";
     const note = c.estimated ? `≈${money(c.mid)} if the ${move} happens (about ${money(c.quote_now)} now, since the stock isn't there yet). ${odds}` : `${money(c.cost)} for one contract (100 shares). ${odds}`;
     return `<div class="oc">
       <div class="oc-t"><b>${day(p.expiry)} $${c.strike} ${side}s</b><small>${cond}</small></div>

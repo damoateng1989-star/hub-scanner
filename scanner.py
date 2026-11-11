@@ -89,17 +89,38 @@ def _pct(a: float, b: float) -> str:
     return f"{(b / a - 1) * 100:+.2f}%"
 
 
-def history_line(sym: str) -> str:
-    """This ticker's past breakout results (about 2 years), cached for a day."""
-    key = f"bt:{sym}"
+def _bt_trades(sym: str) -> list:
+    """This ticker's finished hub trades over ~2 years (direction and return only), cached for a day."""
+    key = f"bt2:{sym}"
     today = pd.Timestamp.now(tz=engine.NY).date().isoformat()
+    cached = json.loads(db.get_setting(key) or "{}")
+    if cached.get("date") != today:
+        res = engine.analyze(load_4h(sym, BACKTEST_DAYS), SETTINGS)
+        cached = dict(date=today, trades=[dict(direction=t["direction"], outcome=t["outcome"], ret=t["ret"])
+                                          for t in res["trades"] if t["outcome"] != "pending"])
+        db.set_setting(key, json.dumps(cached))
+    return cached["trades"]
+
+
+def grade_line(sym: str, d: int) -> str:
+    """'Setup grade D · Poor: long breakouts on AMZN lost 1.24% per trade on average (38.5% winners, 39 trades, ~2y)'"""
     try:
-        cached = json.loads(db.get_setting(key) or "{}")
-        if cached.get("date") != today:
-            res = engine.analyze(load_4h(sym, BACKTEST_DAYS), SETTINGS)
-            cached = dict(date=today, stats=engine.stats(res["trades"]))
-            db.set_setting(key, json.dumps(cached))
-        st = cached["stats"]
+        g = engine.setup_grade(_bt_trades(sym), d)
+    except Exception as e:
+        log.warning("grade for %s failed: %s", sym, e)
+        return ""
+    what = "long breakouts" if d == 1 else "short breakdowns"
+    if g["grade"] == "?":
+        return f"Setup grade: not enough history ({g['n']} past {what} on {sym})"
+    verb = f"made {g['avg']:+.2f}%" if g["avg"] > 0 else f"lost {abs(g['avg']):.2f}%"
+    return (f"Setup grade {g['grade']} · {g['word']}: {what} on {sym} {verb} per trade on average "
+            f"({g['win']}% winners, {g['n']} trades, ~2y)")
+
+
+def history_line(sym: str) -> str:
+    """Kept for callers that want both directions together."""
+    try:
+        st = engine.stats([dict(t, fwd=None) for t in _bt_trades(sym)])
     except Exception as e:
         log.warning("history for %s failed: %s", sym, e)
         return ""
@@ -131,16 +152,30 @@ def plan_lines(entry: float, edge: float, target: float, d: int, reached: bool, 
 
 def format_preclose(sym: str, sig: dict, minutes_left: int) -> str:
     up = sig["direction"] == 1
-    side = "ABOVE" if up else "BELOW"
+    side, word = ("above", "ABOVE") if up else ("below", "BELOW")
     zone = f"{_money(sig['low'])}–{_money(sig['high'])}"
-    hist = history_line(sym)
-    return (f"⚠️ {sym}: trading {side} hub, ~{minutes_left} min before the 4H close\n"
-            f"Now {_money(sig['price'])} vs hub {zone} ({sig['sessions']} sessions)\n"
-            f"If the candle closes {'above' if up else 'below'} {_money(sig['edge'])}, that's the breakout.\n"
-            + (f"Volume: {'✓ confirming' if sig.get('vol_ok') else '✗ light so far. It only counts if volume picks up by the close'}\n"
-               if sig.get("vol_ok") is not None else "")
-            + plan_lines(sig["price"], sig["edge"], sig["target"], sig["direction"], sig["reached"], sig["shelf"])
-            + (f"\n{hist}" if hist else ""))
+    trig = sig.get("trigger", sig["edge"])
+    g = grade_line(sym, sig["direction"])
+    lines = [f"⚠️ {sym}: not a setup yet · ~{minutes_left} min to the 4H close",
+             f"Trading {word} its hub: now {_money(sig['price'])}, hub {zone} ({sig['sessions']} sessions)"]
+    if g:
+        lines.append(g)
+    if sig.get("widens"):
+        lines.append(f"A close here would only widen the hub. It needs a 4H close {side} about {_money(trig)} to count.")
+    else:
+        lines.append(f"It only counts if the 4H candle closes {side} {_money(trig)}.")
+    if sig.get("vol_ok") is not None:
+        lines.append("Volume: ✓ confirming so far" if sig["vol_ok"] else "Volume: ✗ light so far. It only counts if volume picks up by the close")
+    est = max(sig["price"], trig) if up else min(sig["price"], trig)     # the soonest a counting close could be
+    if sig["reached"] or (sig["target"] - est) * sig["direction"] <= 0:
+        what = "the next shelf" if sig["shelf"] else "the target"
+        lines.append(f"⚠️ {what.capitalize()} ({_money(sig['target'])}) is {'already reached' if sig['reached'] else 'inside that move'}, so a close there would be a chase.")
+    else:
+        lines += [f"If it closes {side} {_money(trig)} (not advice):",
+                  f"• Entry ≈ the close (about {_money(est)} at the earliest)" if sig.get("widens") else f"• Entry ≈ the close (about {_money(sig['price'])} now)",
+                  f"• Exit on a 4H close back {'≤' if up else '≥'} {_money(sig['edge'])} (the loss is wherever that close lands)",
+                  shelf_line(sig["target"], sig["shelf"], sig["direction"], est)]
+    return "\n".join(lines)
 
 
 def _say_money(x: float) -> str:
@@ -154,7 +189,7 @@ def speak_preclose(sym: str, sig: dict, minutes_left: int) -> str:
     if sig["reached"]:
         tgt = "Price is already at the target, so this would be a chase."
     return (f"Next Shelf. {phone.spell(sym)} is trading {'above' if up else 'below'} its hub, "
-            f"about {minutes_left} minutes before the 4 hour close. "
+            f"about {minutes_left} minutes before the 4 hour close. Not a setup yet. "
             f"Price {_say_money(sig['price'])}. Hub edge {_say_money(sig['edge'])}. {tgt}")
 
 
@@ -185,7 +220,7 @@ def format_event(sym: str, e: dict) -> str:
         up = e["type"] == "breakout"
         edge = e["high"] if up else e["low"]
         d = 1 if up else -1
-        hist = history_line(sym)
+        hist = grade_line(sym, d)
         return (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
                 f"4H close {'above' if up else 'below'} the hub\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"

@@ -392,6 +392,10 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
     if h["active"]:
         from_hub()
         st.update(state="forming", label=f"Inside hub ({h['sessions']} sessions)")
+        if s.window > 1 and atr_now == atr_now and atr_now > 0:      # the close that would actually end the hub (not just widen it)
+            prev = res["close"].iloc[-(s.window - 1):]
+            st["trigger_up"] = round(max(h["high"], float(prev.min()) + s.k * atr_now), 2)
+            st["trigger_down"] = round(min(h["low"], float(prev.max()) - s.k * atr_now), 2)
         return st
     trade = next((t for t in res["trades"] if t["hub"] is h), None)
     if trade is None:
@@ -458,6 +462,13 @@ def preclose_check(res: dict, price: float, s: Settings, forming_volume: float |
     if d == 0:
         return None
     edge = h["high"] if d == 1 else h["low"]
+    # While the hub is still active, a close just past its edge can keep the window tight: the hub only widens.
+    # The close has to clear the last (window - 1) closes by more than k x ATR to end the hub and count.
+    trigger = edge
+    if h["active"] and s.window > 1:
+        prev, A = res["close"].iloc[-(s.window - 1):], float(res["atr"].iloc[-1])
+        if A == A and A > 0:
+            trigger = max(edge, float(prev.min()) + s.k * A) if d == 1 else min(edge, float(prev.max()) - s.k * A)
     target, shelf = target_for(res["hubs"], h, d, float(res["atr"].iloc[-1]), s)
     vol_ok = None
     if forming_volume is not None and s.vol_mult > 0 and res.get("volume") is not None:
@@ -470,7 +481,25 @@ def preclose_check(res: dict, price: float, s: Settings, forming_volume: float |
         except Exception:
             vol_ok = None
     return dict(direction=d, price=price, low=h["low"], high=h["high"], sessions=h["sessions"],
-                edge=edge, target=target, shelf=shelf, reached=(price - target) * d >= 0, vol_ok=vol_ok)
+                edge=edge, trigger=round(trigger, 2), widens=(price - trigger) * d <= 0,
+                target=target, shelf=shelf, reached=(price - target) * d >= 0, vol_ok=vol_ok)
+
+
+GRADE_MIN = 5    # fewer finished setups than this: no grade
+
+
+def setup_grade(trades: list, d: int | None = None) -> dict:
+    """How this setup has done on this stock: graded on the average return per trade, not the win rate
+    (small wins and bigger losses can lose money at a decent win rate)."""
+    done = [t for t in trades if t["outcome"] != "pending" and t.get("ret") is not None and (d is None or t["direction"] == d)]
+    n = len(done)
+    if n < GRADE_MIN:
+        return dict(grade="?", word="Not enough history", n=n)
+    rets = [t["ret"] for t in done]
+    avg = float(np.mean(rets)); win = 100 * sum(r > 0 for r in rets) / n
+    g, w = ("A", "Strong") if avg >= 1 else ("B", "Fair") if avg > 0 else ("C", "Weak") if avg >= -1 else ("D", "Poor")
+    return dict(grade=g, word=w, n=n, avg=round(avg, 2), win=round(win, 1),
+                reached=sum(t["outcome"] == "follow-through" for t in done))
 
 
 def current_candle_start(now: pd.Timestamp) -> pd.Timestamp:

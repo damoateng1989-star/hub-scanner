@@ -1027,6 +1027,19 @@ async def gamma_walls(symbol: str, u: dict = User):
     return dict(symbol=sym, walls=w)
 
 
+@app.get("/api/grade/{symbol}")
+async def grade_for(symbol: str, u: dict = User):
+    """Setup grade for long and short hub breakouts on this stock (~2 years), the same numbers the alerts use."""
+    import re
+    sym = symbol.upper().strip()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
+        raise HTTPException(400, "Unknown symbol")
+    def work():
+        tr = scanner._bt_trades(sym)
+        return {"up": engine.setup_grade(tr, 1), "down": engine.setup_grade(tr, -1), "years": 2}
+    return await run_in_threadpool(work)
+
+
 @app.get("/api/news/{symbol}")
 async def news_for(symbol: str, candles: int | None = None, u: dict = User):
     """Recent headlines for a stock and, when it has just broken out, the one that may explain it."""
