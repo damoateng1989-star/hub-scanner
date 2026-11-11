@@ -4872,6 +4872,21 @@ html[data-theme="light"] #brief .vz-row summary::after { border-color: #9CA3AF; 
 /* status label reads as a pill, so its padding doesn't look like a stray indent */
 #brief .bf-head .bf-tag.rest { background: #23252B !important; border: 1px solid #30333A !important; color: #D5D8DE !important; border-radius: 6px !important; padding: 4px 10px !important; }
 html[data-theme="light"] #brief .bf-head .bf-tag.rest { background: #F1F2F4 !important; border-color: #E3E5E9 !important; color: #374151 !important; }
+/* Shelf card top panel: centred */
+#brief .bf-hero .bf-top { position: relative; justify-content: center !important; }
+#brief .bf-hero .bf-head { text-align: center !important; width: 100%; padding: 0 40px; box-sizing: border-box; }
+#brief .bf-hero .bf-x { position: absolute !important; top: 0; right: 0; }
+#brief .bf-hero .bf-head h3 { text-align: center !important; }
+#brief .bf-hero .bf-head .bf-tag { margin-left: auto !important; margin-right: auto !important; }
+#brief .bf-hero .vz-sum, #brief .bf-hero .bf-prev, #brief .bf-hero .bf-earn { text-align: center !important; justify-content: center !important; margin-left: auto; margin-right: auto; }
+#brief .bf-hero .bf-live { justify-content: center !important; flex-wrap: wrap; }
+#brief .bf-hero .bf-stats { text-align: center !important; margin-left: -40px; margin-right: -40px; }
+#brief .bf-hero .bf-stats > div { display: flex; flex-direction: column; align-items: center; }
+#brief .bf-hero .sg { margin-left: -40px; margin-right: -40px; text-align: left; }
+#brief .bf-hero .vz-scale { margin-left: -40px !important; margin-right: -40px !important; }
+#brief .bf-hero .vz-key { justify-content: center; }
+#brief .bf-hero #bfWallTop { margin: 0 -40px; text-align: left; }
+@media (max-width: 899px) { #brief .bf-hero .bf-head { padding: 0 36px; } #brief .bf-hero .bf-stats, #brief .bf-hero .sg, #brief .bf-hero .vz-scale, #brief .bf-hero #bfWallTop { margin-left: -36px !important; margin-right: -36px !important; } }
 </style>
 </body>
 </html>
