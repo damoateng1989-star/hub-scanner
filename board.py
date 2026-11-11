@@ -544,19 +544,19 @@ def chart(sym: str, tf: str = "4h", lab_mode: bool = False) -> dict:
         st["setups"] = patterns.live_json(sym, c4, res, pa)
         draw = []
         for L in pa["live"]:
-            if L["kind"] != "sr" and L["state"] == "forming":
+            if L["kind"] != "sr" and L["kind"] not in patterns.OFF and L["state"] == "forming":
                 p = L["p"]
                 draw.append(_seg(p, idx, t, p["a"], len(idx) - 1, L["kind"], True))
         for x in pa["trades"][-12:]:
-            if x["kind"] != "sr" and x["i0"] >= len(idx) - 120:
+            if x["kind"] != "sr" and x["kind"] not in patterns.OFF and x["i0"] >= len(idx) - 120:
                 p = x["p"]
                 draw.append(_seg(p, idx, t, p["a"], x["i0"], x["kind"], False))
         levels = []
-        for L in pa.get("levels_now", []):
+        for L in ([] if "sr" in patterns.OFF else pa.get("levels_now", [])):
             levels.append(dict(price=round(L["price"], 2), touches=L["touches"], since=t(idx[L["first"]])))
         out["setups"] = dict(lines=draw, levels=levels,
                              trades=[dict(time=t(idx[x["i0"]]), direction=x["direction"], kind=x["kind"], outcome=x["outcome"],
-                                          chase=x["chase"]) for x in pa["trades"] if x["i0"] >= len(idx) - 160],
+                                          chase=x["chase"]) for x in pa["trades"] if x["i0"] >= len(idx) - 160 and x["kind"] not in patterns.OFF],
                              stats={k: engine.stats([x for x in pa["trades"] if x["kind"] == k]) for k in patterns.KINDS if k != "hub"})
     except Exception as e:
         log.warning("chart setups failed for %s: %s", sym, e)

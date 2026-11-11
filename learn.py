@@ -357,6 +357,8 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
     ]),
 ]
 
+_OFF_LESSONS = {"triangles", "channels", "support-and-resistance"}   # setups taken off the site
+MODULES = [(t, d, [l for l in ls if l[0] not in _OFF_LESSONS]) for t, d, ls in MODULES]
 LESSONS = [(m, l) for m in MODULES for l in m[2]]
 
 
