@@ -2032,6 +2032,13 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
  #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:30%!important}
  #hubBoard .board-table td:nth-child(11) .board-actions{flex-wrap:wrap!important;row-gap:6px!important}
 }
+
+/* Evening recap uses the full width: today on the left, tomorrow on the right; chips stretch to fill */
+.mb-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 28px; }
+.mb-col > .mb-k:first-child { margin-top: 14px; }
+.mb-col .mb-row { flex-wrap: wrap; overflow: visible; }
+.mb-col .mb-chip { flex: 1 1 140px; max-width: 100%; }
+@media (min-width: 900px) { .mb-col + .mb-col { border-left: 1px solid var(--line); padding-left: 28px; } }
 </style>
 </head>
 <body class="term">
@@ -4044,7 +4051,7 @@ async function loadRecapCard() {
     : `Arrives at ${fmtET(ME.recap_time || "16:45")} ET on weekdays. Tomorrow's 4-hour closes: 1:30 PM and 4:00 PM.`;
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">🌙 Evening recap <span>${esc(d.date)}${d.swept_at ? " · sweep " + esc(d.swept_at) : ""}</span></div>
       <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.new_count}</b> new breakout${d.new_count === 1 ? "" : "s"} · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
-    ${stale}${neu}${watch}<div class="mb-f">${deliver}</div>`;
+    ${stale}<div class="mb-cols"><div class="mb-col">${neu.replace('<p class="mb-quiet">', '<div class="mb-k">Today</div><p class="mb-quiet">')}</div>${watch ? `<div class="mb-col">${watch}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
   el.hidden = false;
   return true;
 }
