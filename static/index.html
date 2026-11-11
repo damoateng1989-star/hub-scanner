@@ -3472,7 +3472,7 @@ function briefHead(sym, st) {
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
   }
   if (hubLive && st.rvol != null) tag += `<p class="bf-prev">${volChip(st.rvol)} on the breakout candle</p>`;
-  $("bfHead").innerHTML = `<div class="bf-kick">visualize</div><h3>${esc(sym)}</h3>${tag}
+  $("bfHead").innerHTML = `<h3>${esc(sym)}</h3>${tag}
     <p class="vz-sum">${vizSummary(st)}</p><div class="bf-live" id="bfLive"></div>
     ${heroStats(st)}${vizScaleHTML(st)}`;
   paintBriefLive(); paintGamma(sym);
