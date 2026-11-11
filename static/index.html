@@ -3698,7 +3698,7 @@ function briefHTML(sym, st, chart) {
   const row = (id, title, prev, body) => `<details class="vz-row" id="${id}"><summary><span class="vz-t">${title}</span><span class="vz-p">${prev}</span></summary><div class="vz-b">${body}</div></details>`;
   return `${row("bf-setup", "Game plan", planPrev, plan2)}
     ${others.length ? row("bf-other", "Other setups", otherPrev, setupsHTML) : ""}
-    <details class="vz-row" id="bf-walls" hidden=${ME && ME.guest ? "true" : "false"}><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev">Checking options walls…</span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
+    <details class="vz-row" id="bf-walls"${ME && ME.guest ? " hidden" : ""}><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev">Checking options walls…</span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
     ${row("bf-news", live ? "Why it may be moving" : "News", "Latest headlines", `<div id="bfNews">${newsHTML(sym)}</div>`)}
     ${row("bf-options", `Options swing <span class="ox-edu">Educational</span>`, "Calls or puts for this setup", `<div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>`)}
     ${row("bf-history", "Track record", `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>${add}`)}
