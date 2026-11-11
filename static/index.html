@@ -2095,6 +2095,11 @@ a.nw-row:hover b{text-decoration:underline}
 .nw-fine{margin:10px 0 0;font-size:11.5px;color:var(--faint)}
 html[data-theme="light"] .nw-tag{color:#8A5A00;background:rgba(183,121,31,.12)}
 html[data-theme="light"] .nw-row.hot{border-color:rgba(183,121,31,.35);background:rgba(183,121,31,.05)}
+
+/* Shelf card tabs: five in one row (News was added as the fifth) */
+html body .bf-seg { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+html body .bf-seg button { white-space: nowrap !important; min-width: 0; padding-left: 2px !important; padding-right: 2px !important; }
+@media (max-width: 480px) { html body .bf-seg button { font-size: 11.5px !important; letter-spacing: -.02em; } }
 </style>
 </head>
 <body class="term">
@@ -2299,7 +2304,7 @@ html[data-theme="light"] .nw-row.hot{border-color:rgba(183,121,31,.35);backgroun
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   <div class="bf-seg" id="bfCmds" role="tablist">
-    <button data-sec="levels" class="on">Levels</button><button data-sec="news">News</button><button data-sec="setup">Game plan</button><button data-sec="options">Options</button><button data-sec="history">Track record</button>
+    <button data-sec="levels" class="on">Levels</button><button data-sec="news">News</button><button data-sec="setup">Plan</button><button data-sec="options">Options</button><button data-sec="history">Record</button>
   </div>
   </div>
   <div class="bf-body" id="bfBody"></div>
