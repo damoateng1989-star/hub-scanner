@@ -317,21 +317,45 @@ def _set(**kw):
     db.set_setting("lab_exits", json.dumps(cur))
 
 
-def run(symbols: list[str] | None = None):
+CKPT = db.DATA_DIR / "lab_exits_ckpt.json"   # progress saved after every chunk, so a restart picks up where it left off
+
+
+def _save_ckpt(syms, done, rows, failed, failed_msg, started):
+    tmp = CKPT.with_suffix(".tmp")
+    tmp.write_text(json.dumps(dict(syms=syms, done=done, rows=rows, failed=failed, failed_msg=failed_msg, started=started),
+                              default=lambda o: o.item() if hasattr(o, "item") else str(o)))
+    tmp.replace(CKPT)
+
+
+def _load_ckpt():
+    try:
+        return json.loads(CKPT.read_text())
+    except Exception:
+        return None
+
+
+def run(symbols: list[str] | None = None, resume: bool = False):
     if not _LOCK.acquire(blocking=False):
         return
     try:
         import scanner
         s = scanner.SETTINGS
-        syms = symbols or universe.board_universe()
-        started = time.time()
-        _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None,
-             failed=0, failed_msg=None, trades_so_far=0)
-        log.info("lab test: started, %d stocks", len(syms))
+        ck = _load_ckpt() if resume else None
+        if ck:
+            syms, start_i, rows = ck["syms"], ck["done"], ck["rows"]
+            for r in rows:                    # JSON turned the (return, how) pairs into lists
+                r["ex"] = {k: tuple(v) for k, v in r["ex"].items()}
+            failed, failed_msg, started = ck.get("failed", 0), ck.get("failed_msg"), ck.get("started") or time.time()
+            _set(status="running", resumed=True, error=None, heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
+            log.info("lab test: resuming at %d/%d stocks", start_i, len(syms))
+        else:
+            syms = symbols or universe.board_universe()
+            start_i, rows, failed, failed_msg, started = 0, [], 0, None, time.time()
+            _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None,
+                 failed=0, failed_msg=None, trades_so_far=0, resumed=False, resumes=0)
+            log.info("lab test: started, %d stocks", len(syms))
         regime = _spy_regime()
-        rows: list[dict] = []
-        failed, failed_msg = 0, None
-        for i in range(0, len(syms), CHUNK):
+        for i in range(start_i, len(syms), CHUNK):
             part = syms[i:i + CHUNK]
             bars = {}
             for attempt in range(3):          # Alpaca rate limits come back as errors: wait and retry
@@ -352,6 +376,7 @@ def run(symbols: list[str] | None = None):
                 except Exception:
                     traceback.print_exc()
             bars = None
+            _save_ckpt(syms, min(i + CHUNK, len(syms)), rows, failed, failed_msg, started)
             _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len(rows),
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
@@ -364,6 +389,7 @@ def run(symbols: list[str] | None = None):
              first=span[0] if span else None, last=span[-1] if span else None,
              finished=pd.Timestamp.now(tz="UTC").isoformat(), seconds=round(time.time() - started),
              regime_ok=regime is not None)
+        CKPT.unlink(missing_ok=True)
     except Exception as e:
         traceback.print_exc()
         _set(status="error", error=str(e)[:300])
@@ -371,17 +397,28 @@ def run(symbols: list[str] | None = None):
         _LOCK.release()
 
 
-def start() -> bool:
+def start(resume: bool = False) -> bool:
     if _LOCK.locked():
         return False
-    threading.Thread(target=run, daemon=True).start()
+    threading.Thread(target=run, kwargs=dict(resume=resume), daemon=True).start()
     return True
+
+
+def resume_if_interrupted():
+    """Called at server start: a test that was running when the server restarted (a deploy) carries on by itself."""
+    st = json.loads(db.get_setting("lab_exits") or "{}")
+    if st.get("status") == "running" and _load_ckpt() is not None:
+        start(resume=True)
 
 
 def status() -> dict:
     st = json.loads(db.get_setting("lab_exits") or "{}")
     if st.get("status") == "running" and not _LOCK.locked():
         # saved as running, but nothing is running in this server: it restarted (a deploy, or it ran out of memory)
+        if _load_ckpt() is not None and st.get("resumes", 0) < 3:
+            _set(resumes=st.get("resumes", 0) + 1)
+            start(resume=True)
+            return json.loads(db.get_setting("lab_exits") or "{}")
         st.update(status="error", error="The test was interrupted (the server restarted part-way). Tap Run the test again.")
         db.set_setting("lab_exits", json.dumps(st))
     return st

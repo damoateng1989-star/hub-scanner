@@ -131,6 +131,11 @@ def handle_command(cmd: str, args: list[str], u: dict) -> str:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    try:      # a Lab test cut off by a deploy carries on from its last saved chunk
+        import lab_exits
+        lab_exits.resume_if_interrupted()
+    except Exception as e:
+        log.warning("lab resume failed: %s", e)
     sched = BackgroundScheduler(timezone="America/New_York")
     for t in SCAN_TIMES:
         h, m = t.split(":")
