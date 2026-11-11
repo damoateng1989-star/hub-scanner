@@ -2122,6 +2122,18 @@ html[data-theme="light"] .vz-dot { background: #141412 !important; box-shadow: 0
 #brief .bf-foot #bfChart:hover { background: #fff !important; }
 html[data-theme="light"] #brief .bf-foot #bfChart { background: #141412 !important; color: #F6F6F3 !important; }
 html[data-theme="light"] #brief .bf-foot #bfChart:hover { background: #000 !important; }
+
+/* Setup grade */
+.sg { display: flex; gap: 12px; align-items: center; margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 8%, transparent); }
+.sg-b { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font: 800 17px var(--sans); color: #0E0F12; background: var(--c); }
+.sg b { display: block; font-size: 14px; color: var(--ink, #fff); } .sg small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: #C3C7CF; }
+.sg small b { display: inline; font-size: inherit; }
+.sg.ga, .sg-in.ga { --c: #3DD68C; } .sg.gb, .sg-in.gb { --c: #7C93FF; } .sg.gc, .sg-in.gc { --c: #F2C14E; } .sg.gd, .sg-in.gd { --c: #FF6B5E; } .sg.gq, .sg-in.gq { --c: #5C616B; }
+.sg-in { color: var(--c); }
+html[data-theme="light"] .sg small { color: #4b5563; }
+html[data-theme="light"] .sg.ga, html[data-theme="light"] .sg-in.ga { --c: #12805C; } html[data-theme="light"] .sg.gb, html[data-theme="light"] .sg-in.gb { --c: #2F54EB; }
+html[data-theme="light"] .sg.gc, html[data-theme="light"] .sg-in.gc { --c: #B7791F; } html[data-theme="light"] .sg.gd, html[data-theme="light"] .sg-in.gd { --c: #C81E1E; }
+html[data-theme="light"] .sg-b { color: #fff; }
 </style>
 </head>
 <body class="term">
@@ -3515,11 +3527,10 @@ function heroStats(st) {
   else if (other) { const d = other.state === "breakout_up" ? 1 : -1; cells = trio(d, other.edge, other.target, true); GAMMA_CTX = {d, edge: other.edge, aim: other.target}; }
   else if ((k === "forming" || k === "watching") && h) {
     const up = st.shelf_up, dn = st.shelf_down;
-    const nearTop = (h.high - p) <= (p - h.low);
-    const dist = (nearTop ? (h.high - p) : (p - h.low)) / p * 100;
+    const [nowL, nowV, nowS] = nowCell(st);
     cells = [
       ["Long above", money(h.high), up ? "aim " + money(up.level) : "no shelf above", up ? "up" : ""],
-      ["Now", money(p), dist.toFixed(2) + "% to " + (nearTop ? "top" : "bottom"), ""],
+      [nowL, nowV, nowS, "", "bfNow"],
       ["Short below", money(h.low), dn ? "aim " + money(dn.level) : "no shelf below", dn ? "dn" : ""]
     ];
     const d = st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : 0;
@@ -3527,7 +3538,49 @@ function heroStats(st) {
   } else cells = [["Last close", money(p), "4-hour candle", ""],
     ["Shelf above", st.shelf_up ? money(st.shelf_up.level) : "–", st.shelf_up ? pct(st.shelf_up.level, p) + " away" : "none in range", "up"],
     ["Shelf below", st.shelf_down ? money(st.shelf_down.level) : "–", st.shelf_down ? pct(st.shelf_down.level, p) + " away" : "none in range", "dn"]];
-  return `<div class="bf-stats">${cells.map(([l, v, sub, c]) => `<div><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div>`;
+  return `<div class="bf-stats">${cells.map(([l, v, sub, c, id]) => `<div${id ? ` id="${id}"` : ""}><small>${l}</small><b>${v}</b><i${c ? ` class="s-${c}"` : ""}>${sub}</i></div>`).join("")}</div><div id="bfGrade">${gradeHTML(st)}</div>`;
+}
+// the middle number: live price when there is one, otherwise the last 4-hour close, said as such
+function nowCell(st) {
+  const h = st.hub, L = LIVE[BRIEF_SYM], live = L && L.price != null, px = live ? L.price : st.last_close;
+  let sub;
+  if (px > h.high) sub = `${((px / h.high - 1) * 100).toFixed(2)}% above the top · not closed yet`;
+  else if (px < h.low) sub = `${((1 - px / h.low) * 100).toFixed(2)}% below the bottom · not closed yet`;
+  else { const top = (h.high - px) <= (px - h.low); sub = `${((top ? h.high / px - 1 : 1 - h.low / px) * 100).toFixed(2)}% to the ${top ? "top" : "bottom"}`; }
+  return [live ? (LIVE_OPEN ? "Now" : "Last trade") : "Last close", money(px), sub];
+}
+function paintNowCell() {
+  const el = $("bfNow"), st = (BRIEF_CHART && BRIEF_CHART.status) || (BRIEF_SYM && findStatus(BRIEF_SYM));
+  if (!el || !st || !st.hub) return;
+  const [l, v, sub] = nowCell(st);
+  el.innerHTML = `<small>${l}</small><b>${v}</b><i>${sub}</i>`;
+}
+// ---------------------------------------------------------------- setup grade: how this setup has done on this stock before
+function setupGrade(n, hit) {
+  if (n < 5) return {g: "?", cls: "gq", word: "Not enough history", tip: `Only ${n} past setup${n === 1 ? "" : "s"} on this stock, too few to grade.`};
+  const r = hit / n;
+  if (r >= 0.5) return {g: "A", cls: "ga", word: "Strong", r};
+  if (r >= 0.35) return {g: "B", cls: "gb", word: "Fair", r};
+  if (r >= 0.2) return {g: "C", cls: "gc", word: "Weak", r};
+  return {g: "D", cls: "gd", word: "Poor", r};
+}
+function gradeFor(st, dir) {
+  const tr = ((BRIEF_CHART && BRIEF_CHART.trades) || []).filter(t => t.outcome !== "pending" && (!dir || t.direction === dir));
+  if (!BRIEF_CHART || !BRIEF_CHART.trades) return null;
+  const hit = tr.filter(t => t.outcome === "follow-through" && !t.chase).length;
+  return Object.assign(setupGrade(tr.length, hit), {n: tr.length, hit});
+}
+function gradeHTML(st) {
+  if (!st || !st.hub) return "";
+  const k = st.state, live = k === "breakout_up" || k === "breakdown";
+  const L = LIVE[BRIEF_SYM], px = L && L.price != null ? L.price : st.last_close, h = st.hub;
+  const dir = live ? (k === "breakout_up" ? 1 : -1) : st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : (h.high - px) <= (px - h.low) ? 1 : -1;   // in a hub: grade the side price is nearest
+  if (!live && k !== "forming" && k !== "watching") return "";
+  const G = gradeFor(st, dir); if (!G) return "";
+  const what = dir === 1 ? "Long breakouts" : dir === -1 ? "Short breakdowns" : "Hub breakouts";
+  const line = G.g === "?" ? G.tip : `${what} on ${esc(BRIEF_SYM)} reached the shelf <b>${G.hit} of ${G.n}</b> times in the last ~9 months.`;
+  const warn = G.g === "D" ? " Most failed: treat a trigger here with extra caution." : G.g === "C" ? " More failed than worked." : "";
+  return `<div class="sg ${G.cls}"><span class="sg-b">${G.g}</span><div><b>Setup grade: ${G.word}</b><small>${line}${warn}</small></div></div>`;
 }
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
@@ -4086,7 +4139,9 @@ function optionsHTML(o) {
   const er = o.earnings && o.plans.some(p => o.earnings.date <= p.expiry) ? `<p class="ox-earn">📅 <b>Earnings ${esc(o.earnings.label)}</b>, before these contracts expire. Option prices usually drop right after earnings (the "IV crush"), even when the stock moves your way, and a gap can skip past your exit.</p>` : "";
   const ctr = (c, p, up, h, cond) => {
     const side = up ? "call" : "put", move = up ? "breakout" : "breakdown", good = (c.at_shelf_pct ?? 0) > 0;
-    const odds = h.n ? `Reached the aim in ${h.reached} of ${h.n} past setups.` : "Too few past setups to judge the odds yet.";
+    const C = gradeFor(null, up ? 1 : -1);          // same count as the grade at the top of the card, when the chart is loaded
+    const n = C ? C.n : (h.n || 0), hit = C ? C.hit : (h.reached || 0), G = setupGrade(n, hit);
+    const odds = n ? `Setup grade ${G.g === "?" ? "not available yet" : `<b class="sg-in ${G.cls}">${G.g} · ${G.word}</b>`}: reached the aim in ${hit} of ${n} past setups.${G.g === "D" ? " Most failed, so this contract is more likely to lose than win." : ""}` : "Too few past setups to judge the odds yet.";
     const note = c.estimated ? `≈${money(c.mid)} if the ${move} happens (about ${money(c.quote_now)} now, since the stock isn't there yet). ${odds}` : `${money(c.cost)} for one contract (100 shares). ${odds}`;
     return `<div class="oc">
       <div class="oc-t"><b>${day(p.expiry)} $${c.strike} ${side}s</b><small>${cond}</small></div>
@@ -4434,6 +4489,7 @@ function paintLive() {
 }
 function paintBriefLive() {
   if (!BRIEF_SYM || !LIVE[BRIEF_SYM] || !$("bfLive")) return;
+  paintNowCell(); if (typeof paintVizScale === "function") paintVizScale();
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(BRIEF_SYM);
   const v = liveVsHub(st, LIVE[BRIEF_SYM].price);
   $("bfLive").innerHTML = `<span class="bf-pl">${LIVE_OPEN ? "Live" : "Last trade"}</span>` + liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
