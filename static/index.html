@@ -3143,15 +3143,19 @@ async function loadLabExits() {
 }
 async function runLabExits(btn) {
   btn.disabled = true; btn.textContent = "Starting…";
-  try { await api("/api/admin/lab/exits/run", {method: "POST"}); } catch (e) { btn.textContent = "Couldn't start"; return; }
-  setTimeout(loadLabExits, 1200);
+  let r;
+  try { r = await api("/api/admin/lab/exits/run", {method: "POST", timeout: 60000}); }
+  catch (e) { btn.disabled = false; btn.textContent = "Run the test"; toast("Couldn't start the test: " + e.message); return; }
+  if (r && r.started === false) toast("The test is already running.");
+  setTimeout(loadLabExits, 1500);
 }
 function renderLabExits() {
   const box = $("labExits"), L = LABX || {}, R = L.result;
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
   const col = (v) => v == null || v === 0 ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
   const head = `<div class="ph"><h2>Which breakouts work, and which exit</h2>
-      <button class="btnx sm" onclick="runLabExits(this)" ${L.status === "running" ? "disabled" : ""}>${L.status === "running" ? `Running… ${L.done || 0} / ${L.total || "?"} stocks` : R ? "Run again" : "Run the test"}</button></div>`;
+      <button class="btnx sm" onclick="runLabExits(this)" ${L.status === "running" ? "disabled" : ""}>${L.status === "running" ? `Running… ${L.done || 0} / ${L.total || "?"} stocks` : R ? "Run again" : "Run the test"}</button></div>`
+    + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");
   const intro = `<p class="note" style="padding:0 18px 12px;margin:0">Replays every hub breakout in the last ${L.days || 720} days across the board's stocks with the live rules, entering at the breakout close.
     Each row keeps only the breakouts that pass that filter; each exit rule scores the same trades a different way. <b>Avg per trade</b> is what decides it, not win rate.
     <b>Early / later</b> splits the trades in time: a filter that only works in one half is probably luck.</p>`;

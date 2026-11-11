@@ -9,6 +9,7 @@ Nothing here changes live alerts. It only measures.
 from __future__ import annotations
 
 import json
+import logging
 import threading
 import time
 import traceback
@@ -21,8 +22,9 @@ import db
 import engine
 import universe
 
+log = logging.getLogger("lab")
 DAYS = 720
-CHUNK = 40
+CHUNK = 20
 _LOCK = threading.Lock()
 
 EXITS = [   # key, label
@@ -203,15 +205,25 @@ def run(symbols: list[str] | None = None):
         s = scanner.SETTINGS
         syms = symbols or universe.board_universe()
         started = time.time()
-        _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None)
+        _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None,
+             failed=0, failed_msg=None, trades_so_far=0)
+        log.info("lab test: started, %d stocks", len(syms))
         regime = _spy_regime()
         rows: list[dict] = []
+        failed, failed_msg = 0, None
         for i in range(0, len(syms), CHUNK):
             part = syms[i:i + CHUNK]
-            try:
-                bars = data.get_bars_many(part, DAYS)
-            except Exception:
-                bars = {}
+            bars = {}
+            for attempt in range(3):          # Alpaca rate limits come back as errors: wait and retry
+                try:
+                    bars = data.get_bars_many(part, DAYS)
+                    break
+                except Exception as e:
+                    failed_msg = str(e)[:200]
+                    log.warning("lab test: %s..%s failed (try %d): %s", part[0], part[-1], attempt + 1, e)
+                    time.sleep(10 * (attempt + 1))
+            else:
+                failed += len(part)
             for sym in part:
                 try:
                     b = bars.get(sym)
@@ -219,7 +231,13 @@ def run(symbols: list[str] | None = None):
                         rows.extend(trades_for(sym, engine.to_4h(b), s, regime))
                 except Exception:
                     traceback.print_exc()
-            _set(done=min(i + CHUNK, len(syms)))
+            bars = None
+            _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len(rows),
+                 heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
+            log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
+            time.sleep(0.2)                   # leave room for the site and the live scan
+        if not rows:
+            raise RuntimeError("no breakouts found: the market data download failed" + (f" ({failed_msg})" if failed_msg else ""))
         out = summarize(rows)
         span = sorted(r["t"] for r in rows)
         _set(status="done", result=out, trades=len(rows), days=DAYS, symbols=len(syms),
@@ -241,4 +259,9 @@ def start() -> bool:
 
 
 def status() -> dict:
-    return json.loads(db.get_setting("lab_exits") or "{}")
+    st = json.loads(db.get_setting("lab_exits") or "{}")
+    if st.get("status") == "running" and not _LOCK.locked():
+        # saved as running, but nothing is running in this server: it restarted (a deploy, or it ran out of memory)
+        st.update(status="error", error="The test was interrupted (the server restarted part-way). Tap Run the test again.")
+        db.set_setting("lab_exits", json.dumps(st))
+    return st
