@@ -4094,7 +4094,7 @@ async function loadBrief() {
     : ways.length ? `Arrives ${ways.join(" and ")} at ${t12} AM ET on weekdays.` : `<a href="#account">Connect Telegram</a> to get this at ${t12} AM ET every weekday.`;
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">☀️ Morning brief <span>${esc(d.date)}</span></div>
       <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
-    ${main}${play}<div class="mb-f">${deliver}</div>`;
+    <div class="mb-cols"><div class="mb-col">${main.replace('<p class="mb-quiet">', '<div class="mb-k">Closest to a breakout today</div><p class="mb-quiet">')}</div>${d.pro ? `<div class="mb-col">${play || '<div class="mb-k">Breakouts still in play</div><p class="mb-quiet">None right now. The next 4-hour closes are 1:30 PM and 4:00 PM ET.</p>'}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
   el.hidden = false;
 }
 function briefCard() {
