@@ -30,7 +30,7 @@ log = logging.getLogger("paper-opt")
 _lock = threading.Lock()
 
 KIND = "option"
-DAILY_MAX = int(os.getenv("PAPER_OPT_DAILY_MAX", 5))        # one per qualifying setup, capped on very busy days
+DAILY_MAX = int(os.getenv("PAPER_OPT_DAILY_MAX", 1))        # one trade a day: the first qualifying setup
 MAX_OPEN = int(os.getenv("PAPER_OPT_MAX_OPEN", 5))
 MAX_PREMIUM = float(os.getenv("PAPER_OPT_MAX_PREMIUM", 2000))
 MAX_SPREAD = float(os.getenv("PAPER_OPT_MAX_SPREAD_PCT", 0.15))
