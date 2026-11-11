@@ -2074,6 +2074,11 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(10){display:none!important}
  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(5){display:block!important;overflow:visible!important}
 }
+@media(min-width:761px){
+ /* the Actions heading starts where the buttons start, above Analyze */
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){text-align:left!important;padding-left:6px!important;padding-right:8px!important}
+ #hubBoard .board-table td:nth-child(11) .board-actions{justify-content:flex-start!important}
+}
 </style>
 </head>
 <body class="term">
