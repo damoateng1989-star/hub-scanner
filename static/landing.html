@@ -793,6 +793,10 @@ html[data-theme="dark"] .hx-it .ok { color: #00C898; } html[data-theme="dark"] .
 .hero.hcx + * {}
 .hero.hcx .bp { margin-top: 56px !important; }
 @media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
+
+/* Hero: a very light blue glow behind the headline only (replaces the wash from the top) */
+.hero.ns { background: radial-gradient(52% 44% at 50% 40%, #EBF0FF 0%, rgba(235,240,255,0) 100%) !important; }
+html[data-theme="dark"] .hero.ns { background: radial-gradient(52% 44% at 50% 40%, rgba(90,115,255,.10) 0%, rgba(90,115,255,0) 100%) !important; }
 </style>
 </head>
 <body>
