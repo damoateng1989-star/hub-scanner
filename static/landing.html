@@ -794,9 +794,14 @@ html[data-theme="dark"] .hx-it .ok { color: #00C898; } html[data-theme="dark"] .
 .hero.hcx .bp { margin-top: 56px !important; }
 @media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
 
-/* Hero: a very light blue glow behind the headline only (replaces the wash from the top) */
-.hero.ns { background: radial-gradient(52% 44% at 50% 40%, #EBF0FF 0%, rgba(235,240,255,0) 100%) !important; }
-html[data-theme="dark"] .hero.ns { background: radial-gradient(52% 44% at 50% 40%, rgba(90,115,255,.10) 0%, rgba(90,115,255,0) 100%) !important; }
+/* Hero: light blue wash from the top, fading into the page colour (option A) */
+.hero.ns { background: linear-gradient(180deg, #E6ECFF 0px, #F1F4FD 300px, rgba(246,246,243,0) 640px) !important; }
+html[data-theme="dark"] .hero.ns { background: linear-gradient(180deg, rgba(90,115,255,.16) 0px, rgba(90,115,255,.06) 300px, rgba(90,115,255,0) 640px) !important; }
+/* the wash continues behind the nav, so there is no hard edge under it */
+.hero.ns { margin-top: -65px; padding-top: 137px !important; }
+nav.top { background: rgba(246,246,243,.6); }
+html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
+@media (max-width: 640px) { .hero.ns { padding-top: 121px !important; } }
 </style>
 </head>
 <body>
