@@ -1956,18 +1956,19 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table th:nth-child(8),#hubBoard .board-table td:nth-child(8){display:none!important}
  #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4),
  #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){display:table-cell!important}
- #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:10%!important}
- #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:14%!important}
+ #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:9%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:13%!important}
  #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:8%!important}
  #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:15%!important;text-align:left!important;padding-left:22px!important;white-space:normal!important;font-size:12.5px;color:var(--muted)}
- #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:17%!important;padding-right:22px!important;text-align:left!important}
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:16%!important;padding-right:22px!important;text-align:left!important}
  #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:9%!important}
- #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:9%!important;padding-left:16px!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:12%!important;padding-left:16px!important}
  #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:18%!important}
  #hubBoard .board-table th:nth-child(9){white-space:normal!important}
  #hubBoard .board-table td:nth-child(5) .msc-bar{margin:4px 7px 0!important}
  #hubBoard .board-table td:nth-child(5) .msc-meta{display:none!important}
  #hubBoard .board-table td:nth-child(5) .msc-ends{font-size:11px}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.3}
 }
 @media(min-width:761px) and (max-width:1280px){
  /* narrower windows: drop 4H context (the position line already says it) so the actions never spill */
@@ -3742,16 +3743,16 @@ function renderInstitutionalBoard(){
   });
   const html=rows.map(r=>{
     const kind=r._kind,status=boardStatus(r,kind),h=r.hub||{},dist=boardDistance(r,kind),shelf=boardShelf(r,kind);
-    const edge=kind==="near"?(r.near_edge==="up"?"Upper edge":"Lower edge"):kind==="live"?"Confirmed close":dist==null?"—":dist.toFixed(2)+"%";
+    const edge=kind==="live"?"Confirmed close":(kind==="near"||kind==="recent")?boardPositionLine(r,kind,dist,status[1]):dist==null?"":dist.toFixed(2)+"%";
     const posLine=boardPositionLine(r,kind,dist,status[1]),dotPct=boardDotPct(r);
     const dotCls=kind==="live"?(status[1]==="up"?" up":status[1]==="down"?" down":""):"";
     const metaLine=boardMetaLine(r,kind,shelf);
     const rangeCell=dotPct==null?"":'<div class="msc-bar"><div class="msc-track"></div><span class="msc-dot'+dotCls+'" style="left:'+dotPct.toFixed(1)+'%"></span></div><div class="msc-ends"><span>'+money(h.low)+'</span><span>'+money(h.high)+'</span></div>'+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
-    const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"—";
+    const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     return '<tr><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
       '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
-      '<td data-label="Hub low">'+(h.low==null?"—":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"—":money(h.high))+'</td>'+
-      '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"—":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
+      '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
+      '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
@@ -3797,7 +3798,7 @@ async function loadBoard() {
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
     '<th class="th-pos"><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Position ↕</button></th><th class="th-rng">Hub range</th><th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
     '<th class="nowrap-th">Next shelf / target</th><th>4H context</th><th>Analysis</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
-    '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels; unavailable values are shown as —.</div></div>';
+    '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels.</div></div>';
   BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
 }
 async function boardWatch(s, btn) {
