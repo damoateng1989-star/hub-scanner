@@ -1960,12 +1960,12 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4),
  #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){display:table-cell!important}
  #hubBoard .board-table th:nth-child(1),#hubBoard .board-table td:nth-child(1){width:8%!important}
- #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:12%!important}
+ #hubBoard .board-table th:nth-child(2),#hubBoard .board-table td:nth-child(2){width:15%!important}
  #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3){width:7%!important}
- #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:14%!important;text-align:left!important;padding-left:22px!important;white-space:normal!important;font-size:12.5px;color:var(--muted)}
- #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:14%!important;padding-right:22px!important;text-align:left!important}
+ #hubBoard .board-table th:nth-child(4),#hubBoard .board-table td:nth-child(4){width:13%!important;text-align:left!important;padding-left:22px!important;white-space:normal!important;font-size:12.5px;color:var(--muted)}
+ #hubBoard .board-table th:nth-child(5),#hubBoard .board-table td:nth-child(5){width:13%!important;padding-right:22px!important;text-align:left!important}
  #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:8%!important}
- #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:11%!important;padding-left:16px!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:10%!important;padding-left:16px!important}
  #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:26%!important}
  #hubBoard .board-table th:nth-child(9){white-space:normal!important}
  #hubBoard .board-table td:nth-child(5) .msc-bar{margin:4px 7px 0!important}
@@ -2046,6 +2046,33 @@ html[data-theme="light"] .bg-gauge i.up{background:#12805C}html[data-theme="ligh
  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1){order:1!important}
  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2){order:2!important}
  #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(n+3){order:4!important}
+}
+
+/* Hub board headers: one line each, lined up with their column */
+@media(min-width:761px){
+ #hubBoard .board-table th, #hubBoard .board-table th .board-sort{white-space:nowrap!important}
+ #hubBoard .board-table th:nth-child(9){white-space:nowrap!important}
+ #hubBoard .board-table th:nth-child(3),#hubBoard .board-table td:nth-child(3),
+ #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){text-align:right!important}
+ #hubBoard .board-table th:nth-child(3) .board-sort{margin-left:auto}
+ #hubBoard .board-table th:nth-child(11){text-align:right!important;padding-right:18px!important}
+ #hubBoard .board-table td:nth-child(11){padding-right:18px!important}
+ #hubBoard .board-symbol{display:flex!important;align-items:baseline!important;gap:6px!important;flex-wrap:wrap}
+ #hubBoard .board-symbol small{margin:0!important}
+}
+@media(min-width:761px){
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){text-align:left!important;padding-left:20px!important}
+ #hubBoard .board-table td:nth-child(2){overflow:hidden!important}
+}
+/* gauge labels sit at the two ends so they can't collide in a narrow column */
+.bg-ends{display:flex!important;justify-content:space-between!important;height:auto!important}
+.bg-ends span{position:static!important;transform:none!important}
+@media(max-width:760px){
+ /* cells are picked by position: their labels follow the header text, which can change */
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(6),#hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(7),
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(8),#hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(9),
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(10){display:none!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(5){display:block!important;overflow:visible!important}
 }
 </style>
 </head>
@@ -3758,7 +3785,7 @@ function boardGauge(r,kind,dir){
   // same look as the sidebar shelf gauge: a thin price line, the hub as a blue box, a tick for the last price
   const h=r.hub||{},lo=Number(h.low),hi=Number(h.high),p=Number(r.last_close);
   if(!Number.isFinite(lo)||!Number.isFinite(hi)||!Number.isFinite(p)||hi<lo)return "";
-  const w=Math.max(hi-lo,p*0.002),a=lo-w*0.18,b=hi+w*0.18;
+  const w=Math.max(hi-lo,p*0.002),a=lo-w*0.08,b=hi+w*0.08;
   const x=v=>Math.max(1.5,Math.min(98.5,(v-a)/(b-a)*100));
   const c=kind==="live"?(dir==="down"?" down":" up"):"";
   return '<div class="bg-gauge"><b style="left:'+x(lo).toFixed(1)+'%;width:'+(x(hi)-x(lo)).toFixed(1)+'%"></b><i class="'+c.trim()+'" style="left:'+x(p).toFixed(1)+'%"></i></div>'+
@@ -3862,11 +3889,11 @@ async function loadBoard() {
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
     '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')" title="Breakouts that already reached their target, failed or ran out of time">Finished</button></div></div>'+
     '<div class="board-frame"><div class="board-caption"><span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
-    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Instrument ↕</button></th>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'symbol\')">Ticker ↕</button></th>'+
     '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'status\')">Setup ↕</button></th>'+
-    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Last price ↕</button></th>'+
+    '<th><button class="board-sort" onclick="sortInstitutionalBoard(\'price\')">Price ↕</button></th>'+
     '<th class="th-pos"><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Position ↕</button></th><th class="th-rng">Hub range</th><th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
-    '<th class="nowrap-th">Next shelf / target</th><th>4H context</th><th>Analysis</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
+    '<th class="nowrap-th">Next shelf</th><th>4H context</th><th>Actions</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
     '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels.</div></div>';
   BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
 }
