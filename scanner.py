@@ -57,24 +57,47 @@ def load_4h(symbol: str, days: int) -> pd.DataFrame:
 
 
 
-def forming_volume(sym: str) -> float | None:
-    """The still-forming 4H candle's volume, projected to the full candle from the share of it traded so far
-    (the 30-min bars run ~15 min behind). None when there's no volume data: fail open."""
+PROFILE_DAYS = int(os.getenv("VOLUME_PROFILE_DAYS", 30))
+
+
+def forming_volume(sym: str, now: pd.Timestamp | None = None, bars: pd.DataFrame | None = None) -> float | None:
+    """The still-forming 4H candle's volume, projected to the full candle.
+
+    Volume isn't spread evenly: the first and last half hours trade far more than midday, so a straight-line
+    projection reads the afternoon candle as light every time (its busiest half hour, into the 4:00 close, hasn't
+    happened yet at 3:45). Instead, scale what has traded so far by how much of the full candle had usually traded
+    by the same point on the previous days. None when there's no volume data: fail open."""
     try:
-        bars = data.get_bars(sym, 5)
+        bars = data.get_bars(sym, PROFILE_DAYS) if bars is None else bars
         if bars is None or bars.empty or "Volume" not in bars.columns:
             return None
-        now = pd.Timestamp.now(tz="UTC")
-        start = engine.current_candle_start(now).tz_convert("UTC")
+        now = pd.Timestamp.now(tz="UTC") if now is None else now
+        start_ny = engine.current_candle_start(now)
+        start = start_ny.tz_convert("UTC")
         part = bars[bars.index >= start]
         if part.empty:
             return None
-        length = (engine.MID_MIN - engine.OPEN_MIN) if engine.current_candle_start(now).hour < 13 else (engine.CLOSE_MIN - engine.MID_MIN)
-        covered = (part.index[-1] + pd.Timedelta(minutes=30) - start).total_seconds() / 60
-        frac = min(max(covered / length, 0.1), 1.0)
-        return float(part["Volume"].sum()) / frac
-    except Exception:
+        so_far = float(part["Volume"].sum())
+        covered = part.index[-1] + pd.Timedelta(minutes=30) - start          # the bars in hand cover this much of the candle
+        length = pd.Timedelta(minutes=(engine.MID_MIN - engine.OPEN_MIN) if start_ny.hour < 13 else (engine.CLOSE_MIN - engine.MID_MIN))
+        b = bars[bars.index < start].copy()
+        ny = b.index.tz_convert(engine.NY)
+        off = (ny - ny.normalize()) - pd.Timedelta(hours=start_ny.hour, minutes=start_ny.minute)   # time since the same slot's start
+        b = b[(off >= pd.Timedelta(0)) & (off < length)]
+        off = off[(off >= pd.Timedelta(0)) & (off < length)]
+        days = b.groupby(b.index.tz_convert(engine.NY).date)
+        full = days["Volume"].sum()
+        early = b[off < covered].groupby(b[off < covered].index.tz_convert(engine.NY).date)["Volume"].sum()
+        both = full.index.intersection(early.index)
+        if len(both) >= 5 and early[both].sum() > 0:
+            share = float(early[both].sum() / full[both].sum())        # e.g. 0.68: by 3:30 the afternoon candle is usually 68% done
+            return so_far / min(max(share, 0.05), 1.0)
+        frac = min(max(covered / length, 0.1), 1.0)                     # not enough history: the old straight-line guess
+        return so_far / frac
+    except Exception as e:
+        log.info("forming volume for %s failed: %s", sym, e)
         return None
+
 
 def _money(x: float) -> str:
     return f"${x:,.2f}"
