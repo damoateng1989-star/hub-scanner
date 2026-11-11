@@ -533,7 +533,7 @@ def chart(sym: str, tf: str = "4h", lab_mode: bool = False) -> dict:
     hubs = [dict(start=t(idx[h["start_i"]]), end=t(idx[h["end_i"]]), low=round(h["low"], 2), high=round(h["high"], 2),
                  sessions=h["sessions"], active=h["active"]) for h in res["hubs"]]
     trades = [dict(time=t(idx[x["i0"]]), direction=x["direction"], target=round(x["target"], 2),
-                   outcome=x["outcome"], chase=x["chase"],
+                   outcome=x["outcome"], chase=x["chase"], ret=None if x.get("ret") is None else round(x["ret"], 3),
                    outcome_time=t(idx[x["oi"]]) if x["oi"] is not None else None) for x in res["trades"]]
     out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st,
                stats=engine.stats(res["trades"]), watching=db.get_ticker(sym) is not None)

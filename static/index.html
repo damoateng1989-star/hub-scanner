@@ -3569,8 +3569,16 @@ async function loadGrade(sym) {
     if (OPT_CACHE[sym] && $("bfOpt")) $("bfOpt").innerHTML = optionsHTML(OPT_CACHE[sym]); }
 }
 function gradeFor(st, dir) {
-  const G = GRADE[BRIEF_SYM]; if (!G || G === "loading") return null;
-  return G[dir === -1 ? "down" : "up"];
+  const G = GRADE[BRIEF_SYM];
+  if (G && G !== "loading") return G[dir === -1 ? "down" : "up"];
+  // the ~2-year grade isn't in (still loading, or it failed): grade from the chart's own history meanwhile
+  const tr = ((BRIEF_CHART && BRIEF_CHART.trades) || []).filter(t => t.outcome !== "pending" && t.ret != null && t.direction === (dir === -1 ? -1 : 1));
+  if (!BRIEF_CHART || !BRIEF_CHART.trades) return null;
+  const n = tr.length;
+  if (n < 5) return {grade: "?", word: "Not enough history", n, short: true};
+  const avg = tr.reduce((a, t) => a + t.ret, 0) / n, win = Math.round(1000 * tr.filter(t => t.ret > 0).length / n) / 10;
+  const [g, w] = avg >= 1 ? ["A", "Strong"] : avg > 0 ? ["B", "Fair"] : avg >= -1 ? ["C", "Weak"] : ["D", "Poor"];
+  return {grade: g, word: w, n, avg: Math.round(avg * 100) / 100, win, short: true};
 }
 const gradeVerb = (g) => g.avg > 0 ? `made <b>${g.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(g.avg).toFixed(2)}%</b>`;
 function gradeHTML(st) {
@@ -3579,10 +3587,11 @@ function gradeHTML(st) {
   if (!live && k !== "forming" && k !== "watching") return "";
   const L = LIVE[BRIEF_SYM], px = L && L.price != null ? L.price : st.last_close, h = st.hub;
   const dir = live ? (k === "breakout_up" ? 1 : -1) : st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : (h.high - px) <= (px - h.low) ? 1 : -1;   // in a hub: grade the side price is nearest
-  const g = gradeFor(st, dir); if (!g) return "";
+  const g = gradeFor(st, dir);
+  if (!g) return GRADE[BRIEF_SYM] === "loading" || !BRIEF_CHART ? `<div class="sg gq"><span class="sg-b">…</span><div><b>Setup grade</b><small>Checking how this setup has done on ${esc(BRIEF_SYM)}…</small></div></div>` : "";
   const what = dir === 1 ? "Long breakouts" : "Short breakdowns";
   const line = g.grade === "?" ? `Only ${g.n} past ${what.toLowerCase()} on ${esc(BRIEF_SYM)}, too few to grade.`
-    : `${what} on ${esc(BRIEF_SYM)} ${gradeVerb(g)} per trade on average (${g.win}% winners, ${g.n} trades, ~2 years).`;
+    : `${what} on ${esc(BRIEF_SYM)} ${gradeVerb(g)} per trade on average (${g.win}% winners, ${g.n} trades, ${g.short ? "~9 months" : "~2 years"}).`;
   const warn = g.grade === "D" ? " Small wins, bigger losses: treat a trigger here with extra caution." : g.grade === "C" ? " Slightly negative so far." : "";
   return `<div class="sg ${GRADE_CLS[g.grade]}"><span class="sg-b">${g.grade}</span><div><b>Setup grade: ${g.word}</b><small>${line}${warn}</small></div></div>`;
 }
