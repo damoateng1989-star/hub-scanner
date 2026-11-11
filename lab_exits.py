@@ -56,6 +56,8 @@ FILTERS = [   # key, label, test(features) -> bool
     ("trend", "With the stock's own trend (vs its 50-day)", lambda f: f["with_trend"] is True),
     ("nochase", "Not chasing (entry in the first half)", lambda f: not f["chase"]),
     ("margin", "Close clears the edge by 0.2 ATR+", lambda f: f["margin"] >= 0.2),
+    ("strong", "Strong breaks only (volume 1.2×+ and 0.2 ATR+ past the edge)", lambda f: f["margin"] >= 0.2 and (f.get("rvol") is None or f["rvol"] >= 1.2)),
+    ("weak", "Weak breaks only (missing either)", lambda f: not (f["margin"] >= 0.2 and (f.get("rvol") is None or f["rvol"] >= 1.2))),
     ("rr", "Room to the target: reward:risk 1.5+", lambda f: _has(f, "rr", lambda v: v >= 1.5)),
     ("tight", "Tight pattern (1 ATR wide or less)", lambda f: f["width"] <= 1.0),
     ("long", "Long pattern (4+ sessions)", lambda f: f["sessions"] >= 4),

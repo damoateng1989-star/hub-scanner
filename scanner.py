@@ -318,6 +318,12 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 msg = format_event(sym, e)
                 if e["type"] in ("breakout", "breakdown"):
                     msg += volume_line(c4, e["time"])
+                    try:
+                        up_ = e["type"] == "breakout"
+                        msg += strength_line(c4, res, c4.index.get_loc(e["time"]), 1 if up_ else -1,
+                                             e["high"] if up_ else e["low"], e["close"])
+                    except Exception:
+                        pass
                 if e["type"] in ("breakout", "breakdown", "hub_formed"):
                     msg += earnings.alert_line(sym)
                 if e["type"] in ("breakout", "breakdown") and e["time"] == c4.index[-1]:
@@ -360,6 +366,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 if e["time"] <= b or e["time"] != c4.index[-1]:
                     continue                 # only the newest candle: no burst of old breaks after downtime
                 msg = format_pattern_event(sym, e)
+                if e["kind"] != "gapfade" and e.get("i0") is not None:
+                    msg += strength_line(c4, res, e["i0"], e["direction"], e["edge"], e["close"])
                 if e["type"] in ("breakout", "breakdown"):
                     msg += earnings.alert_line(sym)
                 if e["type"] in ("breakout", "breakdown"):
@@ -383,6 +391,17 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         log.warning("early-read check failed for %s: %s", sym, ex)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
+
+
+def strength_line(c4: pd.DataFrame, res: dict, i: int, d: int, edge: float, close: float) -> str:
+    """'Strength: 💪 Strong breakout (volume 1.6× normal, closed 0.35 ATR past the edge)'"""
+    g = engine.break_strength(c4, res["atr"], i, d, edge, close)
+    if not g:
+        return ""
+    what = "breakout" if d == 1 else "breakdown"
+    if g["word"] == "strong":
+        return f"\nStrength: 💪 Strong {what} ({g['why']})"
+    return f"\nStrength: ⚠️ Weak {what}: {g['weak_why']} ({g['why']}). Weak breaks fail more often."
 
 
 def volume_line(c4: pd.DataFrame, t) -> str:

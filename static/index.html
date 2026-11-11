@@ -1701,6 +1701,12 @@ html[data-theme="light"] .mdet { border-color: #E4E3DC; } html[data-theme="light
 html[data-theme="light"] .pgoal { background: #fff; border-color: #E4E3DC; } html[data-theme="light"] .pgoal-bar { background: #EFEEE9; }
 .vol-chip { display: inline-block; margin: 5px 0 0; padding: 1px 7px; border-radius: 6px; font: 600 11px var(--sans); border: 1px solid #2E323B; color: #C3C7CF; white-space: nowrap; }
 .board-table td .vol-chip { display: block; width: max-content; }
+.str-chip { display: inline-flex; align-items: center; gap: 4px; margin: 5px 0 0 6px; padding: 2px 8px; border-radius: 999px; font: 700 11px var(--sans); letter-spacing: .01em; white-space: nowrap; vertical-align: middle; }
+.str-chip.strong { color: #3DD68C; background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.45); }
+.str-chip.weak { color: #E5A13D; background: rgba(229,161,61,.10); border: 1px dashed rgba(229,161,61,.55); }
+html[data-theme="light"] .str-chip.strong { color: #15803d; background: #ecfdf3; border-color: #86efac; }
+html[data-theme="light"] .str-chip.weak { color: #B7791F; background: #fffbeb; border-color: #fcd34d; }
+.board-table td .str-chip { margin-left: 0; display: flex; width: max-content; }
 .vol-chip.strong { color: #3DD68C; border-color: rgba(61,214,140,.4); } .vol-chip.light { color: #E5A13D; border-color: rgba(229,161,61,.4); }
 html[data-theme="light"] .vol-chip { color: #4b5563; border-color: #E4E3DC; } html[data-theme="light"] .vol-chip.strong { color: #15803d; border-color: #bbf7d0; } html[data-theme="light"] .vol-chip.light { color: #B7791F; border-color: #fde68a; }
 .vol-split { margin-top: 12px; padding: 14px 16px; border-radius: 12px; border: 1px solid #23262E; } .vol-split > b { display: block; margin-bottom: 6px; }
@@ -3497,15 +3503,16 @@ function briefHead(sym, st) {
   const hubNote = k === "forming" || k === "watching" ? `<p class="bf-prev">Hub: resting, no hub trade yet</p>` : "";
   let tag = "";
   if (st) {
-    if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">${brokeWord(k === "breakout_up", st.target_kind)}</span>`;
-    else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)}: ${brokeWord(other.state === "breakout_up").toLowerCase()}</span>` + hubNote;
+    if (hubLive) tag = `<span class="bf-tag" style="--c:${stateColor(k)}">${brokeWord(k === "breakout_up", st.target_kind)}</span>${strengthChip(st.strength, k === "breakout_up")}`;
+    else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)}: ${brokeWord(other.state === "breakout_up").toLowerCase()}</span>${strengthChip(other.strength, other.state === "breakout_up")}` + hubNote;
     else if (k === "forming" || k === "watching") {
       const hh = st.hub, px = (LIVE[sym] && LIVE[sym].price) || st.last_close, inside = hh && px >= hh.low && px <= hh.high;
       tag = `<span class="bf-tag rest">${inside || k === "forming" ? "Inside a hub" : STATE_WORD[k]} · no trade yet</span>`; }
     else tag = `<span class="bf-tag rest">No setup in play</span>`;
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
   }
-  if (hubLive && st.rvol != null) tag += `<p class="bf-prev">${volChip(st.rvol)} on the breakout candle</p>`;
+  if (hubLive && st.strength) tag += `<p class="bf-prev">${st.strength.word === "strong" ? "Strong" : "Weak"}: ${esc(st.strength.word === "strong" ? st.strength.why : (st.strength.weak_why || "") + " (" + st.strength.why + ")")}</p>`;
+  else if (hubLive && st.rvol != null) tag += `<p class="bf-prev">${volChip(st.rvol)} on the breakout candle</p>`;
   $("bfHead").innerHTML = `<h3>${esc(sym)}</h3>${tag}
     <p class="vz-sum">${vizSummary(st)}</p><div class="bf-live" id="bfLive"></div>
     ${heroStats(st)}${vizScaleHTML(st)}<div id="bfWallTop"></div>`;
@@ -3744,7 +3751,7 @@ function briefHTML(sym, st, chart) {
   const setupsHTML = others.length ? `<p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
-      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}`;
+      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.strength ? ` ${strengthChip(x.strength, x.state === "breakout_up")}` : ""}${x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}`;
       else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
       else if (x.kind.startsWith("double")) t = x.kind === "double_top"
         ? `<b>Double top</b>: two peaks near <b>${money(x.peak)}</b>. A 4-hour close <b>below the neckline ${money(x.neck)}</b> is the short setup.`
@@ -3962,6 +3969,12 @@ function volSplit(v) {
     <span>${v[k].n} closed · reached the shelf ${v[k].reached} · win rate ${v[k].win_rate ?? "–"}${v[k].win_rate == null ? "" : "%"} · avg ${v[k].avg_ret == null ? "–" : (v[k].avg_ret > 0 ? "+" : "") + v[k].avg_ret + "%"}</span></div>`).join("")}
     <p class="note" style="margin:6px 0 0">Labels only: volume doesn't change the rules. If strong-volume breakouts clearly win, it can become one.</p></div>`;
 }
+function strengthChip(g, up) {      // strong = volume 1.2x+ AND the close cleared the edge by 0.2 ATR+; else weak
+  if (!g || !g.word) return "";
+  const what = up ? "breakout" : "breakdown", strong = g.word === "strong";
+  const tip = strong ? `Strong ${what}: ${g.why}` : `Weak ${what}: ${g.weak_why || ""} (${g.why}). Weak breaks fail more often.`;
+  return `<span class="str-chip ${g.word}" title="${esc(tip)}">${strong ? "💪 Strong" : "⚠️ Weak"} ${what}</span>`;
+}
 const brokeWord=(up,kind)=>(up?"Broke out":"Broke down")+" · heading to "+(kind==="atr"?"target":"next shelf");
 function boardStatus(r,kind){
   if(kind==="live") return r.state==="breakdown"?[brokeWord(false,r.target_kind),"down"]:[brokeWord(true,r.target_kind),"up"];
@@ -4057,7 +4070,7 @@ function renderInstitutionalBoard(){
     const rangeCell=boardGauge(r,kind,status[1])+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     return '<tr><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -4288,7 +4301,7 @@ function renderSetupBoard() {
         : live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches`
         : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>${x.kind === "gapfade" ? "1D" : "4H"}</small></div></td>
-        <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</td><td>${money(x.last_close)}</td>
+        <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}${live ? strengthChip(x.strength, x.state === "breakout_up") : ""}</td><td>${money(x.last_close)}</td>
         <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side res">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side sup">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
     </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" ? "daily" : "4-hour"} close.</div>`)

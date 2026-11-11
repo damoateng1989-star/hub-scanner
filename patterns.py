@@ -547,6 +547,8 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             t = L["trade"]
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
+            if k != "gapfade":                   # gap fades run on daily candles
+                row["strength"] = engine.break_strength(c4, res["atr"], t["i0"], t["direction"], t["edge"], float(close.iloc[t["i0"]]))
             if k == "sr":
                 row.update(touches=t["level"]["touches"])
             elif k in ("fail_down", "fail_up"):
@@ -603,7 +605,8 @@ def events(sym: str, res: dict, pa: dict) -> list[dict]:
     idx = res["close"].index
     ev = []
     for t in pa["trades"]:
-        ev.append(dict(type="breakout" if t["direction"] == 1 else "breakdown", kind=t["kind"], time=idx[t["i0"]],
+        ev.append(dict(type="breakout" if t["direction"] == 1 else "breakdown", kind=t["kind"], time=idx[t["i0"]], i0=t["i0"],
+                       direction=t["direction"],
                        close=t["entry"], edge=t["edge"], target=t["target"], shelf=t["shelf"],
                        touches=t.get("level", {}).get("touches"), stop=t.get("stop"), gap_pct=t.get("gap_pct"),
                        gap_day=t.get("gap_day")))

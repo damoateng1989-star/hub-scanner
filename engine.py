@@ -295,6 +295,30 @@ def rvol(c4: pd.DataFrame, i: int, n: int = 20) -> float | None:
         return None
 
 
+STRONG_VOL, STRONG_MARGIN = 1.2, 0.2    # strong break = volume 1.2x normal+ AND the close clears the edge by 0.2 ATR+
+
+
+def break_strength(c4: pd.DataFrame, atr, i: int, d: int, edge: float, close: float) -> dict | None:
+    """Strong or weak breakout/breakdown, from the breakout candle itself: volume vs a normal candle at that time,
+    and how far the close got past the edge (in ATRs). Strong needs both; anything less is weak."""
+    try:
+        A = float(atr.iloc[i] if hasattr(atr, "iloc") else atr[i])
+        if not A or A != A:
+            return None
+        r = rvol(c4, i)
+        m = round(d * (close - edge) / A, 2)
+        vol_ok = r is None or r >= STRONG_VOL
+        strong = vol_ok and m >= STRONG_MARGIN
+        why = []
+        why.append(f"volume {r:.1f}× normal" if r is not None else "volume unknown")
+        why.append(f"closed {m:.2f} ATR past the edge")
+        weak_bits = ([] if vol_ok else ["light volume"]) + ([] if m >= STRONG_MARGIN else ["barely cleared the edge"])
+        return dict(word="strong" if strong else "weak", rvol=r, margin=m, why=", ".join(why),
+                    weak_why=" and ".join(weak_bits) or None)
+    except Exception:
+        return None
+
+
 def rvol_word(r: float | None) -> str | None:
     if r is None:
         return None
@@ -344,6 +368,7 @@ def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         t = next((t for t in res["trades"] if t["outcome"] == "pending"), None) if st.get("state") in ("breakout_up", "breakdown") else None
         if t:
             st["rvol"] = rvol(c4, t["i0"])
+            st["strength"] = break_strength(c4, res["atr"], t["i0"], t["direction"], t["edge"], float(res["close"].iloc[t["i0"]]))
     except Exception:
         pass
     try:
