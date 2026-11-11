@@ -3735,13 +3735,13 @@ function briefHTML(sym, st, chart) {
     ? `${op.kind === "gapfade" ? "Gap fade" : esc(op.name)}: ${op.state === "breakout_up" ? "broke out" : "broke down"}, aim ${money(op.target)}`
     : `${op.kind === "gapfade" ? "Gap fade" : esc(op.name)}: ${setupWord(op)[0].toLowerCase()}` : "";
   const row = (id, title, prev, body) => `<details class="vz-row" id="${id}"><summary><span class="vz-t">${title}</span><span class="vz-p">${prev}</span></summary><div class="vz-b">${body}</div></details>`;
-  return `${row("bf-setup", "Game plan", planPrev, plan2)}
+  return `<div class="vz-card">${row("bf-setup", "Game plan", planPrev, plan2)}
     ${others.length ? row("bf-other", "Other setups", otherPrev, setupsHTML) : ""}
     <details class="vz-row" id="bf-walls" hidden ontoggle="this.dataset.touched=1"><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev"></span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
     ${row("bf-news", live ? "Why it may be moving" : "News", `<span id="bfNewsSum">${newsSum(sym)}</span>`, `<div id="bfNews">${newsHTML(sym)}</div>`)}
     ${row("bf-options", `Options swing <span class="ox-edu">Educational</span>`, "Calls or puts for this setup", `<div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>`)}
     ${row("bf-history", "Track record", chart && chart.stats ? (chart.stats.n ? `${chart.stats.n} breakouts · ${chart.stats["follow-through"] ?? "–"}% reached the shelf` : "No past breakouts yet") : `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>${add}`)}
-    <p class="bf-fine bf-legal">Based on past price behavior and NextShelf's hub rules. For education only, not financial advice.</p>`;
+    </div><p class="bf-fine bf-legal">Based on past price behavior and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
 function orderPlan(h, dir, shelf) {
@@ -4838,6 +4838,24 @@ html[data-theme="light"] #brief .bf-kick { color: #0d1117 !important; }
 html[data-theme="light"] #brief .vz-sum { color: #111827; }
 html[data-theme="light"] #brief .bf-earn { color: #78350f !important; background: #fffbeb !important; border-color: #fcd34d !important; }
 html[data-theme="light"] #brief .bf-earn b { color: #92400e !important; }
+
+/* Shelf card: the top in a bordered panel; the rows in a second bordered panel with dividers */
+#brief .bf-hero { background: #15171C !important; border: 1px solid #292A2D !important; border-radius: 20px !important; margin: 16px 16px 12px !important; padding: 20px 20px 18px !important; }
+#brief .vz-card { border: 1px solid #292A2D; border-radius: 20px; background: #15171C; padding: 0 18px; }
+#brief .vz-card .vz-row { border-bottom: 1px solid #26282D; }
+#brief .vz-card .vz-row:last-of-type, #brief .vz-card .vz-row:not([hidden]):last-child { border-bottom: 0; }
+#brief .vz-row summary { align-items: center !important; padding: 16px 0 !important; }
+#brief .vz-row summary::after { content: "" !important; flex: 0 0 auto; width: 7px; height: 7px; margin: -3px 2px 0 4px; border-right: 1.5px solid #8A909B; border-bottom: 1.5px solid #8A909B; transform: rotate(45deg); transition: transform .15s; }
+#brief .vz-row[open] summary::after { transform: rotate(-135deg); margin-top: 3px; }
+#brief .vz-row .vz-t { flex: 0 0 auto; }
+#brief .vz-row .vz-p { flex: 1 1 auto; min-width: 0; margin-left: auto; }
+#brief .vz-row[open] { padding-bottom: 4px; }
+#brief .vz-row[open] > summary { border-bottom: 1px dashed #26282D; margin-bottom: 14px; }
+#brief .bf-legal { margin: 14px 4px 0; text-align: center; }
+@media (max-width: 899px) { #brief .bf-hero { margin: 12px 12px 10px !important; padding: 18px 16px 16px !important; } #brief .vz-card { padding: 0 14px; border-radius: 18px; } }
+html[data-theme="light"] #brief .bf-hero, html[data-theme="light"] #brief .vz-card { background: #fff !important; border-color: #E5E7EB !important; }
+html[data-theme="light"] #brief .vz-card .vz-row, html[data-theme="light"] #brief .vz-row[open] > summary { border-color: #EEF0F3; }
+html[data-theme="light"] #brief .vz-row summary::after { border-color: #9CA3AF; }
 </style>
 </body>
 </html>
