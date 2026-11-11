@@ -43,6 +43,7 @@ GROUPS = [  # key, label, pattern kinds
     ("channel", "Channels", ("channel_up", "channel_down")),
     ("sr", "Support & resistance", ("sr",)),
     ("gapfade", "Gap fade & rip", ("gapfade",)),
+    ("fakeout", "Failed breakdowns & breakouts", ("fail_down", "fail_up")),
 ]
 GROUP_OF = {k: g for g, _, kinds in GROUPS for k in kinds}
 
@@ -213,8 +214,9 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
             out.append(f)
             continue
         ex = {}
-        for key, stop, hz in (("edge", edge, s.horizon), ("mid", mid, s.horizon), ("far", far, s.horizon),
-                              ("edge20", edge, 20)):
+        cur = float(t["stop"]) if grp == "fakeout" else edge   # fakeouts: the live rule's stop is the fake-out extreme
+        for key, stop, hz in (("edge", cur, s.horizon), ("mid", mid, s.horizon), ("far", far, s.horizon),
+                              ("edge20", cur, 20)):
             ex[key] = _exit(close, i0, d, entry, target, stop, hz)
         ex["half"] = _exit_half(close, i0, d, entry, target, edge, risk_mid if risk_mid > 0 else d * (entry - edge), s.horizon)
         f["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}

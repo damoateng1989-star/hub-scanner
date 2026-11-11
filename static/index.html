@@ -3744,11 +3744,13 @@ function briefHTML(sym, st, chart) {
   const setupsHTML = others.length ? `<p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
-      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).`;
+      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}`;
       else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
       else if (x.kind.startsWith("double")) t = x.kind === "double_top"
         ? `<b>Double top</b>: two peaks near <b>${money(x.peak)}</b>. A 4-hour close <b>below the neckline ${money(x.neck)}</b> is the short setup.`
         : `<b>Double bottom</b>: two lows near <b>${money(x.peak)}</b>. A 4-hour close <b>above the neckline ${money(x.neck)}</b> is the long setup.`;
+      else if (x.kind === "fail_down") t = `<b>Failed breakdown?</b> It closed below its hub (${money(x.hub_bottom)}–${money(x.hub_top)}). A 4-hour close <b>back above ${money(x.trigger_px)}</b> on strong volume in the next ${x.candles_left} candle${x.candles_left === 1 ? "" : "s"} is the long setup. Wrong below the fake-out low <b>${money(x.stop)}</b>.`;
+      else if (x.kind === "fail_up") t = `<b>Failed breakout?</b> It closed above its hub (${money(x.hub_bottom)}–${money(x.hub_top)}). A 4-hour close <b>back below ${money(x.trigger_px)}</b> on strong volume in the next ${x.candles_left} candle${x.candles_left === 1 ? "" : "s"} is the short setup. Wrong above the fake-out high <b>${money(x.stop)}</b>.`;
       else if (x.kind === "gapfade") t = `<b>Post-earnings gap fade &amp; rip</b>: gapped up ${x.gap_pct}% and faded to <b>${money(x.lower)}</b>. A daily close <b>above the gap-day high ${money(x.upper)}</b> in the next ${x.days_left} day${x.days_left === 1 ? "" : "s"} is the long setup (stop at the fade low, target 2× the risk). A close below ${money(x.lower)} kills it.`;
       else if (x.kind.startsWith("flag")) t = `<b>${esc(x.name)}</b> after a ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}% pole. A 4-hour close <b>${x.trigger === "up" ? "above " + money(x.upper) : "below " + money(x.lower)}</b> continues the move.`;
       else t = `<b>${esc(x.name)}</b> forming over ${x.sessions} sessions. Lines now: top <b>${money(x.upper)}</b>, bottom <b>${money(x.lower)}</b>. A 4-hour close outside a line is the trade.`;
@@ -4205,7 +4207,7 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Estimates use Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["flag", "Flags"], ["double", "Double tops & bottoms"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"]];
+const SETUP_TABS = [["hub", "Hubs"], ["flag", "Flags"], ["double", "Double tops & bottoms"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"], ["fakeout", "Failed breakdowns"]];
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
@@ -4213,6 +4215,7 @@ const SETUP_ICON = {
   sr: '<path d="M3 7h18M3 17h18"/><path d="M6 15l3-6 3 4 3-5 3 6" opacity=".6"/>',
   flag: '<path d="M5 20V5"/><path d="M5 5l4-1 0 0"/><path d="M5 5l3 6"/><path d="M9 10l9-3M9 15l9-3"/>',
   double: '<path d="M3 18l4-11 4 7 4-7 4 11"/><path d="M3 14h18" stroke-dasharray="2 2"/>',
+  fakeout: '<rect x="3" y="7" width="12" height="6" rx="1.5" opacity=".6"/><path d="M5 10l3 1 3 7 3-6 3-6 4-2"/><path d="M18 3h3v3"/>',
   gapfade: '<path d="M3 17h4"/><path d="M8 7v10" opacity=".5"/><path d="M8 9l3 6 3-2 3-7 3 1"/><path d="M8 7h12" stroke-dasharray="2 2"/>',
 };
 const setupIcon = (k) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SETUP_ICON[k]}</svg>`;
@@ -4250,6 +4253,7 @@ function setupWord(x) {
   if (x.state === "testing") return [x.near === "resistance" ? "Testing resistance" : "Testing support", x.near === "resistance" ? "near-res" : "near-sup"];
   if (x.kind && x.kind.startsWith("double")) return x.near_edge ? ["Near the neckline", "near"] : ["Second peak in", "hub"];
   if (x.kind && x.kind.startsWith("flag")) return x.near_edge ? ["Pressing the flag", "near"] : ["Flag forming", "hub"];
+  if (x.kind === "fail_down" || x.kind === "fail_up") return x.near_edge ? [x.trigger === "up" ? "Near the hub top" : "Near the hub bottom", "near"] : [x.trigger === "up" ? "Broke down, watching" : "Broke out, watching", "hub"];
   if (x.kind === "gapfade") return x.near_edge ? ["Near the gap-day high", "near"] : ["Gapped and faded", "hub"];
   if (x.near_edge) return [x.near_edge === "up" ? "Near the top line" : "Near the bottom line", "near"];
   return ["Forming", "hub"];
@@ -4272,12 +4276,15 @@ function renderSetupBoard() {
     sr: "Horizontal levels price has tested 3 or more times. The trade is a 4-hour close through the level, aiming for the next level or shelf.",
     flag: "A sharp move (the pole), then a short pause drifting against it. The trade is a 4-hour close out of the flag in the direction of the pole.",
     double: "Two tests of the same high (or low) with a dip between. The trade is a 4-hour close through the neckline, the middle of the M (or W).",
+    fakeout: "A hub breaks one way and traps traders, then within 3 candles a 4-hour close goes back through the OTHER side of the hub on 1.2× normal volume. A failed breakdown (close below the hub, then back above the top) is a long; a failed breakout is a short. Wrong on a close past the fake-out low (or high). Aim: the next shelf.",
     gapfade: "A stock gaps up (usually on earnings), sells off from the gap, then rips. The trade is a daily close back above the gap-day high within 5 days. Stop at the low of the fade, target 2× that risk. Size off the risk, not a fixed %. It fires on the shape; whether the gap was earnings isn't checked yet." }[SETUP_TAB];
   $("setupBoard").innerHTML = lock + `<div class="beta-note"><b>Beta: new setup, too few results to judge yet.</b> Hubs are NextShelf's tested setup. This one's track record builds on the <a href="#results">Results</a> page.</div><p class="setup-about">${about}</p>` + (rows.length ? `<div class="board-frame"><div class="board-scroll"><table class="board-table setup-table"><thead><tr>
     <th>Instrument</th><th>Setup</th><th>Status</th><th>Last price</th><th>Upper</th><th>Lower</th><th>Target</th><th>Context</th><th>Analysis</th></tr></thead><tbody>
     ${rows.map(x => { const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown";
       const up = live ? (x.state === "breakout_up" ? x.edge : null) : x.upper, lo = live ? (x.state === "breakdown" ? x.edge : null) : x.lower;
-      const ctx = x.kind === "gapfade" ? (live ? `day ${x.candles + 1}/10 · stop ${money(x.stop)}` : `gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`)
+      const fk = x.kind === "fail_down" || x.kind === "fail_up";
+      const ctx = fk ? (live ? `${x.candles}/10 candles · stop ${money(x.stop)}` : `trigger ${money(x.trigger_px)} · ${x.candles_left} candle${x.candles_left === 1 ? "" : "s"} left`)
+        : x.kind === "gapfade" ? (live ? `day ${x.candles + 1}/10 · stop ${money(x.stop)}` : `gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`)
         : live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches`
         : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
       return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>${x.kind === "gapfade" ? "1D" : "4H"}</small></div></td>
@@ -4285,7 +4292,7 @@ function renderSetupBoard() {
         <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side res">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side sup">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
         <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
     </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" ? "daily" : "4-hour"} close.</div>`)
-    + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup is in beta. It works on daily closes with a fixed 2× risk target, not the hub rules." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
+    + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup is in beta. It works on daily closes with a fixed 2× risk target, not the hub rules." : SETUP_TAB === "fakeout" ? "This setup is in beta. It acts on a 4-hour close and aims for the next shelf, but the stop is the fake-out low (or high), not the hub edge." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
 }
 let RECORD_PAT = "hub";
 
@@ -4699,7 +4706,8 @@ async function loadRecord() {
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
   const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"],
-    ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"]];
+    ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"],
+    ["fail_down", "Failed breakdowns"], ["fail_up", "Failed breakouts"]];
   $("record").innerHTML = `
     <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
       const tiny = x.closed && x.closed < 5;

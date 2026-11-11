@@ -432,7 +432,7 @@ function render(d) {
     : `<p class="note">No completed breakouts in this period yet.</p>`}
     ${d.setups ? `<h2>Other <em>setups</em> <small style="font-size:12px;color:var(--snap)">beta</small></h2>
       ${(() => {
-        const rows = [["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"]];
+        const rows = [["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"], ["fail_down", "Failed breakdowns"], ["fail_up", "Failed breakouts"]];
         const withN = [], zero = [];
         rows.forEach(([k, l]) => { const x = d.setups.stats[k] || {}; (x.n ? withN : zero).push([k, l, x]); });
         const rowHtml = withN.map(([k, l, x]) => x.n < 5
@@ -529,7 +529,7 @@ function render(d) {
   // other setups: triangles (yellow), channels (teal), support/resistance levels (dotted)
   if (d.setups) {
     d.setups.lines.forEach(l => {
-      const col = l.kind === "triangle" ? "#F2C14E" : l.kind.startsWith("flag") ? "#B48CFF" : l.kind.startsWith("double") ? "#FF6FAE" : l.kind === "gapfade" ? "#FF9F43" : "#2FD4C0";
+      const col = l.kind === "triangle" ? "#F2C14E" : l.kind.startsWith("flag") ? "#B48CFF" : l.kind.startsWith("double") ? "#FF6FAE" : l.kind === "gapfade" ? "#FF9F43" : l.kind.startsWith("fail") ? "#5AC8FA" : "#2FD4C0";
       [["ua", "ub"], ["la", "lb"]].forEach(([a, b]) => {
         const ser = chart.addLineSeries({ color: col, lineWidth: l.live ? 2 : 1, lineStyle: l.live ? LightweightCharts.LineStyle.Solid : LightweightCharts.LineStyle.Dotted,
                                           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });

@@ -407,6 +407,17 @@ def format_pattern_event(sym: str, e: dict) -> str:
                 f"Entry {_money(e['close'])}, stop {_money(e.get('stop'))} (−1R), target {_money(e['target'])} (+2R).\n"
                 f"Size off the risk ({_money(risk)} a share), not a fixed %. Beta: the shape is measured, the earnings link isn't.\n"
                 f"Day closed: {candle_close(e['time'])}")
+    if e["kind"] in ("fail_down", "fail_up"):
+        up = e["kind"] == "fail_down"
+        d = 1 if up else -1
+        reached = (e["close"] - e["target"]) * d >= 0
+        return (f"{'🔄' if up else '🔃'} {sym}: {'Failed breakdown' if up else 'Failed breakout'}. It closed "
+                f"{'below' if up else 'above'} its hub, then the 4H candle just closed back {'ABOVE the hub top' if up else 'BELOW the hub bottom'} "
+                f"{_money(e['edge'])} on strong volume.\n"
+                f"Setup: {patterns.KINDS[e['kind']]} (beta: too few results to judge yet; hubs are the tested setup)\n"
+                + plan_lines(e["close"], e.get("stop") or e["edge"], e["target"], d, reached, e.get("shelf")).replace(
+                    "(the loss is wherever that close lands)", f"(past the fake-out {'low' if up else 'high'}: the trap failed)")
+                + f"\nCandle closed: {candle_close(e['time'])}")
     up = e["type"] == "breakout"
     d = 1 if up else -1
     name = patterns.KINDS[e["kind"]].lower()

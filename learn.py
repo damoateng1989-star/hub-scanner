@@ -341,6 +341,19 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
          ("A stock gaps up 8% on earnings and closes near its low. Two days later it closes above the gap-day high. What happened?",
           ["A gap fade and rip triggered", "A double top formed", "Nothing; it's too late"],
           0, "Gap, fade, then a close back above the gap-day high within 5 sessions: that's the reclaim.")),
+        ("failed-breakdowns", "Failed breakdowns and breakouts", 3, """
+<p>Sometimes a hub breaks the wrong way first. Price closes a 4-hour candle <b>below</b> the hub, sellers pile in, stops get hit... and then it turns straight back up. Those trapped sellers have to buy back, and that fuels the move.</p>
+<h2>The trigger</h2>
+<p>Within <b>3 candles</b> of the fake-out, a 4-hour <b>close back above the hub top</b> on at least <b>1.2× normal volume</b>. A close back inside the hub isn't enough; it has to clear the far side. That's a failed breakdown, and it's a long.</p>
+<p>The mirror is a <b>failed breakout</b>: a close above the hub, then within 3 candles a close back below the hub bottom. That's a short.</p>
+<h2>Aim and wrong</h2>
+<p>Enter around the reclaim close. You're wrong on a 4-hour close below the <b>fake-out low</b> (the lowest point of the trap). The aim is the next shelf above, same as a hub breakout.</p>""",
+         ["A close outside the hub that fails within 3 candles.",
+          "Trigger: a 4H close through the OTHER side of the hub on 1.2× volume.",
+          "Stop: past the fake-out low (or high). Aim: the next shelf."],
+         ("A hub sits at $100–$104. A candle closes at $98, the next at $101, the next at $105 on heavy volume. When is the setup?",
+          ["At $98, the breakdown", "At $101, back inside the hub", "At $105, the close above the hub top"],
+          2, "A close back inside isn't the trigger. The close above the hub top on strong volume is.")),
     ]),
 ]
 
