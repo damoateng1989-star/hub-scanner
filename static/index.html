@@ -1944,18 +1944,36 @@ html[data-theme="light"] .msc-dot.up{background:#12805C}html[data-theme="light"]
  #hubBoard .board-table td[data-label="Hub low"],#hubBoard .board-table td[data-label="Hub high"],#hubBoard .board-table td[data-label="Distance to edge"],#hubBoard .board-table td[data-label="Next shelf / target"],#hubBoard .board-table td[data-label="4H context"]{display:none!important}
  #hubBoard .board-actions{width:100%!important;justify-content:flex-start!important;flex-wrap:wrap!important}
  #hubBoard .board-frame,#hubBoard .board-scroll{overflow:visible!important}
- #hubBoard .board-table .plain-row{display:block!important;width:100%!important}
- #hubBoard .board-table .plain-row td{display:block!important;width:100%!important}
+ #hubBoard .board-table .plain-row:not([hidden]){display:block!important;width:100%!important}
+ #hubBoard .board-table .plain-row:not([hidden]) td{display:block!important;width:100%!important}
 }
 
 /* Patch 72 desktop widths: the two mobile-only cells are hidden */
 @media(min-width:761px){
- .board-table th:nth-child(6),.board-table td:nth-child(6){width:9%!important}
- .board-table th:nth-child(7),.board-table td:nth-child(7){width:9%!important}
- .board-table th:nth-child(8),.board-table td:nth-child(8){width:10%!important}
- .board-table th:nth-child(9),.board-table td:nth-child(9){width:10%!important}
- .board-table th:nth-child(10),.board-table td:nth-child(10){width:15%!important}
- .board-table th:nth-child(11),.board-table td:nth-child(11){width:16%!important}
+ #hubBoard .board-table th:nth-child(6),#hubBoard .board-table td:nth-child(6){width:8%!important}
+ #hubBoard .board-table th:nth-child(7),#hubBoard .board-table td:nth-child(7){width:8%!important}
+ #hubBoard .board-table th:nth-child(8),#hubBoard .board-table td:nth-child(8){width:9%!important}
+ #hubBoard .board-table th:nth-child(9),#hubBoard .board-table td:nth-child(9){width:11%!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){width:9%!important}
+ #hubBoard .board-table th:nth-child(11),#hubBoard .board-table td:nth-child(11){width:19%!important}
+ #hubBoard .board-table th:nth-child(9){white-space:normal!important}
+ #hubBoard .board-table th:nth-child(10),#hubBoard .board-table td:nth-child(10){padding-left:16px!important}
+}
+/* Patch 72 fix: the earlier mobile card block (tbody > tr) out-ranked the Patch 72 rules; same selectors, later, win */
+@media(max-width:760px){
+ #hubBoard .board-table tbody > tr:not(.plain-row){display:flex!important;flex-wrap:wrap!important;align-items:center!important;padding:16px!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row)::after{display:none!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td{display:block!important;flex:1 1 100%!important;padding:0!important;margin:0!important;min-width:0!important;border:0!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td::before{display:none!important;content:none!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(1){flex:1 1 55%!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2){flex:0 1 auto!important;max-width:45%!important;text-align:right!important;padding:0!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(2) > *{margin-left:auto!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:nth-child(3){flex:1 1 auto!important;margin-top:14px!important;font-size:22px!important;font-weight:800!important;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Position"]{display:block!important;flex:1 1 auto!important;margin-top:14px!important;text-align:right!important;font-size:13px!important;color:var(--muted)!important;align-self:center!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Range"]{display:block!important;overflow:visible!important}
+ #hubBoard .msc-bar{margin:12px 9px 0!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Hub low"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Hub high"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Distance to edge"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="Next shelf / target"],#hubBoard .board-table tbody > tr:not(.plain-row) > td[data-label="4H context"]{display:none!important}
+ #hubBoard .board-table tbody > tr:not(.plain-row) > td:last-child{margin-top:14px!important;padding-top:12px!important;border-top:1px solid var(--line)!important}
 }
 </style>
 </head>
