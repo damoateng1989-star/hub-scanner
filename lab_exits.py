@@ -415,7 +415,60 @@ def summarize(rows: list[dict]) -> dict:
         groups.append(dict(key=gk, label=glabel, trades=len(mine_b), trades_retest=len(mine_r),
                            filters=table, best=best, filters_retest=table_r, best_retest=best_r,
                            narrow=st, narrow_retest=st_r))
-    return dict(groups=groups, exits=[dict(key=k, label=l) for k, l in EXITS])
+    return dict(groups=groups, exits=[dict(key=k, label=l) for k, l in EXITS], graduation=graduation(rows))
+
+
+# ---------------------------------------------------------------- leaving beta: the live rules, scored exactly as alerted
+GRAD_MIN_N, GRAD_MIN_PF = 100, 1.2
+LIVE_RULES = [
+    # key, label, which rows, which exit, measured? (the A grades were picked by the best-filters search on longs)
+    ("hub_long", "Hubs: A retest, longs", lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1
+     and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
+    ("hub_short", "Hubs: A retest, shorts", lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == -1
+     and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
+    ("double_long", "Double bottoms: A retest", lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1
+     and r.get("pm") and not r.get("chase"), "far"),
+    ("double_short", "Double tops: A retest", lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == -1
+     and r.get("pm") and not r.get("chase"), "far"),
+    ("gapfade", "Gap fade & rip", lambda r: r["grp"] == "gapfade", "edge"),
+]
+
+
+def graduation(rows: list[dict]) -> list[dict]:
+    """Each live rule, scored exactly as the alert trades it, against fixed bars: enough trades, positive overall,
+    in both halves, in the last 6 months, without its 5 best stocks, and a profit factor of 1.2+."""
+    out = []
+    for key, label, test, ek in LIVE_RULES:
+        got = sorted([r for r in rows if test(r) and ek in r["ex"]], key=lambda r: r["t"])
+        if not got:
+            out.append(dict(key=key, label=label, exit=ek, n=0, checks=[], passed=False))
+            continue
+        x = np.array([r["ex"][ek][0] for r in got])
+        syms = np.array([r["sym"] for r in got])
+        n = len(x)
+        wins, losses = x[x > 0], x[x <= 0]
+        pf = float(wins.sum() / -losses.sum()) if losses.sum() < 0 else None
+        early, late = float(x[:n // 2].mean()) if n >= 2 else None, float(x[n // 2:].mean()) if n >= 2 else None
+        cut = (pd.Timestamp(got[-1]["t"]) - pd.Timedelta(days=182)).isoformat()
+        recent = np.array([r["ex"][ek][0] for r in got if r["t"] >= cut])
+        sp = _spread(x, syms)
+        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek, ek), n=n,
+                   win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
+                   pf=round(pf, 2) if pf is not None else None,
+                   early=round(early, 2) if early is not None else None, late=round(late, 2) if late is not None else None,
+                   recent_n=len(recent), recent=round(float(recent.mean()), 2) if len(recent) else None, **sp)
+        checks = [
+            ("trades", f"{GRAD_MIN_N}+ trades", n >= GRAD_MIN_N),
+            ("avg", "Positive average per trade", res["avg"] > 0),
+            ("pf", f"Profit factor {GRAD_MIN_PF}+", (pf or 0) >= GRAD_MIN_PF),
+            ("halves", "Positive in both halves", (early or 0) > 0 and (late or 0) > 0),
+            ("recent", "Positive in the last 6 months (20+ trades)", (res["recent"] or 0) > 0 and len(recent) >= 20),
+            ("broad", "Positive without its 5 best stocks", (sp["avg_ex_top"] or 0) > 0 and sp["stocks"] >= 15),
+        ]
+        res["checks"] = [dict(key=k, label=l, ok=bool(ok)) for k, l, ok in checks]
+        res["passed"] = all(c["ok"] for c in res["checks"])
+        out.append(res)
+    return out
 
 
 def _set(**kw):
