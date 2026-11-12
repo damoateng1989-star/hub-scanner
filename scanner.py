@@ -377,12 +377,10 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     chase = e["type"] in ("breakout", "breakdown") and \
                         (e["close"] - e["target"]) * (1 if e["type"] == "breakout" else -1) >= 0
                     newest = e["time"] == c4.index[-1]
-                    speech = speak_event(sym, e) if newest and not chase else None
+                    # breakouts are a heads-up now (wait for the retest): a text, no call, no options plan.
+                    # The phone call and the options line go out on A-grade retests only (Patch 80).
+                    speech = speak_event(sym, e) if newest and not chase and e["type"] not in ("breakout", "breakdown") else None
                     extra = None
-                    if newest and not chase and e["type"] in ("breakout", "breakdown"):
-                        d_ = 1 if e["type"] == "breakout" else -1
-                        edge_ = e["high"] if d_ == 1 else e["low"]
-                        extra = (lambda s_=sym, d_=d_, c_=e["close"], ed_=edge_, t_=e["target"]: options.alert_line(s_, d_, c_, ed_, t_))
                     early = db.get_alert(f"{sym}|early|{e['time'].isoformat()}") if e["type"] in ("breakout", "breakdown") else None
                     if early and early["type"] == e["type"]:      # already told them at 1:31 PM: confirm, don't ring again
                         msg = "✅ Confirmed with the full market data\n" + msg
