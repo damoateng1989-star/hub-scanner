@@ -33,6 +33,8 @@ EXITS = [   # key, label
     ("far", "Out on a close past the far side of the pattern"),
     ("half", "Half off at 1R, rest stopped at entry"),
     ("edge20", "Current, but 20 candles before giving up"),
+    ("atr05", "Stop 0.5 ATR from entry"),
+    ("atr10", "Stop 1 ATR from entry"),
 ]
 
 GROUPS = [  # key, label, pattern kinds
@@ -219,7 +221,9 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         ex = {}
         cur = float(t["stop"]) if grp == "fakeout" else edge   # fakeouts: the live rule's stop is the fake-out extreme
         for key, stop, hz in (("edge", cur, s.horizon), ("mid", mid, s.horizon), ("far", far, s.horizon),
-                              ("edge20", cur, 20)):
+                              ("edge20", cur, 20),
+                              ("atr05", entry - d * 0.5 * A, s.horizon),     # fixed at entry, no trailing
+                              ("atr10", entry - d * 1.0 * A, s.horizon)):
             ex[key] = _exit(close, i0, d, entry, target, stop, hz)
         ex["half"] = _exit_half(close, i0, d, entry, target, edge, risk_mid if risk_mid > 0 else d * (entry - edge), s.horizon)
         f["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
@@ -325,16 +329,18 @@ CKPT = db.DATA_DIR / "lab_exits_ckpt.json"   # progress saved after every chunk,
 
 def _save_ckpt(syms, done, rows, failed, failed_msg, started):
     tmp = CKPT.with_suffix(".tmp")
-    tmp.write_text(json.dumps(dict(syms=syms, done=done, rows=rows, failed=failed, failed_msg=failed_msg, started=started),
+    tmp.write_text(json.dumps(dict(syms=syms, done=done, rows=rows, failed=failed, failed_msg=failed_msg, started=started,
+                                   exits=[k for k, _ in EXITS]),
                               default=lambda o: o.item() if hasattr(o, "item") else str(o)))
     tmp.replace(CKPT)
 
 
 def _load_ckpt():
     try:
-        return json.loads(CKPT.read_text())
+        ck = json.loads(CKPT.read_text())
     except Exception:
         return None
+    return ck if ck.get("exits") == [k for k, _ in EXITS] else None   # saved by an older version: start over
 
 
 def run(symbols: list[str] | None = None, resume: bool = False):
