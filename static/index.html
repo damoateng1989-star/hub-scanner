@@ -4425,7 +4425,8 @@ function setupCard(x) {
     pos = d < 0.15 ? "At the " + lineName
       : `<b>$${dd} ${up ? "below" : "above"} the trigger</b><br>${d.toFixed(1)}% ${up ? "below" : "above"} the ${lineName}`;
     meta = gap ? `Trigger: a daily close above <b>${money(trig)}</b> · gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`
-      : (x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> if the retest close is the 4:00 PM close and the entry isn't past halfway to the target. Stop then sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
+      : (x.kind === "double_top" ? `Watch only: double tops lost money in the two-year test, so there's no entry plan on the short side.`
+        : x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> if the retest close is the 4:00 PM close and the entry isn't past halfway to the target. Stop then sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
   }
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>

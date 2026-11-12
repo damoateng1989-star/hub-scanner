@@ -384,8 +384,7 @@ def retest_check(close, low, high, atr, i0, d, edge, j):
 def retest_grade(trade, entry, atr_entry):
     """The Lab branch-B grade for a confirmed retest (hubs, retest entry: room 1.5+ + 4+ sessions + longs, 1 ATR stop).
     Uses the Lab's own definitions, so the live grade and the Lab filter can't disagree. Returns dict(is_a, rr, sessions, stop, reasons).
-    Mirror (Nov 12 ~5:20 AM): the grade is now both directions — the longs side is the measured Lab mix,
-    the shorts side mirrors it (same bars) and is unmeasured; the live record judges the shorts side."""
+    Longs only (Nov 12, 9:20 AM): the mirrored short side was measured in the Lab and lost money, so shorts are watch only."""
     d = trade["direction"]
     edge, target = trade["edge"], trade["target"]
     h = trade["hub"]
@@ -396,11 +395,13 @@ def retest_grade(trade, entry, atr_entry):
     sessions = h.get("sessions") or 0
     stop = entry - d * 1.0 * atr_entry                    # the 1 ATR stop, ATR at the retest candle
     reasons = []
+    if d != 1:      # Lab, Nov 12: short A retests lost money (316 trades, -0.72% per trade, PF 0.56)
+        reasons.append("short — the short side lost money in the two-year test, so shorts are watch only")
     if rr is None or rr < 1.5:
         reasons.append(f"room {rr:.1f}× — below the 1.5 bar" if rr is not None else "room unknown — no target/risk")
     if sessions < 4:
         reasons.append(f"pattern ran {sessions} sessions — below the 4-session bar")
-    return dict(is_a=(rr is not None and rr >= 1.5 and sessions >= 4),
+    return dict(is_a=(d == 1 and rr is not None and rr >= 1.5 and sessions >= 4),
                 rr=rr, sessions=sessions, stop=stop, reasons=reasons)
 
 
@@ -409,8 +410,7 @@ def double_retest_grade(trade, entry, is_pm):
     trade is the pending double trade dict (hub/edge/target/direction). entry is the retest close,
     is_pm whether that close was the 4:00 PM close. Uses the Lab's own definitions, so the live grade
     and the Lab filter can't disagree. Returns dict(is_a, stop, reasons).
-    Mirror (Nov 12 ~5:20 AM): the grade is now both directions — the longs side is the measured Lab mix,
-    the shorts side mirrors it (same bars) and is unmeasured; the live record judges the shorts side."""
+    Longs only (Nov 12, 9:20 AM): the mirrored short side was measured in the Lab and lost money, so shorts are watch only."""
     d = trade["direction"]
     edge, target = trade["edge"], trade["target"]
     h = trade["hub"]
@@ -418,11 +418,13 @@ def double_retest_grade(trade, entry, is_pm):
     stop = edge - d * w                                   # the far side: a close past it kills the pattern
     chasing = d * (entry - edge) > 0.5 * d * (target - edge)
     reasons = []
+    if d != 1:      # Lab, Nov 12: double-top A retests lost money (203 trades, -0.93% per trade, PF 0.49)
+        reasons.append("short — the short side lost money in the two-year test, so shorts are watch only")
     if not is_pm:
         reasons.append("retest closed at 1:30 PM, not 4:00 PM — the measured mix only counts 4:00 PM retests")
     if chasing:
         reasons.append("entry is past halfway to the target — chasing")
-    return dict(is_a=(is_pm and not chasing), stop=stop, reasons=reasons)
+    return dict(is_a=(d == 1 and is_pm and not chasing), stop=stop, reasons=reasons)
 
 
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
