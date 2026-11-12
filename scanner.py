@@ -589,7 +589,9 @@ def format_pattern_event(sym: str, e: dict) -> str:
         ent = (f"Entry ≈ the retest close — a 4H close back near the neckline {_money(e['edge'])} "
                f"that holds {'above' if up else 'below'} it")
     return (f"{'🚀' if up else '🔻'} {sym}: 4H close {'ABOVE' if up else 'BELOW'} {what}\n"
-            f"Setup: {patterns.KINDS[e['kind']]} (beta: too few results to judge yet; hubs are the tested setup)\n"
+            f"Setup: {patterns.KINDS[e['kind']]}"
+            + (" (tested: A retests made money over two years)" if e["kind"] == "double_bottom"
+               else " (beta: the short side lost money in the two-year test)") + "\n"
             + plan_lines(e["close"], e["edge"], e["target"], d, reached, e.get("shelf"), entry_text=ent)
             + f"\nCandle closed: {candle_close(e['time'])}")
 

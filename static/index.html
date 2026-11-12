@@ -1716,6 +1716,8 @@ html[data-theme="light"] .vol-split { border-color: #E4E3DC; }
 .lm-row.oldx { background: rgba(154,160,172,.06) !important; }
 .beta-note { margin: 0 0 12px; padding: 11px 14px; border-radius: 12px; border: 1px solid rgba(229,161,61,.4); background: rgba(229,161,61,.07); color: #E8C887; font-size: 13.5px; line-height: 1.5; }
 .beta-note b { color: #F2C14E; } .beta-note a { color: inherit; text-decoration: underline; }
+.beta-note.ok { border-color: rgba(61,214,140,.4); background: rgba(61,214,140,.07); color: #B9E8D0; } .beta-note.ok b { color: #3DD68C; } .beta-note.ok b.warn { color: #F2C14E; }
+html[data-theme="light"] .beta-note.ok { color: #14532d !important; background: #ecfdf3 !important; border-color: #86efac !important; } html[data-theme="light"] .beta-note.ok b { color: #15803d !important; } html[data-theme="light"] .beta-note.ok b.warn { color: #92400e !important; }
 html[data-theme="light"] .beta-note { color: #78350f; background: #fffbeb; border-color: #fcd34d; } html[data-theme="light"] .beta-note b { color: #92400e; }
 .beta-tag { margin-left: 6px; padding: 1px 7px; border-radius: 6px; border: 1px solid rgba(229,161,61,.5); color: #E5A13D; font: 600 10px var(--mono); letter-spacing: .08em; vertical-align: 1px; }
 .beta-line { margin: -4px 0 10px; font-size: 12.5px; color: #9AA0AC; }
@@ -4340,7 +4342,7 @@ function setupTabs(b) {
   const n = (k) => k === "hub" ? (b.forming || []).length + ((b.live || []).length || b.live_count || 0)   // hubs in play: resting (incl. at the edge) + breaking out now
     : (b.setups || []).filter(x => x.style === k).length;
   return `<div class="setup-tabs" role="tablist">${SETUP_TABS.map(([k, label]) =>
-    `<button class="${SETUP_TAB === k ? "on" : ""}" onclick="pickSetupTab('${k}')">${setupIcon(k)}<span>${label}</span><small>${n(k)}</small>${k !== "hub" ? '<i>beta</i>' : ""}</button>`).join("")}</div>`;
+    `<button class="${SETUP_TAB === k ? "on" : ""}" onclick="pickSetupTab('${k}')">${setupIcon(k)}<span>${label}</span><small>${n(k)}</small>${k !== "hub" && k !== "double" ? '<i>beta</i>' : ""}</button>`).join("")}</div>`;
 }
 function pickSetupTab(k) { SETUP_TAB = k; document.querySelectorAll(".setup-tabs button").forEach((b, i) => b.classList.toggle("on", SETUP_TABS[i][0] === k));
   $("hubBoard").hidden = k !== "hub"; $("setupBoard").hidden = k === "hub"; if (k !== "hub") { renderSetupBoard(); labelTable($("setupBoard")); }
@@ -4357,7 +4359,10 @@ function renderSetupBoard() {
     flush: "A stock drops 5%+ in a day (often on earnings), then within 10 sessions a daily close goes back above the level it fell from (its highest close of the 5 days before) on normal volume or better. That's the reclaim, and it's long only. Wrong on a daily close back below that level. Aim: the next shelf above.",
     fakeout: "A hub breaks one way and traps traders, then within 3 candles a 4-hour close goes back through the OTHER side of the hub on 1.2× normal volume. A failed breakdown (close below the hub, then back above the top) is a long; a failed breakout is a short. Wrong on a close past the fake-out low (or high). Aim: the next shelf.",
     gapfade: "A stock gaps up (usually on earnings), sells off from the gap, then rips. The trade is a daily close back above the gap-day high within 5 days. Stop at the low of the fade, target 2× that risk. Size off the risk, not a fixed %. It fires on the shape; whether the gap was earnings isn't checked yet." }[SETUP_TAB];
-  $("setupBoard").innerHTML = lock + `<div class="beta-note"><b>Beta: new setup, too few results to judge yet.</b> Hubs are NextShelf's tested setup. This one's track record builds on the <a href="#results">Results</a> page.</div><p class="setup-about">${about}</p>` + (rows.length ? `<div class="sc-grid">${rows.map(setupCard).join("")}</div>`
+  const betaNote = SETUP_TAB === "double"
+    ? `<div class="beta-note ok"><b>Double bottoms are out of beta.</b> As an A retest they passed the two-year test: 236 trades, about 3 in 4 won, +0.28% per trade. <b class="warn">Double tops are still in beta</b>: the same rule on the short side lost money in that test. Past results, not a promise.</div>`
+    : `<div class="beta-note"><b>Beta.</b> ${SETUP_TAB === "gapfade" ? "This setup made money over the two-year test (+2.76% per trade, 341 trades) but lost a little over the last 6 months, so it stays in beta until that turns." : "New setup, too few results to judge yet."} Its track record builds on the <a href="#results">Results</a> page.</div>`;
+  $("setupBoard").innerHTML = lock + betaNote + `<p class="setup-about">${about}</p>` + (rows.length ? `<div class="sc-grid">${rows.map(setupCard).join("")}</div>`
     : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" || SETUP_TAB === "flush" ? "daily" : "4-hour"} close.</div>`)
     + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup is in beta. It works on daily closes with a fixed 2× risk target, not the hub rules." : SETUP_TAB === "flush" ? "This setup is in beta. It works on daily closes: the trigger is a daily close back above the level, and it's wrong on a daily close back below it." : SETUP_TAB === "fakeout" ? "This setup is in beta. It acts on a 4-hour close and aims for the next shelf, but the stop is the fake-out low (or high), not the hub edge." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
 }
@@ -4425,7 +4430,7 @@ function setupCard(x) {
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
-    <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${live ? strengthChip(x.strength, up) : ""}</div>
+    <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${x.kind === "double_top" || x.kind === "gapfade" ? ' <span class="beta-tag">beta</span>' : ""}${live ? strengthChip(x.strength, up) : ""}</div>
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
     <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
