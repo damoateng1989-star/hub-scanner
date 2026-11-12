@@ -261,6 +261,31 @@ def format_retest(sym: str, t: dict, c4: pd.DataFrame, res: dict, j: int, grade:
             + f"Candle closed: {candle_close(c4.index[j])}")
 
 
+def format_double_retest(sym, t, c4, res, j, grade):
+    d = t["direction"]
+    up = d == 1
+    edge, target = t["edge"], t["target"]
+    close = float(res["close"].iloc[j])
+    reached = (close - target) * d >= 0
+    name = "Double bottom" if up else "Double top"
+    head = (f"🔄 {sym}: {name} retesting the neckline — {'entry on this close' if grade['is_a'] else 'watch only'}\n"
+            f"4H close {_money(close)} held {'above' if up else 'below'} the neckline {_money(edge)} after pulling back to it.\n")
+    if grade["is_a"]:
+        return (head
+                + plan_lines(close, edge, target, d, reached, t.get("shelf"),
+                             entry_text=f"Entry ≈ {_money(close)} (the retest close)",
+                             exit_text=f"Exit on a 4H close {'≤' if up else '≥'} {_money(grade['stop'])} — past the {name.lower()}")
+                + f"\nCandle closed: {candle_close(c4.index[j])}")
+    return (head
+            + "Watch — no entry: " + "; ".join(grade["reasons"]) + ".\n"
+            + f"Candle closed: {candle_close(c4.index[j])}")
+
+
+def speak_double_retest(sym, d, edge, close, target, stop):
+    return (f"Next Shelf. {phone.spell(sym)} retested its double bottom neckline at {_say_money(edge)} and held. "
+            f"4 hour close {_say_money(close)}. Entry on this close. Stop {_say_money(stop)}. Target {_say_money(target)}.")
+
+
 def format_event(sym: str, e: dict) -> str:
     t = candle_close(e["time"])
     zone = f"{_money(e['low'])}–{_money(e['high'])}"
@@ -454,6 +479,43 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         sent.append(msg)
     except Exception as ex:
         log.warning("retest check failed for %s: %s", sym, ex)
+    try:      # Patch 81: the double-top/bottom retest — a pending double breakout whose latest candle pulled back to the neckline and held it
+        pend_d = [t for t in pa["trades"] if t["kind"] in ("double_top", "double_bottom") and t["outcome"] == "pending"]
+        dbl = max(pend_d, key=lambda t: t["i0"]) if pend_d else None
+        if dbl is not None and baseline:
+            i0, d = dbl["i0"], dbl["direction"]
+            k = len(c4) - 1 - i0
+            if 1 <= k <= engine.RETEST_MAX:
+                edge = dbl["edge"]
+                j = len(c4) - 1
+                if engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float),
+                                       c4["High"].to_numpy(float), res["atr"].to_numpy(float),
+                                       i0, d, edge, j) == "retest":
+                    close2 = float(res["close"].iloc[j])
+                    is_pm = engine.candle_end(c4.index[j].tz_convert(engine.NY)).hour == 16
+                    grade = engine.double_retest_grade(dbl, close2, is_pm)   # A setup or watch, Lab DT/DB retest mix
+                    msg = format_double_retest(sym, dbl, c4, res, j, grade)
+                    msg += volume_line(c4, c4.index[j])
+                    msg += earnings.alert_line(sym)
+                    msg += regime_line(d)
+                    msg += news.alert_line(sym, c4.index[j])
+                    g = gamma.attach({"symbol": sym, "d": d, "edge": edge,
+                                      "target": dbl["target"], "price": close2})
+                    if (gl := gamma.line(g)):
+                        msg += "\n" + gl
+                    reached2 = (close2 - dbl["target"]) * d >= 0
+                    speech = None
+                    extra = None
+                    if grade["is_a"] and not reached2:
+                        speech = speak_double_retest(sym, d, edge, close2, dbl["target"], grade["stop"])
+                        extra = (lambda s_=sym, d_=d, c_=close2, ed_=edge, t_=dbl["target"]: options.alert_line(s_, d_, c_, ed_, t_))
+                    if db.add_alert(f"{sym}|retest-double|{c4.index[i0].isoformat()}", sym, "retest_double",
+                                    c4.index[j].isoformat(), msg):
+                        notify.symbol_alert(sym, "retest_double", msg, speech, pro_extra=extra, style="double",
+                                            candle_start=c4.index[j])
+                        sent.append(msg)
+    except Exception as ex:
+        log.warning("double retest check failed for %s: %s", sym, ex)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
 
@@ -518,9 +580,13 @@ def format_pattern_event(sym: str, e: dict) -> str:
     else:
         what = f"the {name} {'upper' if up else 'lower'} line at {_money(e['edge'])}"
     reached = (e["close"] - e["target"]) * d >= 0
+    ent = None
+    if e["kind"].startswith("double"):
+        ent = (f"Entry ≈ the retest close — a 4H close back near the neckline {_money(e['edge'])} "
+               f"that holds {'above' if up else 'below'} it")
     return (f"{'🚀' if up else '🔻'} {sym}: 4H close {'ABOVE' if up else 'BELOW'} {what}\n"
             f"Setup: {patterns.KINDS[e['kind']]} (beta: too few results to judge yet; hubs are the tested setup)\n"
-            + plan_lines(e["close"], e["edge"], e["target"], d, reached, e.get("shelf"))
+            + plan_lines(e["close"], e["edge"], e["target"], d, reached, e.get("shelf"), entry_text=ent)
             + f"\nCandle closed: {candle_close(e['time'])}")
 
 

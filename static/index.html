@@ -2371,7 +2371,7 @@ const STATES = {
   stalled: ["Timed out", "--stall"], none: ["Waiting for a hub", "--idle"], error: ["Error", "--down"],
 };
 const PRIORITY = { breakout_up: 0, breakdown: 0, forming: 1, watching: 2, "follow-through": 3, "snap-back": 3, stalled: 3, none: 4, error: 5 };
-const ALERT_COLORS = { retest: "--accent", preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
+const ALERT_COLORS = { retest: "--accent", retest_double: "--accent", preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
   "follow-through": "--ft", "snap-back": "--snap", stalled: "--stall" };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -2603,7 +2603,7 @@ function oneLine(st, key) {
     case "error": return esc(st.error || "Couldn't load");
     default: {
       const live = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
-      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${live.state === "breakout_up" ? "Broke out ↑" : "Broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}`;
+      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${live.state === "breakout_up" ? "Broke out ↑" : "Broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}${live.retest && live.retest.candles_left > 0 ? ` · waiting for the retest (${live.retest.candles_left} candle${live.retest.candles_left === 1 ? "" : "s"} left)` : ""}`;
       return up || dn ? `Nearest shelves ${[up && money(up.level) + " above", dn && money(dn.level) + " below"].filter(Boolean).join(" / ")}` : "";
     }
   }
@@ -3783,7 +3783,7 @@ function briefHTML(sym, st, chart) {
   const setupsHTML = others.length ? `<p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
-      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.strength ? ` ${strengthChip(x.strength, x.state === "breakout_up")}` : ""}${x.kind === "flush" ? ` Wrong on a daily close back below ${money(x.edge)}.` : x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}`;
+      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.strength ? ` ${strengthChip(x.strength, x.state === "breakout_up")}` : ""}${x.kind === "flush" ? ` Wrong on a daily close back below ${money(x.edge)}.` : x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}${x.retest && x.retest.candles_left > 0 ? ` Waiting for the retest: entry on a 4H close back near the neckline ${money(x.retest.edge)} that holds ${x.state === "breakout_up" ? "above" : "below"} it (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left).${x.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}` : ""}`;
       else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
       else if (x.kind.startsWith("double")) t = x.kind === "double_top"
         ? `<b>Double top</b>: two peaks near <b>${money(x.peak)}</b>. A 4-hour close <b>below the neckline ${money(x.neck)}</b> is the short setup.`

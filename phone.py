@@ -27,7 +27,7 @@ def call_on() -> set[str]:
 
 
 def wants(alert_type: str) -> bool:
-    kind = "breakout" if alert_type in ("breakout", "breakdown", "retest") else alert_type
+    kind = "breakout" if alert_type in ("breakout", "breakdown", "retest", "retest_double") else alert_type
     return enabled() and kind in call_on()
 
 

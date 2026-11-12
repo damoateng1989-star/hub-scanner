@@ -644,6 +644,14 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             t = L["trade"]
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
+            if k.startswith("double") and t["outcome"] == "pending":
+                # Patch 81: the retest wait, so the board can show it like the hub's st["retest"]
+                kk = n - 1 - t["i0"]
+                A0 = float(res["atr"].iloc[t["i0"]])
+                near = (float(c4["Low"].iloc[-1]) <= t["edge"] + engine.RETEST_TOUCH * A0) if t["direction"] == 1 \
+                    else (float(c4["High"].iloc[-1]) >= t["edge"] - engine.RETEST_TOUCH * A0)
+                row["retest"] = dict(edge=round(t["edge"], 2), candles_since=kk,
+                                     candles_left=max(0, engine.RETEST_MAX - kk), near=bool(near))
             if k not in ("gapfade", "flush"):    # these run on daily candles
                 row["strength"] = engine.break_strength(c4, res["atr"], t["i0"], t["direction"], t["edge"], float(close.iloc[t["i0"]]))
             if k == "sr":
