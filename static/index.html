@@ -2128,6 +2128,18 @@ html[data-theme="light"] .vz-dot { background: #141412 !important; box-shadow: 0
 #brief .bf-foot #bfChart:hover { background: #fff !important; }
 html[data-theme="light"] #brief .bf-foot #bfChart { background: #141412 !important; color: #F6F6F3 !important; }
 html[data-theme="light"] #brief .bf-foot #bfChart:hover { background: #000 !important; }
+/* the watchlist button sits beside "Open full chart", same size, outlined */
+#brief .bf-foot { gap: 10px !important; flex-wrap: nowrap !important; }
+#brief .bf-foot #bfChart { margin: 0 !important; }
+#brief .bf-foot #bfWatch { flex: 0 0 auto; padding: 11px 22px; border-radius: 12px; border: 1px solid #3A3B3F; background: transparent; color: #F3F3F0;
+  font: 700 14px var(--sans); cursor: pointer; white-space: nowrap; }
+#brief .bf-foot #bfWatch:hover:not(:disabled) { border-color: #F3F3F0; }
+#brief .bf-foot #bfWatch.added, #brief .bf-foot #bfWatch:disabled { opacity: 1 !important; }
+#brief .bf-foot #bfWatch.added { color: #F2C14E; border-color: rgba(242,193,78,.55); background: rgba(242,193,78,.08); cursor: default; }
+html[data-theme="light"] #brief .bf-foot #bfWatch { border-color: #D4D4CF; color: #141412; }
+html[data-theme="light"] #brief .bf-foot #bfWatch:hover:not(:disabled) { border-color: #141412; }
+html[data-theme="light"] #brief .bf-foot #bfWatch.added { color: #B7791F; border-color: #F0D9A8; }
+@media (max-width: 480px) { #brief .bf-foot #bfWatch, #brief .bf-foot #bfChart { flex: 1 1 0 !important; padding: 11px 10px !important; text-align: center; font-size: 13.5px !important; } }
 
 /* Setup grade */
 .sg { display: flex; gap: 12px; align-items: center; margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 8%, transparent); }
@@ -2345,7 +2357,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
   </div>
   </div>
   <div class="bf-body" id="bfBody"></div>
-  <div class="bf-foot"><a id="bfChart" href="#">Open full chart →</a></div>
+  <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><a id="bfChart" href="#">Open full chart →</a></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
@@ -3455,6 +3467,7 @@ async function openBrief(sym) {
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null;
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
+  paintBriefWatch(sym);
   document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false"); $("brief").scrollTop = 0;
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
@@ -3685,17 +3698,24 @@ function paintGamma(sym) {
   el.innerHTML = `<div class="gw-row">🧱 ${main}<small>Biggest options open interest by strike${exp}${flip}. Delayed data, context only.</small></div>`;
   paintVizScale();
 }
+function paintBriefWatch(sym) {          // the watchlist button next to "Open full chart"
+  const b = $("bfWatch"); if (!b) return;
+  const on = (TICKERS || []).some(t => t.symbol === sym);
+  b.disabled = on; b.classList.toggle("added", on);
+  b.textContent = on ? "★ On your watchlist" : "☆ Add to watchlist";
+}
 async function briefAdd(sym, btn) {
+  if (!sym) return;
   btn.disabled = true; btn.textContent = "Adding…";
   try {
     const ok = await addToWatchlist(sym);
     if (ok) {
-      btn.classList.add("added"); btn.textContent = `★ ${sym} is on your watchlist`;
-      toast(`${sym} added to your watchlist`); loadTickers();
+      btn.classList.add("added"); btn.textContent = "★ On your watchlist";
+      toast(`${sym} added to your watchlist`, "#watch", "View"); loadTickers();
       return;
     }
-  } catch (e) { toast(e.message); }
-  btn.disabled = false; btn.textContent = `☆ Add ${sym} to my watchlist`;
+  } catch (e) { toast(e.message, /Upgrade/.test(e.message) ? "#account" : null, "See Pro"); }
+  btn.disabled = false; btn.textContent = "☆ Add to watchlist";
 }
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && BRIEF_SYM) closeBrief(); });
 
@@ -3776,9 +3796,6 @@ function briefHTML(sym, st, chart) {
       <div class="trs">${tr.map(t => { const w = t.chase ? ["Skipped (too far)", "#9AA0AC"] : word[t.outcome] || [t.outcome, "#9AA0AC"];
         return `<div><span>${new Date(t.time * 1000).toLocaleDateString(undefined, {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.direction === 1 ? "Long" : "Short"}</span><i style="--c:${w[1]}">${w[0]}</i></div>`; }).join("")}</div>`;
   } else rec = loadingHTML("Loading the track record…");
-  const add = TICKERS.find(t => t.symbol === sym)
-    ? `<button class="btnx bf-addbtn added" disabled>★ ${esc(sym)} is on your watchlist</button>`
-    : `<button class="btnx bf-addbtn" onclick="briefAdd('${esc(sym)}', this)">☆ Add ${esc(sym)} to my watchlist</button>`;
   const others = (st.setups || []).filter(x => x.state !== "between" || x.kind === "sr");
   const setupsHTML = others.length ? `<p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
@@ -3806,7 +3823,7 @@ function briefHTML(sym, st, chart) {
     <details class="vz-row" id="bf-walls" hidden ontoggle="this.dataset.touched=1"><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev"></span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
     ${row("bf-news", live ? "Why it may be moving" : "News", `<span id="bfNewsSum">${newsSum(sym)}</span>`, `<div id="bfNews">${newsHTML(sym)}</div>`)}
     ${row("bf-options", `Options swing <span class="ox-edu">Educational</span>`, "Calls or puts for this setup", `<div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>`)}
-    ${row("bf-history", "Track record", chart && chart.stats ? (chart.stats.n ? `${chart.stats.n} breakouts · ${chart.stats["follow-through"] ?? "–"}% reached the shelf` : "No past breakouts yet") : `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>${add}`)}
+    ${row("bf-history", "Track record", chart && chart.stats ? (chart.stats.n ? `${chart.stats.n} breakouts · ${chart.stats["follow-through"] ?? "–"}% reached the shelf` : "No past breakouts yet") : `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>`)}
     </div><p class="bf-fine bf-legal">Based on past price behavior and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
 // ---------------------------------------------------------------- "set it before work": the order-ticket version of the plan
