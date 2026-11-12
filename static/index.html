@@ -2371,7 +2371,7 @@ const STATES = {
   stalled: ["Timed out", "--stall"], none: ["Waiting for a hub", "--idle"], error: ["Error", "--down"],
 };
 const PRIORITY = { breakout_up: 0, breakdown: 0, forming: 1, watching: 2, "follow-through": 3, "snap-back": 3, stalled: 3, none: 4, error: 5 };
-const ALERT_COLORS = { preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
+const ALERT_COLORS = { retest: "--accent", preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
   "follow-through": "--ft", "snap-back": "--snap", stalled: "--stall" };
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -2501,7 +2501,8 @@ function plainEnglish(r, kind) {
       : `a target of <b>${money(r.target)}</b>, one ATR (the stock's typical 4-hour move) past the range, since there's no shelf nearby`;
     return `${S} closed <b>${isUp ? "above" : "below"} its range at ${money(edge)}</b>. The breakout counts because a 4-hour candle closed there, not because a wick poked through.${candle} ` +
       `It's heading for ${aim} (${pctFrom(r.target, p)} from here). ` +
-      `The idea is wrong if a 4-hour candle closes back ${isUp ? "below" : "above"} <b>${money(edge)}</b>.`;
+      `The idea is wrong if a 4-hour candle closes back ${isUp ? "below" : "above"} <b>${money(edge)}</b>.` +
+      (r.retest && r.retest.candles_left > 0 ? ` Don't chase this close. The entry is a 4-hour candle that comes back to ${money(edge)} and closes ${isUp ? "above" : "below"} it.` : "");
   }
   const done = { "follow-through": "The last breakout reached its target shelf. Now it's waiting for a new range to form.",
     "snap-back": "The last breakout failed: price closed back inside the range. Now it's waiting for a new range to form.",
@@ -2548,11 +2549,14 @@ function summary(sym, st, key) {
         `<b class="u-down">below ${money(h.low)}</b> in the next few candles would still count.`;
     case "breakout_up": case "breakdown": {
       const isUp = key === "breakout_up", edge = isUp ? h.high : h.low;
+      const rt = st.retest && st.retest.candles_left > 0
+        ? ` Waiting for the retest: entry on a 4H close back near ${money(edge)} that holds ${isUp ? "above" : "below"} it (${st.retest.candles_left} candle${st.retest.candles_left === 1 ? "" : "s"} left).${st.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}`
+        : "";
       if (st.target_kind === "atr" && st.target_zone) {
         const z = st.target_zone;
-        return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. No historical shelf was found, so the suggested take-profit zone is <b class="u-${isUp ? "up" : "down"}">${money(z.low)}–${money(z.high)}</b> (${pctFrom(z.low, p)} to ${pctFrom(z.high, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}.`;
+        return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. No historical shelf was found, so the suggested take-profit zone is <b class="u-${isUp ? "up" : "down"}">${money(z.low)}–${money(z.high)}</b> (${pctFrom(z.low, p)} to ${pctFrom(z.high, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}.${rt}`;
       }
-      return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. Next shelf target ${money(st.target)} (${pctFrom(st.target, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}.`;
+      return `${sym} closed <b class="u-${isUp ? "up" : "down"}">${isUp ? "above" : "below"} its hub</b>. Next shelf target ${money(st.target)} (${pctFrom(st.target, p)} from here). It fails if a 4H candle closes back ${isUp ? "below" : "above"} ${money(edge)}.${rt}`;
     }
     case "follow-through": return `The last breakout reached its target shelf. Now waiting for a new hub to form.`;
     case "snap-back": return `The last breakout failed and closed back inside its hub. Waiting for a new hub.`;

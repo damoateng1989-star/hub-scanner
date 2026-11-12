@@ -162,14 +162,17 @@ def shelf_line(target: float, shelf: dict | None, d: int, entry: float) -> str:
             f"target {SETTINGS.target_atr:g}×ATR {_money(target)} ({_pct(entry, target)})")
 
 
-def plan_lines(entry: float, edge: float, target: float, d: int, reached: bool, shelf: dict | None = None) -> str:
+def plan_lines(entry: float, edge: float, target: float, d: int, reached: bool, shelf: dict | None = None,
+               entry_text: str | None = None, exit_text: str | None = None) -> str:
     if reached:
         where = "the next shelf" if shelf else "the target"
         return (f"⚠️ Price is already at {where} ({_money(target)}). The follow-through may be done, "
                 "so entering here is a chase.")
+    ent = entry_text or f"Entry ≈ {_money(entry)}"
+    ext = exit_text or f"Exit on a 4H close back {'≤' if d == 1 else '≥'} {_money(edge)} (the loss is wherever that close lands)"
     return (f"Plan (not advice):\n"
-            f"• Entry ≈ {_money(entry)}\n"
-            f"• Exit on a 4H close back {'≤' if d == 1 else '≥'} {_money(edge)} (the loss is wherever that close lands)\n"
+            f"• {ent}\n"
+            f"• {ext}\n"
             + shelf_line(target, shelf, d, entry))
 
 
@@ -225,12 +228,37 @@ def speak_event(sym: str, e: dict) -> str:
         if (e["close"] - e["target"]) * d >= 0:
             tgt = "It already closed at the target, so this would be a chase."
         return (f"Next Shelf. {phone.spell(sym)} closed {'above' if up else 'below'} its hub. "
-                f"4 hour close {_say_money(e['close'])}. {tgt}")
+                f"4 hour close {_say_money(e['close'])}. {tgt} Wait for the retest — don't chase this close.")
     if e["type"] == "follow-through":
         return f"Next Shelf. {phone.spell(sym)} reached the next shelf at {_say_money(e['target'])}. Follow-through."
     if e["type"] == "snap-back":
         return f"Next Shelf. {phone.spell(sym)} closed back inside its hub. Snap-back."
     return f"Next Shelf. {phone.spell(sym)}: {e['type'].replace('_', ' ')}."
+
+
+def speak_retest(sym: str, d: int, edge: float, close: float, target: float, stop: float) -> str:
+    return (f"Next Shelf. {phone.spell(sym)} retested its hub edge at {_say_money(edge)} and held. "
+            f"4 hour close {_say_money(close)}. Entry on this close. Stop {_say_money(stop)}. Target {_say_money(target)}.")
+
+
+def format_retest(sym: str, t: dict, c4: pd.DataFrame, res: dict, j: int, grade: dict) -> str:
+    d = t["direction"]
+    up = d == 1
+    edge, target = t["edge"], t["target"]
+    close = float(res["close"].iloc[j])
+    reached = (close - target) * d >= 0
+    head = (f"🔄 {sym}: retesting the edge — {'entry on this close' if grade['is_a'] else 'watch only'}\n"
+            f"4H close {_money(close)} held {'above' if up else 'below'} the edge {_money(edge)} after pulling back to it.\n")
+    room_line = f"Room {grade['rr']:.1f}× to the target.\n" if grade["rr"] is not None else ""
+    if grade["is_a"]:
+        return (head + room_line
+                + plan_lines(close, edge, target, d, reached, t.get("shelf"),
+                             entry_text=f"Entry ≈ {_money(close)} (the retest close)",
+                             exit_text=f"Exit on a 4H close {'≤' if up else '≥'} {_money(grade['stop'])} — 1 ATR {'below' if up else 'above'} the entry close")
+                + f"\nCandle closed: {candle_close(c4.index[j])}")
+    return (head + room_line
+            + "Watch — no entry: " + "; ".join(grade["reasons"]) + ".\n"
+            + f"Candle closed: {candle_close(c4.index[j])}")
 
 
 def format_event(sym: str, e: dict) -> str:
@@ -248,7 +276,8 @@ def format_event(sym: str, e: dict) -> str:
                 f"4H close {'above' if up else 'below'} the hub\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"
                 f"Hub grade: {e.get('grade', 'ledge').capitalize()} ({e.get('grade_score', '?')}/6)\n"
-                + plan_lines(e["close"], edge, e["target"], d, (e["close"] - e["target"]) * d >= 0, e.get("shelf"))
+                + plan_lines(e["close"], edge, e["target"], d, (e["close"] - e["target"]) * d >= 0, e.get("shelf"),
+                             entry_text=f"Entry ≈ the retest close — a 4H close back near {_money(edge)} that holds {'above' if up else 'below'} it")
                 + (f"\n{hist}" if hist else "") + f"\nCandle closed: {t}")
     if e["type"] == "follow-through":
         what = "the next shelf" if e.get("shelf") else "the target"
@@ -274,6 +303,9 @@ def describe(sym: str, st: dict) -> str:
     if st.get("target") and st["state"] in ("breakout_up", "breakdown"):
         line += (f", next shelf {_money(st['target'])}" if st.get("target_kind") == "shelf"
                  else f", target {_money(st['target'])} (no shelf)")
+        rt = st.get("retest")
+        if rt and rt.get("candles_left", 0) > 0:
+            line += f", retesting the edge {_money(rt['edge'])} ({rt['candles_left']} candles left)"
     elif st.get("state") in ("forming", "watching"):
         up, dn = st.get("shelf_up"), st.get("shelf_down")
         line += (f"\n   shelves: ▲ {_money(up['level']) if up else 'none'} · "
@@ -389,6 +421,41 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 sent.append(msg)
     except Exception as ex:
         log.warning("early-read check failed for %s: %s", sym, ex)
+    try:      # Patch 80: the retest entry — a pending breakout whose latest candle pulled back to the edge and held it
+        pend = next((t for t in res["trades"] if t["outcome"] == "pending" and t["hub"] is res["hubs"][-1]), None) if res["hubs"] else None
+        if pend is not None and baseline:
+            i0, d = pend["i0"], pend["direction"]
+            k = len(c4) - 1 - i0
+            if 1 <= k <= engine.RETEST_MAX:
+                edge = pend["edge"]
+                j = len(c4) - 1
+                if engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float),
+                                       c4["High"].to_numpy(float), res["atr"].to_numpy(float),
+                                       i0, d, edge, j) == "retest":
+                    close2 = float(res["close"].iloc[j])
+                    A2 = float(res["atr"].iloc[j])
+                    grade = engine.retest_grade(pend, close2, A2)   # A setup or watch, Lab branch B
+                    msg = format_retest(sym, pend, c4, res, j, grade)
+                    msg += volume_line(c4, c4.index[j])
+                    msg += earnings.alert_line(sym)
+                    msg += regime_line(d)
+                    msg += news.alert_line(sym, c4.index[j])
+                    g = gamma.attach({"symbol": sym, "d": d, "edge": edge,
+                                      "target": pend["target"], "price": close2})
+                    if (gl := gamma.line(g)):
+                        msg += "\n" + gl
+                    reached2 = (close2 - pend["target"]) * d >= 0
+                    speech = None
+                    extra = None
+                    if grade["is_a"] and not reached2:
+                        speech = speak_retest(sym, d, edge, close2, pend["target"], grade["stop"])
+                        extra = (lambda s_=sym, d_=d, c_=close2, ed_=edge, t_=pend["target"]: options.alert_line(s_, d_, c_, ed_, t_))
+                    if db.add_alert(f"{sym}|retest|{c4.index[i0].isoformat()}", sym, "retest",
+                                    c4.index[j].isoformat(), msg):
+                        notify.symbol_alert(sym, "retest", msg, speech, pro_extra=extra, candle_start=c4.index[j])
+                        sent.append(msg)
+    except Exception as ex:
+        log.warning("retest check failed for %s: %s", sym, ex)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
 

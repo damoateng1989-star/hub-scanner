@@ -362,6 +362,48 @@ def old_extremes(c4: pd.DataFrame, price: float) -> dict:
     return out
 
 
+RETEST_MAX = 5        # the retest must come within this many 4H candles after the breakout close
+RETEST_TOUCH = 0.25   # pullback low must come within this x ATR of the edge
+RETEST_NEAR = 0.5     # entry close must sit within this x ATR of the edge
+
+
+def retest_check(close, low, high, atr, i0, d, edge, j):
+    """The Patch 79 retest rule for one candle j after the breakout at i0.
+    Returns "retest" (touch + hold + near), "failed" (closed back inside), or None."""
+    A0 = atr[i0]
+    if not A0 or A0 != A0:
+        return None
+    c = close[j]
+    if (c - edge) * d < 0:                      # closed back inside: breakout failed, no retest
+        return "failed"
+    touched = (low[j] <= edge + RETEST_TOUCH * A0) if d == 1 else (high[j] >= edge - RETEST_TOUCH * A0)
+    near = (edge < c <= edge + RETEST_NEAR * A0) if d == 1 else (edge - RETEST_NEAR * A0 <= c < edge)
+    return "retest" if (touched and near) else None
+
+
+def retest_grade(trade, entry, atr_entry):
+    """The Lab branch-B grade for a confirmed retest (hubs, retest entry: room 1.5+ + 4+ sessions + longs, 1 ATR stop).
+    Uses the Lab's own definitions, so the live grade and the Lab filter can't disagree. Returns dict(is_a, rr, sessions, stop, reasons)."""
+    d = trade["direction"]
+    edge, target = trade["edge"], trade["target"]
+    h = trade["hub"]
+    w = h["high"] - h["low"]                              # hubs always have width
+    mid = edge - d * w / 2
+    risk = d * (entry - mid)
+    rr = (d * (target - entry) / risk) if risk > 0 else None
+    sessions = h.get("sessions") or 0
+    stop = entry - d * 1.0 * atr_entry                    # the 1 ATR stop, ATR at the retest candle
+    reasons = []
+    if d != 1:
+        reasons.append("short — this setup only enters longs")
+    if rr is None or rr < 1.5:
+        reasons.append(f"room {rr:.1f}× — below the 1.5 bar" if rr is not None else "room unknown — no target/risk")
+    if sessions < 4:
+        reasons.append(f"pattern ran {sessions} sessions — below the 4-session bar")
+    return dict(is_a=(d == 1 and rr is not None and rr >= 1.5 and sessions >= 4),
+                rr=rr, sessions=sessions, stop=stop, reasons=reasons)
+
+
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
     st = _current_status(c4, res, s)
     try:      # volume on the breakout candle (information only: it doesn't change the rules)
@@ -457,6 +499,17 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         word = "Breakout up" if trade["direction"] == 1 else "Breakdown"
         st.update(state="breakout_up" if trade["direction"] == 1 else "breakdown",
                   label=f"{word}, {k}/{s.horizon} candles")
+        edge_r = h["high"] if trade["direction"] == 1 else h["low"]
+        A0 = float(res["atr"].iloc[trade["i0"]])
+        near = False
+        if 1 <= k <= RETEST_MAX:
+            # a pending trade means no close has landed back inside yet, so the latest close is on the
+            # favourable side by construction; "near" is only whether the latest candle pulled back to the edge
+            lo = float(c4["Low"].iloc[-1])
+            hi = float(c4["High"].iloc[-1])
+            near = (lo <= edge_r + RETEST_TOUCH * A0) if trade["direction"] == 1 else (hi >= edge_r - RETEST_TOUCH * A0)
+        st["retest"] = dict(edge=round(edge_r, 2), candles_since=k,
+                            candles_left=max(0, RETEST_MAX - k), near=bool(near))
         return st
     from_price()
     if n - 1 - trade["oi"] < s.horizon:

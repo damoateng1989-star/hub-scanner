@@ -37,10 +37,6 @@ EXITS = [   # key, label
     ("atr10", "Stop 1 ATR from entry"),
 ]
 
-RETEST_MAX = 5        # the retest must come within this many 4H candles after the breakout close
-RETEST_TOUCH = 0.25   # pullback low must come within this x ATR of the edge
-RETEST_NEAR = 0.5     # entry close must sit within this x ATR of the edge
-
 GROUPS = [  # key, label, pattern kinds
     ("hub", "Hubs", ("hub",)),
     ("flag", "Flags", ("flag_bull", "flag_bear")),
@@ -164,12 +160,12 @@ def _retest_entry(close, low, high, atr, i0, d, edge):
     if not A0 or A0 != A0:
         return None
     n = len(close)
-    for j in range(i0 + 1, min(i0 + 1 + RETEST_MAX, n)):
+    for j in range(i0 + 1, min(i0 + 1 + engine.RETEST_MAX, n)):
         c = close[j]
         if (c - edge) * d < 0:                      # closed back inside: breakout failed, no retest
             return None
-        touched = (low[j] <= edge + RETEST_TOUCH * A0) if d == 1 else (high[j] >= edge - RETEST_TOUCH * A0)
-        near = (edge < c <= edge + RETEST_NEAR * A0) if d == 1 else (edge - RETEST_NEAR * A0 <= c < edge)
+        touched = (low[j] <= edge + engine.RETEST_TOUCH * A0) if d == 1 else (high[j] >= edge - engine.RETEST_TOUCH * A0)
+        near = (edge < c <= edge + engine.RETEST_NEAR * A0) if d == 1 else (edge - engine.RETEST_NEAR * A0 <= c < edge)
         if touched and near:
             return j, float(c)
     return None
