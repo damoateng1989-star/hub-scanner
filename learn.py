@@ -316,7 +316,7 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
 <h2>Aim and wrong</h2>
 <p>You're wrong on a close below the lowest low since the gap. The aim is twice the distance from entry to that low (2R). Earnings gaps can swing hard, so size small.</p>
 <h2>How it tested</h2>
-<p>This was the strongest setup in the two-year test: about +2.8% per trade over 341 trades. Fewer setups, but the best average. It's live, with the reclaim close as the entry.</p>""",
+<p>This was the strongest setup in the two-year test: about +2.8% per trade over 341 trades. Fewer setups, but the best average. The last 6 months of the test were slightly negative, so size small. It's live and out of beta: each alert carries the plan (entry, stop, 2R target, 10 days), and you manage the trade.</p>""",
          ["Gap up 5%+, then a fade with a long upper wick.",
           "Trigger: a daily close back above the gap-day high within 5 sessions.",
           "Stop: below the lowest low since the gap. Aim: 2R."],

@@ -550,8 +550,14 @@ def format_pattern_event(sym: str, e: dict) -> str:
         risk = e["close"] - (e.get("stop") or e["close"])
         return (f"🔄 Post-earnings gap fade & rip: {sym} gapped up {e.get('gap_pct', 0) * 100:.1f}% on {e.get('gap_day', 'the gap day')}, "
                 f"faded to {_money(e.get('stop'))}, and just closed back above the gap-day high {_money(e['edge'])}.\n"
-                f"Entry {_money(e['close'])}, stop {_money(e.get('stop'))} (−1R), target {_money(e['target'])} (+2R).\n"
-                f"Size off the risk ({_money(risk)} a share), not a fixed %. Beta: the shape is measured, the earnings link isn't.\n"
+                f"Plan (not advice; you manage the trade):\n"
+                f"• Entry ≈ {_money(e['close'])} (this close)\n"
+                f"• Stop: a daily close below {_money(e.get('stop'))}, the fade low (−1R)\n"
+                f"• Target: {_money(e['target'])} (+2R)\n"
+                f"• Give it 10 trading days, then it's over\n"
+                f"• Size off the risk ({_money(risk)} a share), not a fixed %\n"
+                f"Tested over two years: +2.76% per trade across 341 trades, though slightly negative over the last 6 months. "
+                f"It fires on the shape; whether the gap was earnings isn't checked.\n"
                 f"Day closed: {candle_close(e['time'])}")
     if e["kind"] == "flush":
         reached = e["close"] >= e["target"]
