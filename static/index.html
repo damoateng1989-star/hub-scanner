@@ -3325,6 +3325,14 @@ async function loadLabExits() {
   clearTimeout(LABX_POLL);
   if (LABX.status === "running") LABX_POLL = setTimeout(loadLabExits, 5000);
 }
+async function stopLabExits(btn, restart) {
+  if (!confirm(restart ? "Stop this run and start a fresh one from the beginning?" : "Stop the test? Progress so far is thrown away; the last finished results stay.")) return;
+  btn.disabled = true; btn.textContent = restart ? "Restarting…" : "Stopping…";
+  try { await api("/api/admin/lab/exits/stop?restart=" + (restart ? "true" : "false"), {method: "POST", timeout: 60000}); }
+  catch (e) { btn.disabled = false; toast("Couldn't stop the test: " + e.message); return; }
+  toast(restart ? "Restarting: it stops at the next stock, then starts fresh." : "Stopping at the next stock.");
+  setTimeout(loadLabExits, 2500);
+}
 async function runLabExits(btn) {
   btn.disabled = true; btn.textContent = "Starting…";
   let r;
@@ -3338,7 +3346,12 @@ function renderLabExits() {
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
   const col = (v) => v == null || v === 0 ? "" : `color:var(${v > 0 ? "--up" : "--down"})`;
   const head = `<div class="ph"><h2>Which breakouts work, and which exit</h2>
-      <button class="btnx sm" onclick="runLabExits(this)" ${L.status === "running" ? "disabled" : ""}>${L.status === "running" ? `Running… ${L.done || 0} / ${L.total || "?"} stocks` : R ? "Run again" : "Run the test"}</button></div>`
+      ${L.status === "running"
+        ? `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="note" style="margin:0">Running… ${L.done || 0} / ${L.total || "?"} stocks</span>
+           <button class="btnx sm" onclick="stopLabExits(this, true)">Restart</button>
+           <button class="btnx sm" style="color:var(--down)!important" onclick="stopLabExits(this, false)">Stop</button></div>`
+        : `<button class="btnx sm" onclick="runLabExits(this)">${R ? "Run again" : "Run the test"}</button>`}</div>`
+    + (L.status === "stopped" ? `<p class="note" style="padding:0 18px 8px;margin:0">The last run was stopped.${R ? " The results below are from the last run that finished." : ""}</p>` : "")
     + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");
   const intro = `<p class="note" style="padding:0 18px 12px;margin:0">Replays every breakout of each pattern (hubs, flags, double tops and bottoms, triangles, channels, support and resistance, gap fades) in the last ${L.days || 720} days across the board's stocks with the live rules. Entry: at the breakout close, or, with Retest selected, at the first close back near the edge after the breakout (within 5 candles); breakouts that never pull back are not traded.
     Each row keeps only the breakouts that pass that filter; each exit rule scores the same trades a different way. <b>Avg per trade</b> is what decides it, not win rate.

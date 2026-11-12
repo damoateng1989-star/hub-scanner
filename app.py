@@ -1085,6 +1085,12 @@ def admin_lab_exits_run(u: dict = Admin):
     return dict(started=lab_exits.start())
 
 
+@app.post("/api/admin/lab/exits/stop")
+def admin_lab_exits_stop(restart: bool = False, u: dict = Admin):
+    import lab_exits
+    return lab_exits.stop(restart=restart)
+
+
 @app.get("/api/backtest/{symbol}")
 async def backtest(symbol: str, pattern: str = "hub", u: dict = Pro):
     try:

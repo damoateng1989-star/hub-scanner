@@ -26,6 +26,12 @@ log = logging.getLogger("lab")
 DAYS = 720
 CHUNK = 20
 _LOCK = threading.Lock()
+_CANCEL = threading.Event()   # set by stop(): the run quits at the next stock
+_RESTART = {"on": False}      # stop(restart=True): start a fresh run as soon as the old one has quit
+
+
+class _Stopped(Exception):
+    pass
 
 EXITS = [   # key, label
     ("edge", "Current: out on a close back inside the pattern"),
@@ -440,6 +446,7 @@ def _load_ckpt():
 def run(symbols: list[str] | None = None, resume: bool = False):
     if not _LOCK.acquire(blocking=False):
         return
+    _CANCEL.clear()
     try:
         import scanner
         s = scanner.SETTINGS
@@ -459,6 +466,8 @@ def run(symbols: list[str] | None = None, resume: bool = False):
             log.info("lab test: started, %d stocks", len(syms))
         regime = _spy_regime()
         for i in range(start_i, len(syms), CHUNK):
+            if _CANCEL.is_set():
+                raise _Stopped()
             part = syms[i:i + CHUNK]
             bars = {}
             for attempt in range(3):          # Alpaca rate limits come back as errors: wait and retry
@@ -472,6 +481,8 @@ def run(symbols: list[str] | None = None, resume: bool = False):
             else:
                 failed += len(part)
             for sym in part:
+                if _CANCEL.is_set():
+                    raise _Stopped()
                 try:
                     b = bars.get(sym)
                     if b is not None and not b.empty:
@@ -494,11 +505,18 @@ def run(symbols: list[str] | None = None, resume: bool = False):
              finished=pd.Timestamp.now(tz="UTC").isoformat(), seconds=round(time.time() - started),
              regime_ok=regime is not None)
         CKPT.unlink(missing_ok=True)
+    except _Stopped:
+        CKPT.unlink(missing_ok=True)           # a stopped run isn't resumed; the last finished results stay on the page
+        _set(status="stopped", error=None, stopped=pd.Timestamp.now(tz="UTC").isoformat())
+        log.info("lab test: stopped")
     except Exception as e:
         traceback.print_exc()
         _set(status="error", error=str(e)[:300])
     finally:
         _LOCK.release()
+        if _RESTART["on"]:
+            _RESTART["on"] = False
+            start()
 
 
 def start(resume: bool = False) -> bool:
@@ -506,6 +524,20 @@ def start(resume: bool = False) -> bool:
         return False
     threading.Thread(target=run, kwargs=dict(resume=resume), daemon=True).start()
     return True
+
+
+def stop(restart: bool = False) -> dict:
+    """Stop the running test (it quits at the next stock). restart=True starts a fresh run right after."""
+    if _LOCK.locked():
+        _RESTART["on"] = restart
+        _CANCEL.set()
+        return dict(stopping=True, restart=restart)
+    CKPT.unlink(missing_ok=True)               # nothing running here (e.g. a run cut off by a restart): clear it
+    st = json.loads(db.get_setting("lab_exits") or "{}")
+    if st.get("status") == "running":
+        _set(status="stopped", error=None)
+    started = start() if restart else False
+    return dict(stopping=False, restart=restart, started=started)
 
 
 def resume_if_interrupted():
