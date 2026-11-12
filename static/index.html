@@ -4384,19 +4384,24 @@ function setupSketch(x) {
     { v: neck, c: "trig", t: (gap ? "gap-day high " : "neckline ") + money(neck) + (live ? "" : " · trigger") },
     { v: far, c: gap || live ? "stop" : "lv", t: (gap ? (live ? "stop " : "fade low ") : (far > neck ? "tops " : "lows ")) + money(far) },
   ].concat(tgt != null && Number.isFinite(tgt) ? [{ v: tgt, c: "tgt", t: "target " + money(tgt) }] : []).sort((a, b) => y(a.v) - y(b.v));
-  let lastY = -99;
+  let lastY = -99; const rightYs = [];
   const lv = lines.map(L => { const yy = y(L.v), line = `<line class="sk-l ${L.c}" x1="4" x2="${W - 4}" y1="${yy}" y2="${yy}"/>`;
     if (L.c === "trig") {       // the trigger label sits on the left, on the side away from the pattern, so nothing on the right can cover it
       const ty = far > neck ? yy + 11 : Math.max(9, yy - 4);
       return line + `<text class="sk-t trig" x="4" y="${ty.toFixed(1)}" text-anchor="start">${esc(L.t)}</text>`;
     }
     const crowded = lines.some(M => M !== L && y(M.v) < yy && yy - y(M.v) < 15);   // another line just above: label goes under its own line
-    let ty = yy - 4; if (crowded || ty - lastY < 12 || ty < 10) ty = yy + 11; lastY = ty;
+    let ty = yy - 4; if (crowded || ty - lastY < 12 || ty < 10) ty = yy + 11; lastY = ty; rightYs.push(ty);
     return line + `<text class="sk-t ${L.c}" x="${W - 6}" y="${ty.toFixed(1)}" text-anchor="end">${esc(L.t)}</text>`; }).join("");
   const dcls = live ? (up ? "up" : "down") : "";
+  // the price, written next to the dot; nudged up or down if a level label on the right is at the same height
+  let py = dot[1] + 3.5; const hit = rightYs.find(t => Math.abs(t - py) < 11);
+  if (hit != null) py = hit >= py ? hit - 12 : hit + 12;
+  py = Math.max(9, Math.min(H - 3, py));
+  const pl = `<text class="sk-now ${dcls}" x="${dot[0] + 12}" y="${py.toFixed(1)}">${money(P)}</text>`;
   return `<svg class="sk" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(x.name)}: price ${money(P)}, ${esc(lines.map(L => L.t).join(", "))}">${lv}
     <polyline class="sk-p" points="${pts.map(p => p.join(",")).join(" ")}"/><line class="sk-p now" x1="${pts[pts.length - 1][0]}" y1="${pts[pts.length - 1][1]}" x2="${dot[0]}" y2="${dot[1]}"/>
-    <circle class="sk-halo ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="8"/><circle class="sk-dot ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="4"/></svg>`;
+    <circle class="sk-halo ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="8"/><circle class="sk-dot ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="4"/>${pl}</svg>`;
 }
 function setupCard(x) {
   const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
@@ -4413,7 +4418,7 @@ function setupCard(x) {
     const d = Math.abs((trig / P - 1) * 100);
     const dd = Math.abs(trig - P).toFixed(2);
     pos = d < 0.15 ? "At the " + lineName
-      : `<b>$${dd} ${up ? "below" : "above"} the ${lineName}</b><br>${d.toFixed(1)}% ${up ? "below" : "above"} the ${lineName}`;
+      : `<b>$${dd} ${up ? "below" : "above"} the trigger</b><br>${d.toFixed(1)}% ${up ? "below" : "above"} the ${lineName}`;
     meta = gap ? `Trigger: a daily close above <b>${money(trig)}</b> · gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`
       : `Heads-up on a 4H close ${up ? "above" : "below"} <b>${money(trig)}</b> · ${x.sessions} sessions`
         + (x.kind.startsWith("double") && x.peak != null ? `<br>Becomes an <b>A setup</b> if the retest close is the 4:00 PM close and the entry isn't past halfway to the target. Stop then sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : "");
@@ -4421,7 +4426,7 @@ function setupCard(x) {
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
-    <div class="sc-kind">${esc(x.name)}${live ? strengthChip(x.strength, up) : ""}</div>
+    <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${live ? strengthChip(x.strength, up) : ""}</div>
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
     <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="toggleScout()">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
@@ -5089,12 +5094,16 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #5B6672; }
 @media (max-width: 760px) { .sc-grid { padding-bottom: 120px; } }   /* the last card clears the Sika button */
 .sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
+.sc-kind b { color: #C9CDD6; font-weight: 650; } html[data-theme="light"] .sc-kind b { color: #33373D; }
 .sc-kind .str-chip { margin: 0 0 0 8px; }
 .sc .sk { display: block; width: 100%; height: auto; margin: 10px 0 2px; }
 .sk-l { stroke: #3A3D45; stroke-width: 1; stroke-dasharray: 4 4; }
 .sk-l.trig { stroke: #7C93FF; } .sk-l.tgt { stroke: #3DD68C; } .sk-l.stop { stroke: #FF6B5E; opacity: .8; }
 .sk-t { font: 600 10px var(--sans); fill: #8A8F99; font-variant-numeric: tabular-nums; }
 .sk-t.trig { fill: #9DAEFF; } .sk-t.tgt { fill: #3DD68C; } .sk-t.stop { fill: #FF8A7F; }
+.sk-now { font: 700 11px var(--sans); fill: #F3F3F0; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: #15161A; stroke-width: 3px; }
+.sk-now.up { fill: #3DD68C; } .sk-now.down { fill: #FF8A7F; }
+html[data-theme="light"] .sk-now { fill: #141412; stroke: #fff; } html[data-theme="light"] .sk-now.up { fill: #12805C; } html[data-theme="light"] .sk-now.down { fill: #C81E1E; }
 .sk-p { fill: none; stroke: #C9CDD6; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
 .sk-p.now { stroke-dasharray: 3 4; opacity: .75; }
 .sk-dot { fill: #F3F3F0; } .sk-dot.up { fill: #3DD68C; } .sk-dot.down { fill: #FF6B5E; }
