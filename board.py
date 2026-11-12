@@ -124,7 +124,7 @@ def _resolve_orphans(sym: str, c4: pd.DataFrame, start: pd.Timestamp, produced: 
             hub = [t for t in res["trades"] if f"{sym}|{idx[t['i0']].isoformat()}" in pend]
             if hub:
                 _record(sym, c4, res, start, trades=hub, only_existing=True)
-            pa = patterns.analyze_all(c4, res, st, vol_gate=gate)
+            pa = patterns.analyze_all(c4, res, st, vol_gate=gate, live_only=False)   # finish signals logged before Patch 82 too
             for kind in patterns.KINDS:
                 if kind != "hub":
                     tr = [x for x in pa["trades"] if x["kind"] == kind and f"{kind}|{sym}|{idx[x['i0']].isoformat()}" in pend]

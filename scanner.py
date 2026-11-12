@@ -580,6 +580,10 @@ def format_pattern_event(sym: str, e: dict) -> str:
     else:
         what = f"the {name} {'upper' if up else 'lower'} line at {_money(e['edge'])}"
     reached = (e["close"] - e["target"]) * d >= 0
+    if e["kind"] not in ("double_top", "double_bottom"):
+        return (f"{'🚀' if up else '🔻'} {sym}: 4H close {'ABOVE' if up else 'BELOW'} {what}\n"
+                f"Setup: {patterns.KINDS[e['kind']]} (watch only — no measured edge, no entry plan)\n"
+                f"Candle closed: {candle_close(e['time'])}")
     ent = None
     if e["kind"].startswith("double"):
         ent = (f"Entry ≈ the retest close — a 4H close back near the neckline {_money(e['edge'])} "

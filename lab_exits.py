@@ -184,7 +184,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     import patterns
     res = engine.analyze(c4, s)
     try:
-        other = patterns.analyze_all(c4, res, s)["trades"]
+        other = patterns.analyze_all(c4, res, s, live_only=False)["trades"]
     except Exception:
         traceback.print_exc()
         other = []

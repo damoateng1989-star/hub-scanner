@@ -27,6 +27,7 @@ KINDS = {
     "fail_up":  "Failed breakout",
     "flush":    "Flush & reclaim",
 }
+LIVE_KINDS = {"double_top", "double_bottom", "gapfade"}   # the measured setups only; the rest are off for now (Patch 82)
 STYLE_OF = {"hub": "hub", "triangle": "triangle", "channel_down": "channel", "channel_up": "channel", "sr": "sr",
             "flag_bull": "flag", "flag_bear": "flag", "double_top": "double", "double_bottom": "double",
             "gapfade": "gapfade", "fail_down": "fakeout", "fail_up": "fakeout", "flush": "flush"}
@@ -332,7 +333,7 @@ def _target(res: dict, start_i: int, d: int, edge: float, atr_v: float, s: engin
 
 
 # ---------------------------------------------------------------- analysis
-def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings, vol_gate: bool = True) -> dict:
+def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings, vol_gate: bool = True, live_only: bool = True) -> dict:
     """All non-hub setups for one stock: patterns found, past breakouts with results, and what's live now.
     vol_gate: like hubs, a breakout on light volume (under VOLUME_MULT x a normal candle at that time) doesn't count."""
     close, atr_s = res["close"], res["atr"]
@@ -446,6 +447,13 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings, vol_gate: bool 
             out["live"].append(dict(kind=t["kind"], state="breakout_up" if t["direction"] == 1 else "breakdown",
                                     edge=t["edge"], target=t["target"], target_kind="shelf" if t["shelf"] else "atr",
                                     candles=n - 1 - t["i0"], since=close.index[t["i0"]].isoformat(), trade=t))
+    # Patch 82: only the measured setups are live. The rest are off for now — no alerts, no board rows,
+    # no record entries. The S&R levels entry (state testing/between) stays: it is the map, not a setup.
+    # live_only=False (the Lab, and finishing signals logged before the switch) still sees every kind.
+    if live_only:
+        out["trades"] = [t for t in out["trades"] if t["kind"] in LIVE_KINDS]
+        out["live"] = [L for L in out["live"]
+                       if L["kind"] in LIVE_KINDS or (L["kind"] == "sr" and L["state"] in ("testing", "between"))]
     return out
 
 

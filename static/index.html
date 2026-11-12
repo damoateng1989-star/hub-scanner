@@ -3797,7 +3797,7 @@ function briefHTML(sym, st, chart) {
         return `<div><span>${new Date(t.time * 1000).toLocaleDateString(undefined, {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.direction === 1 ? "Long" : "Short"}</span><i style="--c:${w[1]}">${w[0]}</i></div>`; }).join("")}</div>`;
   } else rec = loadingHTML("Loading the track record…");
   const others = (st.setups || []).filter(x => x.state !== "between" || x.kind === "sr");
-  const setupsHTML = others.length ? `<p class="beta-line">New setups, too few results to judge yet. Hubs are NextShelf's tested setup.</p><div class="gp">${others.map(x => {
+  const setupsHTML = others.length ? `<p class="beta-line">Only the measured setups are shown: hubs, double tops &amp; bottoms, and gap fade &amp; rip.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
       if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.strength ? ` ${strengthChip(x.strength, x.state === "breakout_up")}` : ""}${x.kind === "flush" ? ` Wrong on a daily close back below ${money(x.edge)}.` : x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}${x.retest && x.retest.candles_left > 0 ? ` Waiting for the retest: entry on a 4H close back near the neckline ${money(x.retest.edge)} that holds ${x.state === "breakout_up" ? "above" : "below"} it (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left).${x.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}` : ""}`;
@@ -4270,7 +4270,7 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Estimates use Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["flag", "Flags"], ["double", "Double tops & bottoms"], ["triangle", "Triangles"], ["channel", "Channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"], ["flush", "Flush & reclaim"], ["fakeout", "Failed breakdowns"]];
+const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"]];   // Patch 82: the measured setups only
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
