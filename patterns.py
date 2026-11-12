@@ -652,6 +652,8 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             t = L["trade"]
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
+            if k.startswith("double"):               # the far side of the pattern (the two lows / highs): the A-setup stop
+                row["far"] = round(t["edge"] - t["direction"] * (t["hub"]["high"] - t["hub"]["low"]), 2)
             if k.startswith("double") and t["outcome"] == "pending":
                 # Patch 81: the retest wait, so the board can show it like the hub's st["retest"]
                 kk = n - 1 - t["i0"]

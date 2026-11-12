@@ -4356,22 +4356,65 @@ function renderSetupBoard() {
     flush: "A stock drops 5%+ in a day (often on earnings), then within 10 sessions a daily close goes back above the level it fell from (its highest close of the 5 days before) on normal volume or better. That's the reclaim, and it's long only. Wrong on a daily close back below that level. Aim: the next shelf above.",
     fakeout: "A hub breaks one way and traps traders, then within 3 candles a 4-hour close goes back through the OTHER side of the hub on 1.2× normal volume. A failed breakdown (close below the hub, then back above the top) is a long; a failed breakout is a short. Wrong on a close past the fake-out low (or high). Aim: the next shelf.",
     gapfade: "A stock gaps up (usually on earnings), sells off from the gap, then rips. The trade is a daily close back above the gap-day high within 5 days. Stop at the low of the fade, target 2× that risk. Size off the risk, not a fixed %. It fires on the shape; whether the gap was earnings isn't checked yet." }[SETUP_TAB];
-  $("setupBoard").innerHTML = lock + `<div class="beta-note"><b>Beta: new setup, too few results to judge yet.</b> Hubs are NextShelf's tested setup. This one's track record builds on the <a href="#results">Results</a> page.</div><p class="setup-about">${about}</p>` + (rows.length ? `<div class="board-frame"><div class="board-scroll"><table class="board-table setup-table"><thead><tr>
-    <th>Instrument</th><th>Setup</th><th>Status</th><th>Last price</th><th>Upper</th><th>Lower</th><th>Target</th><th>Context</th><th>Analysis</th></tr></thead><tbody>
-    ${rows.map(x => { const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown";
-      const up = live ? (x.state === "breakout_up" ? x.edge : null) : x.upper, lo = live ? (x.state === "breakdown" ? x.edge : null) : x.lower;
-      const fk = x.kind === "fail_down" || x.kind === "fail_up";
-      const ctx = x.kind === "flush" ? (live ? `day ${x.candles + 1}/10 · flush low ${money(x.stop)}` : `dropped ${x.drop_pct}% on ${x.flush_day} · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`)
-        : fk ? (live ? `${x.candles}/10 candles · stop ${money(x.stop)}` : `trigger ${money(x.trigger_px)} · ${x.candles_left} candle${x.candles_left === 1 ? "" : "s"} left`)
-        : x.kind === "gapfade" ? (live ? `day ${x.candles + 1}/10 · stop ${money(x.stop)}` : `gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`)
-        : live ? `${x.candles}/10 candles` : x.kind === "sr" ? `${x.near === "resistance" ? x.upper_touches : x.lower_touches || x.upper_touches} touches`
-        : x.kind.startsWith("flag") ? `pole ${x.trigger === "up" ? "+" : "−"}${x.pole_pct}%` : x.kind.startsWith("double") ? `neckline ${money(x.neck)}` : `${x.sessions} sessions`;
-      return `<tr><td><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}">${esc(x.symbol)}</a><small>${x.kind === "gapfade" || x.kind === "flush" ? "1D" : "4H"}</small></div></td>
-        <td>${esc(x.name)}</td><td><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}${live ? strengthChip(x.strength, x.state === "breakout_up") : ""}</td><td>${money(x.last_close)}</td>
-        <td>${up == null ? "—" : money(up) + (x.kind === "sr" && !live ? '<small class="sr-side res">resistance</small>' : "")}</td><td>${lo == null ? "—" : money(lo) + (x.kind === "sr" && !live ? '<small class="sr-side sup">support</small>' : "")}</td><td>${live ? money(x.target) : "—"}</td><td>${ctx}</td>
-        <td><div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></td></tr>`; }).join("")}
-    </tbody></table></div></div>` : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" || SETUP_TAB === "flush" ? "daily" : "4-hour"} close.</div>`)
+  $("setupBoard").innerHTML = lock + `<div class="beta-note"><b>Beta: new setup, too few results to judge yet.</b> Hubs are NextShelf's tested setup. This one's track record builds on the <a href="#results">Results</a> page.</div><p class="setup-about">${about}</p>` + (rows.length ? `<div class="sc-grid">${rows.map(setupCard).join("")}</div>`
+    : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" || SETUP_TAB === "flush" ? "daily" : "4-hour"} close.</div>`)
     + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup is in beta. It works on daily closes with a fixed 2× risk target, not the hub rules." : SETUP_TAB === "flush" ? "This setup is in beta. It works on daily closes: the trigger is a daily close back above the level, and it's wrong on a daily close back below it." : SETUP_TAB === "fakeout" ? "This setup is in beta. It acts on a 4-hour close and aims for the next shelf, but the stop is the fake-out low (or high), not the hub edge." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
+}
+// ---- setup cards: the pattern drawn with its levels and a dot where price is now (same card as the hub board)
+function setupSketch(x) {
+  const P = Number(x.last_close), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
+  const up = live ? x.state === "breakout_up" : x.trigger === "up";            // the direction the trade goes
+  let neck, far, tgt = null;                                                   // neck = the trigger line; far = the other side of the pattern
+  if (gap) { neck = live ? x.edge : x.upper; far = live ? x.stop : x.lower; }
+  else if (live) { neck = x.edge; far = x.far; }
+  else { neck = x.neck; far = x.peak; }
+  neck = Number(neck); far = Number(far);
+  if (live) tgt = Number(x.target);
+  if (![P, neck, far].every(Number.isFinite) || neck === far) return "";
+  const w = Math.abs(neck - far), base = gap ? far - 0.45 * w : null;
+  const vals = [P, neck, far].concat(tgt != null && Number.isFinite(tgt) ? [tgt] : [], base != null ? [base] : []);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.14; lo -= pad; hi += pad;
+  const W = 320, H = 104, y = v => +(8 + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - 16)).toFixed(1);
+  const pts = gap
+    ? [[8, y(base)], [50, y(base)], [57, y(neck - 0.25 * w)], [74, y(neck)], [122, y(far)]]          // flat, gap up, spike to the high, fade
+    : [[8, y(neck)], [48, y(far)], [88, y(neck)], [128, y(far)]];                                   // the M (or W): two tests of the same level
+  const px = live ? 188 : 164, dot = [px, y(P)];
+  const lines = [
+    { v: neck, c: "trig", t: (gap ? "gap-day high " : "neckline ") + money(neck) },
+    { v: far, c: gap || live ? "stop" : "lv", t: (gap ? (live ? "stop " : "fade low ") : (far > neck ? "tops " : "lows ")) + money(far) },
+  ].concat(tgt != null && Number.isFinite(tgt) ? [{ v: tgt, c: "tgt", t: "target " + money(tgt) }] : []).sort((a, b) => y(a.v) - y(b.v));
+  let lastY = -99;
+  const lv = lines.map(L => { const yy = y(L.v); let ty = yy - 4; if (ty - lastY < 12 || ty < 10) ty = yy + 11; lastY = ty;
+    return `<line class="sk-l ${L.c}" x1="4" x2="${W - 4}" y1="${yy}" y2="${yy}"/><text class="sk-t ${L.c}" x="${W - 6}" y="${ty.toFixed(1)}" text-anchor="end">${esc(L.t)}</text>`; }).join("");
+  const dcls = live ? (up ? "up" : "down") : "";
+  return `<svg class="sk" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(x.name)}: price ${money(P)}, ${esc(lines.map(L => L.t).join(", "))}">${lv}
+    <polyline class="sk-p" points="${pts.map(p => p.join(",")).join(" ")}"/><line class="sk-p now" x1="${pts[pts.length - 1][0]}" y1="${pts[pts.length - 1][1]}" x2="${dot[0]}" y2="${dot[1]}"/>
+    <circle class="sk-halo ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="8"/><circle class="sk-dot ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="4"/></svg>`;
+}
+function setupCard(x) {
+  const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
+  const up = live ? x.state === "breakout_up" : x.trigger === "up", P = Number(x.last_close);
+  const pct = (a, b) => Math.abs((a / b - 1) * 100).toFixed(1) + "%";
+  const trig = gap ? (live ? x.edge : x.upper) : (live ? x.edge : x.neck), lineName = gap ? "gap-day high" : "neckline";
+  let pos, meta;
+  if (live) {
+    const reached = (P - x.target) * (up ? 1 : -1) >= 0;
+    pos = reached ? "At the target" : pct(x.target, P) + " to the target";
+    meta = `Target <b>${money(x.target)}</b>` + (gap ? ` · stop ${money(x.stop)} · day ${x.candles + 1}/10` : `${x.far != null ? ` · wrong past ${money(x.far)}` : ""} · ${x.candles}/10 candles`)
+      + (x.retest && x.retest.candles_left > 0 ? `<br>Wait for the retest: a 4H close back near <b>${money(x.retest.edge)}</b> that holds (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left)${x.retest.near ? ". Price is back at it now" : ""}.` : "");
+  } else {
+    const d = Math.abs((trig / P - 1) * 100);
+    pos = d < 0.15 ? "At the " + lineName : d.toFixed(1) + "% " + (up ? "below" : "above") + " the " + lineName;
+    meta = gap ? `Trigger: a daily close above <b>${money(trig)}</b> · gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`
+      : `Heads-up on a 4H close ${up ? "above" : "below"} <b>${money(trig)}</b> · ${x.sessions} sessions`;
+  }
+  return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
+      <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
+    <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
+    <div class="sc-kind">${esc(x.name)}${live ? strengthChip(x.strength, up) : ""}</div>
+    ${setupSketch(x)}
+    <div class="msc-meta">${meta}</div>
+    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></div>`;
 }
 let RECORD_PAT = "hub";
 
@@ -5014,6 +5057,39 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
   main footer, body footer { grid-template-columns: 1fr; padding-bottom: 80px; }
   footer > .foot-brand, footer > span:nth-child(2), footer > .app-legal:nth-child(3), footer > .app-legal:nth-child(4) { grid-column: 1; grid-row: auto; justify-content: flex-start; }
 }
+
+/* setup cards (double tops & bottoms, gap fade): the hub card, with the pattern drawn */
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.sc { border: 1px solid var(--line, #26272B); border-radius: 18px; padding: 18px 18px 16px; background: #15161A; min-width: 0; }
+.sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }
+.sc .board-symbol a { font-size: 24px !important; font-weight: 800 !important; letter-spacing: -.01em; }
+.sc .board-symbol small { font-size: 11px !important; margin: 0 !important; display: inline !important; }
+.sc .board-symbol .earn-tag { flex-basis: 100%; width: max-content; }
+.sc-st { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
+.sc-mid { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 14px; }
+.sc-px { font: 800 26px var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: #F3F3F0; }
+.sc-pos { font-size: 14px; color: #A9AEB8; text-align: right; }
+.sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
+.sc-kind .str-chip { margin: 0 0 0 8px; }
+.sc .sk { display: block; width: 100%; height: auto; margin: 10px 0 2px; }
+.sk-l { stroke: #3A3D45; stroke-width: 1; stroke-dasharray: 4 4; }
+.sk-l.trig { stroke: #7C93FF; } .sk-l.tgt { stroke: #3DD68C; } .sk-l.stop { stroke: #FF6B5E; opacity: .8; }
+.sk-t { font: 600 10px var(--sans); fill: #8A8F99; font-variant-numeric: tabular-nums; }
+.sk-t.trig { fill: #9DAEFF; } .sk-t.tgt { fill: #3DD68C; } .sk-t.stop { fill: #FF8A7F; }
+.sk-p { fill: none; stroke: #C9CDD6; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sk-p.now { stroke-dasharray: 3 4; opacity: .75; }
+.sk-dot { fill: #F3F3F0; } .sk-dot.up { fill: #3DD68C; } .sk-dot.down { fill: #FF6B5E; }
+.sk-halo { fill: rgba(243,243,240,.16); } .sk-halo.up { fill: rgba(61,214,140,.2); } .sk-halo.down { fill: rgba(255,107,94,.2); }
+.sc .msc-meta { margin-top: 8px; line-height: 1.5; }
+.sc .board-actions { justify-content: flex-start; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line, #26272B); flex-wrap: wrap; }
+html[data-theme="light"] .sc { background: #fff; border-color: #E4E4DF; }
+html[data-theme="light"] .sc-px { color: #141412; } html[data-theme="light"] .sc-pos { color: #5B6672; }
+html[data-theme="light"] .sk-l { stroke: #CFD3DA; } html[data-theme="light"] .sk-l.trig { stroke: #2F54EB; } html[data-theme="light"] .sk-l.tgt { stroke: #12805C; } html[data-theme="light"] .sk-l.stop { stroke: #C81E1E; }
+html[data-theme="light"] .sk-t { fill: #6B7280; } html[data-theme="light"] .sk-t.trig { fill: #2F54EB; } html[data-theme="light"] .sk-t.tgt { fill: #12805C; } html[data-theme="light"] .sk-t.stop { fill: #C81E1E; }
+html[data-theme="light"] .sk-p { stroke: #141412; } html[data-theme="light"] .sk-dot { fill: #141412; } html[data-theme="light"] .sk-dot.up { fill: #12805C; } html[data-theme="light"] .sk-dot.down { fill: #C81E1E; }
+html[data-theme="light"] .sk-halo { fill: rgba(20,20,18,.12); }
+@media (max-width: 480px) { .sc-grid { grid-template-columns: 1fr; } }
 </style>
 </body>
 </html>
