@@ -316,13 +316,34 @@ ATOMS = ("vol", "mkt", "trend", "nochase", "margin", "rr", "tight", "long", "pm"
 MIN_BEST = 100          # a winning filter must keep at least this many trades
 
 
-def best_filters(mine: list[dict], filters: list) -> list[dict]:
+TOP_N = 5          # concentration check: drop the 5 stocks that made the most and see if it still makes money
+MIN_STOCKS = 15    # and it has to have traded at least this many different stocks
+
+
+def _spread(x: np.ndarray, syms: np.ndarray) -> dict:
+    """How broad the profit is: stocks traded, share of the profit from the top TOP_N stocks, and the result without them."""
+    tot = {}
+    for r, sy in zip(x, syms):
+        tot[sy] = tot.get(sy, 0.0) + float(r)
+    top = sorted(tot, key=lambda k: -tot[k])[:TOP_N]
+    pos = sum(v for v in tot.values() if v > 0)
+    keep = ~np.isin(syms, top)
+    rest = x[keep]
+    return dict(stocks=len(tot), top=top,
+                top_share=round(100 * sum(max(tot[k], 0) for k in top) / pos, 1) if pos > 0 else None,
+                n_ex_top=int(keep.sum()), avg_ex_top=round(float(rest.mean()), 2) if len(rest) else None)
+
+
+def best_filters(mine: list[dict], filters: list, stats: dict | None = None) -> list[dict]:
     """Search every combination of up to 3 simple filters, under every exit rule, for ones that made money in BOTH
-    halves of the test window with enough trades. Ranked by the weaker half, so one lucky stretch can't win."""
+    halves of the test window with enough trades, across at least MIN_STOCKS stocks, and still made money with the
+    TOP_N best stocks removed (so a few hot names can't carry it). Ranked by the weaker half."""
     from itertools import combinations
     if len(mine) < MIN_BEST:
         return []
     mine = sorted(mine, key=lambda r: r["t"])
+    syms = np.array([r["sym"] for r in mine])
+    narrow = []
     atoms = [(k, l, np.array([bool(t(r)) for r in mine])) for k, l, t in filters if k in ATOMS]
     atoms = [a for a in atoms if a[2].sum() >= MIN_BEST]
     found = []
@@ -347,10 +368,14 @@ def best_filters(mine: list[dict], filters: list) -> list[dict]:
                 if early <= 0 or late <= 0:
                     continue
                 wins, losses = x[x > 0], x[x <= 0]
-                found.append(dict(filters=[c[1] for c in combo], keys=sorted(keys), exit=ek, exit_label=elabel, n=n,
-                                  win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
-                                  pf=round(float(wins.sum() / -losses.sum()), 2) if losses.sum() < 0 else None,
-                                  early=round(early, 2), late=round(late, 2), size=size))
+                row = dict(filters=[c[1] for c in combo], keys=sorted(keys), exit=ek, exit_label=elabel, n=n,
+                           win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
+                           pf=round(float(wins.sum() / -losses.sum()), 2) if losses.sum() < 0 else None,
+                           early=round(early, 2), late=round(late, 2), size=size, **_spread(x, syms[m]))
+                if row["stocks"] < MIN_STOCKS or not (row["avg_ex_top"] or 0) > 0:
+                    narrow.append(row)            # positive, but only thanks to a few stocks
+                    continue
+                found.append(row)
     found.sort(key=lambda f: (-min(f["early"], f["late"]), f["size"], -f["n"]))
     out, seen = [], set()
     for f in found:                       # top 3, no near-duplicates (same filters under another exit)
@@ -361,6 +386,9 @@ def best_filters(mine: list[dict], filters: list) -> list[dict]:
         out.append(f)
         if len(out) == 3:
             break
+    if stats is not None:
+        narrow.sort(key=lambda f: (-min(f["early"], f["late"]), -f["n"]))
+        stats.update(narrow=len({tuple(f["keys"]) for f in narrow}), narrow_top=narrow[0] if narrow else None)
     return out
 
 
@@ -375,14 +403,16 @@ def summarize(rows: list[dict]) -> dict:
             for fk, flabel, test in filters:
                 sub = [r for r in sub_rows if test(r)]
                 table.append(dict(key=fk, label=flabel, exits={ek: _score(sub, ek) for ek, _ in EXITS}))
-            return table, best_filters(sub_rows, filters)
+            st = {}
+            return table, (best_filters(sub_rows, filters, st), st)
         mine_b = [r for r in mine if r.get("entry", "breakout") == "breakout"]
         # gap fade and flush have no retest variant: their retest tables ARE the breakout tables
         mine_r = [r for r in mine if r.get("entry") == "retest"] if gk not in ("gapfade", "flush") else mine_b
-        table, best = build(mine_b)
-        table_r, best_r = build(mine_r)
+        table, (best, st) = build(mine_b)
+        table_r, (best_r, st_r) = build(mine_r)
         groups.append(dict(key=gk, label=glabel, trades=len(mine_b), trades_retest=len(mine_r),
-                           filters=table, best=best, filters_retest=table_r, best_retest=best_r))
+                           filters=table, best=best, filters_retest=table_r, best_retest=best_r,
+                           narrow=st, narrow_retest=st_r))
     return dict(groups=groups, exits=[dict(key=k, label=l) for k, l in EXITS])
 
 

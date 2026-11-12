@@ -3347,6 +3347,9 @@ function renderLabExits() {
   const filters = retest ? G.filters_retest : G.filters;
   const bestF = retest ? G.best_retest : G.best;
   const gTrades = retest ? G.trades_retest : G.trades;
+  const narrow = (retest ? G.narrow_retest : G.narrow) || null;
+  const spreadLine = (b) => b.stocks == null ? "" : `<div class="note" style="margin:3px 0 0">${b.stocks} stocks · top 5 made ${b.top_share ?? "–"}% of the profit (${(b.top || []).map(esc).join(", ")}) · without them: ${b.n_ex_top} trades, <b style="color:${b.avg_ex_top > 0 ? "var(--up)" : "var(--down)"}">${sign(b.avg_ex_top)}</b> per trade</div>`;
+  const narrowNote = narrow && narrow.narrow ? `<p class="note" style="margin:8px 0 0">${narrow.narrow} other mix${narrow.narrow === 1 ? " was" : "es were"} positive but left out because a few stocks carried ${narrow.narrow === 1 ? "it" : "them"}${narrow.narrow_top ? `, e.g. ${narrow.narrow_top.filters.map(esc).join(" + ")}: ${sign(narrow.narrow_top.avg)} per trade, but ${narrow.narrow_top.stocks < 15 ? `only ${narrow.narrow_top.stocks} stocks` : `${sign(narrow.narrow_top.avg_ex_top)} without ${(narrow.narrow_top.top || []).map(esc).join(", ")}`}` : ""}.</p>` : "";
   const onB = "background:#2F54EB!important;color:#fff!important;border-color:#2F54EB!important";
   const entryRow = hasRetest ? `<div style="padding:0 18px 12px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
     <span class="note" style="margin:0">Entry:</span>
@@ -3361,9 +3364,9 @@ function renderLabExits() {
     ((bestF || []).length ? bestF.map((b, i) => `<div style="padding:8px 0;${i ? "border-top:1px solid var(--line)" : ""}">
         <div><b>${i + 1}. ${b.filters.map(esc).join(" + ")}</b></div>
         <div class="note" style="margin:3px 0 0">Exit: ${esc(b.exit_label)}</div>
-        <div style="margin-top:4px;font-size:13px">${b.n} trades · win rate ${b.win}% · <b style="color:var(--up)">${sign(b.avg)}</b> per trade · profit factor ${b.pf ?? "–"} · early half <span style="color:var(--up)">${sign(b.early)}</span> · later half <span style="color:var(--up)">${sign(b.late)}</span></div></div>`).join("")
-      + `<p class="note" style="margin:8px 0 0">The test tried every mix of up to three filters under each exit, and kept only those that made money in both halves with at least 100 trades. It searched hundreds of mixes, so the best one always looks better than it really is: expect less going forward.</p>`
-      : `<p class="note" style="margin:0">No mix of up to three filters made money in both halves of the test with at least 100 trades. For this pattern the honest answer is that these filters don't turn it positive.</p>`) + `</div>`;
+        <div style="margin-top:4px;font-size:13px">${b.n} trades · win rate ${b.win}% · <b style="color:var(--up)">${sign(b.avg)}</b> per trade · profit factor ${b.pf ?? "–"} · early half <span style="color:var(--up)">${sign(b.early)}</span> · later half <span style="color:var(--up)">${sign(b.late)}</span></div>${spreadLine(b)}</div>`).join("")
+      + `<p class="note" style="margin:8px 0 0">The test tried every mix of up to three filters under each exit, and kept only those that made money in both halves with at least 100 trades, across at least 15 stocks, and still made money with the 5 best stocks taken out. It searched hundreds of mixes, so the best one always looks better than it really is: expect less going forward.</p>`
+      : `<p class="note" style="margin:0">No mix of up to three filters made money in both halves of the test with at least 100 trades. For this pattern the honest answer is that these filters don't turn it positive.</p>`) + narrowNote + `</div>`;
   const exits = R.exits.filter(e => filters[0].exits[e.key]), ex = exits.find(e => e.key === LABX_EXIT) || exits[0];
   const all = filters[0].exits;
   const best = Math.max(...exits.map(e => (all[e.key] || {}).avg ?? -99));
