@@ -4429,7 +4429,7 @@ function setupCard(x) {
     <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${live ? strengthChip(x.strength, up) : ""}</div>
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
-    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="toggleScout()">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
+    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
 }
 let RECORD_PAT = "hub";
 
