@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 
 import engine
+import news
 
 KINDS = {
     "hub":        "Hub",
@@ -652,6 +653,13 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             t = L["trade"]
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
+            try:      # Patch 85: the same possible catalyst the alert carries, for the setup card
+                cat = news.catalyst(news.recent(sym, timeout=4), L["since"])
+                if cat:
+                    row["catalyst"] = dict(headline=cat["headline"], source=cat["source"], url=cat["url"],
+                                           time=cat["time"], tag_label=cat["tag_label"])
+            except Exception:
+                pass      # news never breaks the board
             if k.startswith("double"):               # the far side of the pattern (the two lows / highs): the A-setup stop
                 row["far"] = round(t["edge"] - t["direction"] * (t["hub"]["high"] - t["hub"]["low"]), 2)
             if k.startswith("double") and t["outcome"] == "pending":

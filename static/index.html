@@ -4436,6 +4436,7 @@ function setupCard(x) {
     <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${x.kind === "double_top" ? ' <span class="beta-tag">beta</span>' : ""}${live ? strengthChip(x.strength, up) : ""}</div>
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
+    ${x.catalyst ? `<div class="sc-news">📰 Possible catalyst (${esc(x.catalyst.tag_label)}): ${x.catalyst.url ? `<a href="${esc(x.catalyst.url)}" target="_blank" rel="noopener">${esc(x.catalyst.headline)}</a>` : `<b>${esc(x.catalyst.headline)}</b>`} · ${esc(x.catalyst.source)}, ${when(x.catalyst.time)}</div>` : ""}
     <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
 }
 let RECORD_PAT = "hub";
@@ -5118,6 +5119,9 @@ html[data-theme="light"] .sk-now { fill: #141412; stroke: #fff; } html[data-them
 .sk-dot { fill: #F3F3F0; } .sk-dot.up { fill: #3DD68C; } .sk-dot.down { fill: #FF6B5E; }
 .sk-halo { fill: rgba(243,243,240,.16); } .sk-halo.up { fill: rgba(61,214,140,.2); } .sk-halo.down { fill: rgba(255,107,94,.2); }
 .sc .msc-meta { margin-top: 8px; line-height: 1.5; }
+.sc-news { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line, #26272B); font-size: 12.5px; color: #8A8F99; line-height: 1.5; }
+.sc-news a, .sc-news b { color: #F3F3F0; text-decoration: none; font-weight: 600; } .sc-news a:hover { text-decoration: underline; }
+html[data-theme="light"] .sc-news { color: #5B6672; } html[data-theme="light"] .sc-news a, html[data-theme="light"] .sc-news b { color: #141412; }
 .sc .board-actions { justify-content: flex-start; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line, #26272B); flex-wrap: wrap; }
 html[data-theme="light"] .sc { background: #fff; border-color: #E4E4DF; }
 html[data-theme="light"] .sc-px { color: #141412; } html[data-theme="light"] .sc-pos { color: #5B6672; }
