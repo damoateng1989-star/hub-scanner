@@ -37,6 +37,10 @@ EXITS = [   # key, label
     ("atr10", "Stop 1 ATR from entry"),
 ]
 
+RETEST_MAX = 5        # the retest must come within this many 4H candles after the breakout close
+RETEST_TOUCH = 0.25   # pullback low must come within this x ATR of the edge
+RETEST_NEAR = 0.5     # entry close must sit within this x ATR of the edge
+
 GROUPS = [  # key, label, pattern kinds
     ("hub", "Hubs", ("hub",)),
     ("flag", "Flags", ("flag_bull", "flag_bear")),
@@ -153,6 +157,24 @@ def _flag_feats(c4: pd.DataFrame, p: dict, d: int) -> dict:
         return {}
 
 
+def _retest_entry(close, low, high, atr, i0, d, edge):
+    """First close back near the edge after the breakout, within RETEST_MAX candles.
+    Returns (j, entry) or None. Dead on any close back inside the edge first."""
+    A0 = atr[i0]
+    if not A0 or A0 != A0:
+        return None
+    n = len(close)
+    for j in range(i0 + 1, min(i0 + 1 + RETEST_MAX, n)):
+        c = close[j]
+        if (c - edge) * d < 0:                      # closed back inside: breakout failed, no retest
+            return None
+        touched = (low[j] <= edge + RETEST_TOUCH * A0) if d == 1 else (high[j] >= edge - RETEST_TOUCH * A0)
+        near = (edge < c <= edge + RETEST_NEAR * A0) if d == 1 else (edge - RETEST_NEAR * A0 <= c < edge)
+        if touched and near:
+            return j, float(c)
+    return None
+
+
 def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series | None) -> list[dict]:
     if c4 is None or len(c4) < 60:
         return []
@@ -166,6 +188,8 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         other = []
     close = res["close"].to_numpy(float)
     atr = res["atr"].to_numpy(float)
+    low = c4["Low"].to_numpy(float)
+    high = c4["High"].to_numpy(float)
     idx = c4.index
     day = idx.tz_convert(engine.NY).normalize()
     dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum() if "Volume" in c4.columns else None
@@ -188,18 +212,18 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         risk_mid = d * (entry - mid)
         today = day[i0]
 
-        def _as_of(series):
+        def _as_of(series, on_day):
             if series is None:
                 return None
-            past = series[series.index < today].dropna()
+            past = series[series.index < on_day].dropna()
             return bool(past.iloc[-1]) if len(past) else None
-        mkt_up, own_up = _as_of(regime), _as_of(own)
+        mkt_up, own_up = _as_of(regime, today), _as_of(own, today)
         dv = None
         if dvol is not None:
             prior = dvol[dvol.index < today]
             prior = prior[prior > 0].tail(20)
             dv = float(prior.mean()) if len(prior) >= 5 else None
-        f = dict(sym=sym, grp=grp, t=str(idx[i0]), d=d, dv=dv,
+        f = dict(sym=sym, grp=grp, entry="breakout", t=str(idx[i0]), d=d, dv=dv,
                  board_ok=board.quality_skip(sym, dv, mc) is None,
                  rvol=engine.rvol(c4, i0),
                  with_mkt=None if mkt_up is None else (mkt_up if d == 1 else not mkt_up),
@@ -229,6 +253,41 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         f["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
         if "edge" in f["ex"]:
             out.append(f)
+
+        # --- Patch 79: the same breakout, entered on the retest instead ---
+        rt = _retest_entry(close, low, high, atr, i0, d, edge)
+        if rt is not None:
+            j, entry2 = rt
+            A2 = atr[j]
+            if A2 and A2 == A2:
+                today2 = day[j]
+                dv2 = None
+                if dvol is not None:
+                    prior2 = dvol[dvol.index < today2]
+                    prior2 = prior2[prior2 > 0].tail(20)
+                    dv2 = float(prior2.mean()) if len(prior2) >= 5 else None
+                mkt2 = _as_of(regime, today2)
+                own2 = _as_of(own, today2)
+                risk2 = d * (entry2 - mid)
+                f2 = dict(f, entry="retest", t=str(idx[j]),
+                          dv=dv2, board_ok=board.quality_skip(sym, dv2, mc) is None,
+                          rvol=engine.rvol(c4, j),
+                          with_mkt=None if mkt2 is None else (mkt2 if d == 1 else not mkt2),
+                          with_trend=None if own2 is None else (own2 if d == 1 else not own2),
+                          chase=d * (entry2 - edge) > 0.5 * d * (target - edge),
+                          margin=d * (entry2 - edge) / A2,
+                          rr=(d * (target - entry2) / risk2) if risk2 > 0 else None,
+                          pm=engine.candle_end(idx[j].tz_convert(engine.NY)).hour == 16)
+                ex2 = {}
+                for key, stop, hz in (("edge", cur, s.horizon), ("mid", mid, s.horizon), ("far", far, s.horizon),
+                                      ("edge20", cur, 20),
+                                      ("atr05", entry2 - d * 0.5 * A2, s.horizon),
+                                      ("atr10", entry2 - d * 1.0 * A2, s.horizon)):
+                    ex2[key] = _exit(close, j, d, entry2, target, stop, hz)
+                ex2["half"] = _exit_half(close, j, d, entry2, target, edge, risk2 if risk2 > 0 else d * (entry2 - edge), s.horizon)
+                f2["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex2.items() if v is not None}
+                if "edge" in f2["ex"]:
+                    out.append(f2)
     return out
 
 
@@ -310,11 +369,20 @@ def summarize(rows: list[dict]) -> dict:
     for gk, glabel, _ in GROUPS:
         mine = [r for r in rows if r["grp"] == gk]
         filters = FILTERS + EXTRA.get(gk, [])
-        table = []
-        for fk, flabel, test in filters:
-            sub = [r for r in mine if test(r)]
-            table.append(dict(key=fk, label=flabel, exits={ek: _score(sub, ek) for ek, _ in EXITS}))
-        groups.append(dict(key=gk, label=glabel, trades=len(mine), filters=table, best=best_filters(mine, filters)))
+
+        def build(sub_rows):
+            table = []
+            for fk, flabel, test in filters:
+                sub = [r for r in sub_rows if test(r)]
+                table.append(dict(key=fk, label=flabel, exits={ek: _score(sub, ek) for ek, _ in EXITS}))
+            return table, best_filters(sub_rows, filters)
+        mine_b = [r for r in mine if r.get("entry", "breakout") == "breakout"]
+        # gap fade and flush have no retest variant: their retest tables ARE the breakout tables
+        mine_r = [r for r in mine if r.get("entry") == "retest"] if gk not in ("gapfade", "flush") else mine_b
+        table, best = build(mine_b)
+        table_r, best_r = build(mine_r)
+        groups.append(dict(key=gk, label=glabel, trades=len(mine_b), trades_retest=len(mine_r),
+                           filters=table, best=best, filters_retest=table_r, best_retest=best_r))
     return dict(groups=groups, exits=[dict(key=k, label=l) for k, l in EXITS])
 
 
@@ -330,7 +398,7 @@ CKPT = db.DATA_DIR / "lab_exits_ckpt.json"   # progress saved after every chunk,
 def _save_ckpt(syms, done, rows, failed, failed_msg, started):
     tmp = CKPT.with_suffix(".tmp")
     tmp.write_text(json.dumps(dict(syms=syms, done=done, rows=rows, failed=failed, failed_msg=failed_msg, started=started,
-                                   exits=[k for k, _ in EXITS]),
+                                   exits=[k for k, _ in EXITS], entries=["breakout", "retest"]),
                               default=lambda o: o.item() if hasattr(o, "item") else str(o)))
     tmp.replace(CKPT)
 
@@ -340,7 +408,7 @@ def _load_ckpt():
         ck = json.loads(CKPT.read_text())
     except Exception:
         return None
-    return ck if ck.get("exits") == [k for k, _ in EXITS] else None   # saved by an older version: start over
+    return ck if ck.get("exits") == [k for k, _ in EXITS] and ck.get("entries") == ["breakout", "retest"] else None   # saved by an older version: start over
 
 
 def run(symbols: list[str] | None = None, resume: bool = False):
@@ -386,15 +454,16 @@ def run(symbols: list[str] | None = None, resume: bool = False):
                     traceback.print_exc()
             bars = None
             _save_ckpt(syms, min(i + CHUNK, len(syms)), rows, failed, failed_msg, started)
-            _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len(rows),
+            _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len([r for r in rows if r.get("entry", "breakout") == "breakout"]),
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
             time.sleep(0.2)                   # leave room for the site and the live scan
         if not rows:
             raise RuntimeError("no breakouts found: the market data download failed" + (f" ({failed_msg})" if failed_msg else ""))
         out = summarize(rows)
-        span = sorted(r["t"] for r in rows)
-        _set(status="done", result=out, trades=len(rows), days=DAYS, symbols=len(syms),
+        brows = [r for r in rows if r.get("entry", "breakout") == "breakout"]
+        span = sorted(r["t"] for r in brows)
+        _set(status="done", result=out, trades=len(brows), days=DAYS, symbols=len(syms),
              first=span[0] if span else None, last=span[-1] if span else None,
              finished=pd.Timestamp.now(tz="UTC").isoformat(), seconds=round(time.time() - started),
              regime_ok=regime is not None)
