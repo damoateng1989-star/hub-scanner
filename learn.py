@@ -71,58 +71,82 @@ MODULES = [
     ]),
     ("Trading the setup", "Turning a setup into a plan you can stick to.", [
         ("trade-your-first-setup", "Your first setup, start to finish", 5, """
-<p>A setup is one thing: a stock that has been coiling inside a <b>hub</b> — a price zone it keeps bouncing around in — and then <b>closes outside it</b> on a 4-hour candle. That close is the trigger, and it comes with a plan: where to get in, where you're wrong, and where to take profit. This lesson walks through the whole thing once, start to finish.</p>
-<div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 300" role="img" aria-label="Diagram: candles coiling inside a hub, then one candle closing above the hub top" style="display:block;width:100%;height:auto;"><line x1="40" y1="52" x2="600" y2="52" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="42" font-family="JetBrains Mono, monospace" font-size="12" fill="#8a9aae">next shelf — the aim</text><rect x="40" y="150" width="560" height="64" fill="rgba(47,84,235,0.08)"/><line x1="40" y1="150" x2="600" y2="150" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="40" y1="214" x2="600" y2="214" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="142" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub top</text><text x="40" y="232" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub bottom</text><g stroke="#141412" stroke-width="2"><line x1="107" y1="162" x2="107" y2="202"/><rect x="100" y="170" width="14" height="24" fill="#141412" stroke="none"/><line x1="187" y1="170" x2="187" y2="206"/><rect x="180" y="178" width="14" height="20" fill="#141412" stroke="none"/><line x1="267" y1="158" x2="267" y2="200"/><rect x="260" y="166" width="14" height="26" fill="#141412" stroke="none"/><line x1="347" y1="172" x2="347" y2="206"/><rect x="340" y="180" width="14" height="18" fill="#141412" stroke="none"/><line x1="427" y1="164" x2="427" y2="202"/><rect x="420" y="172" width="14" height="22" fill="#141412" stroke="none"/></g><line x1="508" y1="88" x2="508" y2="96" stroke="#3DD68C" stroke-width="2"/><rect x="500" y="96" width="16" height="54" fill="#3DD68C"/><text x="600" y="76" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">breakout close — the trigger</text><text x="40" y="282" font-family="JetBrains Mono, monospace" font-size="12" fill="#8a9aae">stop: a 4H close back inside the hub</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">The setup, drawn.</b> Candles coil inside the hub for days. One 4-hour candle closes above the hub top — that's the trigger. The next shelf above is the aim; a close back inside is where you're wrong.</p></div>
+<p>A setup starts with a stock that has been coiling inside a <b>hub</b> — a price zone it keeps bouncing around in — and then <b>closes outside it</b> on a 4-hour candle. That close is the <b>heads-up</b>, not the entry. The entry comes when price <b>pulls back to the hub edge and holds it</b>: the retest. This lesson walks through the whole thing once, start to finish.</p>
+<div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 300" role="img" aria-label="Diagram: candles coiling inside a hub, then one candle closing above the hub top" style="display:block;width:100%;height:auto;"><line x1="40" y1="52" x2="600" y2="52" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="42" font-family="JetBrains Mono, monospace" font-size="12" fill="#8a9aae">next shelf — the aim</text><rect x="40" y="150" width="560" height="64" fill="rgba(47,84,235,0.08)"/><line x1="40" y1="150" x2="600" y2="150" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="40" y1="214" x2="600" y2="214" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="142" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub top</text><text x="40" y="232" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub bottom</text><g stroke="#141412" stroke-width="2"><line x1="107" y1="162" x2="107" y2="202"/><rect x="100" y="170" width="14" height="24" fill="#141412" stroke="none"/><line x1="187" y1="170" x2="187" y2="206"/><rect x="180" y="178" width="14" height="20" fill="#141412" stroke="none"/><line x1="267" y1="158" x2="267" y2="200"/><rect x="260" y="166" width="14" height="26" fill="#141412" stroke="none"/><line x1="347" y1="172" x2="347" y2="206"/><rect x="340" y="180" width="14" height="18" fill="#141412" stroke="none"/><line x1="427" y1="164" x2="427" y2="202"/><rect x="420" y="172" width="14" height="22" fill="#141412" stroke="none"/></g><line x1="508" y1="88" x2="508" y2="96" stroke="#3DD68C" stroke-width="2"/><rect x="500" y="96" width="16" height="54" fill="#3DD68C"/><text x="600" y="76" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">breakout close — the heads-up</text><text x="40" y="282" font-family="JetBrains Mono, monospace" font-size="12" fill="#8a9aae">entry: the retest of the hub top (next lesson)</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">The setup, drawn.</b> Candles coil inside the hub for days. One 4-hour candle closes above the hub top — that's the heads-up. The entry is the pullback to the hub top that holds; the next shelf above is the aim.</p></div>
 <h2>1. Pick your watchlist</h2>
 <p>NextShelf only watches the tickers you put on your watchlist, and only those can alert you. The free tier covers 3 tickers. Pick names you actually follow — the alert is only useful if you know the stock.</p>
-<h2>2. Wait for the alert</h2>
-<p>There are two 4-hour closes a day: <b>1:30 PM</b> and <b>4:00 PM</b> Eastern. Either close can be the trigger: if a 4-hour candle closes outside the hub, that's the breakout. About 15 minutes before each close, Pro members get a warning if a stock is sitting outside its hub. After the close, the alert arrives on Telegram (free) or by text and phone call (Pro).</p>
-<h2>3. Read the card</h2>
-<p>Every alert carries the same three numbers: the <b>trigger</b> (the close outside the hub), the <b>aim</b> (the next shelf in the direction of the break), and <b>where you're wrong</b> (a 4-hour close back inside the hub). The stop matters most: you know what you lose if you're wrong before any money goes in.</p>
+<h2>2. The breakout alert: a heads-up</h2>
+<p>There are two 4-hour closes a day: <b>1:30 PM</b> and <b>4:00 PM</b> Eastern. When a 4-hour candle closes outside the hub, you get a <b>breakout alert</b> by Telegram (and a text for Pro). It says "wait for the retest": don't chase that close. Breakouts on light volume don't count at all, and each one is labelled <b>Strong</b> or <b>Weak</b> so you know how convincing it was.</p>
+<h2>3. The retest alert: the entry</h2>
+<p>Over the next 5 four-hour candles, NextShelf watches for price to <b>pull back to the hub edge and close back above it</b> (below it, for a breakdown). When that happens you get one <b>retest alert</b>, graded:</p>
+<ul><li><b>A setup — entry on this close.</b> It comes with the plan: entry at the retest close, a stop 1 ATR past it, and the next shelf as the aim. Pro members get a phone call and an options plan.</li>
+<li><b>Watch only.</b> The retest happened, but it missed a bar (not enough room to the aim, or a hub that was too short). The alert says which. No entry.</li></ul>
+<p>The next lesson explains the grade and why it exists.</p>
 <h2>4. Place it in your own broker</h2>
 <p>NextShelf never trades for you and never holds your money. The card has links to open the ticker in Webull or Robinhood — you place the order there, at the size you worked out from your risk. The position-size lesson shows how to work that out from the distance to your exit.</p>
 <h2>5. Manage it with the three exits</h2>
-<p>After you're in, there are only three ways out: price reaches the shelf, a 4-hour candle closes back inside the hub (a snap-back), or 10 four-hour candles pass — about a week — without either happening. Nothing else. No watching the screen all day.</p>
+<p>After you're in, there are only three ways out: price reaches the shelf, a 4-hour candle closes past your stop (1 ATR from the entry on an A setup), or 10 four-hour candles pass — about a week — without either happening. Nothing else. No watching the screen all day.</p>
 <h2>6. Check the record</h2>
 <p>Every setup NextShelf calls is logged on the Results page, wins and losses, nothing removed. Before you trust a setup with real money, look at how it has actually performed.</p>
 <h2>Three rules for your first few</h2>
-<p><b>Only take fresh breakouts.</b> On the board that's 0 out of 10 candles. A breakout that's already 6 candles old is a move that already happened, not an entry.</p>
-<p><b>Don't chase.</b> If price is already past halfway to the aim by the time you see the alert, skip it. The plan only works at the breakout close.</p>
+<p><b>Enter on the retest, not the breakout.</b> The breakout close is where most of the losing trades started: price ran up to get there and gave it all back. The retest gets you in near the edge, so being wrong costs less. Breakouts that never come back simply aren't traded.</p>
+<p><b>Only A setups are entries.</b> A "watch only" retest is information, not a trade. If the retest window (5 candles) passes, the setup is over.</p>
 <div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 300" role="img" aria-label="Diagram: the first-half rule. Between the hub edge and halfway is the entry zone; past halfway is chasing." style="display:block;width:100%;height:auto;"><rect x="180" y="30" width="240" height="120" fill="rgba(220,0,88,0.07)"/><rect x="180" y="150" width="240" height="120" fill="rgba(61,214,140,0.10)"/><line x1="300" y1="30" x2="300" y2="270" stroke="#141412" stroke-width="2"/><line x1="180" y1="30" x2="420" y2="30" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="150" x2="420" y2="150" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="270" x2="420" y2="270" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><circle cx="300" cy="210" r="7" fill="#3DD68C"/><circle cx="300" cy="90" r="7" fill="#DC0058"/><text x="440" y="34" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">aim — next shelf</text><text x="440" y="154" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">halfway</text><text x="440" y="274" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">hub edge</text><text x="170" y="214" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">enter here ✓</text><text x="170" y="94" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">here = chasing ✗</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">The first-half rule, drawn.</b> Between the hub edge and halfway to the aim, the reward left is bigger than the risk back. Past halfway, it's the other way round — skip it.</p></div>
 <p><b>Never hold through earnings.</b> The alert warns you when a print is near. The setup is a swing into the move, not a bet on the report.</p>
 <h2>Worked example: one real watchlist</h2>
 <p>Here's what this looked like on one real day — the Nov 9 close, on a watchlist of 11 tickers. Levels change every close, so check the board for today's numbers. The shape is what matters.</p>
-<p><b>Trade now — HONA.</b> Broke out on the 1:30 PM close at $164.18, out of a $149.59–$161.72 warehouse hub. Stop is a 4-hour close back inside (below $161.72); the aim is the next shelf at $207.41. The catch: a gamma wall sits at $165, right above the entry — the first test. Still in the first half of the move (halfway is $184.57), so the entry is valid.</p>
-<div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 320" role="img" aria-label="Diagram: HONA at the Nov 9 close. Hub 149.59 to 161.72, entry 164.18, gamma wall 165, halfway 184.57, target shelf 207.41." style="display:block;width:100%;height:auto;"><rect x="180" y="214" width="240" height="46" fill="rgba(47,84,235,0.08)"/><line x1="180" y1="214" x2="420" y2="214" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="260" x2="420" y2="260" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="300" y1="30" x2="300" y2="280" stroke="#141412" stroke-width="2"/><line x1="180" y1="40" x2="420" y2="40" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="127" x2="420" y2="127" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="201" x2="420" y2="201" stroke="#DC0058" stroke-width="1.5" stroke-dasharray="6 5"/><circle cx="300" cy="205" r="7" fill="#3DD68C"/><line x1="178" y1="195" x2="292" y2="202" stroke="#141412" stroke-width="1" opacity="0.45"/><text x="440" y="44" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">next shelf $207.41</text><text x="440" y="131" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">halfway $184.57</text><text x="440" y="205" font-family="JetBrains Mono, monospace" font-size="12" fill="#DC0058">gamma wall $165</text><text x="170" y="192" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">entry $164.18</text><text x="170" y="222" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub top $161.72</text><text x="170" y="264" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub bottom $149.59</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">HONA, Nov 9 close.</b> Warehouse hub, 6 sessions. Entry $164.18 · wall $165 · target $207.41. The wall sits almost on top of the entry — the first test of the breakout.</p></div>
-<p><b>Watch — ABBV, GOOG, GOOGL.</b> All three are pressing the top of their hubs: ABBV at $294.17 under a $294.89 top, GOOG at $287.61 under $289.92, GOOGL at $289.61 under $291.67. Nothing to do until a 4-hour candle closes above the hub top.</p>
+<p><b>Heads-up — HONA.</b> Broke out on the 1:30 PM close at $164.18, out of a $149.59–$161.72 warehouse hub. That close isn't the entry. The plan is to wait for a 4-hour candle that pulls back near the hub top ($161.72) and closes above it. If that retest grades A, the entry is that close, the stop 1 ATR below it, and the aim the next shelf at $207.41. A gamma wall sits at $165, right above the hub top — the first test after any entry.</p>
+<div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 320" role="img" aria-label="Diagram: HONA at the Nov 9 close. Hub 149.59 to 161.72, entry 164.18, gamma wall 165, halfway 184.57, target shelf 207.41." style="display:block;width:100%;height:auto;"><rect x="180" y="214" width="240" height="46" fill="rgba(47,84,235,0.08)"/><line x1="180" y1="214" x2="420" y2="214" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="260" x2="420" y2="260" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="300" y1="30" x2="300" y2="280" stroke="#141412" stroke-width="2"/><line x1="180" y1="40" x2="420" y2="40" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="127" x2="420" y2="127" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="201" x2="420" y2="201" stroke="#DC0058" stroke-width="1.5" stroke-dasharray="6 5"/><circle cx="300" cy="205" r="7" fill="#3DD68C"/><line x1="178" y1="195" x2="292" y2="202" stroke="#141412" stroke-width="1" opacity="0.45"/><text x="440" y="44" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">next shelf $207.41</text><text x="440" y="131" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">halfway $184.57</text><text x="440" y="205" font-family="JetBrains Mono, monospace" font-size="12" fill="#DC0058">gamma wall $165</text><text x="170" y="192" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">entry $164.18</text><text x="170" y="222" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub top $161.72</text><text x="170" y="264" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub bottom $149.59</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">HONA, Nov 9 close.</b> Warehouse hub, 6 sessions. Breakout close $164.18 · wall $165 · target $207.41. The entry waits for a retest of the hub top at $161.72.</p></div>
+<p><b>Watch — ABBV, GOOG, GOOGL.</b> All three are pressing the top of their hubs: ABBV at $294.17 under a $294.89 top, GOOG at $287.61 under $289.92, GOOGL at $289.61 under $291.67. Nothing to do until a 4-hour candle closes above the hub top, and then the entry is still the retest.</p>
 <p><b>Wait — the rest.</b> AAPL, AMZN, ARM, NVDA, QQQ, SPCX: no live setup. IBM's breakdown and ARM's bear flag are days old — moves that already happened, not entries. NVDA reports Nov 17, so nothing new goes on there into earnings.</p>
 <p>Start by watching a few alerts play out, and paper-trade them in your broker's practice account before any real money. If a setup's plan doesn't make sense to you, skip it — there will be another one at the next close.</p>""",
-         ["A setup is a hub breakout with a plan: trigger, aim, and where you're wrong.",
-          "After every close your watchlist sorts into three buckets: trade now, watch, wait.",
-          "Only fresh breakouts (0 of 10 candles) are entries — and never chase past halfway to the aim."],
+         ["The breakout close is a heads-up; the entry is the retest of the hub edge.",
+          "Retest alerts are graded: an A setup comes with the entry plan, a watch doesn't.",
+          "Three exits only: the shelf, the stop, or about a week (10 candles)."],
          ("NextShelf alerts you to a breakout. Where does the trade actually happen?",
           ["NextShelf places it for you", "In your own broker, using the plan on the card", "By replying to the Telegram alert"],
           1, "NextShelf never trades for you or holds your money. You place the order in your own broker.")),
+        ("the-retest", "Wait for the retest: the A setup", 4, """
+<p>NextShelf replayed <b>every hub breakout across 543 stocks over two years</b>, more than 22,000 of them. Entering at the breakout close lost money on average: wins averaged about +1%, but losses averaged about −2%, because a failed breakout gives back the whole run-up you paid for. No exit rule fixed that. Changing <i>where you get in</i> did.</p>
+<div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 300" role="img" aria-label="Diagram: a breakout close above the hub top, a pullback to the hub top that closes above it (the retest entry), and a stop 1 ATR below" style="display:block;width:100%;height:auto;"><line x1="40" y1="44" x2="600" y2="44" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="34" font-family="JetBrains Mono, monospace" font-size="12" fill="#8a9aae">next shelf — the aim</text><rect x="40" y="160" width="560" height="60" fill="rgba(47,84,235,0.08)"/><line x1="40" y1="160" x2="600" y2="160" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="40" y1="220" x2="600" y2="220" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="240" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub</text><g fill="#141412"><rect x="100" y="176" width="14" height="26"/><rect x="160" y="182" width="14" height="22"/><rect x="220" y="172" width="14" height="28"/></g><rect x="290" y="112" width="16" height="56" fill="#3DD68C"/><text x="298" y="102" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">breakout: heads-up</text><rect x="360" y="122" width="14" height="22" fill="#DC0058"/><line x1="447" y1="132" x2="447" y2="170" stroke="#3DD68C" stroke-width="2"/><rect x="440" y="140" width="14" height="16" fill="#3DD68C"/><circle cx="447" cy="148" r="20" fill="none" stroke="#141412" stroke-width="1.5"/><text x="600" y="96" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">retest: dips to the top,</text><text x="600" y="112" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">closes above it = entry</text><line x1="420" y1="196" x2="600" y2="196" stroke="#DC0058" stroke-width="1.5" stroke-dasharray="4 4"/><text x="600" y="212" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#DC0058">stop: 1 ATR below the entry</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">The retest, drawn.</b> The breakout close is the heads-up. A later candle dips back to the hub top and closes above it: that close is the entry, with a stop 1 ATR below.</p></div>
+<h2>What counts as a retest</h2>
+<p>Within <b>5 four-hour candles</b> of the breakout, a candle that <b>dips back to within a quarter of an ATR of the hub edge</b> and <b>closes on the breakout side, within half an ATR of the edge</b>. A close back inside the hub first ends it: the breakout failed. Only the first retest counts.</p>
+<h2>The A setup</h2>
+<p>The retest alone helped, but it still lost money on average. A small set of retests made money, and held up in both halves of the two years and without the five best stocks. Those are A setups:</p>
+<ul><li><b>Room 1.5× or more:</b> the distance to the next shelf is at least 1.5 times the distance back to the middle of the hub.</li>
+<li><b>A real hub:</b> it held for <b>4 or more sessions</b>.</li>
+<li><b>Stop 1 ATR from the entry</b>, on a 4-hour close.</li></ul>
+<p>Measured on longs: 319 trades, about half winners, <b>+0.5% per trade</b> on average. Shorts use the same bars but haven't been measured yet, so the live record will judge them. A retest that misses a bar arrives as <b>watch only</b>, with the reason.</p>
+<h2>Double bottoms and tops</h2>
+<p>Double tops and bottoms get the same treatment: the breakout through the neckline is a heads-up, and the entry is the retest of the neckline. Their A setup is a retest that closes at <b>4:00 PM</b> and isn't past halfway to the aim, with the stop past the far side of the pattern.</p>
+<h2>What this costs</h2>
+<p>Fewer trades. Breakouts that run away without coming back are never entered, and the win rate is lower than chasing every breakout. In exchange, the losses are smaller and the average trade was positive. These are past results, not a promise.</p>""",
+         ["The breakout close lost money on average; the retest entry cut the losses.",
+          "A setup = room 1.5×+, a 4+ session hub, stop 1 ATR from the entry.",
+          "Missed retests aren't traded, and a watch-only retest isn't an entry."],
+         ("A hub broke out at $105 over a $100–$104 hub. Two candles later one dips to $104.10 and closes at $104.60. What is that?",
+          ["A failed breakout", "The retest: a pullback to the edge that held", "Nothing; only the breakout matters"],
+          1, "It pulled back to the hub top and closed above it, close to the edge. That's the retest, and if it grades A it's the entry.")),
         ("the-game-plan", "The game plan: aim, and where you're wrong", 3, """
 <p>Every NextShelf setup comes with the same three parts. Knowing all three <i>before</i> you trade is what turns a setup into a plan.</p>
-<ul><li><b>The trigger:</b> a 4-hour close outside the hub.</li>
+<ul><li><b>The entry:</b> the retest close, once a 4-hour close outside the hub has given the heads-up.</li>
 <li><b>The aim:</b> the next shelf (or the ATR target).</li>
-<li><b>Where you're wrong:</b> a 4-hour close back inside the hub. The breakout didn't hold, so the reason for the trade is gone.</li></ul>
+<li><b>Where you're wrong:</b> a 4-hour close 1 ATR past your entry on an A setup. Before you're in, a close back inside the hub means the breakout failed and there's nothing to enter.</li></ul>
 <h2>Why "wrong if" comes first</h2>
-<p>Most losses get big because there was no exit planned. If you decide in advance that a close back inside the hub ends the trade, you never have to decide under pressure.</p>
+<p>Most losses get big because there was no exit planned. If you decide in advance where the trade ends, you never have to decide under pressure.</p>
 <h2>The time limit</h2>
 <p>Breakouts that work tend to move within days. NextShelf gives each one 10 four-hour candles (about a week). If it hasn't reached the aim or failed by then, it's marked as timed out. Money stuck in a trade that's going nowhere can't be used for the next setup.</p>""",
-         ["Trigger, aim and 'wrong if' are decided before the trade.",
-          "A 4-hour close back inside the hub means the breakout failed.",
+         ["Entry, aim and 'wrong if' are decided before the trade.",
+          "On an A setup, a 4-hour close 1 ATR past the entry ends it.",
           "Each setup gets about a week (10 four-hour candles)."],
-         ("You bought a breakout. The next 4-hour candle closes back inside the hub. What does the plan say?",
-          ["Hold, it might come back", "The breakout failed: exit", "Buy more at a better price"],
-          1, "A close back inside the hub is the 'wrong if' condition. The plan says the trade is over.")),
+         ("You entered an A retest at $50 with a stop 1 ATR ($1) below. A 4-hour candle closes at $48.80. What does the plan say?",
+          ["Hold, it might come back", "The stop was hit: exit", "Buy more at a better price"],
+          1, "A close past the stop is the 'wrong if' condition. The plan says the trade is over.")),
         ("dont-chase", "Don't chase: the first-half rule", 3, """
 <p>The worst time to enter a breakout is after most of the move has happened. You pay a high price, the remaining reward is small, and the distance to your exit is large.</p>
 <h2>The first-half rule</h2>
 <p>If you missed the close, only take the trade if price is still in the <b>first half of the move</b>, between the hub edge and the halfway point to the aim. Past that, the reward left is usually smaller than the risk back to the hub. Skip it.</p>
-<p>NextShelf applies the same idea to its own alerts: a breakout that has already reached its aim doesn't ring your phone, and it's marked as "skipped (too far)" in the track record.</p>
+<p>NextShelf builds this in: the breakout alert itself is only a heads-up, and the entry is the retest, which is close to the edge by design. A breakout that has already reached its aim is marked "skipped (too far)" in the track record.</p>
 <h2>There's always another setup</h2>
 <p>Hundreds of stocks are scanned after every close. Missing one move costs nothing. Chasing it often costs a lot.</p>""",
          ["Late entries have small rewards and big risks.",
@@ -136,7 +160,7 @@ MODULES = [
 <h2>Start from the loss, not the gain</h2>
 <p>Many traders cap the loss on any one trade at a small slice of their account, often <b>0.5% to 1%</b>. Then they work out the size from the distance to their exit:</p>
 <div class="cbox"><small>The formula</small><b>Shares = (account × risk %) ÷ (entry − exit price)</b><br>
-$10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 ($2 away). $100 ÷ $2 = <b>50 shares</b>.</div>
+$10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 away). $100 ÷ $2 = <b>50 shares</b>.</div>
 <p>If the trade fails, you lose about $100, not $1,000. A string of losses (which every method has) stays survivable.</p>
 <h2>Gaps can make losses bigger</h2>
 <p>Prices can jump overnight, past your exit. Earnings, news and market-wide shocks cause gaps. Smaller sizes are the only real protection.</p>""",
@@ -231,6 +255,7 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
 <ul><li><b>Entry:</b> a stop order just past the hub edge.</li><li><b>Stop-loss:</b> the middle of the hub.</li><li><b>Target:</b> the next shelf.</li></ul>
 <h2>The trade-off, honestly</h2>
 <p>A stop order fires the moment price <b>touches</b> it, including on a wick that closes back inside the hub. NextShelf's own setup waits for the close. So this version will catch some false breakouts the alert would have skipped. It's a trade-off between convenience and accuracy.</p>
+<p>It's also the <b>breakout version</b>, not the retest entry NextShelf now alerts on. The retest needs a 4-hour close, so it can't be fully automated. If you can check in at 1:30 PM or 4:00 PM, the retest alert is the better entry.</p>
 <h2>Keep it fresh</h2>
 <p>Use a <b>day order</b> and set it again each morning. A forgotten order can fill weeks later, long after the setup changed.</p>""",
          ["A bracket order = entry + stop-loss + target in one go.",
@@ -268,8 +293,38 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
           ["Find another trade quickly", "Wait for a real setup; don't force a trade", "Double the size on the next one"],
           1, "Revenge trading is forcing it. The next trade should come from a setup, not from the loss.")),
     ]),
-    ("More setups (beta)", "The other patterns on the board, read the same way: a 4-hour close, an aim, and where you're wrong.", [
+    ("More setups", "Live now: double tops & bottoms and the gap fade & rip. The rest are paused: NextShelf isn't alerting on them because the two-year test found no edge. They're here so you can recognise them.", [
+        ("double-tops-and-bottoms", "Double tops and bottoms", 3, """
+<p>A <b>double top</b> is two tests of the same high, a few sessions apart, with a real dip between them. A <b>double bottom</b> is the mirror: two tests of the same low with a bounce between.</p>
+<h2>What NextShelf checks</h2>
+<ul><li>A real move into the first peak (a rally into a top, a drop into a bottom).</li><li>The two peaks within about a third of an ATR of each other, 3 to 30 sessions apart.</li><li>A dip (or bounce) between them at least 2 ATR deep. The low of that dip is the <b>neckline</b>.</li></ul>
+<h2>The trigger</h2>
+<p>A 4-hour <b>close through the neckline</b> within about 10 sessions of the second peak is the heads-up. A double top breaks down; a double bottom breaks up. If price makes a new high (or low) first, the pattern is void.</p>
+<h2>The entry: the retest</h2>
+<p>Like hubs, the entry is the <b>retest</b>: within 5 four-hour candles, a pullback to the neckline that closes back on the breakout side. It's an <b>A setup</b> when that retest is the <b>4:00 PM close</b> and price isn't past halfway to the aim. The stop is a close past the <b>far side</b> of the pattern: below the two lows for a double bottom. Measured on double bottoms, about 3 in 4 of those trades won. Double tops use the same bars but haven't been measured yet.</p>
+<p>That far-side stop is wider than a hub's, so size the position from it.</p>""",
+         ["Two tests of the same level, with a real dip between.",
+          "The close through the neckline is the heads-up; the retest is the entry.",
+          "A setup: a 4:00 PM retest, not past halfway, stop past the far side."],
+         ("Where does a double top trigger?",
+          ["At the second peak", "On a 4-hour close below the neckline", "On any red candle"],
+          1, "The second peak is only a test. The setup confirms on a close through the neckline.")),
+        ("gap-fade-and-rip", "Post-earnings gap fade and rip", 3, """
+<p>This one uses <b>daily</b> candles. A stock gaps up at least 5% at the open, often on earnings, then <b>fades</b>: it closes well off the high, leaving a long upper wick.</p>
+<h2>The trigger</h2>
+<p>A daily <b>close back above the gap-day high</b> within 5 sessions. That's the "rip": buyers took back the whole fade. It's long only.</p>
+<h2>Aim and wrong</h2>
+<p>You're wrong on a close below the lowest low since the gap. The aim is twice the distance from entry to that low (2R). Earnings gaps can swing hard, so size small.</p>
+<h2>How it tested</h2>
+<p>This was the strongest setup in the two-year test: about +2.8% per trade over 341 trades. Fewer setups, but the best average. It's live, with the reclaim close as the entry.</p>""",
+         ["Gap up 5%+, then a fade with a long upper wick.",
+          "Trigger: a daily close back above the gap-day high within 5 sessions.",
+          "Stop: below the lowest low since the gap. Aim: 2R."],
+         ("A stock gaps up 8% on earnings and closes near its low. Two days later it closes above the gap-day high. What happened?",
+          ["A gap fade and rip triggered", "A double top formed", "Nothing; it's too late"],
+          0, "Gap, fade, then a close back above the gap-day high within 5 sessions: that's the reclaim.")),
         ("flags", "Flags: a sharp move, then a short pause", 3, """
+<p style="padding:10px 14px;border-radius:10px;background:#f4f5f7;border:1px solid #e3e7ec;font-size:14px"><b>Paused.</b> NextShelf isn't alerting on this setup right now: the two-year test found no version of it that made money. It's here so you can recognise it on a chart.</p>
 <p>A flag starts with a <b>pole</b>: a fast, mostly one-way move of at least 3 times the stock's normal 4-hour range (its ATR), over 2 to 6 four-hour candles. Then price <b>pauses</b> for 2 to 6 sessions in a small band that drifts slightly against the move, or sideways. That pause is the flag.</p>
 <h2>The trigger</h2>
 <p>A 4-hour <b>close outside the flag in the direction of the pole</b>. A bull flag breaks up; a bear flag breaks down. A flag that gives back more than half the pole isn't a flag any more, and NextShelf drops it.</p>
@@ -281,19 +336,8 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
          ("A stock rallies hard, then drifts down gently for three sessions. A 4-hour candle closes above the drift. What is it?",
           ["A bull flag breakout", "A double top", "No setup"],
           0, "A sharp move up, a short drift against it, then a close out the top: that's a bull flag breaking out.")),
-        ("double-tops-and-bottoms", "Double tops and bottoms", 3, """
-<p>A <b>double top</b> is two tests of the same high, a few sessions apart, with a real dip between them. A <b>double bottom</b> is the mirror: two tests of the same low with a bounce between.</p>
-<h2>What NextShelf checks</h2>
-<ul><li>A real move into the first peak (a rally into a top, a drop into a bottom).</li><li>The two peaks within about a third of an ATR of each other, 3 to 30 sessions apart.</li><li>A dip (or bounce) between them at least 2 ATR deep. The low of that dip is the <b>neckline</b>.</li></ul>
-<h2>The trigger</h2>
-<p>A 4-hour <b>close through the neckline</b> within about 10 sessions of the second peak. A double top breaks down; a double bottom breaks up. If price makes a new high (or low) first, the pattern is void.</p>""",
-         ["Two tests of the same level, with a real dip between.",
-          "The neckline is the middle low (or high).",
-          "Trade the close through the neckline, not the second peak."],
-         ("Where does a double top trigger?",
-          ["At the second peak", "On a 4-hour close below the neckline", "On any red candle"],
-          1, "The second peak is only a test. The setup confirms on a close through the neckline.")),
         ("triangles", "Triangles: a squeeze into a point", 3, """
+<p style="padding:10px 14px;border-radius:10px;background:#f4f5f7;border:1px solid #e3e7ec;font-size:14px"><b>Paused.</b> NextShelf isn't alerting on this setup right now: the two-year test found no version of it that made money. It's here so you can recognise it on a chart.</p>
 <p>A symmetrical triangle forms when <b>highs keep getting lower and lows keep getting higher</b>, so the range narrows toward a point. It's like a hub that's being squeezed from both sides.</p>
 <h2>What NextShelf checks</h2>
 <p>Lines fitted to the highs and lows over 4 to 14 sessions, the top sloping down and the bottom sloping up, with the range shrinking to well under two-thirds of where it started.</p>
@@ -306,6 +350,7 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
           ["Always up", "Always down", "Wait for a 4-hour close outside a line"],
           2, "Triangles don't tell you the direction in advance. The close does.")),
         ("channels", "Channels: trending between two lines", 3, """
+<p style="padding:10px 14px;border-radius:10px;background:#f4f5f7;border:1px solid #e3e7ec;font-size:14px"><b>Paused.</b> NextShelf isn't alerting on this setup right now: the two-year test found no version of it that made money. It's here so you can recognise it on a chart.</p>
 <p>A channel is a trend that stays between <b>two roughly parallel lines</b>. In an ascending channel both lines slope up; in a descending channel both slope down. NextShelf looks for channels lasting 6 to 20 sessions.</p>
 <h2>The trigger</h2>
 <p>A 4-hour <b>close outside the channel</b>. A close below a rising channel, or above a falling one, says the trend has broken. A close out the other side says it's speeding up.</p>
@@ -318,30 +363,20 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
           ["The uptrend has broken", "The trend is speeding up", "Nothing"],
           0, "Closing below the bottom of a rising channel means price left the trend.")),
         ("support-and-resistance", "Support and resistance", 3, """
+<p style="padding:10px 14px;border-radius:10px;background:#f4f5f7;border:1px solid #e3e7ec;font-size:14px"><b>Paused.</b> NextShelf isn't alerting on this setup right now: the two-year test found no version of it that made money. It's here so you can recognise it on a chart.</p>
 <p>Some prices keep coming back. A level that price has turned at <b>three or more times</b> is support (below price) or resistance (above). NextShelf tracks those levels and forgets ones that haven't been touched in about 80 sessions.</p>
 <h2>The trigger</h2>
 <p>A 4-hour <b>close through a tested level</b>, after the level held for at least the previous 4 sessions. Breaking resistance is a long; breaking support is a short.</p>
-<h2>Near a level</h2>
-<p>The board also shows stocks <b>sitting near</b> support or resistance before they break. That's a heads-up, not a trade. The setup starts on the close through.</p>""",
+<h2>Still on the map</h2>
+<p>The levels themselves still show on the board and the Shelf card, as a map of where price has turned before. A close through one just isn't an alert any more.</p>""",
          ["A level needs 3+ touches to count.",
           "Trade the close through it, after it held for a while.",
           "Near a level is a heads-up, not a trade."],
          ("A stock has bounced off $40 four times and is at $40.30. Is that a trade?",
           ["Yes, buy the bounce", "Not yet; it's a heads-up until a close through a level", "Yes, short it"],
           1, "Being near support is a heads-up. NextShelf's setup starts on a close through the level.")),
-        ("gap-fade-and-rip", "Post-earnings gap fade and rip", 3, """
-<p>This one uses <b>daily</b> candles. A stock gaps up at least 5% at the open, often on earnings, then <b>fades</b>: it closes well off the high, leaving a long upper wick.</p>
-<h2>The trigger</h2>
-<p>A daily <b>close back above the gap-day high</b> within 5 sessions. That's the "rip": buyers took back the whole fade. It's long only.</p>
-<h2>Aim and wrong</h2>
-<p>You're wrong on a close below the lowest low since the gap. The aim is twice the distance from entry to that low (2R). Earnings gaps can swing hard, so size small.</p>""",
-         ["Gap up 5%+, then a fade with a long upper wick.",
-          "Trigger: a daily close back above the gap-day high within 5 sessions.",
-          "Stop: below the lowest low since the gap. Aim: 2R."],
-         ("A stock gaps up 8% on earnings and closes near its low. Two days later it closes above the gap-day high. What happened?",
-          ["A gap fade and rip triggered", "A double top formed", "Nothing; it's too late"],
-          0, "Gap, fade, then a close back above the gap-day high within 5 sessions: that's the reclaim.")),
         ("flush-and-reclaim", "Flush and reclaim", 3, """
+<p style="padding:10px 14px;border-radius:10px;background:#f4f5f7;border:1px solid #e3e7ec;font-size:14px"><b>Paused.</b> NextShelf isn't alerting on this setup right now: the two-year test found no version of it that made money. It's here so you can recognise it on a chart.</p>
 <p>This one uses <b>daily</b> candles. A stock drops <b>5% or more in a day</b>, often on earnings. Sellers rush out. Then, over the next days, buyers walk it all the way back.</p>
 <h2>The level</h2>
 <p>The level is where it fell from: the <b>highest close of the 5 days before the drop</b>. That's the price the sellers were sure was too high.</p>
@@ -356,6 +391,7 @@ $10,000 account, 1% risk = $100. Entry $50, exit if back inside the hub at $48 (
           ["Yes, it traded above $100", "Not yet; it needs a daily close above $100", "No, it's too late"],
           1, "Only the daily close counts. A close above $100 within 10 sessions is the trigger.")),
         ("failed-breakdowns", "Failed breakdowns and breakouts", 3, """
+<p style="padding:10px 14px;border-radius:10px;background:#f4f5f7;border:1px solid #e3e7ec;font-size:14px"><b>Paused.</b> NextShelf isn't alerting on this setup right now: the two-year test found no version of it that made money. It's here so you can recognise it on a chart.</p>
 <p>Sometimes a hub breaks the wrong way first. Price closes a 4-hour candle <b>below</b> the hub, sellers pile in, stops get hit... and then it turns straight back up. Those trapped sellers have to buy back, and that fuels the move.</p>
 <h2>The trigger</h2>
 <p>Within <b>3 candles</b> of the fake-out, a 4-hour <b>close back above the hub top</b> on at least <b>1.2× normal volume</b>. A close back inside the hub isn't enough; it has to clear the far side. That's a failed breakdown, and it's a long.</p>
