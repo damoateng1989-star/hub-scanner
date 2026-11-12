@@ -282,7 +282,7 @@ def format_double_retest(sym, t, c4, res, j, grade):
 
 
 def speak_double_retest(sym, d, edge, close, target, stop):
-    return (f"Next Shelf. {phone.spell(sym)} retested its double bottom neckline at {_say_money(edge)} and held. "
+    return (f"Next Shelf. {phone.spell(sym)} retested its double {'bottom' if d == 1 else 'top'} neckline at {_say_money(edge)} and held. "
             f"4 hour close {_say_money(close)}. Entry on this close. Stop {_say_money(stop)}. Target {_say_money(target)}.")
 
 
