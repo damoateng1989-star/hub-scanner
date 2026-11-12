@@ -986,7 +986,7 @@ body.brief-open .sf-hello { display: none; }
 .mb-f { margin-top: 12px; color: #646B78; font-size: 12.5px; } .mb-f a { color: var(--ink); text-decoration: underline; }
 .brief-sw { display: inline-flex !important; width: auto !important; align-items: center; gap: 8px; margin-right: 12px; font-weight: 600; color: #E9EBEF; cursor: pointer; }
 .brief-sw input { width: 18px !important; min-width: 0 !important; height: 18px !important; padding: 0 !important; margin: 0 !important; flex: none; accent-color: #3DD68C; }
-.broker.logo-only, a.broker:has(> .broker-logo) { padding: 4px 6px !important; line-height: 0; }
+.broker.logo-only, a.broker:not(.named):has(> .broker-logo) { padding: 4px 6px !important; line-height: 0; }
 .broker-logo { width: 18px; height: 18px; vertical-align: -3px; display: block; }
 .gwall { display: block; margin-top: 3px; font-size: 11px; font-weight: 500; color: var(--muted); white-space: normal; max-width: 220px; line-height: 1.35; }
 .board-table .gwall { white-space: nowrap; }
@@ -2393,8 +2393,9 @@ const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, {month: "
 const TV_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 4v16M6 8h-2v6h2M12 6v14M12 9h-2v7h2M18 3v15M18 6h-2v6h2"/><path d="M15 21h6v-6" opacity=".0"/></svg>`;
 const rhUrl = (s) => `https://robinhood.com/stocks/${encodeURIComponent(s.toUpperCase())}`;
 const wbUrl = (s, ex) => ex ? `https://www.webull.com/quote/${ex}-${encodeURIComponent(s.toLowerCase())}` : null;
-const brokerLinks = (s, ex) => {
+const brokerLinks = (s, ex, named) => {
   const wb = wbUrl(s, ex);
+  if (named) return `${wb ? `<a class="broker named" href="${wb}" target="_blank" rel="noopener" title="Open ${esc(s)} in Webull"><img class="broker-logo" src="/vendor/webull-mark.png" alt="" width="16" height="16"><span class="broker-name">Webull</span></a>` : ""}<a class="broker named" href="${rhUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in Robinhood"><img class="broker-logo" src="/vendor/robinhood.svg" alt="" width="16" height="16"><span class="broker-name">Robinhood</span></a>`;
   return `${wb ? `<a class="broker" href="${wb}" target="_blank" rel="noopener" title="Open ${esc(s)} in Webull" aria-label="Open ${esc(s)} in Webull"><img class="broker-logo" src="/vendor/webull-mark.png" alt="Webull" width="18" height="18"></a>` : ""}<a class="broker" href="${rhUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in Robinhood" aria-label="Open ${esc(s)} in Robinhood"><img class="broker-logo" src="/vendor/robinhood.svg" alt="Robinhood" width="18" height="18"></a>`;
 };
 let TICKERS = [], FILTER = "all";
@@ -4327,7 +4328,7 @@ function setupWord(x) {
   if (x.state === "breakout_up") return ["Breakout ↑", "up"];
   if (x.state === "breakdown") return ["Breakdown ↓", "down"];
   if (x.state === "testing") return [x.near === "resistance" ? "Testing resistance" : "Testing support", x.near === "resistance" ? "near-res" : "near-sup"];
-  if (x.kind && x.kind.startsWith("double")) return x.near_edge ? ["Near the neckline", "near"] : ["Second peak in", "hub"];
+  if (x.kind && x.kind.startsWith("double")) return x.near_edge ? ["Near the neckline", "near"] : ["Second peak forming", "hub"];
   if (x.kind && x.kind.startsWith("flag")) return x.near_edge ? ["Pressing the flag", "near"] : ["Flag forming", "hub"];
   if (x.kind === "flush") return x.near_edge ? ["Near the reclaim level", "near"] : ["Flushed, bouncing", "hub"];
   if (x.kind === "fail_down" || x.kind === "fail_up") return x.near_edge ? [x.trigger === "up" ? "Near the hub top" : "Near the hub bottom", "near"] : [x.trigger === "up" ? "Broke down, watching" : "Broke out, watching", "hub"];
@@ -4380,12 +4381,18 @@ function setupSketch(x) {
     : [[8, y(neck)], [48, y(far)], [88, y(neck)], [128, y(far)]];                                   // the M (or W): two tests of the same level
   const px = live ? 188 : 164, dot = [px, y(P)];
   const lines = [
-    { v: neck, c: "trig", t: (gap ? "gap-day high " : "neckline ") + money(neck) },
+    { v: neck, c: "trig", t: (gap ? "gap-day high " : "neckline ") + money(neck) + (live ? "" : " · trigger") },
     { v: far, c: gap || live ? "stop" : "lv", t: (gap ? (live ? "stop " : "fade low ") : (far > neck ? "tops " : "lows ")) + money(far) },
   ].concat(tgt != null && Number.isFinite(tgt) ? [{ v: tgt, c: "tgt", t: "target " + money(tgt) }] : []).sort((a, b) => y(a.v) - y(b.v));
   let lastY = -99;
-  const lv = lines.map(L => { const yy = y(L.v); let ty = yy - 4; if (ty - lastY < 12 || ty < 10) ty = yy + 11; lastY = ty;
-    return `<line class="sk-l ${L.c}" x1="4" x2="${W - 4}" y1="${yy}" y2="${yy}"/><text class="sk-t ${L.c}" x="${W - 6}" y="${ty.toFixed(1)}" text-anchor="end">${esc(L.t)}</text>`; }).join("");
+  const lv = lines.map(L => { const yy = y(L.v), line = `<line class="sk-l ${L.c}" x1="4" x2="${W - 4}" y1="${yy}" y2="${yy}"/>`;
+    if (L.c === "trig") {       // the trigger label sits on the left, on the side away from the pattern, so nothing on the right can cover it
+      const ty = far > neck ? yy + 11 : Math.max(9, yy - 4);
+      return line + `<text class="sk-t trig" x="4" y="${ty.toFixed(1)}" text-anchor="start">${esc(L.t)}</text>`;
+    }
+    const crowded = lines.some(M => M !== L && y(M.v) < yy && yy - y(M.v) < 15);   // another line just above: label goes under its own line
+    let ty = yy - 4; if (crowded || ty - lastY < 12 || ty < 10) ty = yy + 11; lastY = ty;
+    return line + `<text class="sk-t ${L.c}" x="${W - 6}" y="${ty.toFixed(1)}" text-anchor="end">${esc(L.t)}</text>`; }).join("");
   const dcls = live ? (up ? "up" : "down") : "";
   return `<svg class="sk" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(x.name)}: price ${money(P)}, ${esc(lines.map(L => L.t).join(", "))}">${lv}
     <polyline class="sk-p" points="${pts.map(p => p.join(",")).join(" ")}"/><line class="sk-p now" x1="${pts[pts.length - 1][0]}" y1="${pts[pts.length - 1][1]}" x2="${dot[0]}" y2="${dot[1]}"/>
@@ -4404,9 +4411,12 @@ function setupCard(x) {
       + (x.retest && x.retest.candles_left > 0 ? `<br>Wait for the retest: a 4H close back near <b>${money(x.retest.edge)}</b> that holds (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left)${x.retest.near ? ". Price is back at it now" : ""}.` : "");
   } else {
     const d = Math.abs((trig / P - 1) * 100);
-    pos = d < 0.15 ? "At the " + lineName : d.toFixed(1) + "% " + (up ? "below" : "above") + " the " + lineName;
+    const dd = Math.abs(trig - P).toFixed(2);
+    pos = d < 0.15 ? "At the " + lineName
+      : `<b>$${dd} ${up ? "below" : "above"} the ${lineName}</b><br>${d.toFixed(1)}% ${up ? "below" : "above"} the ${lineName}`;
     meta = gap ? `Trigger: a daily close above <b>${money(trig)}</b> · gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left`
-      : `Heads-up on a 4H close ${up ? "above" : "below"} <b>${money(trig)}</b> · ${x.sessions} sessions`;
+      : `Heads-up on a 4H close ${up ? "above" : "below"} <b>${money(trig)}</b> · ${x.sessions} sessions`
+        + (x.kind.startsWith("double") && x.peak != null ? `<br>Becomes an <b>A setup</b> if the retest close is the 4:00 PM close and the entry isn't past halfway to the target. Stop then sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : "");
   }
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
@@ -4414,7 +4424,7 @@ function setupCard(x) {
     <div class="sc-kind">${esc(x.name)}${live ? strengthChip(x.strength, up) : ""}</div>
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
-    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a>${brokerLinks(x.symbol, x.exchange)}</div></div>`;
+    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="toggleScout()">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
 }
 let RECORD_PAT = "hub";
 
@@ -5069,7 +5079,15 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc-st { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
 .sc-mid { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 14px; }
 .sc-px { font: 800 26px var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: #F3F3F0; }
-.sc-pos { font-size: 14px; color: #A9AEB8; text-align: right; }
+.sc-pos { font-size: 14px; color: #A9AEB8; text-align: right; line-height: 1.4; }
+.sc-pos b { color: var(--ink, #F3F3F0); font-weight: 650; }
+.sc .board-actions { gap: 8px !important; align-items: center; }
+.sc .board-actions button.btnx { font-size: 10px !important; padding: 6px 8px !important; line-height: inherit; }
+.sc .trade-label { font-size: 12px; color: #8A8F99; margin-left: 6px; }
+.sc a.broker.named { display: inline-flex; align-items: center; gap: 6px; margin-left: 0 !important; padding: 6px 10px !important; line-height: 1.2; border-radius: 999px; text-decoration: none; }
+.sc .broker-name { font-size: 12px; font-weight: 600; color: #A9AEB8; }
+html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #5B6672; }
+@media (max-width: 760px) { .sc-grid { padding-bottom: 120px; } }   /* the last card clears the Sika button */
 .sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
 .sc-kind .str-chip { margin: 0 0 0 8px; }
 .sc .sk { display: block; width: 100%; height: auto; margin: 10px 0 2px; }
