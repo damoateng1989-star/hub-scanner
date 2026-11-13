@@ -30,8 +30,8 @@ log = logging.getLogger("paper-opt")
 _lock = threading.Lock()
 
 KIND = "option"
-DAILY_MAX = int(os.getenv("PAPER_OPT_DAILY_MAX", 1))        # one trade a day: the first qualifying setup
-MAX_OPEN = int(os.getenv("PAPER_OPT_MAX_OPEN", 5))
+DAILY_MAX = int(os.getenv("PAPER_OPT_DAILY_MAX", 5))        # up to five A setups a day, best reward:risk first
+MAX_OPEN = int(os.getenv("PAPER_OPT_MAX_OPEN", 10))
 MAX_PREMIUM = float(os.getenv("PAPER_OPT_MAX_PREMIUM", 2000))
 MAX_SPREAD = float(os.getenv("PAPER_OPT_MAX_SPREAD_PCT", 0.15))
 MIN_DTE_ENTRY, EXIT_DTE = 14, 7
@@ -96,8 +96,47 @@ def _contract(sym: str, d: int) -> tuple[dict, dict] | tuple[None, str]:
     return c, pl
 
 
+def a_candidates(window: str) -> list[dict]:
+    """A-grade retests (hubs and double bottoms, longs) whose retest closed on the candle we're entering after,
+    from the live record of today's rules (board.RULES, logged by the sweep). Best reward:risk at today's price first."""
+    import board
+    import earnings
+    today = pd.Timestamp.now(tz=engine.NY).normalize()
+    rows = []
+    for s_ in db.all_signals(500, board.RULES):
+        if s_.get("grade") != "A" or s_.get("outcome") != "pending" or not s_.get("entry_time") or s_.get("stop") is None:
+            continue
+        t = pd.Timestamp(s_["entry_time"]).tz_convert(engine.NY)
+        fresh = (t.normalize() == today and t.hour == 9) if window == "midday" else \
+                (t.normalize() < today and t.hour == 13 and (today - t.normalize()).days <= 4)
+        if fresh:
+            rows.append(s_)
+    if not rows:
+        return []
+    try:
+        live = data.latest_prices([r["symbol"] for r in rows])
+    except Exception:
+        live = {}
+    out = []
+    for r in rows:
+        px = (live.get(r["symbol"]) or {}).get("price") or r["entry"]
+        if not (r["stop"] < px < r["target"]):
+            continue                               # already stopped or already at the target: nothing left to enter
+        try:
+            e = earnings.lookup(r["symbol"])
+            if e and e.get("days") is not None and e["days"] <= 7:
+                continue                           # don't hold an option through an earnings report
+        except Exception:
+            pass
+        out.append(dict(symbol=r["symbol"], d=1, edge=r["stop"], target=r["target"], price=px, low=r["hub_low"], high=r["hub_high"],
+                        kind=r.get("target_kind") or "shelf", hub_start=r["breakout_time"], candle=r["entry_time"],
+                        setup=r.get("setup") or "Retest", rr=(r["target"] - px) / max(px - r["stop"], 1e-9)))
+    return sorted(out, key=lambda c: (-min(c["rr"], 4.0), -(c["target"] / c["price"] - 1)))
+
+
 def enter_daily_opt(window: str = "midday") -> list[str] | None:
-    """After the confirming close: one options trade per qualifying setup, up to DAILY_MAX a day and MAX_OPEN open."""
+    """After the confirming close: one options trade per A setup (an A-grade retest), up to DAILY_MAX a day and MAX_OPEN open.
+    The stop rides in the trade's `edge` field, so the pre-close check exits on it (1 ATR for hubs, the lows for doubles)."""
     if not enabled() or paper.source() != "board" or not _ready():
         return None
     if window == "midday":                 # wait for the 1:52 PM sweep that confirms the 1:30 close
@@ -116,7 +155,7 @@ def enter_daily_opt(window: str = "midday") -> list[str] | None:
         except Exception as e:
             log.warning("clock check failed: %s", e)
             return None
-        for c in paper.candidates(window):
+        for c in a_candidates(window):
             if _entries_today() >= DAILY_MAX or len(db.open_trades(kind=KIND)) >= MAX_OPEN:
                 break
             hub_key = f"OPT:{c['symbol']}|{c['hub_start']}"
@@ -148,8 +187,8 @@ def enter_daily_opt(window: str = "midday") -> list[str] | None:
                          opt_delta=k.get("delta"), opt_premium=round(fill * 100 * qty, 2))
             msgs.append(f"🧪📈 Paper OPTIONS experiment: BUY {qty} {c['symbol']} {k['expiry']} ${k['strike']:g} "
                         f"{'call' if c['d'] == 1 else 'put'} @ {_money(fill)} (premium {_money(fill * 100 * qty)})\n"
-                        f"Same setup as the share trade: confirmed close outside {_money(c['low'])}–{_money(c['high'])}, "
-                        f"aiming for {_money(c['target'])}. Exits on the stock: the shelf, a close back inside, "
+                        f"A setup: {c['setup']} at {_money(c['price'])}, aiming for {_money(c['target'])}. "
+                        f"Exits on the stock: the target, a close below the stop {_money(c['edge'])}, "
                         f"{scanner.SETTINGS.horizon} candles, or under {EXIT_DTE} days to expiry. Max loss is the premium.")
     for m in msgs:
         notify.admins(m)
@@ -179,7 +218,7 @@ def _dte(t: dict) -> int:
 
 
 def run_check_opt() -> list[str]:
-    """Pre-close (same slots as the share trader): close back inside the hub, time limit, or expiry week."""
+    """Pre-close (same slots as the share trader): price below the stop (stored as `edge`), time limit, or expiry week."""
     if not db.open_trades(kind=KIND) or not _ready():
         return []
     msgs = []
