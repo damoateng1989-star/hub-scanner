@@ -3565,13 +3565,14 @@ function vizScaleHTML(st) {
   const pc = v => ((v - d.min) / (d.max - d.min) * 100).toFixed(1);
   const inView = v => v != null && v >= d.min && v <= d.max;
   const L = LIVE[BRIEF_SYM];
-  const px = (L && Math.abs(L.price - p) >= 0.01) ? L.price : p;
+  const useLive = LIVE_OPEN && L && Math.abs(L.price - p) >= 0.01;
+  const px = useLive ? L.price : p;
   const w = GAMMA[BRIEF_SYM], walls = [];
   if (w && w !== "loading") [["Call wall", w.call_wall], ["Put wall", w.put_wall]].forEach(([n, v]) => { if (v != null && inView(v)) walls.push([n, v]); });
   const up = st.shelf_up && inView(st.shelf_up.level) ? st.shelf_up.level : null;
   const dn = st.shelf_down && inView(st.shelf_down.level) ? st.shelf_down.level : null;
   const hubL = pc(h.low), hubW = (pc(h.high) - pc(h.low)).toFixed(1);
-  const key = [`<span><i class="k-px"></i>${L && Math.abs(L.price - p) >= 0.01 ? (LIVE_OPEN ? "Live" : "Last trade") : "Price"} ${money(px)}</span>`,
+  const key = [`<span><i class="k-px"></i>${useLive ? "Live" : "Last close"} ${money(px)}</span>`,
     `<span><i class="k-hub"></i>Hub ${money(h.low)}–${money(h.high).slice(1)}</span>`];
   if (up != null) key.push(`<span><i class="k-up"></i>Shelf ${money(up)}</span>`);
   if (dn != null) key.push(`<span><i class="k-dn"></i>Shelf ${money(dn)}</span>`);
@@ -3651,7 +3652,7 @@ function roomNote(sh, trig, d, min, side) {
 }
 // the middle number: live price when there is one, otherwise the last 4-hour close, said as such
 function nowCell(st) {
-  const h = st.hub, L = LIVE[BRIEF_SYM], live = L && L.price != null, px = live ? L.price : st.last_close;
+  const h = st.hub, L = LIVE[BRIEF_SYM], live = LIVE_OPEN && L && L.price != null, px = live ? L.price : st.last_close;   // market closed: the last closing price, not a premarket/after-hours print
   let sub;
   const tu = st.trigger_up || h.high, td = st.trigger_down || h.low;
   if (px > tu) sub = `${((px / h.high - 1) * 100).toFixed(2)}% above the top · not closed yet`;
@@ -3659,7 +3660,7 @@ function nowCell(st) {
   else if (px > h.high) sub = `above the top, but a close here only widens the hub`;
   else if (px < h.low) sub = `below the bottom, but a close here only widens the hub`;
   else { const top = (h.high - px) <= (px - h.low); sub = `${((top ? h.high / px - 1 : 1 - h.low / px) * 100).toFixed(2)}% to the ${top ? "top" : "bottom"}`; }
-  return [live ? (LIVE_OPEN ? "Now" : "Last trade") : "Last close", money(px), sub];
+  return [live ? "Now" : "Last closing price", money(px), sub];
 }
 function paintNowCell() {
   const el = $("bfNow"), st = (BRIEF_CHART && BRIEF_CHART.status) || (BRIEF_SYM && findStatus(BRIEF_SYM));
@@ -4752,8 +4753,13 @@ function paintBriefLive() {
   if (!BRIEF_SYM || !LIVE[BRIEF_SYM] || !$("bfLive")) return;
   paintNowCell(); if (typeof paintVizScale === "function") paintVizScale();
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(BRIEF_SYM);
+  if (!LIVE_OPEN) {       // market closed: the last closing price, not a premarket or after-hours print
+    const v = liveVsHub(st, st.last_close);
+    $("bfLive").innerHTML = `<span class="bf-pl">Last closing price</span><span class="live">${money(st.last_close)}</span>` + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
+    return;
+  }
   const v = liveVsHub(st, LIVE[BRIEF_SYM].price);
-  $("bfLive").innerHTML = `<span class="bf-pl">${LIVE_OPEN ? "Live" : "Last trade"}</span>` + liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
+  $("bfLive").innerHTML = `<span class="bf-pl">Live</span>` + liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
 }
 
 // ---------------------------------------------------------------- install as an app (PWA)
