@@ -392,7 +392,7 @@ def enter_daily(window: str = "midday") -> str | None:
     """The paper trader's one trade a day: the best fresh, confirmed breakout from the whole board."""
     if not enabled() or source() != "board":
         return None      # paper trading off (or watchlist mode): nothing to record
-    if window == "midday":                 # the 1:52 PM board sweep confirms the 1:30 close: wait for it
+    if window == "midday":                 # wait for a running board sweep to finish before checking the clock
         import time as _t
         from board import SCAN
         for _ in range(60):
@@ -408,7 +408,7 @@ def enter_daily(window: str = "midday") -> str | None:
         b = broker()
         try:
             if not b.is_open():
-                _record(window, False, "market closed (holiday or early close)")
+                _record(window, False, "market closed at check time")
                 return None
         except Exception as e:
             log.warning("clock check failed: %s", e)
@@ -534,6 +534,7 @@ def summary(with_prices: bool = True) -> dict:
         stats=dict(closed=len(closed), wins=len(wins),
                    win_rate=round(100 * len(wins) / len(closed), 1) if closed else None,
                    total_pnl=round(sum(t["pnl"] or 0 for t in closed), 2),
+                   open_unreal=round(sum(t.get("unreal") or 0 for t in opened), 2),
                    avg_pct=round(sum(t["pnl_pct"] or 0 for t in closed) / len(closed), 2) if closed else None),
         open=opened, closed=closed[:50])
 

@@ -377,15 +377,19 @@ def analyze_all(c4: pd.DataFrame, res: dict, s: engine.Settings, vol_gate: bool 
         out["trades"].append(t)
 
     # double tops and bottoms: a close through the neckline
+    _doubles_live = {}
     for p in _find_doubles(c4, atr, close):
         if p["active"]:
-            out["live"].append(dict(kind=p["kind"], state="forming", upper=p["ch"], lower=p["cl"], sessions=p["sessions"],
-                                    start_i=p["a"], end_i=n - 1, p=p))
+            # one forming row per double kind: several pairs can match the same stock (F showed two identical
+            # double tops). _find_doubles returns pairs in time order, so the last write keeps the newest second peak.
+            _doubles_live[p["kind"]] = dict(kind=p["kind"], state="forming", upper=p["ch"], lower=p["cl"], sessions=p["sessions"],
+                                            start_i=p["a"], end_i=n - 1, p=p)
             continue
         i0, d, edge = p["brk"], p["d"], p["neck"]
         target, shelf = _target(res, p["a"], d, edge, float(atr[i0]), s)
         out["trades"].append(dict(kind=p["kind"], hub=dict(start_i=p["a"], end_i=i0 - 1, low=p["cl"], high=p["ch"], sessions=p["sessions"]),
                                   p=p, i0=i0, direction=d, edge=edge, target=target, shelf=shelf, **_outcome(close, i0, d, edge, target, s)))
+    out["live"].extend(_doubles_live.values())
 
     # support & resistance: a close through a level tested 3+ times
     lv_at = _sr_levels(c4, atr)

@@ -2840,7 +2840,7 @@ async function loadPaper() {
   const how = p.source === "board" ? `${p.daily_max === 1 ? "One trade a day" : `Up to ${p.daily_max} trades a day`}: the best confirmed hub breakout on the whole board, entered after the close (about 3:50 PM for the 1:30 candle, 9:35 AM for yesterday's 4:00 candle), only while price is in the first half of the move. At most ${p.max_open} open at once.`
     : "Entries from members' watchlists, about 2 minutes before each 4-hour close.";
   $("paper").innerHTML = `
-    <div class="pgoal"><div class="pgoal-h"><b>${st.closed} of ${goal}</b> closed trades collected <span>${pct}%</span></div><div class="pgoal-bar"><i style="width:${pct}%"></i></div>
+    <div class="pgoal"><div class="pgoal-h"><b>${st.closed} of ${goal}</b> closed trades collected <span>${pct}% of goal</span></div><div class="pgoal-bar"><i style="width:${pct}%"></i></div>
       <p class="note" style="margin:8px 0 0">${how} Judge the strategy once ${goal} trades have closed, not before.</p>
       ${lcLine ? `<div class="note" style="margin:10px 0 0;font-size:13px;line-height:1.6"><div style="font-weight:600;margin-bottom:2px">Latest entry checks</div>${lcLine}</div>` : ""}</div>
     <div class="stats" style="margin-top:0">
@@ -2849,7 +2849,7 @@ async function loadPaper() {
       <div><b style="${pc(st.total_pnl)}">${st.closed ? usd(st.total_pnl) : "–"}</b><span>Total P&amp;L</span></div>
       <div><b style="${pc(st.avg_pct)}">${sign(st.avg_pct)}</b><span>Avg per trade</span></div>
     </div>
-    <div class="note">${p.account ? `Paper account equity ${money(p.account.equity)} · ` : ""}${money(p.trade_usd)} per trade${p.allow_short ? " · longs and shorts" : " · longs only"} · entries and exits ~2 min before each 4H close</div>
+    <div class="note">${p.account ? `Paper account equity ${money(p.account.equity)}${st.closed ? ` · closed ${usd(st.total_pnl)}` : ""}${(p.open || []).length ? ` · open ${usd(st.open_unreal || 0)}` : ""} · ` : ""}${money(p.trade_usd)} per trade${p.allow_short ? " · longs and shorts" : " · longs only"} · entries and exits ~2 min before each 4H close</div>
     ${p.open.length ? `<div class="eyebrow" style="margin:16px 0 8px">Open</div><div class="feed">${p.open.map(t => row(t, true)).join("")}</div>` : ""}
     ${p.closed.length ? `<div class="eyebrow" style="margin:16px 0 8px">Closed</div><div class="feed">${p.closed.map(t => row(t, false)).join("")}</div>`
       : p.open.length ? "" : `<div class="empty" style="margin-top:12px">${p.enabled ? (p.source === "board" ? "Waiting for the first confirmed breakout. One trade a day, entered after the close." : "Waiting for the first setup. Trades open ~2 min before a 4H close when price is outside a hub.") : "Turn on auto paper trading to start a hands-off forward test with fake money."}</div>`}`;
@@ -3998,9 +3998,11 @@ function bRow(r, kind) {
     if (r.gamma_line) d += `<span class="gwall">${esc(r.gamma_line)}</span>`;
   } else if (kind === "near") {
     const up = r.near_edge === "up";
-    const dist = Math.abs(up ? r.to_high_pct : r.to_low_pct).toFixed(1);
+    const v = up ? r.to_high_pct : r.to_low_pct;
+    const dist = Math.abs(v).toFixed(1);
+    const past = up ? Number(v) < 0 : Number(v) > 0;   // price is already past the edge it is near
     const sh = up ? r.shelf_up : r.shelf_down;
-    d = `Near the <b class="u-${up ? "up" : "down"}">${up ? "top" : "bottom"}</b> of its hub ${money(h.low)}–${money(h.high).slice(1)} · ${dist}% to ${up ? "breakout" : "breakdown"}` +
+    d = `Near the <b class="u-${up ? "up" : "down"}">${up ? "top" : "bottom"}</b> of its hub ${money(h.low)}–${money(h.high).slice(1)} · ${past ? dist + "% " + (up ? "above the upper edge" : "below the lower edge") : dist + "% to " + (up ? "breakout" : "breakdown")}` +
         (sh ? ` · next shelf <span class="u-${up ? "up" : "down"}">${money(sh.level)}</span>` : "");
   } else if (kind === "forming") {
     d = `Hub ${money(h.low)}–${money(h.high).slice(1)} · ${h.sessions} sessions` + (h.grade ? ` · ${gradeWord(h)}` : "") + (r.state === "watching" ? " · just ended" : "");
@@ -4061,7 +4063,10 @@ function boardPositionLine(r,kind,dist,dir){
   if(kind==="near"){
     if(dist==null)return "At the edge";
     if(dist<0.05)return r.near_edge==="up"?"On the upper edge":"On the lower edge";
-    return dist.toFixed(2)+"% "+(r.near_edge==="up"?"below the upper edge":"above the lower edge");
+    const v = r.near_edge==="up" ? Number(r.to_high_pct) : Number(r.to_low_pct);
+    // board.py sends a signed pct (positive = the edge is above the price); the old line guessed the side from near_edge alone
+    if(!Number.isFinite(v))return dist.toFixed(2)+"% "+(r.near_edge==="up"?"below the upper edge":"above the lower edge");
+    return dist.toFixed(2)+"% "+(v>0?"below the ":"above the ")+(r.near_edge==="up"?"upper edge":"lower edge");
   }
   if(kind==="forming"){
     const h=r.hub||{},p=Number(r.last_close);
@@ -4838,6 +4843,7 @@ function winRankHTML(rows) {
   return `<div class="rank" id="winRank"><div class="rank-h"><div class="eyebrow" style="margin:0">Win rate by stock</div>
     <div class="rank-ctl"><div class="seg"><button class="${RANK_DIR === -1 ? "on" : ""}" onclick="setRank(-1)">Highest</button><button class="${RANK_DIR === 1 ? "on" : ""}" onclick="setRank(1)">Lowest</button></div>
       <label class="note" style="margin:0">min <select onchange="RANK_MIN=+this.value;setRank(RANK_DIR)">${[1, 2, 3, 5].map(n => `<option value="${n}"${n === RANK_MIN ? " selected" : ""}>${n}</option>`).join("")}</select> setups</label></div></div>
+    ${list.length && RANK_DIR === -1 && list[0].win_rate === 0 ? `<p class="note" style="margin:8px 0 0">No stock with ${RANK_MIN}+ completed setups has reached the shelf yet. The highest win rate in this table is 0%.</p>` : ""}
     ${list.length ? `<div class="tbl" style="margin-top:8px"><table><tr><th>#</th><th>Stock</th><th>Win rate</th><th>Wins</th><th>Avg per setup</th></tr>
       ${list.map((x, i) => `<tr><td>${i + 1}</td><td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')"><b>${esc(x.symbol)}</b></a></td>
         <td><span class="rank-bar" style="--w:${x.win_rate}%;--c:var(${x.win_rate >= 50 ? "--up" : "--down"})"><i></i>${x.win_rate}%</span></td><td>${x.wins} of ${x.n}</td>
