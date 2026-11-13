@@ -4477,6 +4477,7 @@ function setupCard(x) {
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
     <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${x.kind === "double_top" ? ' <span class="beta-tag">beta</span>' : ""}${live ? strengthChip(x.strength, up) : ""}</div>
+    ${gap ? `<div class="sc-last" data-earn="${esc(x.symbol)}"></div>` : ""}
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
     ${x.catalyst ? `<div class="sc-news">📰 Possible catalyst (${esc(x.catalyst.tag_label)}): ${x.catalyst.url ? `<a href="${esc(x.catalyst.url)}" target="_blank" rel="noopener">${esc(x.catalyst.headline)}</a>` : `<b>${esc(x.catalyst.headline)}</b>`} · ${esc(x.catalyst.source)}, ${when(x.catalyst.time)}</div>` : ""}
@@ -5010,7 +5011,12 @@ function earnShort(e) { const d = new Date(e.date + "T12:00:00"); return e.days 
 function earnPaint(root) {
   root.querySelectorAll("[data-earn]").forEach(el => {
     const e = EARN[el.dataset.earn]; const old = el.querySelector(":scope > .earn-tag, :scope > .bf-earn"); if (old) old.remove();
-    if (!e || e.days > 14) return;
+    if (el.classList.contains("sc-last")) {      // gap fade cards: the report the gap came from
+      const L = e && e.last, w = L && ({bmo: "before the open", amc: "after the close"})[L.when];
+      el.textContent = L ? `📅 Last earnings ${new Date(L.date + "T12:00:00").toLocaleDateString(undefined, {month: "short", day: "numeric"})}${w ? ", " + w : ""} · ${L.days_ago === 0 ? "today" : L.days_ago === 1 ? "yesterday" : L.days_ago + " days ago"}` : "";
+      return;
+    }
+    if (!e || e.days == null || e.days > 14) return;
     if (el.id === "bfHead") {
       if ($("bfWallTop")) $("bfWallTop").innerHTML = "";      // one warning on top: earnings wins over the options wall
       el.insertAdjacentHTML("beforeend", `<p class="bf-earn"><i>📅</i><span><b>Earnings ${esc(e.label)}.</b> Price can gap past the hub.</span></p>`);
@@ -5021,6 +5027,10 @@ function earnPaint(root) {
   });
 }
 function earnScan(root) {
+  root.querySelectorAll(".sc-last:not([data-earn-done])").forEach(el => {
+    const sym = el.dataset.earn; el.dataset.earnDone = "1";
+    if (sym in EARN) earnPaint(el.parentNode || el); else earnAsk(sym);
+  });
   root.querySelectorAll(".board-symbol:not([data-earn]), .lrow > summary .s:not([data-earn]), #bfHead").forEach(el => {
     let sym = "";
     if (el.id === "bfHead") { sym = (el.querySelector("h3") || {}).textContent || ""; if (el.dataset.earn === sym.trim() && el.querySelector(".bf-earn")) return; }
@@ -5159,6 +5169,8 @@ html[data-theme="light"] .sc .board-actions a.btnx { background: #141412 !import
 html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #141412; }
 @media (max-width: 760px) { .sc-grid { padding-bottom: 120px; } }   /* the last card clears the Sika button */
 .sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
+.sc-last { margin-top: 6px; font-size: 12.5px; color: #B48CFF; } .sc-last:empty { display: none; }
+html[data-theme="light"] .sc-last { color: #7c3aed; }
 .sc-kind b { color: #C9CDD6; font-weight: 650; } html[data-theme="light"] .sc-kind b { color: #33373D; }
 .sc-kind .str-chip { margin: 0 0 0 8px; }
 .sc .sk { display: block; width: 100%; height: auto; margin: 10px 0 2px; }

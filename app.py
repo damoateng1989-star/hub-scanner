@@ -179,6 +179,8 @@ async def lifespan(_app: FastAPI):
                   args=["midday"], misfire_grace_time=900, coalesce=True, max_instances=1, id="paper_midday", replace_existing=True)
     sched.add_job(earnings.refresh, CronTrigger(hour="6,12,18", minute=5, timezone="America/New_York"),
                   kwargs={"force": True}, id="earnings", replace_existing=True)
+    sched.add_job(earnings.refresh_past, CronTrigger(hour=6, minute=10, timezone="America/New_York"),
+                  kwargs={"force": True}, id="earnings_past", replace_existing=True)
     if brief.BRIEF_TIME:      # morning brief, weekdays before the open
         bh, bm = map(int, brief.BRIEF_TIME.split(":"))
         sched.add_job(brief.send_all, CronTrigger(day_of_week="mon-fri", hour=bh, minute=bm, timezone="America/New_York"),
@@ -813,7 +815,7 @@ def info(u: dict | None = Maybe):
 
 @app.get("/api/earnings")
 def earnings_dates(symbols: str = ""):
-    """Upcoming earnings (within 3 weeks) for up to 200 symbols: {SYM: {date, days, when, label}}."""
+    """Upcoming earnings (within 3 weeks) and the last report for up to 200 symbols: {SYM: {date, days, when, label, last}}."""
     syms = []
     for x in symbols.split(",")[:200]:
         try:

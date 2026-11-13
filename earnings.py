@@ -37,19 +37,19 @@ def _today() -> date:
     return pd.Timestamp.now(tz="America/New_York").date()
 
 
-def _finnhub(start: date, end: date) -> dict[str, dict]:
+def _finnhub(start: date, end: date, latest: bool = False) -> dict[str, dict]:
     r = requests.get("https://finnhub.io/api/v1/calendar/earnings", timeout=20,
                      params={"from": start.isoformat(), "to": end.isoformat(), "token": os.getenv("FINNHUB_API_KEY", "")})
     r.raise_for_status()
     out = {}
     for x in r.json().get("earningsCalendar") or []:
         sym, d = (x.get("symbol") or "").upper(), x.get("date")
-        if sym and d and (sym not in out or d < out[sym]["date"]):
+        if sym and d and (sym not in out or (d > out[sym]["date"] if latest else d < out[sym]["date"])):
             out[sym] = {"date": d, "when": x.get("hour") if x.get("hour") in WHEN else ""}
     return out
 
 
-def _nasdaq(start: date, end: date) -> dict[str, dict]:
+def _nasdaq(start: date, end: date, latest: bool = False) -> dict[str, dict]:
     headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36",
                "Accept": "application/json, text/plain, */*", "Origin": "https://www.nasdaq.com", "Referer": "https://www.nasdaq.com/"}
     days = [start + timedelta(days=i) for i in range((end - start).days + 1)]
@@ -66,7 +66,7 @@ def _nasdaq(start: date, end: date) -> dict[str, dict]:
     with ThreadPoolExecutor(max_workers=4) as ex:
         results = sorted(ex.map(one, days))
     out = {}
-    for d, rows in results:
+    for d, rows in (reversed(results) if latest else results):
         for x in rows:
             sym = (x.get("symbol") or "").upper().replace("/", ".")
             t = x.get("time") or ""
@@ -87,6 +87,92 @@ def _demo(start: date) -> dict[str, dict]:
                 d += timedelta(days=1)
             out[sym] = {"date": d.isoformat(), "when": ("bmo", "amc")[h % 2]}
     return out
+
+
+# ---------------------------------------------------------------- the last report (for setups that trade the earnings move)
+BACK = 95                  # days of past reports to keep: covers the last quarter for every stock
+_PAST: dict[str, dict] = {}
+_PAST_AT = 0.0
+_PAST_BUSY = threading.Lock()
+
+
+def _demo_past(today: date) -> dict[str, dict]:
+    out = {}
+    import universe
+    for sym in set(universe.board_universe()) | {"AAPL", "MSFT", "NVDA", "AMD", "TSLA", "META", "GOOGL", "AMZN", "AMAT"}:
+        h = int(hashlib.md5(f"past{sym}".encode()).hexdigest(), 16)
+        d = today - timedelta(days=1 + h % 80)
+        while d.weekday() >= 5:
+            d -= timedelta(days=1)
+        out[sym] = {"date": d.isoformat(), "when": ("bmo", "amc")[h % 2]}
+    return out
+
+
+def refresh_past(force: bool = False) -> int:
+    """The most recent report in the last BACK days, per stock. At most once a day; saved so a restart keeps it."""
+    global _PAST, _PAST_AT
+    if not _PAST:
+        try:
+            saved = json.loads(db.get_setting("earnings_past") or "{}")
+            _PAST, _PAST_AT = saved.get("cal", {}), saved.get("at", 0)
+        except Exception:
+            pass
+    if not force and _PAST and time.time() - _PAST_AT < 86400:
+        return len(_PAST)
+    today = _today()
+    start, end = today - timedelta(days=BACK), today - timedelta(days=1)
+    try:
+        if data.provider() == "demo":
+            cal = _demo_past(today)
+        elif os.getenv("FINNHUB_API_KEY"):
+            cal = _finnhub(start, end, latest=True)
+        else:
+            cal = _nasdaq(start, end, latest=True)
+    except Exception as e:
+        log.warning("past earnings refresh failed: %s", e)
+        return len(_PAST)
+    if cal:
+        merged = dict(_PAST)
+        for s, x in cal.items():           # keep whichever report is newer
+            if s not in merged or x["date"] >= merged[s]["date"]:
+                merged[s] = x
+        _PAST, _PAST_AT = merged, time.time()
+        try:
+            db.set_setting("earnings_past", json.dumps({"at": _PAST_AT, "cal": _PAST}))
+        except Exception:
+            pass
+    return len(_PAST)
+
+
+def _past_async():
+    if (not _PAST or time.time() - _PAST_AT > 86400) and _PAST_BUSY.acquire(blocking=False):
+        def run():
+            try:
+                refresh_past()
+            finally:
+                _PAST_BUSY.release()
+        threading.Thread(target=run, daemon=True).start()
+
+
+def last(sym: str) -> dict | None:
+    """{"date", "days_ago", "when", "label"} for the most recent report, else None. Never blocks on the network.
+    A report from the upcoming calendar that has now passed counts too, so a fresh report shows up the same day."""
+    if not _PAST:
+        try:
+            saved = json.loads(db.get_setting("earnings_past") or "{}")
+            _PAST.update(saved.get("cal", {}))
+        except Exception:
+            pass
+    _past_async()
+    sym = (sym or "").upper()
+    cands = [x for x in (_PAST.get(sym), _CAL.get(sym)) if x and x.get("date") and x["date"] < _today().isoformat()]
+    if not cands:
+        return None
+    x = max(cands, key=lambda c: c["date"])
+    d = date.fromisoformat(x["date"])
+    when = WHEN.get(x.get("when") or "", "")
+    return dict(date=x["date"], days_ago=(_today() - d).days, when=x.get("when") or "",
+                label=d.strftime("%a %b ") + str(d.day) + (f", {when}" if when else ""))
 
 
 def refresh(force: bool = False) -> int:
@@ -172,9 +258,16 @@ def lookup(sym: str) -> dict | None:
 
 
 def many(symbols: list[str]) -> dict[str, dict]:
+    """Upcoming report (date/days/when/label) and the last report ("last"), per symbol that has either."""
     out = {}
     for s in symbols:
-        e = lookup(s)
+        e = dict(lookup(s) or {})
+        try:
+            lt = last(s)
+        except Exception:
+            lt = None
+        if lt:
+            e["last"] = lt
         if e:
             out[s.upper()] = e
     return out
