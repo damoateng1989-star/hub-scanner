@@ -2154,6 +2154,9 @@ html[data-theme="light"] .sg small { color: #4b5563; }
 html[data-theme="light"] .sg.ga, html[data-theme="light"] .sg-in.ga { --c: #12805C; } html[data-theme="light"] .sg.gb, html[data-theme="light"] .sg-in.gb { --c: #2F54EB; }
 html[data-theme="light"] .sg.gc, html[data-theme="light"] .sg-in.gc { --c: #B7791F; } html[data-theme="light"] .sg.gd, html[data-theme="light"] .sg-in.gd { --c: #C81E1E; }
 html[data-theme="light"] .sg-b { color: #fff; }
+.rec-test { margin: 0 0 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; }
+.rec-test .stats span { line-height: 1.45; }
+@media (max-width: 640px) { .rec-test .stats { grid-template-columns: 1fr !important; } }
 </style>
 </head>
 <body class="term">
@@ -4853,14 +4856,19 @@ async function loadRecord() {
   const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"],
     ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"],
     ["flush", "Flush & reclaim"], ["fail_down", "Failed breakdowns"], ["fail_up", "Failed breakouts"]];
-  $("record").innerHTML = `
+  const T = r.tested, mo = (t) => t ? new Date(t).toLocaleDateString(undefined, {month: "short", year: "numeric"}) : "";
+  const testedBox = T && T.rows && T.rows.length ? `<div class="rec-test"><div class="eyebrow" style="margin:0 0 4px">Two-year test of today's rules</div>
+      <p class="note" style="margin:0 0 12px">The setups NextShelf alerts on now, replayed on ${T.symbols} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}. A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
+      <div class="stats" style="margin:0;grid-template-columns:repeat(${T.rows.length},1fr)">${T.rows.map(x => `<div><b style="color:var(${x.avg >= 0 ? "--up" : "--down"})">${x.avg > 0 ? "+" : ""}${Number(x.avg).toFixed(2)}%</b><span>${esc(x.label)}<br>${x.n} trades · ${Math.round(x.win)}% won · profit factor ${x.pf ?? "–"}</span></div>`).join("")}</div></div>
+      <div class="eyebrow" style="margin:26px 0 10px">Live log since launch</div>` : "";
+  $("record").innerHTML = testedBox + `
     <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
       const tiny = x.closed && x.closed < 5;
       const sub = !x.closed ? "no results yet"
         : tiny ? `${x.closed} done · <span class="beta-tag">beta</span>`
         : `${x.win_rate ?? "–"}% winners · ${x.closed} done`;
       return `<button class="${RECORD_PAT === k ? "on" : ""}${tiny ? " tiny" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${sub}</small></button>`; }).join("")}</div>
-    <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.</p>
+    <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.${RECORD_PAT === "hub" ? " That's the earlier rule. NextShelf now waits for the retest before an entry, which is what the test above measures." : ""}</p>
     ${st.closed && st.closed < 5 ? `<div class="note"><b>Too few to judge yet.</b> This pattern has ${st.closed} completed setup${st.closed === 1 ? "" : "s"}, so the numbers below are a count, not a record. Hubs are NextShelf's tested setup.</div>
     <div class="note">${st.closed} completed · ${st.win_rate == null ? "–" : st.win_rate + "%"} winners · avg ${sign(st.avg_ret)} · ${st.open} open now</div>`
     : `<div class="stats" style="margin-top:0">

@@ -983,7 +983,8 @@ def public_summary():
     done = [x for x in (board.track_record("hub").get("signals") or []) if x.get("outcome") not in (None, "pending")]
     done.sort(key=lambda x: x.get("outcome_time") or x.get("breakout_time") or "", reverse=True)
     recent = [dict(symbol=x["symbol"], direction=x.get("direction"), outcome=x["outcome"]) for x in done[:14]]
-    return dict(recent=recent, updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
+    import lab_exits
+    return dict(tested=lab_exits.tested_public(), recent=recent, updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
                 signals=rec.get("signals"), closed=closed, open=rec.get("open"), reached=by.get("follow-through", 0),
                 reached_pct=round(100 * by.get("follow-through", 0) / closed) if closed else None,
                 win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), next=_next_sweep(), times=sorted(BOARD_TIMES))
@@ -993,7 +994,8 @@ def public_summary():
 def record_data(pattern: str = "hub", u: dict = User):
     if pattern not in patterns.KINDS:
         raise HTTPException(400, "unknown setup")
-    return board.track_record(pattern)
+    import lab_exits
+    return dict(board.track_record(pattern), tested=lab_exits.tested_public())
 
 
 def options_for(u: dict | None) -> bool:

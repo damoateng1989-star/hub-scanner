@@ -160,6 +160,9 @@ h2 { font-size: clamp(22.5px, 3.2vw, 30.5px); letter-spacing: -0.03em; line-heig
 .rec { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .rec .stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; text-align: center; }
 .rec .big { font-size: 32.5px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+@media (min-width: 761px) { .rec.two { grid-template-columns: repeat(2, 1fr); } }
+.rec-h { margin-top: 44px; text-align: center; } .rec-h b { display: block; font-size: 17px; letter-spacing: -.01em; } .rec-h span { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink2); }
+#recTest:not([hidden]) + #recLive { margin-top: 14px; }
 .rec .cap { font-size: 11.5px; color: var(--ink2); margin-top: 6px; }
 .honest { margin: 20px auto 0; font-size: 12.5px; color: var(--ink2); text-align: center; max-width: 64ch; }
 .honest a { color: var(--blue); font-weight: 600; text-decoration: none; }
@@ -1089,8 +1092,14 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
 <section id="record" class="band"><div class="wrap">
   <div class="kicker">Track record</div>
   <h2>An honest <em>record.</em></h2>
-  <p class="sub">Every hub breakout the board finds is logged with its result. Nothing cherry-picked. The failures are the point.</p>
-  <div class="rec">
+  <p class="sub">Two sets of numbers, kept apart: how today's rules tested over two years, and the live log of every breakout since launch. Nothing is removed.</p>
+  <div id="recTest" hidden>
+    <div class="rec-h"><b>Two-year test of today's rules</b><span id="recTestSub"></span></div>
+    <div class="rec" id="recTestRow" style="margin-top:14px"></div>
+    <p class="honest" style="margin-top:14px">A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
+    <div class="rec-h" style="margin-top:40px"><b>Live log since launch</b><span>Every hub breakout, entered at the breakout close: the earlier rule, before the retest entry.</span></div>
+  </div>
+  <div class="rec" id="recLive">
     <div class="stat"><div class="big" id="recN">–</div><div class="cap" id="recNc">hub breakouts logged</div></div>
     <div class="stat"><div class="big" id="recHit" style="color:var(--up)">–</div><div class="cap">reached the shelf target</div></div>
     <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed setup</div></div>
@@ -1215,6 +1224,13 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
       const d = new Date(s.next), ny = {timeZone: "America/New_York"};
       const day = d.toLocaleDateString("en-US", {...ny, weekday: "short"}) === new Date().toLocaleDateString("en-US", {...ny, weekday: "short"}) ? "today" : d.toLocaleDateString("en-US", {...ny, weekday: "long"});
       $("bpNext").textContent = `Next check ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
+    }
+    if (s.tested && s.tested.rows && s.tested.rows.length) {
+      const T = s.tested, mo = (t) => t ? new Date(t).toLocaleDateString("en-US", {month: "short", year: "numeric"}) : "";
+      $("recTestSub").textContent = `Every setup replayed on ${n(T.symbols)} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}.`;
+      $("recTestRow").innerHTML = T.rows.map(r => `<div class="stat"><div class="big" style="color:var(${r.avg >= 0 ? "--up" : "--down"})">${r.avg > 0 ? "+" : ""}${Number(r.avg).toFixed(2)}%</div><div class="cap"><b>${r.label}</b><br>average per trade · ${n(r.n)} trades · ${Math.round(r.win)}% won</div></div>`).join("");
+      if (T.rows.length < 3) $("recTestRow").classList.add("two");
+      $("recTest").hidden = false;
     }
     if (s.signals) {
       $("recN").textContent = n(s.signals);

@@ -434,6 +434,25 @@ LIVE_RULES = [
 ]
 
 
+PUBLIC_RULES = [("hub_long", "Hub A retests"), ("double_long", "Double bottom A retests"), ("gapfade", "Gap fade & rip")]
+
+
+def tested_public() -> dict | None:
+    """The two-year test of the rules NextShelf alerts on today, for the public record pages. Straight from the last
+    finished Lab run, shown whatever the numbers are (a rule that tests negative shows negative). None before a run."""
+    try:
+        st = json.loads(db.get_setting("lab_exits") or "{}")
+        grad = {g["key"]: g for g in (st.get("result") or {}).get("graduation") or []}
+        rows = [dict(key=k, label=label, n=grad[k]["n"], win=grad[k]["win"], avg=grad[k]["avg"], pf=grad[k]["pf"],
+                     recent=grad[k].get("recent"), recent_n=grad[k].get("recent_n"))
+                for k, label in PUBLIC_RULES if k in grad and grad[k].get("n")]
+        if not rows:
+            return None
+        return dict(rows=rows, symbols=st.get("symbols"), first=st.get("first"), last=st.get("last"), finished=st.get("finished"))
+    except Exception:
+        return None
+
+
 def graduation(rows: list[dict]) -> list[dict]:
     """Each live rule, scored exactly as the alert trades it, against fixed bars: enough trades, positive overall,
     in both halves, in the last 6 months, without its 5 best stocks, and a profit factor of 1.2+."""
