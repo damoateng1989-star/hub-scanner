@@ -3864,9 +3864,6 @@ function mapPlan(sym, st) {
     P.status = "No setup in play"; P.sub = "NextShelf flags it once price settles into a tight range for 4+ four-hour candles.";
     P.shelf = st.shelf_up ? st.shelf_up.level : null;
   }
-  // the shelf zone itself (low–high), drawn as a bordered box on the map
-  const shz = P.dir === 1 ? st.shelf_up : st.shelf_down;
-  if (P.shelf != null && shz && shz.low != null && shz.high != null && !P.atrTarget && P.steps.startsWith("hub")) P.shelfBox = {low: shz.low, high: shz.high};
   // what's in the way: a call wall (or put wall) between trigger and target, else a 3+-touch level, else an old high
   if (P.trig != null && P.shelf != null) {
     const d = P.dir, between = (v) => v != null && (d === 1 ? v > P.trig * 1.001 && v < P.shelf * 0.999 : v < P.trig * 0.999 && v > P.shelf * 1.001);
@@ -3894,8 +3891,7 @@ function mapChart(P, chart, W) {
   const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(W < 560 ? -36 : -64) : [];
   const fc = mapFormingCandle(P, chart, cs);
   if (fc) { cs.push(fc); if (cs.length > (W < 560 ? 36 : 64)) cs.shift(); }
-  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high,
-              P.shelfBox && P.shelfBox.low, P.shelfBox && P.shelfBox.high].filter(v => v != null);
+  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
   let lo = Math.min(...lv, ...cs.map(c => c.low)), hi = Math.max(...lv, ...cs.map(c => c.high));
   const pad = (hi - lo) * 0.04 || hi * 0.01; lo -= pad; hi += pad;
   const y = (v) => top + (hi - v) / (hi - lo) * (H - top - bot);
@@ -3921,11 +3917,7 @@ function mapChart(P, chart, W) {
     parts.push(`<text class="mp-hubt" x="${small ? x0 + 2 : Math.min(x0, futX - 150)}" y="${ly}">HUB${small ? "" : ` ${money(P.hub.low)}–${money(P.hub.high)}`}</text>`);
   }
   // shelf band, obstacle band
-  if (P.shelfBox) {          // the real shelf: its whole zone, outlined
-    const yt = y(P.shelfBox.high), hh = Math.max(10, y(P.shelfBox.low) - yt);
-    parts.push(`<rect class="mp-shelfbox${P.watch ? " w" : ""}" x="${futX + 2}" y="${yt - (hh === 10 ? 5 : 0)}" width="${plotR - futX - 4}" height="${hh}" rx="4"/>`);
-  } else if (P.shelf != null)  // a target with no shelf zone (ATR or measured move): a thin band, dashed outline
-    parts.push(`<rect class="mp-shelfband${P.watch ? " w" : ""}" x="${futX + 2}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${plotR - futX - 4}" height="14" rx="4"/>`);
+  if (P.shelf != null) parts.push(`<rect class="mp-shelfband" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${plotR - futX}" height="14"/>`);
   if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${plotR - futX}" height="12"/>`);
   // candles
   cs.forEach((c, i) => { const up = c.close >= c.open, X = cx(i), yo = y(c.open), yc = y(c.close);
@@ -3933,7 +3925,7 @@ function mapChart(P, chart, W) {
   // level lines
   const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${plotR}" y1="${y(v)}" y2="${y(v)}"/>`;
   parts.push(line(P.stop !== P.trig ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
-             line(P.shelfBox ? null : P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", futX));
+             line(P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", futX));
   // the path: current price → trigger → target (dashed; nothing to the right of "now" is real price)
   if (P.shelf != null && P.trig != null) {
     const xa = futX + 18, xb = Math.max(xa + 40, plotR - (small ? 118 : 160)), ya = y(P.trig), yb = y(P.shelf);
@@ -3949,9 +3941,7 @@ function mapChart(P, chart, W) {
   if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
   if (P.stop != null && P.stop !== P.trig) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
   // each tag sits just above its own line; when that would collide with the tag above, it drops just below its line instead
-  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly - 5 < 11 ? g.ly + 13 : g.ly - 5; });
-  const sb = P.shelfBox && tags.find(g => g.cls === "t-shelf" || g.cls === "t-mut");   // a tall shelf box: its label sits inside, at the top
-  if (sb && y(P.shelfBox.low) - y(P.shelfBox.high) >= 24) { sb.ly = y(P.shelfBox.high) + 10; sb.y = y(P.shelfBox.high) + 15; } tags.sort((a, b) => a.ly - b.ly);
+  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly - 5 < 11 ? g.ly + 13 : g.ly - 5; }); tags.sort((a, b) => a.ly - b.ly);
   for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 14) tags[i].y = Math.max(tags[i].ly + 13, tags[i - 1].y + 14);
   const over = tags.length ? tags[tags.length - 1].y - (H - bot - 12) : 0; if (over > 0) tags.forEach(g => g.y -= over);
   tags.forEach(g => { const txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high") : g.t} ${money(g.v)}`;
@@ -5619,11 +5609,9 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-svg .mp-fut { fill: var(--mp-ink); opacity: .025; }
 .mp-svg .mp-futdiv { stroke: var(--mp-line); stroke-width: 1; }
 .mp-svg .mp-plan { fill: var(--mp-mut); font: 600 9px var(--sans, system-ui); letter-spacing: .14em; }
-.mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .08; stroke: none; }
+.mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .1; stroke: var(--mp-hub); stroke-width: 1.5; stroke-opacity: .85; }
 .mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
-.mp-svg .mp-shelfbox { fill: var(--mp-shelf); fill-opacity: .12; stroke: var(--mp-shelf); stroke-width: 1.5; stroke-opacity: .85; }
-.mp-svg .mp-shelfband { fill: var(--mp-shelf); fill-opacity: .1; stroke: var(--mp-shelf); stroke-width: 1.2; stroke-dasharray: 4 3; stroke-opacity: .8; }
-.mp-svg .mp-shelfbox.w, .mp-svg .mp-shelfband.w { fill: var(--mp-mut); stroke: var(--mp-mut); } .mp-svg .mp-obstband { fill: var(--mp-obst); opacity: .12; }
+.mp-svg .mp-shelfband { fill: var(--mp-shelf); opacity: .13; } .mp-svg .mp-obstband { fill: var(--mp-obst); opacity: .12; }
 .mp-svg .mp-cf { opacity: .45; } .mp-svg .mp-cf rect { stroke-dasharray: 2 2; fill-opacity: .35; stroke-width: 1.2; }
 .mp-svg .mp-cu, .mp-svg .mp-cuf { stroke: #3DD68C; fill: #3DD68C; } .mp-svg .mp-cd, .mp-svg .mp-cdf { stroke: #FF6B5E; fill: #FF6B5E; }
 html[data-theme="light"] .mp-svg .mp-cu, html[data-theme="light"] .mp-svg .mp-cuf { stroke: #16a34a; fill: #16a34a; }
