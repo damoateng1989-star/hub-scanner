@@ -381,6 +381,9 @@ def retest_check(close, low, high, atr, i0, d, edge, j):
     return "retest" if (touched and near) else None
 
 
+B_ROOM, B_SESSIONS = 1.0, 3      # the B setup: one notch looser than A (room 1.5, 4 sessions). Not measured yet; the Lab's B rows judge it
+
+
 def retest_grade(trade, entry, atr_entry):
     """The Lab branch-B grade for a confirmed retest (hubs, retest entry: room 1.5+ + 4+ sessions + longs, 1 ATR stop).
     Uses the Lab's own definitions, so the live grade and the Lab filter can't disagree. Returns dict(is_a, rr, sessions, stop, reasons).
@@ -401,7 +404,9 @@ def retest_grade(trade, entry, atr_entry):
         reasons.append(f"room {rr:.1f}× — below the 1.5 bar" if rr is not None else "room unknown — no target/risk")
     if sessions < 4:
         reasons.append(f"pattern ran {sessions} sessions — below the 4-session bar")
-    return dict(is_a=(d == 1 and rr is not None and rr >= 1.5 and sessions >= 4),
+    is_a = d == 1 and rr is not None and rr >= 1.5 and sessions >= 4
+    is_b = not is_a and d == 1 and rr is not None and rr >= B_ROOM and sessions >= B_SESSIONS
+    return dict(is_a=is_a, grade="A" if is_a else "B" if is_b else None,
                 rr=rr, sessions=sessions, stop=stop, reasons=reasons)
 
 
@@ -424,7 +429,9 @@ def double_retest_grade(trade, entry, is_pm):
         reasons.append("retest closed at 1:30 PM, not 4:00 PM — the measured mix only counts 4:00 PM retests")
     if chasing:
         reasons.append("entry is past halfway to the target — chasing")
-    return dict(is_a=(d == 1 and is_pm and not chasing), stop=stop, reasons=reasons)
+    is_a = d == 1 and is_pm and not chasing
+    is_b = not is_a and d == 1 and not chasing              # the B setup: the same retest at the 1:30 PM close
+    return dict(is_a=is_a, grade="A" if is_a else "B" if is_b else None, stop=stop, reasons=reasons)
 
 
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:

@@ -241,17 +241,29 @@ def speak_retest(sym: str, d: int, edge: float, close: float, target: float, sto
             f"4 hour close {_say_money(close)}. Entry on this close. Stop {_say_money(stop)}. Target {_say_money(target)}.")
 
 
+def _grade_head(g: str | None) -> str:
+    return {"A": "A setup, entry on this close", "B": "B setup, entry on this close"}.get(g, "watch only")
+
+
+def _b_note(grade: dict) -> str:
+    """Why a retest is a B and not an A, and that B is the looser, not-yet-measured grade."""
+    if grade.get("grade") != "B":
+        return ""
+    return "B, not A: " + "; ".join(grade["reasons"]) + ". B setups use a looser bar that hasn't been measured yet, so size smaller.\n"
+
+
 def format_retest(sym: str, t: dict, c4: pd.DataFrame, res: dict, j: int, grade: dict) -> str:
     d = t["direction"]
     up = d == 1
     edge, target = t["edge"], t["target"]
     close = float(res["close"].iloc[j])
     reached = (close - target) * d >= 0
-    head = (f"🔄 {sym}: retesting the edge — {'entry on this close' if grade['is_a'] else 'watch only'}\n"
+    g = grade.get("grade")
+    head = (f"🔄 {sym}: retesting the edge — {_grade_head(g)}\n"
             f"4H close {_money(close)} held {'above' if up else 'below'} the edge {_money(edge)} after pulling back to it.\n")
     room_line = f"Room {grade['rr']:.1f}× to the target.\n" if grade["rr"] is not None else ""
-    if grade["is_a"]:
-        return (head + room_line
+    if g:
+        return (head + room_line + _b_note(grade)
                 + plan_lines(close, edge, target, d, reached, t.get("shelf"),
                              entry_text=f"Entry ≈ {_money(close)} (the retest close)",
                              exit_text=f"Exit on a 4H close {'≤' if up else '≥'} {_money(grade['stop'])} — 1 ATR {'below' if up else 'above'} the entry close")
@@ -268,10 +280,10 @@ def format_double_retest(sym, t, c4, res, j, grade):
     close = float(res["close"].iloc[j])
     reached = (close - target) * d >= 0
     name = "Double bottom" if up else "Double top"
-    head = (f"🔄 {sym}: {name} retesting the neckline — {'entry on this close' if grade['is_a'] else 'watch only'}\n"
+    head = (f"🔄 {sym}: {name} retesting the neckline — {_grade_head(grade.get('grade'))}\n"
             f"4H close {_money(close)} held {'above' if up else 'below'} the neckline {_money(edge)} after pulling back to it.\n")
-    if grade["is_a"]:
-        return (head
+    if grade.get("grade"):
+        return (head + _b_note(grade)
                 + plan_lines(close, edge, target, d, reached, t.get("shelf"),
                              entry_text=f"Entry ≈ {_money(close)} (the retest close)",
                              exit_text=f"Exit on a 4H close {'≤' if up else '≥'} {_money(grade['stop'])} — past the {name.lower()}")

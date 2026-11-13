@@ -426,6 +426,11 @@ LIVE_RULES = [
      and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
     ("hub_short", "Hubs: A retest, shorts", lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == -1
      and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
+    ("hub_long_b", "Hubs: B retest, longs (room 1.0+, 3+ sessions, not A)", lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1
+     and (r.get("rr") or 0) >= engine.B_ROOM and (r.get("sessions") or 0) >= engine.B_SESSIONS
+     and not ((r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4), "atr10"),
+    ("double_long_b", "Double bottoms: B retest (1:30 PM close, not chasing)", lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1
+     and not r.get("pm") and not r.get("chase"), "far"),
     ("double_long", "Double bottoms: A retest", lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1
      and r.get("pm") and not r.get("chase"), "far"),
     ("double_short", "Double tops: A retest", lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == -1
