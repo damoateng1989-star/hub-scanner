@@ -1094,7 +1094,7 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
   <h2>An honest <em>record.</em></h2>
   <p class="sub">Two sets of numbers, kept apart: how today's rules tested over two years, and the live log of every breakout since launch. Nothing is removed.</p>
   <div id="recTest" hidden>
-    <div class="rec-h"><b>Two-year test of today's rules</b><span id="recTestSub"></span></div>
+    <div class="rec-h"><b id="recTestH">Two-year test of today's rules</b><span id="recTestSub"></span></div>
     <div class="rec" id="recTestRow" style="margin-top:14px"></div>
     <p class="honest" style="margin-top:14px">A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
     <div class="rec-h" style="margin-top:40px"><b>Live record of today's rules</b><span id="recLiveSub">Every trade the current rules take, logged as it happens. The earlier breakout-close log is archived.</span></div>
@@ -1227,6 +1227,7 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
     }
     if (s.tested && s.tested.rows && s.tested.rows.length) {
       const T = s.tested, mo = (t) => t ? new Date(t).toLocaleDateString("en-US", {month: "short", year: "numeric"}) : "";
+      if (T.period) $("recTestH").textContent = `${T.period} test of today's rules`;
       $("recTestSub").textContent = `Every setup replayed on ${n(T.symbols)} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}.`;
       $("recTestRow").innerHTML = T.rows.map(r => `<div class="stat"><div class="big" style="color:var(${r.avg >= 0 ? "--up" : "--down"})">${r.avg > 0 ? "+" : ""}${Number(r.avg).toFixed(2)}%</div><div class="cap"><b>${r.label}</b><br>average per trade · ${n(r.n)} trades · ${Math.round(r.win)}% won</div></div>`).join("");
       if (T.rows.length < 3) $("recTestRow").classList.add("two");

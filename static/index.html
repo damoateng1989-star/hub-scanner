@@ -3387,7 +3387,8 @@ async function stopLabExits(btn, restart) {
 async function runLabExits(btn) {
   btn.disabled = true; btn.textContent = "Starting…";
   let r;
-  try { r = await api("/api/admin/lab/exits/run", {method: "POST", timeout: 60000}); }
+  const yrs = ($("labYears") && +$("labYears").value) || 2;
+  try { r = await api("/api/admin/lab/exits/run?years=" + yrs, {method: "POST", timeout: 60000}); }
   catch (e) { btn.disabled = false; btn.textContent = "Run the test"; toast("Couldn't start the test: " + e.message); return; }
   if (r && r.started === false) toast("The test is already running.");
   setTimeout(loadLabExits, 1500);
@@ -3401,7 +3402,8 @@ function renderLabExits() {
         ? `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="note" style="margin:0">Running… ${L.done || 0} / ${L.total || "?"} stocks</span>
            <button class="btnx sm" onclick="stopLabExits(this, true)">Restart</button>
            <button class="btnx sm" style="color:var(--down)!important" onclick="stopLabExits(this, false)">Stop</button></div>`
-        : `<button class="btnx sm" onclick="runLabExits(this)">${R ? "Run again" : "Run the test"}</button>`}</div>`
+        : `<span style="display:inline-flex;gap:6px;align-items:center"><label class="note" style="margin:0">Test period <select id="labYears" title="How far back to test. Longer covers more market conditions (5 years includes the 2022 bear market) but takes longer: about an hour per year.">${[2, 3, 5, 10].map(y => `<option value="${y}"${y === Math.round((L.days || 720) / 360) || (y === 2 && (L.days || 720) <= 730) ? " selected" : ""}>${y} years</option>`).join("")}</select></label>
+           <button class="btnx sm" onclick="runLabExits(this)">${R ? "Run again" : "Run the test"}</button></span>`}</div>`
     + (L.status === "stopped" ? `<p class="note" style="padding:0 18px 8px;margin:0">The last run was stopped.${R ? " The results below are from the last run that finished." : ""}</p>` : "")
     + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");
   const intro = `<p class="note" style="padding:0 18px 12px;margin:0">Replays every breakout of each pattern (hubs, flags, double tops and bottoms, triangles, channels, support and resistance, gap fades) in the last ${L.days || 720} days across the board's stocks with the live rules. Entry: at the breakout close, or, with Retest selected, at the first close back near the edge after the breakout (within 5 candles); breakouts that never pull back are not traded.
@@ -4973,7 +4975,7 @@ async function loadRecord() {
   // today's rules for everyone; the earlier breakout-close log is archived (admins can still open it)
   const pt = r.patterns || {}, tabs = [["rules", "Today's rules"]].concat(ME && ME.is_admin ? [["hub", "Archive: hubs"], ["double_top", "Archive: double tops"], ["double_bottom", "Archive: double bottoms"], ["gapfade", "Archive: gap fade"]] : []);
   const T = r.tested, mo = (t) => t ? new Date(t).toLocaleDateString(undefined, {month: "short", year: "numeric"}) : "";
-  const testedBox = T && T.rows && T.rows.length ? `<div class="rec-test"><div class="eyebrow" style="margin:0 0 4px">Two-year test of today's rules</div>
+  const testedBox = T && T.rows && T.rows.length ? `<div class="rec-test"><div class="eyebrow" style="margin:0 0 4px">${esc(T.period || "Two-year")} test of today's rules</div>
       <p class="note" style="margin:0 0 12px">The setups NextShelf alerts on now, replayed on ${T.symbols} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}. A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
       <div class="stats" style="margin:0;grid-template-columns:repeat(${T.rows.length},1fr)">${T.rows.map(x => `<div><b style="color:var(${x.avg >= 0 ? "--up" : "--down"})">${x.avg > 0 ? "+" : ""}${Number(x.avg).toFixed(2)}%</b><span>${esc(x.label)}<br>${x.n} trades · ${Math.round(x.win)}% won · profit factor ${x.pf ?? "–"}</span></div>`).join("")}</div></div>
       <div class="eyebrow" style="margin:26px 0 10px">${RU ? "Live record of today's rules" : "Archive: the earlier breakout-close log"}</div>` : "";

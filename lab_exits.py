@@ -23,7 +23,8 @@ import engine
 import universe
 
 log = logging.getLogger("lab")
-DAYS = 720
+DAYS = 720                       # the test period; each run can pick its own (2, 3, 5 or 10 years)
+YEARS_OK = (2, 3, 5, 10)
 CHUNK = 20
 _LOCK = threading.Lock()
 _CANCEL = threading.Event()   # set by stop(): the run quits at the next stock
@@ -464,7 +465,10 @@ def tested_public() -> dict | None:
                 for k, label in PUBLIC_RULES if k in grad and grad[k].get("n")]
         if not rows:
             return None
-        return dict(rows=rows, symbols=st.get("symbols"), first=st.get("first"), last=st.get("last"), finished=st.get("finished"))
+        days = int(st.get("days") or 720)
+        yrs = 2 if days <= 730 else round(days / 365)
+        return dict(rows=rows, symbols=st.get("symbols"), first=st.get("first"), last=st.get("last"), finished=st.get("finished"),
+                    days=days, period=f"{['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][yrs] if yrs <= 10 else yrs}-year")
     except Exception:
         return None
 
@@ -518,7 +522,7 @@ CKPT = db.DATA_DIR / "lab_exits_ckpt.json"   # progress saved after every chunk,
 def _save_ckpt(syms, done, rows, failed, failed_msg, started):
     tmp = CKPT.with_suffix(".tmp")
     tmp.write_text(json.dumps(dict(syms=syms, done=done, rows=rows, failed=failed, failed_msg=failed_msg, started=started,
-                                   exits=[k for k, _ in EXITS], entries=["breakout", "retest"]),
+                                   exits=[k for k, _ in EXITS], entries=["breakout", "retest"], days=DAYS),
                               default=lambda o: o.item() if hasattr(o, "item") else str(o)))
     tmp.replace(CKPT)
 
@@ -531,7 +535,8 @@ def _load_ckpt():
     return ck if ck.get("exits") == [k for k, _ in EXITS] and ck.get("entries") == ["breakout", "retest"] else None   # saved by an older version: start over
 
 
-def run(symbols: list[str] | None = None, resume: bool = False):
+def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None):
+    global DAYS
     if not _LOCK.acquire(blocking=False):
         return
     _CANCEL.clear()
@@ -540,6 +545,7 @@ def run(symbols: list[str] | None = None, resume: bool = False):
         s = scanner.SETTINGS
         ck = _load_ckpt() if resume else None
         if ck:
+            DAYS = int(ck.get("days") or DAYS)          # a resumed run keeps the period it started with
             syms, start_i, rows = ck["syms"], ck["done"], ck["rows"]
             for r in rows:                    # JSON turned the (return, how) pairs into lists
                 r["ex"] = {k: tuple(v) for k, v in r["ex"].items()}
@@ -547,9 +553,11 @@ def run(symbols: list[str] | None = None, resume: bool = False):
             _set(status="running", resumed=True, error=None, heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: resuming at %d/%d stocks", start_i, len(syms))
         else:
+            if years in YEARS_OK:
+                DAYS = 360 * years if years == 2 else 365 * years   # 2 years stays 720 days, like every earlier run
             syms = symbols or universe.board_universe()
             start_i, rows, failed, failed_msg, started = 0, [], 0, None, time.time()
-            _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None,
+            _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None, days=DAYS,
                  failed=0, failed_msg=None, trades_so_far=0, resumed=False, resumes=0)
             log.info("lab test: started, %d stocks", len(syms))
         regime = _spy_regime()
@@ -607,10 +615,10 @@ def run(symbols: list[str] | None = None, resume: bool = False):
             start()
 
 
-def start(resume: bool = False) -> bool:
+def start(resume: bool = False, years: int | None = None) -> bool:
     if _LOCK.locked():
         return False
-    threading.Thread(target=run, kwargs=dict(resume=resume), daemon=True).start()
+    threading.Thread(target=run, kwargs=dict(resume=resume, years=years), daemon=True).start()
     return True
 
 
