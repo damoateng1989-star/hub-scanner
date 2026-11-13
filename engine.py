@@ -812,6 +812,12 @@ PEG_TARGET_R = 2.0       # target = entry + 2R
 PEG_MIN_DAILY = 60       # daily candles needed before the detector runs
 
 
+def _next_pct(close, g: int):
+    """% change of the session after the gap day (close to close), or None when it hasn't closed yet.
+    Negative = the stock kept fading the next day."""
+    return round(float(close[g + 1] / close[g] - 1) * 100, 2) if g + 1 < len(close) else None
+
+
 def _gapfade_scan(d: pd.DataFrame) -> tuple[list[dict], dict | None]:
     """Daily candles -> (entered setups, the setup still pending at the last candle or None). Long only.
     Gap day: open >= prior close x (1 + PEG_GAP) with an upper wick >= half the day's range. Entry: the first
@@ -849,12 +855,13 @@ def _gapfade_scan(d: pd.DataFrame) -> tuple[list[dict], dict | None]:
             if R > 0:
                 setups.append(dict(gap_i=g, i0=i0, entry=entry, stop=stop, target=entry + PEG_TARGET_R * R, risk=R,
                                    gap_open=float(open_[g]), gap_high=gap_high, gap_pct=float(open_[g] / close[g - 1] - 1),
-                                   fade_low=stop))
+                                   fade_low=stop, next_pct=_next_pct(close, g)))
             i = i0 + 1
             continue
         if state == "expired" and g + PEG_RECLAIM_MAX > n - 1:     # window still open at the last candle: pending
             pending = dict(gap_i=g, gap_open=float(open_[g]), gap_high=gap_high, fade_low=fade_low,
-                           gap_pct=float(open_[g] / close[g - 1] - 1), left=g + PEG_RECLAIM_MAX - (n - 1))
+                           gap_pct=float(open_[g] / close[g - 1] - 1), left=g + PEG_RECLAIM_MAX - (n - 1),
+                           next_pct=_next_pct(close, g))
         i = nxt if nxt is not None else g + 1
     return setups, pending
 

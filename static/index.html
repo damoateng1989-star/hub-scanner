@@ -4581,6 +4581,7 @@ function setupCard(x) {
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
     <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${x.kind === "double_top" ? ' <span class="beta-tag">beta</span>' : ""}${live ? strengthChip(x.strength, up) : ""}</div>
+    ${gap && x.next_pct != null && x.next_pct < 0 ? `<div class="sc-faded">▼ Faded the next day: −${Math.abs(x.next_pct).toFixed(1)}%</div>` : ""}
     ${gap ? `<div class="sc-last" data-earn="${esc(x.symbol)}"></div>` : ""}
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
@@ -5290,6 +5291,7 @@ html[data-theme="light"] .sc .board-actions a.btnx { background: #141412 !import
 html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #141412; }
 @media (max-width: 760px) { .sc-grid { padding-bottom: 120px; } }   /* the last card clears the Sika button */
 .sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
+.sc-faded { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: #FF6B5E; } html[data-theme="light"] .sc-faded { color: #dc2626; }
 .sc-last { margin-top: 6px; font-size: 12.5px; color: #B48CFF; } .sc-last:empty { display: none; }
 html[data-theme="light"] .sc-last { color: #7c3aed; }
 .sc-kind b { color: #C9CDD6; font-weight: 650; } html[data-theme="light"] .sc-kind b { color: #33373D; }

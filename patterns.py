@@ -642,7 +642,7 @@ def _gapfade(c4: pd.DataFrame, close: pd.Series, n: int, s: engine.Settings, out
             p = dict(a=g, end_i=n - 1, mh=0.0, ch=pend["gap_high"], ml=0.0, cl=pend["fade_low"], gap=pend, gapfade=True)
             out["live"].append(dict(kind="gapfade", state="forming", upper=pend["gap_high"], lower=pend["fade_low"],
                                     sessions=len(daily) - 1 - pend["gap_i"], start_i=g, end_i=n - 1, p=p,
-                                    gap_pct=pend["gap_pct"], left=pend["left"]))
+                                    gap_pct=pend["gap_pct"], left=pend["left"], next_pct=pend.get("next_pct")))
 
 
 def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
@@ -686,6 +686,7 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
                 row.update(stop=round(t["stop"], 2), hub_top=round(t["hub"]["high"], 2), hub_bottom=round(t["hub"]["low"], 2))
             elif k == "gapfade":
                 row.update(stop=round(t["stop"], 2), gap_pct=round(t["gap_pct"] * 100, 1), gap_day=t["gap_day"],
+                           next_pct=t["p"]["gap"].get("next_pct"),
                            candles_unit="days", to_target_pct=round((t["target"] / last - 1) * 100, 2))
             else:
                 p = t["p"]
@@ -715,7 +716,8 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
                 row.update(trigger="up", drop_pct=L["drop_pct"], flush_day=L["flush_day"], days_left=L["left"], sessions_unit="days")
                 row["near_edge"] = "up" if pos >= 0.8 else None
             if k == "gapfade":                   # the trigger is a daily close back above the gap-day high
-                row.update(trigger="up", gap_pct=round(L["gap_pct"] * 100, 1), days_left=L["left"], sessions_unit="days")
+                row.update(trigger="up", gap_pct=round(L["gap_pct"] * 100, 1), days_left=L["left"], sessions_unit="days",
+                           next_pct=L.get("next_pct"))
                 row["near_edge"] = "up" if pos >= 0.8 else None
         out.append(row)
     order = {"breakout_up": 0, "breakdown": 0, "testing": 1, "forming": 2, "between": 3}
