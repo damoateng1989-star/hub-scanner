@@ -136,6 +136,14 @@ FLOOR_EXITS = {
 }
 
 
+# no shelf above a hub: which target works best? (A retest longs, stop 1 ATR under the retest entry)
+NOSHELF_EXITS = {
+    "nt_atr": "Target: 1 ATR past the hub top (current rule) · stop 1 ATR under entry",
+    "nt_trig": "Target: 1 ATR past the breakout close · stop 1 ATR under entry",
+    "nt_high": "Target: the nearest recent high above the breakout close (else 1 ATR past the top) · stop 1 ATR under entry",
+}
+
+
 def _exit_intrabar(open_, high, low, close, i0, entry, target, stop, horizon):
     """Long only. Stop/target hit by the candle's low/high; a gap past either fills at the open; when one candle
     touches both, count the stop (we can't know which came first, so assume the worse)."""
@@ -365,6 +373,21 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
                                       ("atr10", entry2 - d * 1.0 * A2, s.horizon)):
                     ex2[key] = _exit(close, j, d, entry2, target, stop, hz)
                 ex2["half"] = _exit_half(close, j, d, entry2, target, edge, risk2 if risk2 > 0 else d * (entry2 - edge), s.horizon)
+                if grp == "hub" and d == 1 and not t.get("shelf"):          # no shelf: compare targets
+                    f2["no_shelf"] = True
+                    stp = entry2 - A2
+                    ex2["nt_atr"] = ex2.get("atr10")
+                    t_trig = entry + A
+                    try:
+                        oh = engine.old_extremes(c4.iloc[:i0 + 2], entry)["old_high"]
+                    except Exception:
+                        oh = None
+                    t_high = oh["level"] if oh and oh["level"] > entry2 else edge + s.target_atr * A
+                    for k_, tg in (("nt_trig", t_trig), ("nt_high", t_high)):
+                        ex2[k_] = _exit(close, j, 1, entry2, tg, stp, s.horizon) if tg > entry2 else None
+                    # room (reward / risk to the hub middle) measured against each target, as the A grade does
+                    f2["rr_nt"] = {"nt_atr": f2.get("rr"), "nt_trig": (t_trig - entry2) / risk2 if risk2 > 0 else None,
+                                   "nt_high": (t_high - entry2) / risk2 if risk2 > 0 else None}
                 f2["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex2.items() if v is not None}
                 if "edge" in f2["ex"]:
                     out.append(f2)
@@ -529,6 +552,13 @@ LIVE_RULES = [
      lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_ride"),
     ("floor_any", "Test · Hub floor bounce: stop on a close below the floor (any hub)",
      lambda r: r["grp"] == "floor" and r.get("first_any"), "fl_close"),
+    # test only: hubs with no shelf above, A retest longs, three targets
+    *[(f"noshelf_{k[3:]}", f"Test · No shelf above, retest after a 4+ session hub: {lbl.split(' · ')[0].replace('Target: ', 'target ')}",
+       lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and r.get("no_shelf")
+       and (r.get("sessions") or 0) >= 4, k) for k, lbl in NOSHELF_EXITS.items()],
+    *[(f"noshelf_{k[3:]}_a", f"Test · No shelf above, A retest (room 1.5+ to this target): {lbl.split(' · ')[0].replace('Target: ', 'target ')}",
+       (lambda kk: lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and r.get("no_shelf")
+        and (r.get("sessions") or 0) >= 4 and ((r.get("rr_nt") or {}).get(kk) or 0) >= 1.5)(k), k) for k, lbl in NOSHELF_EXITS.items()],
 ]
 
 
@@ -572,7 +602,7 @@ def graduation(rows: list[dict]) -> list[dict]:
         cut = (pd.Timestamp(got[-1]["t"]) - pd.Timedelta(days=182)).isoformat()
         recent = np.array([r["ex"][ek][0] for r in got if r["t"] >= cut])
         sp = _spread(x, syms)
-        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek, ek), n=n,
+        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
                    win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
                    pf=round(pf, 2) if pf is not None else None,
                    early=round(early, 2) if early is not None else None, late=round(late, 2) if late is not None else None,

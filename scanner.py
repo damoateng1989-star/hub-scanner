@@ -1000,6 +1000,69 @@ def preclose_all() -> list[str]:
     return sent
 
 
+TRIGGER_ALERTS = os.getenv("TRIGGER_ALERTS", "on").lower() != "off"
+
+
+def format_trigger(sym: str, kind: str, trig: float, price: float, need: str, target: float | None, stop: float | None) -> str:
+    name = {"hub": "its hub trigger", "double_bottom": "its double-bottom neckline", "gapfade": "its gap-day high"}[kind]
+    lines = [f"⚡ {sym} crossed {name} {_money(trig)}: now {_money(price)}",
+             f"Not a trade yet. It counts only on {need} above {_money(trig)}."]
+    if kind != "gapfade":
+        lines.append("Then NextShelf waits for the retest (a pullback to the edge that holds) for the A entry.")
+    if target is not None:
+        lines.append(f"Target {_money(target)}" + (f" · stop {_money(stop)}" if stop is not None else ""))
+    return "\n".join(lines)
+
+
+def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
+    """Every few minutes in market hours: alert watchers when the live price crosses a setup's trigger (longs only).
+    One alert per stock per 4H candle. Cheap: uses each ticker's last scanned status and one batched price request."""
+    now = pd.Timestamp.now(tz="UTC") if now is None else now
+    if not TRIGGER_ALERTS or not data.market_open(now):
+        return []
+    rows = db.list_tickers()
+    cands = []
+    for row in rows:
+        try:
+            st = json.loads(row.get("status") or "{}")
+        except Exception:
+            continue
+        sym = row["symbol"]
+        if st.get("state") == "forming" and st.get("trigger_up"):
+            sh = st.get("shelf_up")
+            cands.append((sym, "hub", float(st["trigger_up"]), sh["level"] if sh else st.get("target_up"),
+                          round((st["hub"]["high"] + st["hub"]["low"]) / 2, 2) if st.get("hub") else None))
+        for x in st.get("setups") or []:
+            if x.get("state") != "forming":
+                continue
+            if x.get("kind") == "double_bottom" and x.get("neck") is not None:
+                cands.append((sym, "double_bottom", float(x["neck"]), 2 * x["neck"] - x["peak"] if x.get("peak") else None, x.get("peak")))
+            elif x.get("kind") == "gapfade" and x.get("upper") is not None:
+                risk = x["upper"] - x["lower"] if x.get("lower") is not None else None
+                cands.append((sym, "gapfade", float(x["upper"]), x["upper"] + 2 * risk if risk else None, x.get("lower")))
+    if not cands:
+        return []
+    prices = data.latest_prices(sorted({c[0] for c in cands}))
+    start = engine.current_candle_start(now)
+    sent = []
+    for sym, kind, trig, target, stop in cands:
+        px = (prices.get(sym) or {}).get("price")
+        if px is None or px <= trig:
+            continue
+        need = "a daily close (4:00 PM)" if kind == "gapfade" else f"a 4-hour close ({'1:30 PM' if start.hour < 13 else '4:00 PM'})"
+        msg = format_trigger(sym, kind, trig, px, need, round(target, 2) if target else None, round(stop, 2) if stop else None)
+        key = f"{sym}|trigger|{kind}|{start.isoformat()}"
+        try:
+            if db.add_alert(key, sym, "trigger", start.isoformat(), msg + earnings.alert_line(sym)):
+                notify.symbol_alert(sym, "trigger", msg + earnings.alert_line(sym),
+                                    style=patterns.STYLE_OF.get(kind, "hub"), candle_start=start)
+                sent.append(msg)
+        except Exception as e:
+            log.warning("trigger alert failed for %s: %s", sym, e)
+    log.info("trigger check done, %d alerts", len(sent))
+    return sent
+
+
 def _fresh_board_status(sym: str) -> dict | None:
     """The board's status for sym if it was scanned within the last 5 hours (one 4H candle)."""
     r = db._run("SELECT status, updated_at FROM board WHERE symbol=?", (sym,)).fetchone()
