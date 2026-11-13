@@ -2633,15 +2633,38 @@ function oneLine(st, key) {
     }
   }
 }
+// the summary for a live setup that isn't the hub (gap fade, double): what happened and what the plan is, in its own terms
+function setupSummary(sym, x, st) {
+  const up = x.state === "breakout_up", p = st.last_close;
+  const dist = x.target != null && p ? ` (${pctFrom(x.target, p)} from here)` : "";
+  let t;
+  if (x.kind === "gapfade") {
+    t = `${sym} gapped up${x.gap_pct ? ` ${Number(x.gap_pct).toFixed(1)}%` : ""}, faded, then closed back <b class="u-up">above the gap-day high ${money(x.edge)}</b>: a <b>post-earnings gap fade &amp; rip</b>. `
+      + `Plan: out on a daily close below <b>${money(x.stop)}</b>, target <b>${money(x.target)}</b>${dist}, 2× the risk, 10 trading days at most`
+      + (x.candles != null ? ` (day ${x.candles + 1} of 10)` : "") + ".";
+  } else if (x.kind === "double_bottom") {
+    t = `${sym} closed <b class="u-up">above its double-bottom neckline ${money(x.edge)}</b>. That's the heads-up, not the entry: `
+      + (x.retest && x.retest.candles_left > 0 ? `the entry is a 4-hour close back near ${money(x.retest.edge)} that holds above it (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left), an A setup if it's the 4:00 PM close. ` : `the retest window has passed, so there's no entry now. `)
+      + `Target <b>${money(x.target)}</b>${dist}${x.far != null ? `; the stop would sit below the lows, at <b>${money(x.far)}</b>` : ""}.`;
+  } else if (x.kind === "double_top") {
+    t = `${sym} closed <b class="u-down">below its double-top neckline ${money(x.edge)}</b>. Watch only: double tops lost money in the two-year test, so there's no entry plan on the short side. Target ${money(x.target)}${dist}.`;
+  } else {
+    t = `${sym}: <b>${esc(x.name)}</b> ${up ? "broke out above" : "broke down below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b>${dist}.`;
+  }
+  if (st.hub && st.state === "forming")
+    t += ` Separately, its hub ${money(st.hub.low)}–${money(st.hub.high).slice(1)} is still resting; a 4-hour close outside it would be a hub setup of its own.`;
+  return t;
+}
 function details(t) {
   const st = t.status || {};
   const key = st.error ? "error" : (st.state || "none");
+  const other = liveOther(st);
   const [, color] = STATES[key] || [key, "--idle"];
   const showHub = ["forming", "watching", "breakout_up", "breakdown"].includes(key);
   const chartSt = showHub ? st : {...st, hub: null};
   const S = esc(t.symbol);
   return (st.error ? `<div class="note">${esc(st.error)}</div>` : `
-    <p class="sum">${summary(S, st, key)}</p>
+    <p class="sum">${other ? setupSummary(S, other, st) : summary(S, st, key)}</p>
     <div class="dgrid"><div class="dl">
     ${spark(chartSt, color)}
     <div class="legend">${showHub ? `<span style="--c:var(--hub)"><i></i>Hub ${tip("hub")}</span>` : ""}
