@@ -4440,7 +4440,7 @@ function setupCard(x) {
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
     ${x.catalyst ? `<div class="sc-news">📰 Possible catalyst (${esc(x.catalyst.tag_label)}): ${x.catalyst.url ? `<a href="${esc(x.catalyst.url)}" target="_blank" rel="noopener">${esc(x.catalyst.headline)}</a>` : `<b>${esc(x.catalyst.headline)}</b>`} · ${esc(x.catalyst.source)}, ${when(x.catalyst.time)}</div>` : ""}
-    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</div></div>`;
+    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="sc-trade"><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</span></div></div>`;
 }
 let RECORD_PAT = "hub";
 
@@ -5106,10 +5106,14 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc .board-actions button.btnx { font-size: 10px !important; padding: 6px 8px !important; line-height: inherit; }
 .sc .board-actions a.btnx { background: #F3F3F0 !important; color: #141412 !important; border-color: #F3F3F0 !important; font-weight: 700 !important; }
 html[data-theme="light"] .sc .board-actions a.btnx { background: #141412 !important; color: #fff !important; border-color: #141412 !important; }
-.sc .trade-label { font-size: 12px; color: #8A8F99; margin-left: 6px; }
-.sc a.broker.named { display: inline-flex; align-items: center; gap: 6px; margin-left: 0 !important; padding: 6px 10px !important; line-height: 1.2; border-radius: 999px; text-decoration: none; }
-.sc .broker-name { font-size: 12px; font-weight: 600; color: #A9AEB8; }
-html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #5B6672; }
+.sc .trade-label { font-size: 12px; color: #8A8F99; margin-left: 4px; }
+.sc .sc-trade { display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; flex: 0 0 auto; min-height: 30px; }   /* stays together: one row if it fits, else its own tidy line */
+.sc .board-actions { row-gap: 8px !important; }
+.sc a.broker.named { display: inline-flex; align-items: center; gap: 5px; margin: 0 !important; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; line-height: 1.2; border-radius: 0; text-decoration: none; min-height: 0 !important; height: auto !important; width: auto !important; }
+.sc a.broker.named:hover .broker-name { text-decoration: underline; }
+.sc a.broker.named + a.broker.named::before { content: "·"; color: #6B7079; margin-right: 7px; }
+.sc .broker-name { font-size: 12.5px; font-weight: 650; color: #DADDE3; }
+html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #141412; }
 @media (max-width: 760px) { .sc-grid { padding-bottom: 120px; } }   /* the last card clears the Sika button */
 .sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
 .sc-kind b { color: #C9CDD6; font-weight: 650; } html[data-theme="light"] .sc-kind b { color: #33373D; }
