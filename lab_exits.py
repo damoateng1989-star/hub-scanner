@@ -124,6 +124,72 @@ def _exit(close: np.ndarray, i0: int, d: int, entry: float, target: float, stop:
     return None
 
 
+# ---------------------------------------------------------------- hub floor bounce (test only, not alerted)
+# Buy a 4H close in the bottom quarter of a hub that's still forming (holding the floor, not a new low), aim for the hub top. Hub bounds are the
+# closes SO FAR (point in time), never the hub's final range, so the test can't see the future.
+FLOOR_ZONE = 0.25        # bottom quarter of the hub
+FLOOR_EXITS = {
+    "fl_close": "Stop: a 4H close below the floor · target: the hub top (on a close)",
+    "fl_cush": "Stop: the floor minus 0.25 ATR, hit intraday · target: the hub top, hit intraday",
+    "fl_tight": "Stop: right at the floor, hit intraday · target: the hub top, hit intraday",
+    "fl_ride": "Stop: a 4H close below the floor · target: one hub-width above the top (20 candles)",
+}
+
+
+def _exit_intrabar(open_, high, low, close, i0, entry, target, stop, horizon):
+    """Long only. Stop/target hit by the candle's low/high; a gap past either fills at the open; when one candle
+    touches both, count the stop (we can't know which came first, so assume the worse)."""
+    n = len(close)
+    for j in range(i0 + 1, min(i0 + 1 + horizon, n)):
+        if low[j] <= stop:
+            px = min(open_[j], stop)
+            return (px / entry - 1) * 100, "stop"
+        if high[j] >= target:
+            px = max(open_[j], target)
+            return (px / entry - 1) * 100, "target"
+    if i0 + horizon < n:
+        return (close[i0 + horizon] / entry - 1) * 100, "time"
+    return None
+
+
+def _floor_rows(sym, c4, res, s, atr, dvol, day, mc):
+    import board
+    close = res["close"].to_numpy(float)
+    open_, high, low = (c4[k].to_numpy(float) for k in ("Open", "High", "Low"))
+    idx, out = c4.index, []
+    for h in res["hubs"]:
+        si, got_any, got_4 = h["start_i"], False, False
+        for j in range(h["formed_i"], h["end_i"] + 1):
+            sess = (j - si + 1) // 2
+            if got_any and (got_4 or sess < 4):
+                continue
+            lo, hi = float(close[si:j].min()), float(close[si:j + 1].max())    # floor set BEFORE this candle
+            if hi <= lo or close[j] < lo or close[j] > lo + FLOOR_ZONE * (hi - lo):
+                continue                                      # not in the bottom quarter, or it just made a new low
+            A = atr[j]
+            if not A or A != A:
+                continue
+            entry, w = float(close[j]), hi - lo
+            dv = None
+            if dvol is not None:
+                prior = dvol[dvol.index < day[j]]
+                prior = prior[prior > 0].tail(20)
+                dv = float(prior.mean()) if len(prior) >= 5 else None
+            ex = {"fl_close": _exit(close, j, 1, entry, hi, lo - 1e-6, s.horizon),
+                  "fl_cush": _exit_intrabar(open_, high, low, close, j, entry, hi, lo - 0.25 * A, s.horizon),
+                  "fl_tight": _exit_intrabar(open_, high, low, close, j, entry, hi, lo, s.horizon),
+                  "fl_ride": _exit(close, j, 1, entry, hi + w, lo - 1e-6, 20)}
+            ex = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
+            # one entry per hub for each rule: the first time it reaches the floor (any age), and the first time at 4+ sessions
+            first_any, first_4 = not got_any, sess >= 4 and not got_4
+            got_any, got_4 = True, got_4 or sess >= 4
+            if "fl_close" in ex:
+                out.append(dict(sym=sym, grp="floor", entry="floor", t=str(idx[j]), d=1, dv=dv,
+                                board_ok=board.quality_skip(sym, dv, mc) is None, first_any=first_any, first_4=first_4,
+                                sessions=sess, width=w / A, rr=(hi - entry) / max(entry - lo, 1e-9), ex=ex))
+    return out
+
+
 def _exit_half(close: np.ndarray, i0: int, d: int, entry: float, target: float, stop: float, r: float, horizon: int):
     """Half off at entry + 1R (or the target if that comes first); the rest is stopped at entry once half is off."""
     n, lvl, half = len(close), entry + d * r, None
@@ -202,6 +268,10 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     own = (dclose > dclose.rolling(50).mean()).where(dclose.rolling(50).count() >= 50)
     mc = universe.market_cap(sym)
     out = []
+    try:
+        out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc)
+    except Exception:
+        traceback.print_exc()
     for t in [dict(x, kind="hub") for x in res["trades"]] + other:
         kind = t.get("kind", "hub")
         grp = GROUP_OF.get(kind)
@@ -448,6 +518,17 @@ LIVE_RULES = [
     ("double_short", "Double tops: A retest", lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == -1
      and r.get("pm") and not r.get("chase"), "far"),
     ("gapfade", "Gap fade & rip", lambda r: r["grp"] == "gapfade", "edge"),
+    # test only (not alerted): buying the bottom of a hub
+    ("floor_close", "Test · Hub floor bounce: stop on a close below the floor (hub 4+ sessions)",
+     lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_close"),
+    ("floor_cush", "Test · Hub floor bounce: stop 0.25 ATR under the floor (hub 4+ sessions)",
+     lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_cush"),
+    ("floor_tight", "Test · Hub floor bounce: stop right at the floor (hub 4+ sessions)",
+     lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_tight"),
+    ("floor_ride", "Test · Hub floor bounce: hold for one hub-width above the top (hub 4+ sessions)",
+     lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_ride"),
+    ("floor_any", "Test · Hub floor bounce: stop on a close below the floor (any hub)",
+     lambda r: r["grp"] == "floor" and r.get("first_any"), "fl_close"),
 ]
 
 
@@ -491,7 +572,7 @@ def graduation(rows: list[dict]) -> list[dict]:
         cut = (pd.Timestamp(got[-1]["t"]) - pd.Timedelta(days=182)).isoformat()
         recent = np.array([r["ex"][ek][0] for r in got if r["t"] >= cut])
         sp = _spread(x, syms)
-        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek, ek), n=n,
+        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek, ek), n=n,
                    win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
                    pf=round(pf, 2) if pf is not None else None,
                    early=round(early, 2) if early is not None else None, late=round(late, 2) if late is not None else None,
