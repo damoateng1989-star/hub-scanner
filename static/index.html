@@ -2366,6 +2366,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   </div>
+  <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><a id="bfChart" href="#">Open full chart →</a></div>
 </aside>
@@ -3024,6 +3025,8 @@ async function loadAccount() {
       <div class="theme-seg"><button data-theme-opt="system" onclick="nsSetTheme('system')">Auto</button><button data-theme-opt="light" onclick="nsSetTheme('light')">☀️ Light</button><button data-theme-opt="dark" onclick="nsSetTheme('dark')">🌙 Dark</button></div></div>
 
     ${installCard()}
+    <div class="acct"><h3>Stock panel</h3><p>What opens when you tap a stock. The setup map shows the plan as a picture; classic is the earlier layout.</p>
+      <div class="theme-seg"><button data-mapopt="on" class="${MAP_ON() ? "on" : ""}" onclick="setMapView(true)">Setup map</button><button data-mapopt="off" class="${MAP_ON() ? "" : "on"}" onclick="setMapView(false)">Classic</button></div></div>
 
     ${styleCard()}
 
@@ -3531,7 +3534,7 @@ function openShelfFromUrl() {
   if (/^[A-Z][A-Z.\-]{0,9}$/.test(sym)) openBrief(sym);
 }
 async function openBrief(sym) {
-  BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null;
+  BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null; MAP_Q = null;
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
   paintBriefWatch(sym);
@@ -3629,7 +3632,7 @@ function briefHead(sym, st) {
   $("bfHead").innerHTML = `<h3>${esc(sym)}</h3>${tag}
     <p class="vz-sum">${vizSummary(st)}</p><div class="bf-live" id="bfLive"></div>
     ${heroStats(st)}${vizScaleHTML(st)}<div id="bfWallTop"></div>`;
-  paintBriefLive(); paintGamma(sym);
+  paintBriefLive(); paintGamma(sym); paintMap();
 }
 // the three numbers that matter, at the top of the card
 function heroStats(st) {
@@ -3709,6 +3712,7 @@ async function loadGrade(sym, kind) {
   GRADE[key] = "loading";
   try { GRADE[key] = await api(`/api/grade/${encodeURIComponent(sym)}?kind=${encodeURIComponent(kind)}`); } catch (e) { GRADE[key] = "failed"; }   // marked, so a failed fetch isn't retried on every re-render
   if (BRIEF_SYM === sym) { if ($("bfGrade")) $("bfGrade").innerHTML = gradeHTML((BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym));
+    if ($("mapGrade")) $("mapGrade").innerHTML = gradeHTML((BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym));
     if (OPT_CACHE[sym] && $("bfOpt")) $("bfOpt").innerHTML = optionsHTML(OPT_CACHE[sym]); }
 }
 function gradeFor(dir, kind) {
@@ -3786,6 +3790,230 @@ function planGradeHTML(st, shown) {
   const ent = kind === "hub" ? "Entering at the breakout close" : "Entering at the neckline close";
   return `<div class="sg ${GRADE_CLS[disp.grade]}"><span class="sg-b">${disp.grade}</span><div><b>Setup grade: ${disp.word}</b><small>${line}${warn}${hist(G.up, ent)}</small></div></div>`;
 }
+// ---------------------------------------------------------------- setup map (the stock panel's map view)
+// One picture of the plan: where price is, what has to happen, what's in the way, where it's headed.
+// Switch back to the classic panel from Account (localStorage "ns-map" = "off").
+const MAP_ON = () => { try { return localStorage.getItem("ns-map") !== "off"; } catch (e) { return true; } };
+function setMapView(on) {
+  try { localStorage.setItem("ns-map", on ? "on" : "off"); } catch (e) {}
+  document.body.classList.toggle("map-v2", on);
+  document.querySelectorAll("[data-mapopt]").forEach(b => b.classList.toggle("on", (b.dataset.mapopt === "on") === on));
+  if (!on && $("bfMap")) $("bfMap").innerHTML = "";
+  if (BRIEF_SYM) openBrief(BRIEF_SYM);
+}
+document.body.classList.toggle("map-v2", MAP_ON());
+let MAP_Q = null;   // which Sika question is open
+// the chart is drawn at the real pixel width (text stays readable on phones), so measure the space it gets
+const MAP_W = () => { const el = $("mpCw") || $("bfMap"), w = el ? el.clientWidth : 0;
+  if ($("mpCw")) return Math.max(300, w);
+  const pane = $("brief") ? $("brief").clientWidth : innerWidth;   // first paint: estimate from the panel width
+  return Math.max(300, (pane >= 1100 ? pane - 300 - 14 : pane) - (pane < 900 ? 20 : 32) - 26); };
+let MAP_RT = null; addEventListener("resize", () => { clearTimeout(MAP_RT); MAP_RT = setTimeout(() => { if (BRIEF_SYM && MAP_ON()) paintMap(); }, 150); });
+const MAP_STEPS = {
+  hub: [["Inside the hub", "hub"], ["4H close above", "bolt"], ["Retest", "retest"], ["Next shelf", "flag"]],
+  hub_short: [["Inside the hub", "hub"], ["4H close below", "bolt"], ["Watch only", "eye"]],
+  double_bottom: [["Two lows", "hub"], ["Close above neckline", "bolt"], ["Retest", "retest"], ["Target", "flag"]],
+  double_top: [["Two peaks", "hub"], ["Close below neckline", "bolt"], ["Watch only", "eye"]],
+  gapfade: [["Gap & fade", "hub"], ["Daily close above gap high", "bolt"], ["Target", "flag"]],
+  none: [["Waiting for a hub", "hub"], ["Hub forms", "bolt"], ["Breakout", "flag"]],
+};
+function mapPlan(sym, st) {
+  const k = st.state, h = st.hub, L = LIVE[sym], isLive = !!(LIVE_OPEN && L && L.price != null);
+  const px = isLive ? L.price : st.last_close;
+  const P = {sym, px, isLive, chg: isLive ? L.change_pct : null, hub: null, trig: null, stop: null, shelf: null, obst: null,
+             dir: 1, steps: "none", phase: 0, watch: false, status: "", sub: "", tone: "wait", setupName: "Hub breakout"};
+  const hubLive = (k === "breakout_up" || k === "breakdown") && h;
+  const MEASURED = (x) => x.kind === "gapfade" || x.kind === "double_top" || x.kind === "double_bottom";
+  const other = !hubLive && (st.setups || []).find(x => MEASURED(x) && (x.state === "breakout_up" || x.state === "breakdown"));
+  const forming = !hubLive && !other && (k === "forming" || k === "watching") && h;
+  const pend = !hubLive && !other && !forming && (st.setups || []).find(x => x.kind === "gapfade" || x.kind === "double_bottom");
+  if (hubLive) {
+    const d = k === "breakout_up" ? 1 : -1, rt = st.retest;
+    Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, stop: d === 1 ? h.high : h.low,
+      steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2});
+    if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
+      P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (${rt.candles_left} candle${rt.candles_left === 1 ? "" : "s"} left).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
+    else { P.status = "Broke down · watch only"; P.sub = "Short breakdowns lost money in the two-year test, so there's no entry plan."; P.tone = "bad"; }
+  } else if (other) {
+    const d = other.state === "breakout_up" ? 1 : -1, kd = other.kind.startsWith("double") ? other.kind : other.kind === "gapfade" ? "gapfade" : "hub";
+    Object.assign(P, {dir: d, trig: other.edge, shelf: other.target, stop: other.stop ?? other.edge, steps: kd === "hub" ? (d === 1 ? "hub" : "hub_short") : kd,
+      watch: d === -1 || other.kind === "double_top", setupName: other.name,
+      phase: kd === "gapfade" ? 1 : other.retest && other.retest.near ? 2 : 1});
+    P.status = P.watch ? `${other.name}: broke down · watch only` : `${other.name}: ${other.kind === "gapfade" ? "triggered" : "broke out"}`;
+    P.sub = P.watch ? "The short side lost money in the two-year test, so there's no entry plan." : `Aiming for ${money(other.target)}${other.stop != null ? `, wrong below ${money(other.stop)}` : ""}.`;
+    P.tone = P.watch ? "bad" : "go";
+  } else if (forming) {
+    const tu = st.trigger_up || h.high;
+    Object.assign(P, {hub: h, trig: tu, shelf: st.shelf_up ? st.shelf_up.level : null, stop: Math.round((h.high + h.low) / 2 * 100) / 100, steps: "hub"});
+    P.status = "Waiting for confirmation";
+    P.sub = px > tu ? `Above ${money(tu)} now, but it hasn't closed there yet. The next check is ${nextCloseText()}.`
+      : px > h.high ? "Above the top, but a close here only widens the hub."
+      : px < h.low ? "Below the hub. Breakdowns are watch only." : "Price is still inside the hub.";
+  } else if (pend) {
+    if (pend.kind === "gapfade") {
+      const risk = pend.upper - pend.lower;
+      Object.assign(P, {trig: pend.upper, stop: pend.lower, shelf: Math.round((pend.upper + 2 * risk) * 100) / 100, steps: "gapfade", setupName: pend.name});
+      P.status = "Gap fade · waiting for the rip"; P.sub = `A daily close above ${money(pend.upper)} in the next ${pend.days_left} day${pend.days_left === 1 ? "" : "s"} starts it.`;
+    } else {
+      Object.assign(P, {trig: pend.neck, stop: pend.peak, shelf: Math.round((2 * pend.neck - pend.peak) * 100) / 100, steps: "double_bottom", setupName: pend.name});
+      P.status = "Double bottom · forming"; P.sub = `A 4-hour close above the neckline ${money(pend.neck)} starts it.`;
+    }
+  } else {
+    P.status = "No setup in play"; P.sub = "NextShelf flags it once price settles into a tight range for 4+ four-hour candles.";
+    P.shelf = st.shelf_up ? st.shelf_up.level : null;
+  }
+  // what's in the way: a call wall (or put wall) between trigger and target, else a 3+-touch level, else an old high
+  if (P.trig != null && P.shelf != null) {
+    const d = P.dir, between = (v) => v != null && (d === 1 ? v > P.trig * 1.001 && v < P.shelf * 0.999 : v < P.trig * 0.999 && v > P.shelf * 1.001);
+    const w = GAMMA[sym], wall = w && w !== "loading" ? (d === 1 ? w.call_wall : w.put_wall) : null;
+    if (between(wall)) P.obst = {level: wall, name: d === 1 ? "Call wall" : "Put wall", why: "biggest options open interest; dealer hedging tends to slow price there"};
+    else {
+      const lv = ((BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.setups && BRIEF_CHART.setups.levels) || [])
+        .filter(l => l.touches >= 3 && between(l.price)).sort((a, b) => d * (a.price - b.price))[0];
+      if (lv) P.obst = {level: lv.price, name: d === 1 ? "Resistance" : "Support", why: `price turned there ${lv.touches} times`};
+      else { const ox = d === 1 ? st.old_high : st.old_low; if (ox && between(ox.level)) P.obst = {level: ox.level, name: d === 1 ? "Old high" : "Old low", why: "a wick where the move may stall"}; }
+    }
+  }
+  return P;
+}
+const MAP_IC = {
+  hub: '<path d="M4 8h16M4 16h16" /><path d="M7 12h10" opacity=".55"/>',
+  bolt: '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
+  retest: '<path d="M4 7h16" stroke-dasharray="2 2.5"/><path d="M6 19c3-9 5-11 7-8s3 3 5-4"/>',
+  flag: '<path d="M6 21V4"/><path d="M6 4h11l-2 4 2 4H6"/>',
+  eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>',
+};
+const mapIc = (n, s) => `<svg width="${s || 16}" height="${s || 16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MAP_IC[n] || ""}</svg>`;
+function mapChart(P, chart, W) {
+  const small = W < 560, H = small ? 260 : 330, R = small ? 54 : 64, top = 16, bot = 22, plotR = W - R, futX = plotR * (small ? 0.6 : 0.7);
+  const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(W < 560 ? -36 : -64) : [];
+  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
+  let lo = Math.min(...lv, ...cs.map(c => c.low)), hi = Math.max(...lv, ...cs.map(c => c.high));
+  const pad = (hi - lo) * 0.08 || hi * 0.01; lo -= pad; hi += pad;
+  const y = (v) => top + (hi - v) / (hi - lo) * (H - top - bot);
+  const n = cs.length, step = n ? (futX - 14) / n : 0, cx = (i) => 8 + step * (i + 0.5), bw = Math.max(1.5, step * 0.58);
+  const xNow = n ? cx(n - 1) : futX - 10;
+  const parts = [];
+  // grid + price axis
+  const tick = (() => { const raw = (hi - lo) / 5, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * mag).find(m => m >= raw); })();
+  for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick)
+    parts.push(`<line class="mp-grid" x1="0" x2="${plotR}" y1="${y(v)}" y2="${y(v)}"/><text class="mp-ax" x="${plotR + 8}" y="${y(v) + 4}">${v >= 1000 ? v.toFixed(0) : v.toFixed(2)}</text>`);
+  // future zone
+  parts.push(`<rect class="mp-fut" x="${futX}" y="${top}" width="${plotR - futX}" height="${H - top - bot}"/>`);
+  // hub box
+  let hubX0 = null;
+  if (P.hub) {
+    let i0 = n - (P.hub.sessions || 6);
+    const hb = chart && chart.hubs && chart.hubs.length ? chart.hubs[chart.hubs.length - 1] : null;
+    if (hb && Math.abs(hb.high - P.hub.high) < 0.02 * P.hub.high) { const j = cs.findIndex(c => c.time >= hb.start); if (j >= 0) i0 = j; }
+    const x0 = n ? cx(Math.max(0, i0)) - step / 2 : 8, x1 = P.steps === "hub" && P.phase === 0 ? xNow + step / 2 : futX;
+    hubX0 = x0;
+    parts.push(`<rect class="mp-hub" x="${x0}" y="${y(P.hub.high)}" width="${Math.max(8, x1 - x0)}" height="${Math.max(2, y(P.hub.low) - y(P.hub.high))}" rx="4"/>`);
+    const ly = y(P.hub.low) + 16 > H - bot ? y(P.hub.high) - 7 : y(P.hub.low) + 16;
+    parts.push(`<text class="mp-hubt" x="${Math.min(x0, futX - 150)}" y="${ly}">HUB ${money(P.hub.low)}–${money(P.hub.high)}</text>`);
+  }
+  // shelf band, obstacle band
+  if (P.shelf != null) parts.push(`<rect class="mp-shelfband" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${plotR - futX}" height="14"/>`);
+  if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${plotR - futX}" height="12"/>`);
+  // candles
+  cs.forEach((c, i) => { const up = c.close >= c.open, X = cx(i), yo = y(c.open), yc = y(c.close);
+    parts.push(`<line class="${up ? "mp-cu" : "mp-cd"}" x1="${X}" x2="${X}" y1="${y(c.high)}" y2="${y(c.low)}"/><rect class="${up ? "mp-cuf" : "mp-cdf"}" x="${X - bw / 2}" y="${Math.min(yo, yc)}" width="${bw}" height="${Math.max(1, Math.abs(yc - yo))}"/>`); });
+  // level lines
+  const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${plotR}" y1="${y(v)}" y2="${y(v)}"/>`;
+  const hx = hubX0 != null ? hubX0 : n ? Math.max(8, xNow - 12 * step) : futX - 40;
+  parts.push(line(P.stop !== P.trig ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
+             line(P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", Math.min(hx, xNow)));
+  // the path: current price → trigger → target (dashed; nothing to the right of "now" is real price)
+  if (P.shelf != null && P.trig != null) {
+    const xa = futX + 18, xb = Math.max(xa + 40, plotR - (small ? 118 : 160)), ya = y(P.trig), yb = y(P.shelf);
+    parts.push(`<path class="mp-path ${P.watch ? "w" : ""}" d="M${xNow} ${y(P.px)} L${xa} ${ya} C${xa + (xb - xa) * 0.55} ${ya}, ${xb - (xb - xa) * 0.25} ${yb + (ya - yb) * 0.35}, ${xb} ${yb}" marker-end="url(#mpArrow${P.watch ? "W" : ""})"/>`);
+    parts.push(`<circle class="mp-trigdot" cx="${xa}" cy="${ya}" r="5"/><circle class="mp-tgtdot ${P.watch ? "w" : ""}" cx="${xb}" cy="${yb}" r="5"/>`);
+  }
+  // now dot
+  parts.push(`<circle class="mp-now-halo" cx="${xNow}" cy="${y(P.px)}" r="10"/><circle class="mp-now" cx="${xNow}" cy="${y(P.px)}" r="5"/>`);
+  // tags on the right, nudged apart so they never overlap
+  const tags = [];
+  if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
+  if (P.obst) tags.push({v: P.obst.level, cls: "t-obst", t: P.obst.name});
+  if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
+  if (P.stop != null && P.stop !== P.trig) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
+  tags.forEach(g => g.y = y(g.v)); tags.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 24) tags[i].y = tags[i - 1].y + 24;
+  const over = tags.length ? tags[tags.length - 1].y - (H - bot - 12) : 0; if (over > 0) tags.forEach(g => g.y -= over);
+  tags.forEach(g => { const txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high") : g.t} ${money(g.v)}`, tw = txt.length * (small ? 6.1 : 6.7) + 16, tx = plotR - tw - 2;
+    parts.push(`<g class="mp-tag ${g.cls}"><rect x="${tx}" y="${g.y - 11}" width="${tw}" height="22" rx="6"/><text x="${tx + 8}" y="${g.y + 4}">${txt.slice(0, txt.lastIndexOf(" "))} <tspan>${money(g.v)}</tspan></text></g>`); });
+  // "now" callout above the dot
+  const ny = y(P.px) - 46 < top ? y(P.px) + 14 : y(P.px) - 46, nx = Math.min(Math.max(xNow - 64, 4), futX - 132);
+  parts.push(`<g class="mp-nowtag"><rect x="${nx}" y="${ny}" width="128" height="34" rx="8"/><text x="${nx + 10}" y="${ny + 14}" class="a">${P.isLive ? "Current price" : "Last close"}</text><text x="${nx + 10}" y="${ny + 28}" class="b">${money(P.px)}</text></g>`);
+  if (!n) parts.push(`<text class="mp-ax" x="${futX / 2}" y="${H / 2}" text-anchor="middle">Loading candles…</text>`);
+  return `<svg class="mp-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Setup map for ${esc(P.sym)}">
+    <defs><marker id="mpArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow"/></marker>
+    <marker id="mpArrowW" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow w"/></marker></defs>${parts.join("")}</svg>`;
+}
+function mapAnswer(q, P, st) {
+  const S = esc(P.sym), h = P.hub, e = EARN[P.sym];
+  const earnLine = e && e.days != null && e.days <= 14 ? ` Earnings are in ${e.days} day${e.days === 1 ? "" : "s"}, which can move it past any level.` : "";
+  if (q === "why") {
+    if (P.steps === "gapfade") return `${S} gapped up on earnings and the gains faded. When a faded gap gets bought back above the gap-day high, it often runs. In the two-year test this setup made +2.76% per trade (341 trades), though the last 6 months were weaker.`;
+    if (P.steps.startsWith("double")) return `Price tested the same low twice and held. A close above the neckline shows buyers took over. In the two-year test, A retests of double bottoms made +0.28% per trade (236 trades).`;
+    if (h) return `${S} has closed in a tight range (${money(h.low)}–${money(h.high)}) for ${h.sessions} sessions. Tight ranges are where moves start: when price leaves, it often travels to the next shelf. In the two-year test, A retests after a hub breakout made +0.50% per trade (319 trades).`;
+    return `Nothing is set up on ${S} right now. NextShelf only acts on its measured setups, so this one is on the shelf for now.`;
+  }
+  if (q === "next") {
+    if (P.watch) return `Nothing to do: the short side is watch only. It stops being relevant once price closes back ${P.dir === -1 ? "above" : "below"} ${money(P.trig)}.`;
+    if (P.phase === 0 && P.trig != null) return `${P.steps === "gapfade" ? "A daily close" : "A 4-hour close"} above <b>${money(P.trig)}</b>. The next one to watch is ${P.steps === "gapfade" ? "today's 4:00 PM close" : nextCloseText()}. ${P.steps === "gapfade" ? "That's the entry." : "After that, NextShelf waits for a pullback to the edge that holds (the retest). That's the A entry."}`;
+    if (P.phase === 1) return P.steps === "gapfade" ? `It's triggered. The plan: stop at ${money(P.stop)}, target ${money(P.shelf)}.` : `It broke out. Now NextShelf waits for the retest: a pullback near ${money(P.trig)} that closes back above it. Don't chase it higher.`;
+    if (P.phase === 2) return `Price is back at the edge. If the next 4-hour close holds above ${money(P.trig)}, that's the A entry, aiming for ${money(P.shelf)}.`;
+    return `Wait for price to settle into a tight range. NextShelf will flag it.`;
+  }
+  if (q === "stop") {
+    const parts = [];
+    if (P.trig != null && P.phase === 0) parts.push(`If it never closes above ${money(P.trig)}, there's no trade.`);
+    if (P.stop != null && !P.watch) parts.push(`The plan is wrong below <b>${money(P.stop)}</b>${P.hub && P.stop < P.hub.high ? " (the middle of the hub)" : ""}.`);
+    if (P.obst) parts.push(`On the way up, the ${P.obst.name.toLowerCase()} at <b>${money(P.obst.level)}</b> could slow it: ${P.obst.why}. Some traders take part off there.`);
+    if (P.shelf == null && !P.watch) parts.push("There's no shelf above in range, so the target is less clear.");
+    return (parts.join(" ") || "Nothing specific stands in the way right now.") + earnLine;
+  }
+  // like I'm new
+  if (P.steps === "gapfade") return `Think of it as a second chance: the stock jumped on news, people sold the jump, and now it's trying to climb back. If it closes above the day's high, the buyers won. If it drops under ${money(P.stop)}, they didn't, and you step aside.`;
+  if (h) return `Picture a shelf in a cupboard. Price has been sitting on one shelf (${money(h.low)}–${money(h.high)}). NextShelf waits for it to step up to the next one${P.shelf != null ? ` near ${money(P.shelf)}` : ""}. A 4-hour candle closing above ${money(P.trig)} is that step. Until then: no trade.`;
+  return `NextShelf looks for stocks resting in a tight range, then waits for them to step out of it. ${S} isn't resting in one right now.`;
+}
+function mapQ(q) { MAP_Q = MAP_Q === q ? null : q; paintMap(); }
+function paintMap() {
+  const el = $("bfMap"); if (!el) return;
+  if (!MAP_ON() || !BRIEF_SYM) { el.innerHTML = ""; return; }
+  const sym = BRIEF_SYM, chart = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart && chart.status) || findStatus(sym);
+  if (!st || st.last_close == null) { el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()">← Back</button><h3>${esc(sym)}</h3><button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>`; return; }
+  const P = mapPlan(sym, st), steps = MAP_STEPS[P.steps];
+  const chg = P.chg != null ? `<em class="${P.chg >= 0 ? "u" : "d"}">${P.chg >= 0 ? "+" : ""}${P.chg}%</em>` : "";
+  const pctTo = (v) => v == null || P.trig == null ? "" : `${(v / P.trig - 1) * 100 >= 0 ? "+" : ""}${((v / P.trig - 1) * 100).toFixed(1)}% from trigger`;
+  const cell = (cls, label, v, sub, ic) => `<div class="mp-c ${cls}"><small>${label}</small><b>${ic ? mapIc(ic, 15) : ""}${v}</b>${sub ? `<i>${sub}</i>` : ""}</div>`;
+  const cells = [cell("c-now", P.isLive ? "Now" : "Last close", money(P.px), P.chg != null ? `${P.chg >= 0 ? "+" : ""}${P.chg}% today` : "4-hour close")];
+  if (P.trig != null) cells.push(cell("c-trig", P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger", money(P.trig), P.steps === "gapfade" ? "daily close above" : `4H close ${P.dir === 1 ? "above" : "below"}`, "bolt"));
+  if (P.stop != null && P.stop !== P.trig && !P.watch) cells.push(cell("c-stop", "Stop", money(P.stop), P.hub && P.stop < P.hub.high && P.stop > P.hub.low ? "middle of the hub" : P.steps === "gapfade" ? "the fade low" : "", ""));
+  if (P.obst) cells.push(cell("c-obst", "Next obstacle", money(P.obst.level), P.obst.name));
+  cells.push(cell("c-shelf", P.steps === "hub" || P.steps === "hub_short" || P.steps === "none" ? "Next shelf" : "Target", P.shelf != null ? money(P.shelf) : "–", P.shelf != null ? pctTo(P.shelf) || "above" : "none in range", "flag"));
+  const jr = steps.map(([t, ic], i) => `<div class="mp-j ${i < P.phase ? "done" : i === P.phase ? "now" : ""}"><span class="mp-jd">${mapIc(ic, 14)}</span><small>${t}${i === P.phase ? "<em>Now</em>" : ""}</small></div>`).join("");
+  const qs = [["why", "Why is this interesting?"], ["next", "What needs to happen next?"], ["stop", "What could stop it?"], ["new", "Explain it like I'm new"]];
+  el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
+      <h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
+      <span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : "Market closed"}</span>
+      <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
+    <div class="mp-grid">
+      <div class="mp-main">
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><b>Setup map</b><span>Where price is, what has to happen, and what's ahead. Right of the dot is the plan, not real prices.</span></div><div class="mp-cw" id="mpCw">${mapChart(P, chart, MAP_W())}</div></div>
+        <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
+        <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
+        <div id="mapGrade">${gradeHTML(st)}</div>
+      </div>
+      <div class="mp-card mp-sika"><div class="mp-sh"><span class="sika-ava mp-ava" id="mpAva"></span><b>Sika</b><small>Plain English</small></div>
+        <p class="mp-say">${MAP_Q ? mapAnswer(MAP_Q, P, st) : vizSummary(st)}</p>
+        <div class="mp-qs">${qs.map(([k, t]) => `<button class="${MAP_Q === k ? "on" : ""}" onclick="mapQ('${k}')">${t}<span>›</span></button>`).join("")}</div>
+        <p class="mp-fine">Based on NextShelf's rules and past prices. For education only, not financial advice.</p></div>
+    </div>`;
+  const ava = $("mpAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
+}
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
 async function loadGamma(sym) {
@@ -3795,7 +4023,7 @@ async function loadGamma(sym) {
     try { GAMMA[sym] = (await api(`/api/gamma/${encodeURIComponent(sym)}`)).walls || null; } catch (e) { GAMMA[sym] = null; }
     GAMMA_AT[sym] = Date.now();
   }
-  paintGamma(sym);
+  paintGamma(sym); if (BRIEF_SYM === sym) paintMap();
 }
 function paintGamma(sym) {
   const el = $("bfGamma"); if (!el || BRIEF_SYM !== sym) return;
@@ -4826,7 +5054,7 @@ function paintLive() {
 }
 function paintBriefLive() {
   if (!BRIEF_SYM || !LIVE[BRIEF_SYM] || !$("bfLive")) return;
-  paintNowCell(); if (typeof paintVizScale === "function") paintVizScale();
+  paintMap(); paintNowCell(); if (typeof paintVizScale === "function") paintVizScale();
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(BRIEF_SYM);
   if (!LIVE_OPEN) {       // market closed: the last closing price, not a premarket or after-hours print
     const v = liveVsHub(st, st.last_close);
@@ -5323,6 +5551,95 @@ html[data-theme="light"] .sk-halo { fill: rgba(20,20,18,.12); }
 
 /* light theme: white surfaces become a soft light gray (inputs and small chips stay white) */
 html[data-theme="light"] body .panel, html[data-theme="light"] body .tbl, html[data-theme="light"] body .side, html[data-theme="light"] body #side, html[data-theme="light"] body .acct, html[data-theme="light"] body .agent, html[data-theme="light"] body .board-frame, html[data-theme="light"] body .mbrief, html[data-theme="light"] body .kpi, html[data-theme="light"] body .empty, html[data-theme="light"] body .stats, html[data-theme="light"] body .sc, html[data-theme="light"] body .bf-card, html[data-theme="light"] body .bf-hero { background: #F8F9FD !important; }
+
+/* ---------------- setup map (stock panel). body.map-v2 = on; Account → Stock panel → Classic turns it off */
+body.map-v2 #brief .bf-hero { display: none !important; }
+body:not(.map-v2) #bfMap { display: none; }
+@media (min-width: 1100px) { body.map-v2 .brief { width: min(1240px, 100vw) !important; } }
+#bfMap { --mp-card: #15171C; --mp-line: #292A2D; --mp-ink: #F3F4F6; --mp-mut: #9AA0AC; --mp-hub: #5B7BFF; --mp-trig: #F2C14E; --mp-obst: #FF6B5E; --mp-shelf: #3DD68C; --mp-stop: #9AA0AC;
+  padding: 14px 16px 4px; color: var(--mp-ink); }
+html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-ink: #0d1117; --mp-mut: #5b6472; --mp-hub: #4f46e5; --mp-trig: #b7791f; --mp-obst: #dc2626; --mp-shelf: #15803d; --mp-stop: #6b7280; }
+.mp-head { display: flex; align-items: center; gap: 12px; padding: 4px 2px 12px; flex-wrap: wrap; }
+.mp-head h3 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
+.mp-head .mp-px { font: 600 20px/1 var(--mono, ui-monospace, monospace); } .mp-head .mp-px em { font-style: normal; font-size: 15px; margin-left: 8px; }
+.mp-px em.u { color: var(--mp-shelf); } .mp-px em.d { color: var(--mp-obst); }
+.mp-upd { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--mp-mut); border: 1px solid var(--mp-line); border-radius: 999px; padding: 5px 10px; }
+.mp-upd i { width: 7px; height: 7px; border-radius: 50%; background: var(--mp-mut); } .mp-upd i.on { background: var(--mp-shelf); box-shadow: 0 0 8px var(--mp-shelf); }
+.mp-back { background: none; border: 0; color: var(--mp-ink); font-size: 22px; cursor: pointer; padding: 0 4px; }
+.mp-head .bf-x { position: static !important; }
+.mp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.mp-main { display: grid; gap: 12px; min-width: 0; }
+.mp-card { background: var(--mp-card); border: 1px solid var(--mp-line); border-radius: 18px; padding: 16px; }
+.mp-ct { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; } .mp-ct b { font-size: 16px; } .mp-ct span { font-size: 12.5px; color: var(--mp-mut); }
+.mp-chartcard { padding: 14px 10px 8px 14px; }
+.mp-cw { width: 100%; overflow: hidden; } .mp-svg { display: block; overflow: visible; }
+.mp-grid line.mp-grid, .mp-svg .mp-grid { stroke: var(--mp-line); stroke-width: 1; }
+.mp-svg .mp-ax { fill: var(--mp-mut); font: 11px var(--mono, ui-monospace, monospace); }
+.mp-svg .mp-fut { fill: var(--mp-ink); opacity: .025; }
+.mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .14; stroke: var(--mp-hub); stroke-width: 1.5; }
+.mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
+.mp-svg .mp-shelfband { fill: var(--mp-shelf); opacity: .13; } .mp-svg .mp-obstband { fill: var(--mp-obst); opacity: .12; }
+.mp-svg .mp-cu, .mp-svg .mp-cuf { stroke: #3DD68C; fill: #3DD68C; } .mp-svg .mp-cd, .mp-svg .mp-cdf { stroke: #FF6B5E; fill: #FF6B5E; }
+html[data-theme="light"] .mp-svg .mp-cu, html[data-theme="light"] .mp-svg .mp-cuf { stroke: #16a34a; fill: #16a34a; }
+html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cdf { stroke: #dc2626; fill: #dc2626; }
+.mp-svg [class^="mp-l-"] { stroke-width: 1.6; stroke-dasharray: 7 5; }
+.mp-svg .mp-l-trig { stroke: var(--mp-trig); } .mp-svg .mp-l-obst { stroke: var(--mp-obst); } .mp-svg .mp-l-shelf { stroke: var(--mp-shelf); } .mp-svg .mp-l-stop { stroke: var(--mp-stop); stroke-dasharray: 3 4; }
+.mp-svg .mp-path { fill: none; stroke: var(--mp-shelf); stroke-width: 2.4; stroke-dasharray: 6 5; } .mp-svg .mp-path.w { stroke: var(--mp-mut); }
+.mp-svg .mp-arrow { fill: var(--mp-shelf); } .mp-svg .mp-arrow.w { fill: var(--mp-mut); }
+.mp-svg .mp-trigdot { fill: var(--mp-card); stroke: var(--mp-trig); stroke-width: 2.5; }
+.mp-svg .mp-tgtdot { fill: var(--mp-shelf); } .mp-svg .mp-tgtdot.w { fill: var(--mp-mut); }
+.mp-svg .mp-now { fill: var(--mp-hub); stroke: var(--mp-card); stroke-width: 2; } .mp-svg .mp-now-halo { fill: var(--mp-hub); opacity: .22; }
+.mp-svg .mp-tag rect { fill: var(--mp-card); stroke-width: 1.3; } .mp-svg .mp-tag text { font: 600 12px var(--sans, system-ui); } .mp-svg .mp-tag tspan { font-family: var(--mono, ui-monospace, monospace); }
+.mp-svg .t-trig rect { stroke: var(--mp-trig); } .mp-svg .t-trig text { fill: var(--mp-trig); }
+.mp-svg .t-obst rect { stroke: var(--mp-obst); } .mp-svg .t-obst text { fill: var(--mp-obst); }
+.mp-svg .t-shelf rect { stroke: var(--mp-shelf); } .mp-svg .t-shelf text { fill: var(--mp-shelf); }
+.mp-svg .t-stop rect, .mp-svg .t-mut rect { stroke: var(--mp-stop); } .mp-svg .t-stop text, .mp-svg .t-mut text { fill: var(--mp-stop); }
+.mp-svg .mp-nowtag rect { fill: var(--mp-card); stroke: var(--mp-hub); stroke-width: 1.3; }
+.mp-svg .mp-nowtag .a { fill: var(--mp-mut); font: 600 10.5px var(--sans, system-ui); } .mp-svg .mp-nowtag .b { fill: var(--mp-hub); font: 700 13px var(--mono, ui-monospace, monospace); }
+.mp-status { display: grid; grid-template-columns: minmax(170px, 1.1fr) 3fr; gap: 14px; align-items: center; }
+.mp-st { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; border-left: 3px solid var(--mp-trig); }
+.mp-st.t-go { border-left-color: var(--mp-shelf); } .mp-st.t-bad { border-left-color: var(--mp-obst); }
+.mp-st b { font-size: 15px; } .mp-st span { font-size: 12.5px; color: var(--mp-mut); line-height: 1.4; }
+.mp-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 0; }
+.mp-c { display: flex; flex-direction: column; gap: 3px; padding: 2px 12px; border-left: 1px solid var(--mp-line); }
+.mp-c small { font-size: 11.5px; color: var(--mp-mut); } .mp-c b { display: inline-flex; align-items: center; gap: 5px; font: 700 17px var(--mono, ui-monospace, monospace); white-space: nowrap; }
+.mp-c i { font-style: normal; font-size: 11.5px; color: var(--mp-mut); }
+#bfMap .mp-c.c-now b { color: var(--mp-hub) !important; } #bfMap .mp-c.c-trig b { color: var(--mp-trig) !important; } #bfMap .mp-c.c-obst b { color: var(--mp-obst) !important; } #bfMap .mp-c.c-shelf b { color: var(--mp-shelf) !important; } #bfMap .mp-c.c-stop b { color: var(--mp-ink) !important; }
+.mp-jt { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--mp-mut); margin-bottom: 12px; font-weight: 600; }
+.mp-js { display: grid; grid-template-columns: repeat(var(--n), 1fr); position: relative; }
+.mp-js::before { content: ""; position: absolute; left: calc(50% / var(--n)); right: calc(50% / var(--n)); top: 15px; height: 2px; background: var(--mp-line); }
+.mp-j { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; text-align: center; }
+.mp-jd { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--mp-card); border: 2px solid var(--mp-line); color: var(--mp-mut); position: relative; }
+.mp-j.done .mp-jd { border-color: var(--mp-hub); background: var(--mp-hub); color: #fff; }
+.mp-j.now .mp-jd { border-color: var(--mp-hub); color: var(--mp-hub); box-shadow: 0 0 0 5px color-mix(in srgb, var(--mp-hub) 22%, transparent); }
+.mp-j small { font-size: 12px; color: var(--mp-mut); line-height: 1.3; } .mp-j.now small { color: var(--mp-ink); font-weight: 600; }
+.mp-j small em { display: block; font-style: normal; color: var(--mp-hub); font-size: 11px; }
+#mapGrade .sg { margin: 0; }
+.mp-sika { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.mp-sh { display: flex; align-items: center; gap: 10px; } .mp-sh b { font-size: 17px; }
+.mp-sh small { margin-left: auto; font-size: 11.5px; color: var(--mp-shelf); border: 1px solid color-mix(in srgb, var(--mp-shelf) 50%, transparent); border-radius: 999px; padding: 3px 9px; }
+.mp-ava { width: 34px !important; height: 34px !important; display: inline-grid; place-items: center; }
+.mp-ava svg { width: 100%; height: 100%; }
+.mp-say { margin: 0; font-size: 14px; line-height: 1.55; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--mp-ink) 5%, transparent); }
+.mp-qs { display: grid; gap: 8px; }
+.mp-qs button { display: flex; justify-content: space-between; align-items: center; text-align: left; font: 500 13.5px var(--sans, system-ui); color: var(--mp-ink);
+  background: transparent; border: 1px solid var(--mp-line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.mp-qs button:hover { border-color: var(--mp-hub); } .mp-qs button.on { border-color: var(--mp-hub); color: var(--mp-hub); background: color-mix(in srgb, var(--mp-hub) 9%, transparent); }
+.mp-qs button span { color: var(--mp-mut); font-size: 17px; }
+.mp-fine { margin: 0; font-size: 11.5px; color: var(--mp-mut); }
+@media (max-width: 1099px) {
+  .mp-grid { grid-template-columns: 1fr; } .mp-sika { position: static; }
+}
+@media (max-width: 899px) {
+  #bfMap { padding: 10px 10px 2px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .mp-head h3 { font-size: 24px; } .mp-head .mp-px { font-size: 17px; }
+  .mp-upd { margin-left: auto; padding: 4px 8px; } .mp-head .bf-x { order: 9; margin-left: 0; }
+  .mp-card { padding: 13px; border-radius: 16px; } .mp-chartcard { padding: 12px 6px 6px 10px; }
+  .mp-status { grid-template-columns: 1fr; }
+  .mp-cells { grid-template-columns: repeat(2, 1fr); row-gap: 12px; }
+  .mp-c:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .mp-j small { font-size: 11px; }
+}
 </style>
 </body>
 </html>
