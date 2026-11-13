@@ -1053,7 +1053,10 @@ async def grade_for(symbol: str, kind: str = "hub", u: dict = User):
     def work():
         tr = scanner._bt_trades(sym) if kind == "hub" else scanner._bt_pattern_trades(sym, kind)
         return {"up": engine.setup_grade(tr, 1), "down": engine.setup_grade(tr, -1), "years": 2, "kind": kind,
-                "universe": scanner.universe_record(sym, kind)}
+                "universe": scanner.universe_record(sym, kind),
+                # the trade NextShelf would actually take: this stock's A retests, and the A record across all stocks
+                "retest": engine.setup_grade(scanner._bt_retest_trades(sym, kind), 1) if kind in ("hub", "double_bottom") else None,
+                "universe_a": scanner.universe_a(kind) if kind in ("hub", "double_bottom") else None}
     return await run_in_threadpool(work)
 
 

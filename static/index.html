@@ -2151,6 +2151,7 @@ html[data-theme="light"] #brief .bf-foot #bfWatch.added { color: #fff !important
 .sg-b { flex: 0 0 auto; width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font: 800 17px var(--sans); color: #0E0F12; background: var(--c); }
 .sg b { display: block; font-size: 14px; color: var(--ink, #fff); } .sg small { display: block; margin-top: 2px; font-size: 12.5px; line-height: 1.4; color: #C3C7CF; }
 .sg small b { display: inline; font-size: inherit; }
+.sg-hist { display: block; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(127,127,127,.22); font-size: 12px; color: #9AA0AC; }
 .sg.ga, .sg-in.ga { --c: #3DD68C; } .sg.gb, .sg-in.gb { --c: #7C93FF; } .sg.gc, .sg-in.gc { --c: #F2C14E; } .sg.gd, .sg-in.gd { --c: #FF6B5E; } .sg.gq, .sg-in.gq { --c: #5C616B; }
 .sg-in { color: var(--c); }
 html[data-theme="light"] .sg small { color: #4b5563; }
@@ -3728,6 +3729,7 @@ function gradeHTML(st) {
     if (!st.hub || (!live && k !== "forming" && k !== "watching")) return "";
   }
   const dir = shown.dir, kind = shown.kind;
+  if (kind === "hub" || kind === "double_bottom" || kind === "double_top") return planGradeHTML(st, shown);
   const g = gradeFor(dir, kind);
   if (!g) loadGrade(BRIEF_SYM, kind);   // guarded by the "loading" marker: fetches once, re-renders on completion
   if (!g && GRADE[BRIEF_SYM + "|" + kind] === "failed") return "";
@@ -3740,6 +3742,36 @@ function gradeHTML(st) {
     : `${esc(what)} on ${esc(BRIEF_SYM)}: won <b>${g.pf >= 9.99 ? "every time" : g.pf.toFixed(2) + "×"}</b> what they lost (${g.win}% winners, ${gradeVerb(g)} per trade, ${g.n} trades, ${g.short ? "~9 months" : "~2 years"}).`;
   const warn = disp.grade === "D" ? " Losses outweighed wins: treat a trigger here with extra caution." : disp.grade === "C" ? " About break-even so far." : "";
   return `<div class="sg ${GRADE_CLS[disp.grade]}"><span class="sg-b">${disp.grade}</span><div><b>Setup grade: ${disp.word}</b><small>${line}${warn}</small></div></div>`;
+}
+// hubs and doubles: grade the trade NextShelf would actually take (an A retest, longs), and show the old
+// breakout-close history underneath as the reason to wait for the retest. Shorts and double tops are watch only.
+function planGradeHTML(st, shown) {
+  const S = esc(BRIEF_SYM), live = st.state === "breakout_up" || st.state === "breakdown";
+  const short = shown.kind === "double_top" || (shown.dir === -1 && (live || shown.kind !== "hub"));
+  const kind = shown.kind === "double_top" ? "double_top" : shown.kind, key = BRIEF_SYM + "|" + kind;
+  const G = GRADE[key];
+  if (!G) loadGrade(BRIEF_SYM, kind);
+  if (G === "failed") return "";
+  if (!G || G === "loading") return `<div class="sg gq"><span class="sg-b">…</span><div><b>Setup grade</b><small>Checking how this setup has done on ${S}…</small></div></div>`;
+  const hist = (g, label) => !g || g.grade === "?" ? "" :
+    `<span class="sg-hist">${label} on ${S} ${gradeVerb(g)} per trade (${g.n} trades, ~2 years)${g.avg < 0 ? ". That's why NextShelf waits for the retest." : "."}</span>`;
+  if (short) {        // the short side tested negative: no plan to grade
+    const g = G.down;
+    return `<div class="sg gq"><span class="sg-b">–</span><div><b>Watch only</b><small>${shown.kind === "double_top" ? "Double tops" : "Short breakdowns"} lost money in the two-year test, so there's no entry plan on the short side.${hist(g, "Shorting at the breakdown close")}</small></div></div>`;
+  }
+  const R = G.retest, UA = G.universe_a, name = kind === "hub" ? "hub A retests" : "double bottom A retests";
+  let disp, line;
+  if (R && R.grade !== "?") {
+    disp = R;
+    line = `If it retests as an A setup: ${name} on ${S} won <b>${R.pf >= 9.99 ? "every time" : R.pf.toFixed(2) + "×"}</b> what they lost (${R.win}% winners, ${gradeVerb(R)} per trade, ${R.n} trades, ~2 years).`;
+  } else if (UA) {
+    disp = UA;
+    const n = R ? R.n : 0;
+    line = `If it retests as an A setup: across all 543 stocks, ${name} made <b>+${UA.avg.toFixed(2)}%</b> per trade over two years (${Number(UA.n).toLocaleString()} trades, ${UA.win}% won). ${n ? `Only ${n} on ${S} itself, too few to grade on its own.` : `None on ${S} itself yet.`}`;
+  } else return "";
+  const warn = disp.grade === "D" ? " Even the A retests lost here: extra caution." : disp.grade === "C" ? " About break-even so far." : "";
+  const ent = kind === "hub" ? "Entering at the breakout close" : "Entering at the neckline close";
+  return `<div class="sg ${GRADE_CLS[disp.grade]}"><span class="sg-b">${disp.grade}</span><div><b>Setup grade: ${disp.word}</b><small>${line}${warn}${hist(G.up, ent)}</small></div></div>`;
 }
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};

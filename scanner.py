@@ -209,6 +209,54 @@ def _retest_variant_double(c4, res, pa, kind) -> str:
                                                                     engine.candle_end(c4.index[j].tz_convert(engine.NY)).hour == 16))
 
 
+def _bt_retest_trades(sym: str, kind: str) -> list:
+    """This ticker's A-grade retest trades over ~2 years, scored the way the live A plan trades them: entry at the retest
+    close, stop 1 ATR below it (hubs) or past the lows (double bottoms), aim the target, 10 candles. Longs only.
+    Cached for a day. This is what the grade box leads with: the trade NextShelf would actually take."""
+    key = f"bt2r:{sym}:{kind}"
+    today = pd.Timestamp.now(tz=engine.NY).date().isoformat()
+    cached = json.loads(db.get_setting(key) or "{}")
+    if cached.get("date") == today:
+        return cached["trades"]
+    import lab_exits
+    c4 = load_4h(sym, BACKTEST_DAYS)
+    res = engine.analyze(c4, SETTINGS)
+    idx = c4.index
+    close = res["close"].to_numpy(float)
+    low, high, atr = c4["Low"].to_numpy(float), c4["High"].to_numpy(float), res["atr"].to_numpy(float)
+    if kind == "hub":
+        src = [t for t in res["trades"] if t["direction"] == 1]
+    else:
+        src = [t for t in patterns.analyze_all(c4, res, SETTINGS)["trades"] if t["kind"] == "double_bottom"]
+    out = []
+    for t in src:
+        rt = lab_exits._retest_entry(close, low, high, atr, t["i0"], 1, t["edge"])
+        if not rt:
+            continue
+        j, entry = rt
+        g = (engine.retest_grade(t, entry, float(atr[j])) if kind == "hub" else
+             engine.double_retest_grade(t, entry, engine.candle_end(idx[j].tz_convert(engine.NY)).hour == 16))
+        if not g.get("is_a"):
+            continue
+        ex = lab_exits._exit(close, j, 1, entry, t["target"], g["stop"], SETTINGS.horizon)
+        if ex is None:
+            continue
+        out.append(dict(direction=1, outcome={"target": "follow-through", "stop": "snap-back", "time": "stalled"}[ex[1]], ret=round(ex[0], 3)))
+    db.set_setting(key, json.dumps(dict(date=today, trades=out)))
+    return out
+
+
+def universe_a(kind: str) -> dict | None:
+    """The A-retest record across the test universe for hubs and double bottoms (what 'if it retests as an A setup' means)."""
+    key = "double" if kind in ("double_top", "double_bottom") else kind
+    rec = UNIVERSE_RECORD.get(key)
+    if not rec or "a" not in rec:
+        return None
+    row = rec["a"]
+    grade, word = _universe_grade(row["avg"], row["pf"])
+    return dict(label=row["label"], avg=row["avg"], pf=row["pf"], n=row["n"], win=row["win"], grade=grade, word=word)
+
+
 def universe_record(sym: str, kind: str) -> dict | None:
     """The pattern's universe record for the grade fallback, decided for the live setup shown on the card.
     None when the kind has no universe record. Never raises: a failed lookup returns None."""
