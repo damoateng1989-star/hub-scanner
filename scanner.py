@@ -788,7 +788,22 @@ def premarket_check(sym: str, bars: pd.DataFrame, now: pd.Timestamp | None = Non
     if not A or A != A:
         return []
     out = []
+    try:      # a premarket hub break: price is trading outside the hub it closed inside yesterday (watch only)
+        res = engine.analyze(c4, SETTINGS)
+        st = engine.current_status(c4, res, SETTINGS)
+        h = st.get("hub")
+        if h and st.get("state") in ("forming", "watching"):
+            for d, edge, trig in ((1, h["high"], st.get("trigger_up") or h["high"]), (-1, h["low"], st.get("trigger_down") or h["low"])):
+                if d * (pre_last - edge) > 0 and d * (yest - edge) <= 0:
+                    out.append(dict(kind="hub_break", price=round(edge, 2), trigger=round(trig, 2), hub_low=h["low"], hub_high=h["high"],
+                                    sessions=h.get("sessions"), side="resistance" if d == 1 else "support", direction=d,
+                                    pre_last=pre_last, yest=yest, pre_high=float(pm["High"].max()), pre_low=float(pm["Low"].min()), bars=len(pm)))
+    except Exception as ex:
+        log.warning("premarket hub break check failed for %s: %s", sym, ex)
+    broke = {o["direction"] for o in out}
     for L in levels:
+        if L.get("kind") == "hub" and broke:
+            continue          # the hub-break alert already covers this hub's edge
         lv = L["price"]
         if abs(pre_last - lv) > 0.25 * A or abs(yest - lv) <= 0.25 * A:
             continue
@@ -800,6 +815,15 @@ def premarket_check(sym: str, bars: pd.DataFrame, now: pd.Timestamp | None = Non
 
 def format_premarket(sym: str, h: dict) -> str:
     gap = (h["pre_last"] / h["yest"] - 1) * 100
+    if h["kind"] == "hub_break":
+        up = h["direction"] == 1
+        return (f"🌅 {sym} is trading {'ABOVE' if up else 'BELOW'} its hub premarket (watch only)\n"
+                f"Last {_money(h['pre_last'])} premarket (gap {gap:+.1f}% vs yesterday's close {_money(h['yest'])}) · "
+                f"premarket range {_money(h['pre_low'])}–{_money(h['pre_high'])}\n"
+                f"Hub {_money(h['hub_low'])}–{_money(h['hub_high'])}" + (f" ({h['sessions']} sessions)" if h.get("sessions") else "") + ".\n"
+                f"Not a setup yet: premarket prices are thin, and gaps {'above' if up else 'below'} a range often fade at the open. "
+                f"It needs a 4-hour close {'above' if up else 'below'} {_money(h['trigger'])} (the 1:30 PM close is the first that can decide it), "
+                f"then the retest for an entry. Premarket breaks are being tested in the Lab; no plan until they pass.")
     lv = _money(h["price"])
     if h["kind"] == "hub":
         what = f"Sitting on its hub's {'top' if h['side'] == 'resistance' else 'bottom'} edge {lv} ({h['sessions']} sessions)"
@@ -827,7 +851,8 @@ def premarket_all(now: pd.Timestamp | None = None) -> list[str]:
                 for h in hits:
                     msg = format_premarket(sym, h) + earnings.alert_line(sym)
                     msg += regime_line(h["direction"])
-                    if db.add_alert(f"{sym}|premarket_gap|{day}|{h['price']:.2f}", sym, "premarket_gap", day, msg):
+                    aid = f"{sym}|premarket_hub|{day}" if h["kind"] == "hub_break" else f"{sym}|premarket_gap|{day}|{h['price']:.2f}"
+                    if db.add_alert(aid, sym, "premarket_gap", day, msg):
                         notify.symbol_alert(sym, "premarket_gap", msg, None)
                         sent.append(msg)
             except Exception as e:

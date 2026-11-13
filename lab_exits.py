@@ -64,6 +64,8 @@ FILTERS = [   # key, label, test(features) -> bool
     ("against", "Against the market", lambda f: f["with_mkt"] is False),
     ("trend", "With the stock's own trend (vs its 50-day)", lambda f: f["with_trend"] is True),
     ("nochase", "Not chasing (entry in the first half)", lambda f: not f["chase"]),
+    ("gapopen", "Opened past the edge (a premarket break)", lambda f: f.get("gap_open") is True),
+    ("nogapopen", "Did not open past the edge", lambda f: f.get("gap_open") is False),
     ("margin", "Close clears the edge by 0.2 ATR+", lambda f: f["margin"] >= 0.2),
     ("strong", "Strong breaks only (volume 1.2×+ and 0.2 ATR+ past the edge)", lambda f: f["margin"] >= 0.2 and (f.get("rvol") is None or f["rvol"] >= 1.2)),
     ("weak", "Weak breaks only (missing either)", lambda f: not (f["margin"] >= 0.2 and (f.get("rvol") is None or f["rvol"] >= 1.2))),
@@ -236,6 +238,11 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
                  width=(h["high"] - h["low"]) / A,
                  sessions=h.get("sessions") or 0,
                  pm=engine.candle_end(idx[i0].tz_convert(engine.NY)).hour == 16)
+        try:      # a premarket break, as the Lab can see it: the breakout is the day's first candle and it OPENED past the edge
+            t0 = idx[i0].tz_convert(engine.NY)
+            f["gap_open"] = bool(t0.hour == 9 and t0.minute == 30 and d * (float(c4["Open"].iloc[i0]) - edge) > 0)
+        except Exception:
+            f["gap_open"] = False
         if grp == "flag":
             f.update(_flag_feats(c4, t["p"], d))
         if grp in ("gapfade", "flush"):                       # daily clock with its own exit rule: scored as recorded
@@ -426,6 +433,10 @@ LIVE_RULES = [
      and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
     ("hub_short", "Hubs: A retest, shorts", lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == -1
      and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
+    ("gapopen_hub_close", "Premarket hub breaks, longs: entered at the breakout close", lambda r: r["grp"] == "hub" and r.get("entry") == "breakout"
+     and r["d"] == 1 and r.get("gap_open"), "edge"),
+    ("gapopen_hub_retest", "Premarket hub breaks, longs: entered on the retest", lambda r: r["grp"] == "hub" and r.get("entry") == "retest"
+     and r["d"] == 1 and r.get("gap_open"), "atr10"),
     ("hub_long_b", "Hubs: B retest, longs (room 1.0+, 3+ sessions, not A)", lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1
      and (r.get("rr") or 0) >= engine.B_ROOM and (r.get("sessions") or 0) >= engine.B_SESSIONS
      and not ((r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4), "atr10"),
