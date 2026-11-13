@@ -125,6 +125,119 @@ def _bt_trades(sym: str) -> list:
     return cached["trades"]
 
 
+def _bt_pattern_trades(sym: str, kind: str) -> list:
+    """This ticker's finished trades of one pattern kind over ~2 years (direction and return only), cached for a day.
+    Same frame and cache shape as _bt_trades; the trades come from patterns.analyze_all, not engine.analyze,
+    so the grade measures the named setup, never another pattern's trades."""
+    key = f"bt2:{sym}:{kind}"
+    today = pd.Timestamp.now(tz=engine.NY).date().isoformat()
+    cached = json.loads(db.get_setting(key) or "{}")
+    if cached.get("date") != today:
+        c4 = load_4h(sym, BACKTEST_DAYS)
+        res = engine.analyze(c4, SETTINGS)
+        pa = patterns.analyze_all(c4, res, SETTINGS)
+        cached = dict(date=today, trades=[dict(direction=t["direction"], outcome=t["outcome"], ret=t["ret"])
+                                          for t in pa["trades"] if t["kind"] == kind and t["outcome"] != "pending"])
+        db.set_setting(key, json.dumps(cached))
+    return cached["trades"]
+
+
+# Universe-level Lab numbers for the grade fallback (Nov 12 Lab run, 44,321 breakouts, Dec 3 2024 to Nov 11 2026).
+# ONE SOURCE OF TRUTH: the card and the options odds line read these from /api/grade, never from JS literals.
+# UPDATE THIS when the Lab re-runs: the gap fade alert's hardcoded string and the landing record cards print the same setups.
+# "a" is the measured A-mix record; "overall" is the pattern's overall retest record, used when the shown setup doesn't grade A.
+UNIVERSE_RECORD = {
+    "gapfade": dict(label="Post-earnings gap fade & rip",
+                    record=dict(label="Post-earnings gap fade & rip", avg=2.76, pf=2.14, n=341, win=60.1,
+                                early=2.89, late=2.62, mix="Gap fade & rip, own daily-clock exit, long-only",
+                                caveat="Slightly negative over the last 6 months (−0.26%, 62 trades).")),
+    "double": dict(label="Double tops & bottoms",
+                   a=dict(label="Double tops & bottoms (A retest)", avg=0.28, pf=1.32, n=236, win=74.6,
+                          early=0.36, late=0.20, without_top5=0.14, mix="Not chasing + 4:00 PM closes + longs, far-side exit"),
+                   overall=dict(label="Double tops & bottoms", avg=-0.34, pf=0.63, n=800, win=41.2,
+                                mix="Retest entry, all doubles")),
+    "hub": dict(label="Hub",
+                a=dict(label="Hub A retests", avg=0.50, pf=1.39, n=319, win=51.7,
+                       early=0.96, late=0.03, without_top5=0.27, mix="Room 1.5+ + long pattern 4+ sessions + longs, 1 ATR stop"),
+                overall=dict(label="Hub retests", avg=-0.41, pf=0.57, n=8175, win=36.3,
+                             early=-0.32, late=-0.49, mix="Retest entry, all hubs")),
+}
+
+
+def _universe_grade(avg: float, pf: float) -> tuple[str, str]:
+    """Grade letter for a universe record: A whenever the average per trade is positive (owner's call, Nov 13);
+    otherwise the per-ticker PF thresholds. Universe fallback only; engine.setup_grade is untouched."""
+    if avg > 0:
+        return "A", "Strong"
+    return ("A", "Strong") if pf >= 1.5 else ("B", "Fair") if pf >= 1.1 else ("C", "Weak") if pf >= 0.9 else ("D", "Poor")
+
+
+def _first_retest_grade(c4, res, trade, grade_at) -> str:
+    """Scan the candles after the breakout for the first retest and grade it (mirrors lab_exits._retest_entry).
+    A close back inside first, or no retest in the window, means the setup does not grade A."""
+    i0, d, edge = trade["i0"], trade["direction"], trade["edge"]
+    close = res["close"].to_numpy(float); low = c4["Low"].to_numpy(float); high = c4["High"].to_numpy(float)
+    atr = res["atr"].to_numpy(float)
+    for j in range(i0 + 1, min(len(c4), i0 + engine.RETEST_MAX + 1)):
+        r = engine.retest_check(close, low, high, atr, i0, d, edge, j)
+        if r == "failed":
+            return "overall"
+        if r == "retest":
+            return "a" if grade_at(j)["is_a"] else "overall"
+    return "overall"
+
+
+def _retest_variant_hub(c4, res) -> str:
+    """'a' if the latest pending hub breakout's first retest graded A, else 'overall'."""
+    if not res["hubs"]:
+        return "overall"
+    pend = next((t for t in res["trades"] if t["outcome"] == "pending" and t["hub"] is res["hubs"][-1]), None)
+    if pend is None:
+        return "overall"
+    return _first_retest_grade(c4, res, pend,
+                               lambda j: engine.retest_grade(pend, float(res["close"].iloc[j]), float(res["atr"].iloc[j])))
+
+
+def _retest_variant_double(c4, res, pa, kind) -> str:
+    """'a' if the latest pending double of this kind's first retest graded A, else 'overall'."""
+    pend_d = [t for t in pa["trades"] if t["kind"] == kind and t["outcome"] == "pending"]
+    dbl = max(pend_d, key=lambda t: t["i0"]) if pend_d else None
+    if dbl is None:
+        return "overall"
+    return _first_retest_grade(c4, res, dbl,
+                               lambda j: engine.double_retest_grade(dbl, float(res["close"].iloc[j]),
+                                                                    engine.candle_end(c4.index[j].tz_convert(engine.NY)).hour == 16))
+
+
+def universe_record(sym: str, kind: str) -> dict | None:
+    """The pattern's universe record for the grade fallback, decided for the live setup shown on the card.
+    None when the kind has no universe record. Never raises: a failed lookup returns None."""
+    key = "double" if kind in ("double_top", "double_bottom") else kind
+    rec = UNIVERSE_RECORD.get(key)
+    if rec is None:
+        return None
+    try:
+        if kind == "gapfade":
+            variant, row = "single", rec["record"]
+        elif kind in ("double_top", "double_bottom"):
+            c4 = load_4h(sym, BACKTEST_DAYS)
+            res = engine.analyze(c4, SETTINGS)
+            pa = patterns.analyze_all(c4, res, SETTINGS)
+            variant = _retest_variant_double(c4, res, pa, kind)
+            row = rec["a"] if variant == "a" else rec["overall"]
+        else:  # hub
+            c4 = load_4h(sym, BACKTEST_DAYS)
+            res = engine.analyze(c4, SETTINGS)
+            variant = _retest_variant_hub(c4, res)
+            row = rec["a"] if variant == "a" else rec["overall"]
+    except Exception as ex:
+        log.warning("universe record for %s %s failed: %s", sym, kind, ex)
+        return None
+    grade, word = _universe_grade(row["avg"], row["pf"])
+    return dict(label=row["label"], variant=variant, avg=row["avg"], pf=row["pf"], n=row["n"], win=row["win"],
+                grade=grade, word=word, caveat=row.get("caveat"))
+
+
 def grade_line(sym: str, d: int) -> str:
     """'Setup grade D · Poor: long breakouts on AMZN lost 1.24% per trade on average (38.5% winners, 39 trades, ~2y)'"""
     try:

@@ -1035,15 +1035,20 @@ async def gamma_walls(symbol: str, u: dict = User):
 
 
 @app.get("/api/grade/{symbol}")
-async def grade_for(symbol: str, u: dict = User):
-    """Setup grade for long and short hub breakouts on this stock (~2 years), the same numbers the alerts use."""
+async def grade_for(symbol: str, kind: str = "hub", u: dict = User):
+    """Setup grade for this stock (~2 years), the same numbers the alerts use. kind selects the setup measured:
+    hub (default), gapfade, double_top, double_bottom. Always the named setup in the named direction, never another
+    pattern's trades. `universe` is the pattern's record across the test universe, for when the stock's own history is thin."""
     import re
     sym = symbol.upper().strip()
     if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
         raise HTTPException(400, "Unknown symbol")
+    if kind != "hub" and kind not in patterns.KINDS:
+        raise HTTPException(400, "Unknown setup")
     def work():
-        tr = scanner._bt_trades(sym)
-        return {"up": engine.setup_grade(tr, 1), "down": engine.setup_grade(tr, -1), "years": 2}
+        tr = scanner._bt_trades(sym) if kind == "hub" else scanner._bt_pattern_trades(sym, kind)
+        return {"up": engine.setup_grade(tr, 1), "down": engine.setup_grade(tr, -1), "years": 2, "kind": kind,
+                "universe": scanner.universe_record(sym, kind)}
     return await run_in_threadpool(work)
 
 

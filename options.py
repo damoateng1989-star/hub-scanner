@@ -186,7 +186,7 @@ def _contract_view(c: dict, S_entry: float, target: float, fail_px: float, days_
 
 
 def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: float, target_kind: str,
-         res: dict, iv_fallback: float, mode: str, setup: str) -> dict | None:
+         res: dict, iv_fallback: float, mode: str, setup: str, kind: str = "hub") -> dict | None:
     call = d == 1
     hist = _history(res, d)
     need = max(hist["median_days"] or 3, 2) if hist["reached"] >= 3 else 3     # too few examples: assume ~3 trading days
@@ -205,7 +205,7 @@ def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: 
     views = [_contract_view(atm, entry, target, fail_px, need, iv_fallback, "At the money", prep)]
     if itm:
         views.append(_contract_view(itm, entry, target, fail_px, need, iv_fallback, "One strike in the money", prep))
-    return dict(direction=d, side="call" if call else "put", setup=setup, mode=mode, entry=round(entry, 2), edge=round(edge, 2),
+    return dict(direction=d, side="call" if call else "put", setup=setup, kind=kind, mode=mode, entry=round(entry, 2), edge=round(edge, 2),
                 target=round(target, 2), target_kind=target_kind, target_pct=round((target / entry - 1) * 100, 2),
                 expiry=exp.isoformat(), dte=(exp - date.today()).days, contracts=views, history=hist,
                 days_to_target=need, fail_px=round(fail_px, 2))
@@ -288,7 +288,7 @@ def _plan(sym: str) -> dict:
             lv = None
         if lv:
             t = lv["trade"]
-            p = _one(sym, rows_for(t["direction"]), t["direction"], last, t["edge"], t["target"], lv["target_kind"], res, iv0, "live", patterns.KINDS[lv["kind"]])
+            p = _one(sym, rows_for(t["direction"]), t["direction"], last, t["edge"], t["target"], lv["target_kind"], res, iv0, "live", patterns.KINDS[lv["kind"]], lv["kind"])
             out.update(mode="live", plans=[p] if p else [])
         elif state in ("forming", "watching") and st.get("hub"):
             h, up, dn = st["hub"], st.get("shelf_up"), st.get("shelf_down")

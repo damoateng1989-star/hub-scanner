@@ -3491,7 +3491,7 @@ async function openBrief(sym) {
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   BRIEF_SEC = "levels";
   $("brief").scrollTop = 0;
-  loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym);
+  loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); }
@@ -3640,16 +3640,32 @@ function paintNowCell() {
 // ---------------------------------------------------------------- setup grade: how this setup has done on this stock before
 const GRADE = {};
 const GRADE_CLS = {A: "ga", B: "gb", C: "gc", D: "gd", "?": "gq"};
-async function loadGrade(sym) {
-  if (!ME || ME.guest || GRADE[sym]) return;
-  GRADE[sym] = "loading";
-  try { GRADE[sym] = await api(`/api/grade/${encodeURIComponent(sym)}`); } catch (e) { GRADE[sym] = null; }
+// the setup the card is actually showing: a live hub break, else the first live non-hub setup (the headline in
+// briefHead / heroStats), else the hub side price is nearest. The grade must measure this setup, never the hub instead.
+function shownSetup(st) {
+  if (!st) return {kind: "hub", dir: 1, name: "Long breakouts"};
+  const k = st.state, live = k === "breakout_up" || k === "breakdown";
+  if (live) return {kind: "hub", dir: k === "breakout_up" ? 1 : -1, name: k === "breakout_up" ? "Long breakouts" : "Short breakdowns"};
+  const other = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+  if (other) return {kind: other.kind, dir: other.state === "breakout_up" ? 1 : -1, name: other.name};
+  const h = st.hub || {}, px = (LIVE[BRIEF_SYM] && LIVE[BRIEF_SYM].price != null) ? LIVE[BRIEF_SYM].price : st.last_close;
+  const dir = st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : (h.high - px) <= (px - h.low) ? 1 : -1;
+  return {kind: "hub", dir, name: dir === 1 ? "Long breakouts" : "Short breakdowns"};
+}
+async function loadGrade(sym, kind) {
+  kind = kind || "hub";
+  const key = sym + "|" + kind;
+  if (!ME || ME.guest || GRADE[key]) return;
+  GRADE[key] = "loading";
+  try { GRADE[key] = await api(`/api/grade/${encodeURIComponent(sym)}?kind=${encodeURIComponent(kind)}`); } catch (e) { GRADE[key] = "failed"; }   // marked, so a failed fetch isn't retried on every re-render
   if (BRIEF_SYM === sym) { if ($("bfGrade")) $("bfGrade").innerHTML = gradeHTML((BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym));
     if (OPT_CACHE[sym] && $("bfOpt")) $("bfOpt").innerHTML = optionsHTML(OPT_CACHE[sym]); }
 }
-function gradeFor(st, dir) {
-  const G = GRADE[BRIEF_SYM];
-  if (G && G !== "loading") return G[dir === -1 ? "down" : "up"];
+function gradeFor(dir, kind) {
+  kind = kind || "hub";
+  const G = GRADE[BRIEF_SYM + "|" + kind];
+  if (G && G !== "loading" && G !== "failed") return G[dir === -1 ? "down" : "up"];
+  if (kind !== "hub") return null;   // no per-stock history for this setup yet: wait for /api/grade, never grade hub trades instead
   // the ~2-year grade isn't in (still loading, or it failed): grade from the chart's own history meanwhile
   const tr = ((BRIEF_CHART && BRIEF_CHART.trades) || []).filter(t => t.outcome !== "pending" && t.ret != null && t.direction === (dir === -1 ? -1 : 1));
   if (!BRIEF_CHART || !BRIEF_CHART.trades) return null;
@@ -3662,19 +3678,32 @@ function gradeFor(st, dir) {
   return {grade: g, word: w, n, avg: Math.round(avg * 100) / 100, win, pf: Math.round(pf * 100) / 100, short: true};
 }
 const gradeVerb = (g) => g.avg > 0 ? `made <b>${g.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(g.avg).toFixed(2)}%</b>`;
+// the pattern's record across the test universe, shown only when this stock has too few finished trades of the shown setup.
+// The numbers come from /api/grade (UNIVERSE_RECORD in scanner.py), never literals in JS.
+function universeLine(U, n) {
+  const verb = U.avg > 0 ? `made <b>+${U.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(U.avg).toFixed(2)}%</b>`;
+  return `Across all 543 stocks, ${esc(U.label)} ${verb} per trade over two years (${Number(U.n).toLocaleString()} trades, ${U.win}% won). ${n ? `Only ${n} on ${esc(BRIEF_SYM)} itself, too few to grade.` : `None on ${esc(BRIEF_SYM)} itself yet, so no stock grade.`}${U.caveat ? ` ${esc(U.caveat)}` : ""}`;
+}
 function gradeHTML(st) {
-  if (!st || !st.hub) return "";
-  const k = st.state, live = k === "breakout_up" || k === "breakdown";
-  if (!live && k !== "forming" && k !== "watching") return "";
-  const L = LIVE[BRIEF_SYM], px = L && L.price != null ? L.price : st.last_close, h = st.hub;
-  const dir = live ? (k === "breakout_up" ? 1 : -1) : st.near_edge === "up" ? 1 : st.near_edge === "down" ? -1 : (h.high - px) <= (px - h.low) ? 1 : -1;   // in a hub: grade the side price is nearest
-  const g = gradeFor(st, dir);
-  if (!g) return GRADE[BRIEF_SYM] === "loading" || !BRIEF_CHART ? `<div class="sg gq"><span class="sg-b">…</span><div><b>Setup grade</b><small>Checking how this setup has done on ${esc(BRIEF_SYM)}…</small></div></div>` : "";
-  const what = dir === 1 ? "Long breakouts" : "Short breakdowns";
-  const line = g.grade === "?" ? `Only ${g.n} past ${what.toLowerCase()} on ${esc(BRIEF_SYM)}, too few to grade.`
-    : `${what} on ${esc(BRIEF_SYM)}: won <b>${g.pf >= 9.99 ? "every time" : g.pf.toFixed(2) + "×"}</b> what they lost${g.pf >= 9.99 ? "" : ""} (${g.win}% winners, ${gradeVerb(g)} per trade, ${g.n} trades, ${g.short ? "~9 months" : "~2 years"}).`;
-  const warn = g.grade === "D" ? " Losses outweighed wins: treat a trigger here with extra caution." : g.grade === "C" ? " About break-even so far." : "";
-  return `<div class="sg ${GRADE_CLS[g.grade]}"><span class="sg-b">${g.grade}</span><div><b>Setup grade: ${g.word}</b><small>${line}${warn}</small></div></div>`;
+  if (!st) return "";
+  const shown = shownSetup(st);
+  if (shown.kind === "hub") {          // a hub grade needs a hub that's live, forming or being watched
+    const k = st.state, live = k === "breakout_up" || k === "breakdown";
+    if (!st.hub || (!live && k !== "forming" && k !== "watching")) return "";
+  }
+  const dir = shown.dir, kind = shown.kind;
+  const g = gradeFor(dir, kind);
+  if (!g) loadGrade(BRIEF_SYM, kind);   // guarded by the "loading" marker: fetches once, re-renders on completion
+  if (!g && GRADE[BRIEF_SYM + "|" + kind] === "failed") return "";
+  if (!g) return GRADE[BRIEF_SYM + "|" + kind] === "loading" || !BRIEF_CHART || kind !== "hub" ? `<div class="sg gq"><span class="sg-b">…</span><div><b>Setup grade</b><small>Checking how this setup has done on ${esc(BRIEF_SYM)}…</small></div></div>` : "";
+  const what = shown.name;
+  const UG = GRADE[BRIEF_SYM + "|" + kind];
+  const U = (UG && typeof UG === "object") ? UG.universe : null;
+  const disp = g.grade === "?" && U ? {grade: U.grade, word: U.word} : g;   // the universe grade only as a fallback, never over a real per-stock grade
+  const line = g.grade === "?" ? (U ? universeLine(U, g.n) : `Only ${g.n} past ${what.toLowerCase()} on ${esc(BRIEF_SYM)}, too few to grade.`)
+    : `${esc(what)} on ${esc(BRIEF_SYM)}: won <b>${g.pf >= 9.99 ? "every time" : g.pf.toFixed(2) + "×"}</b> what they lost (${g.win}% winners, ${gradeVerb(g)} per trade, ${g.n} trades, ${g.short ? "~9 months" : "~2 years"}).`;
+  const warn = disp.grade === "D" ? " Losses outweighed wins: treat a trigger here with extra caution." : disp.grade === "C" ? " About break-even so far." : "";
+  return `<div class="sg ${GRADE_CLS[disp.grade]}"><span class="sg-b">${disp.grade}</span><div><b>Setup grade: ${disp.word}</b><small>${line}${warn}</small></div></div>`;
 }
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
@@ -4251,9 +4280,14 @@ function optionsHTML(o) {
   const er = o.earnings && o.plans.some(p => o.earnings.date <= p.expiry) ? `<p class="ox-earn">📅 <b>Earnings ${esc(o.earnings.label)}</b>, before these contracts expire. Option prices usually drop right after earnings (the "IV crush"), even when the stock moves your way, and a gap can skip past your exit.</p>` : "";
   const ctr = (c, p, up, h, cond) => {
     const side = up ? "call" : "put", move = up ? "breakout" : "breakdown", good = (c.at_shelf_pct ?? 0) > 0;
-    const g = gradeFor(null, up ? 1 : -1);          // same grade as the top of the card and the alerts
-    const odds = g && g.grade !== "?" ? `Setup grade <b class="sg-in ${GRADE_CLS[g.grade]}">${g.grade} · ${g.word}</b>: ${up ? "long breakouts" : "short breakdowns"} ${gradeVerb(g)} per trade on the stock (${g.win}% winners, ${g.n} trades).${g.grade === "D" ? " The stock usually lost on this setup, so this contract is more likely to lose than win." : ""}`
-      : h.n ? `Reached the aim in ${h.reached} of ${h.n} past setups.` : "Too few past setups to judge the odds yet.";
+    const kind = p.kind || "hub";
+    const g = gradeFor(up ? 1 : -1, kind);          // the plan's setup, in its direction: never the hub grade for another setup
+    if (!g) loadGrade(BRIEF_SYM, kind);
+    const UG = GRADE[BRIEF_SYM + "|" + kind];
+    const U = (UG && typeof UG === "object") ? UG.universe : null;
+    const odds = g && g.grade !== "?" ? `Setup grade <b class="sg-in ${GRADE_CLS[g.grade]}">${g.grade} · ${g.word}</b>: ${kind === "hub" ? (up ? "long breakouts" : "short breakdowns") : esc(p.setup)} ${gradeVerb(g)} per trade on the stock (${g.win}% winners, ${g.n} trades).${g.grade === "D" ? " The stock usually lost on this setup, so this contract is more likely to lose than win." : ""}`
+      : g && U ? `Setup grade <b class="sg-in ${GRADE_CLS[U.grade]}">${U.grade} · ${U.word}</b>: ${esc(U.label)} record across all 543 stocks: ${U.avg > 0 ? `made <b>+${U.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(U.avg).toFixed(2)}%</b>`} per trade over two years (${Number(U.n).toLocaleString()} trades, ${U.win}% won). Too few on ${esc(BRIEF_SYM)} itself to grade.${U.grade === "D" ? " The pattern lost money in the two-year test." : ""}${U.caveat ? ` ${esc(U.caveat)}` : ""}`
+      : kind === "hub" && h.n ? `Reached the aim in ${h.reached} of ${h.n} past setups.` : "Too few past setups to judge the odds yet.";
     const note = c.estimated ? `≈${money(c.mid)} if the ${move} happens (about ${money(c.quote_now)} now, since the stock isn't there yet). ${odds}` : `${money(c.cost)} for one contract (100 shares). ${odds}`;
     return `<div class="oc">
       <div class="oc-t"><b>${day(p.expiry)} $${c.strike} ${side}s</b><small>${cond}</small></div>
