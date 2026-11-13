@@ -43,7 +43,7 @@
 @font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerifItalic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
 @font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
 :root {
-  --paper: #F6F6F3; --card: #FFFFFF; --sunk: #EFEEE9;
+  --paper: #F6F6F3; --card: #F8F9FD; --sunk: #EFEEE9;
   --ink: #141412; --ink2: #5C5B55; --ink3: #9A998F;
   --line: #E4E3DC; --blue: #2F54EB; --blue-ink: #FFFFFF;
   --up: #12805C; --down: #D1352B; --warn: #B7791F;
@@ -817,6 +817,9 @@ html[data-theme="dark"] .hero.ns { background: linear-gradient(180deg, rgba(90,1
 nav.top { background: rgba(246,246,243,.6); }
 html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
 @media (max-width: 640px) { .hero.ns { padding-top: 121px !important; } }
+
+/* light theme: white surfaces become a soft light gray (inputs and small chips stay white) */
+html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl-chart, html:not([data-theme="dark"]) body .card { background: #F8F9FD !important; }
 </style>
 </head>
 <body>
