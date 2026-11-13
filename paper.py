@@ -240,14 +240,27 @@ def _try_entry(b, sym: str, candle_start: pd.Timestamp) -> str | None:
 
 
 # ---------------------------------------------------------------- one trade a day, from the whole board, after the close
-DAILY_MAX = int(os.getenv("PAPER_DAILY_MAX", 1))     # new paper trades per day
+DAILY_MAX = int(os.getenv("PAPER_DAILY_MAX", 5))     # new paper trades per day
 MAX_OPEN = int(os.getenv("PAPER_MAX_OPEN", 10))      # open paper trades at once
 GOAL = int(os.getenv("PAPER_GOAL", 50))              # closed trades before judging the strategy
 
 
 def source() -> str:
-    """'board' (default): one confirmed breakout a day from the whole board. 'watchlist': the old pre-close entries."""
-    return os.getenv("PAPER_SOURCE", "board").strip().lower()
+    """'rules' (default): every A retest (hub or double bottom, longs) on a watchlisted stock, entered after the
+    confirming close. 'board': the old one-breakout-a-day trader (enters at the breakout close, which lost money in the
+    Lab). 'watchlist': the oldest pre-close entries."""
+    return os.getenv("PAPER_SOURCE", "rules").strip().lower()
+
+
+def rules_candidates(window: str, why: dict | None = None) -> list[dict]:
+    """A retests from the live record of today's rules, on stocks someone has on a watchlist."""
+    import paper_opt
+    why = why if why is not None else {}
+    watched = {r["symbol"] for r in db.list_tickers()}
+    allc = paper_opt.a_candidates(window)
+    out = [c for c in allc if c["symbol"] in watched]
+    why.update(rules=True, a_setups=len(allc), watched=len(out))
+    return out
 
 
 def _today_ny() -> str:
@@ -341,6 +354,12 @@ def candidates(window: str, why: dict | None = None) -> list[dict]:
 def _why_text(w: dict) -> str:
     if not w:
         return ""
+    if w.get("rules"):
+        if not w.get("a_setups"):
+            return "no A retest confirmed on this close"
+        if not w.get("watched"):
+            return f"{w['a_setups']} A retest{'s' if w['a_setups'] != 1 else ''} on this close, none on a watchlist"
+        return f"{w['watched']} A retest{'s' if w['watched'] != 1 else ''} on watchlisted stocks, but already held or traded"
     if not w.get("fresh"):
         return (f"none of the {w.get('breakouts', 0)} live breakouts confirmed on this close" if w.get("breakouts")
                 else "no live breakouts on the board")
@@ -390,12 +409,13 @@ def last_checks() -> dict:
 
 def enter_daily(window: str = "midday") -> str | None:
     """The paper trader's one trade a day: the best fresh, confirmed breakout from the whole board."""
-    if not enabled() or source() != "board":
+    if not enabled() or source() not in ("board", "rules"):
         return None      # paper trading off (or watchlist mode): nothing to record
     if window == "midday":                 # wait for a running board sweep to finish before checking the clock
         import time as _t
         from board import SCAN
-        for _ in range(60):
+        _t.sleep(5)
+        for _ in range(180):               # up to 30 minutes
             if not SCAN.get("running"):
                 break
             _t.sleep(10)
@@ -416,7 +436,10 @@ def enter_daily(window: str = "midday") -> str | None:
             return None
         busy = {t["symbol"] for t in db.open_trades()}
         why: dict = {}
-        for c in candidates(window, why):
+        msgs: list[str] = []
+        for c in (rules_candidates(window, why) if source() == "rules" else candidates(window, why)):
+            if entries_today() >= DAILY_MAX or len(db.open_trades()) >= MAX_OPEN:
+                break
             hub_key = f"{c['symbol']}|{c['hub_start']}"
             if c["symbol"] in busy or db.hub_traded(hub_key):
                 continue
@@ -428,6 +451,16 @@ def enter_daily(window: str = "midday") -> str | None:
             db.add_trade(symbol=c["symbol"], direction=c["d"], qty=qty, hub_key=hub_key, hub_low=c["low"], hub_high=c["high"],
                          edge=c["edge"], target=round(c["target"], 2), target_kind=c["kind"],
                          entry_candle=c["candle"], entry_price=fill, entry_order=oid, tp_order=tp)
+            if source() == "rules":
+                msg = (f"🧪 Paper trade: LONG {qty} {c['symbol']} @ {_money(fill)} · A setup ({c.get('setup', 'Retest')})\n"
+                       f"Retest held on the {'1:30 PM' if window == 'midday' else 'previous 4:00 PM'} close · "
+                       f"target {_money(c['target'])} · stop {_money(c['edge'])} (on a 4H close) · reward:risk {c['rr']:.1f}\n"
+                       f"Time limit {scanner.SETTINGS.horizon} candles.")
+                notify.admins(msg)
+                _record(window, True, f"entered {c['symbol']}")
+                msgs.append(msg)
+                busy.add(c["symbol"])
+                continue
             msg = (f"🧪 Paper trade of the day: {'LONG' if c['d'] == 1 else 'SHORT'} {qty} {c['symbol']} @ {_money(fill)}\n"
                    f"Confirmed {'1:30 PM' if window == 'midday' else 'yesterday 4:00 PM'} close outside the hub {_money(c['low'])}–{_money(c['high'])} · "
                    f"{'gamma wall' if c.get('gamma_capped') else 'next shelf' if c['kind'] == 'shelf' else 'ATR target'} {_money(c['target'])} · reward:risk {c['rr']:.1f}\n"
@@ -436,6 +469,8 @@ def enter_daily(window: str = "midday") -> str | None:
             notify.admins(msg)
             _record(window, True, f"entered {c['symbol']}")
             return msg
+        if msgs:
+            return "\n\n".join(msgs)
         _record(window, False, _why_text(why))
     return None
 

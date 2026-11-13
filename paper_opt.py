@@ -137,7 +137,7 @@ def a_candidates(window: str) -> list[dict]:
 def enter_daily_opt(window: str = "midday") -> list[str] | None:
     """After the confirming close: one options trade per A setup (an A-grade retest), up to DAILY_MAX a day and MAX_OPEN open.
     The stop rides in the trade's `edge` field, so the pre-close check exits on it (1 ATR for hubs, the lows for doubles)."""
-    if not enabled() or paper.source() != "board" or not _ready():
+    if not enabled() or paper.source() not in ("board", "rules") or not _ready():
         return None
     if window == "midday":                 # wait for the 1:52 PM sweep that confirms the 1:30 close
         import time as _t
