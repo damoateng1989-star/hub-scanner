@@ -2388,6 +2388,12 @@ const STATES = {
   "follow-through": ["Hit shelf", "--ft"], "snap-back": ["Failed breakout", "--snap"],
   stalled: ["Timed out", "--stall"], none: ["Waiting for a hub", "--idle"], error: ["Error", "--down"],
 };
+// a live setup that isn't the hub (gap fade, double): it outranks a hub that's only resting, so the row says what's actually live
+function liveOther(st) {
+  if (!st || st.error || st.state === "breakout_up" || st.state === "breakdown") return null;
+  return (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown") || null;
+}
+const effState = (st) => { const o = liveOther(st); return o ? o.state : (st && st.error ? "error" : (st && st.state) || "none"); };
 const PRIORITY = { breakout_up: 0, breakdown: 0, forming: 1, watching: 2, "follow-through": 3, "snap-back": 3, stalled: 3, none: 4, error: 5 };
 const ALERT_COLORS = { retest: "--accent", retest_double: "--accent", preclose: "--accent", hub_formed: "--hub", breakout: "--up", breakdown: "--down",
   "follow-through": "--ft", "snap-back": "--snap", stalled: "--stall" };
@@ -2656,14 +2662,14 @@ function details(t) {
 function listRow(t) {
   const st = t.status || {};
   const key = st.error ? "error" : (st.state || "none");
-  const liveSetup = key === "none" ? (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown") : null;
+  const liveSetup = liveOther(st);
   const [label, color] = liveSetup
     ? [esc(liveSetup.name), liveSetup.state === "breakout_up" ? "--up" : "--down"]
     : (STATES[key] || [key, "--idle"]);
   const S = esc(t.symbol);
   return `<details class="lrow" id="c-${S}"${OPEN.has(t.symbol) ? " open" : ""} ontoggle="this.open ? OPEN.add('${S}') : OPEN.delete('${S}')">
     <summary><span class="s">${S}<small>${money(st.last_close)}</small></span>
-      <span class="one">${oneLine(st, key)}</span>
+      <span class="one">${oneLine(st, liveSetup ? "setup" : key)}</span>
       <span class="badge" style="--c: var(${color})">${label}</span><span class="chev">›</span></summary>
     <div class="body">${details(t)}</div></details>`;
 }
@@ -3290,7 +3296,7 @@ function countUp(node, to) {
 }
 let KPI_SIG = "";
 function renderKpis() {
-  const st = (t) => t.status?.error ? "error" : (t.status?.state || "none");
+  const st = (t) => effState(t.status || {});
   const vals = [
     [TICKERS.length, "On my watchlist", "--ink", "#list"],
     [TICKERS.filter(t => st(t) === "forming").length, "Resting in a hub", "--hub", "#list"],
@@ -3462,7 +3468,7 @@ function renderStrip() {
   const el = $("sbShelves"); if (!el) return;
   const rows = TICKERS.filter(t => t.status && !t.status.error);
   el.innerHTML = rows.length ? rows.map(t => `<div class="sb-shelf-row"><button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(LIVE[t.symbol] ? {...t.status, last_close: LIVE[t.symbol].price} : t.status)}
-      <small>${STATE_WORD[t.status.state] || "No setup yet"}</small></button><button class="sb-rm" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">×</button></div>`).join("")
+      <small>${liveOther(t.status) ? `${esc(liveOther(t.status).name)} · ${liveOther(t.status).state === "breakout_up" ? "broke out" : "broke down"}` : STATE_WORD[t.status.state] || "No setup yet"}</small></button><button class="sb-rm" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">×</button></div>`).join("")
     : `<p style="color:#646B78;font-size:13px;margin:4px 8px">Add tickers to see where each one sits against its hub.</p>`;
 }
 function findStatus(sym) {
@@ -3981,13 +3987,13 @@ function renderToday() {
   </div>`;
 
   // needs attention (my list)
-  const st = (t) => t.status?.error ? "error" : (t.status?.state || "none");
+  const st = (t) => effState(t.status || {});
   const urgent = TICKERS.filter(t => ["breakout_up", "breakdown", "forming", "watching"].includes(st(t)))
     .sort((a, b) => (PRIORITY[st(a)] ?? 4) - (PRIORITY[st(b)] ?? 4));
   $("attn").innerHTML = urgent.length ? urgent.slice(0, 6).map(t => {
     const [, c] = STATES[st(t)] || ["", "--idle"];
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')" style="--c:var(${c})"><i></i>
-      <span class="t"><span class="tk">${esc(t.symbol)}</span><span>${oneLine(t.status || {}, st(t))}</span></span><span class="go">›</span></a>`;
+      <span class="t"><span class="tk">${esc(t.symbol)}</span><span>${oneLine(t.status || {}, liveOther(t.status) ? "setup" : st(t))}</span></span><span class="go">›</span></a>`;
   }).join("") : `<div class="empty">${!TICKERS.length
       ? `Nothing yet. Add a few stocks to your <a href="#list">Watchlist</a> and we'll tell you here when one sets up.`
       : `All quiet on your watchlist. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
