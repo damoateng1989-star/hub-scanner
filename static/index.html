@@ -3537,7 +3537,7 @@ function closeBrief() { document.body.classList.remove("brief-open"); $("brief")
 function vizSummary(st) {
   if (!st) return "";
   const h = st.hub, k = st.state;
-  if ((k === "forming" || k === "watching") && h) return `Resting between ${money(h.low)} and ${money(h.high)}. No trade until a 4-hour close outside.`;
+  if ((k === "forming" || k === "watching") && h) return `Resting between ${money(h.low)} and ${money(h.high)}. Nothing counts until a 4-hour close above ${money(st.trigger_up ?? h.high)} or below ${money(st.trigger_down ?? h.low)}; the next is ${nextCloseText()}.`;
   if ((k === "breakout_up" || k === "breakdown") && h) {
     const up = k === "breakout_up", edge = up ? h.high : h.low;
     return `Closed ${up ? "above" : "below"} the hub at ${money(edge)}. Aiming for ${money(st.target)}.`;
@@ -4705,12 +4705,25 @@ async function pollLive() {
   LIVE_T = setTimeout(pollLive, LIVE_OPEN ? 30000 : 300000);    // every 30s while the market is open
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pollLive(); });
+// the next 4-hour close, in words: "the 1:30 PM close", "the 4:00 PM close", "Monday's 1:30 PM close" (holidays not checked)
+function nextCloseText(now) {
+  const ny = new Date((now || new Date()).toLocaleString("en-US", {timeZone: "America/New_York"}));
+  const m = ny.getHours() * 60 + ny.getMinutes(), wd = ny.getDay();
+  if (wd >= 1 && wd <= 5 && m < 13 * 60 + 30) return "the 1:30 PM close";
+  if (wd >= 1 && wd <= 5 && m < 16 * 60) return "the 4:00 PM close";
+  const next = wd === 5 ? "Monday" : wd === 6 ? "Monday" : wd === 0 ? "Monday" : "tomorrow";
+  return `${next === "tomorrow" ? "tomorrow" : next}'s 1:30 PM close`;
+}
 function liveVsHub(st, px) {
   // where the live price sits against the hub, BEFORE the candle closes
   const h = st && st.hub;
   if (!h || !px || !["forming", "watching"].includes(st.state)) return null;
-  if (px > h.high) return ["up", `Price is above the hub top ${money(h.high)}. Not closed yet`];
-  if (px < h.low) return ["down", `Price is below the hub bottom ${money(h.low)}. Not closed yet`];
+  const nc = nextCloseText();
+  const tu = st.trigger_up != null ? Number(st.trigger_up) : h.high, td = st.trigger_down != null ? Number(st.trigger_down) : h.low;
+  if (px >= tu) return ["up", `Above the ${money(tu)} trigger. It counts if ${nc} holds there`];
+  if (px > h.high) return ["up", `Above the hub top, but below the ${money(tu)} trigger. Nothing counts until ${nc}`];
+  if (px <= td) return ["down", `Below the ${money(td)} trigger. It counts if ${nc} holds there`];
+  if (px < h.low) return ["down", `Below the hub bottom, but above the ${money(td)} trigger. Nothing counts until ${nc}`];
   const w = h.high - h.low, pos = w > 0 ? (px - h.low) / w : .5;
   return ["in", `Price is inside the hub · ${pos >= .5 ? (((h.high / px) - 1) * 100).toFixed(2) + "% to the top" : (((px / h.low) - 1) * 100).toFixed(2) + "% to the bottom"}`];
 }
