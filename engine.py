@@ -498,6 +498,10 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         if s.window > 1 and atr_now == atr_now and atr_now > 0:      # the close that would actually end the hub (not just widen it)
             prev = res["close"].iloc[-(s.window - 1):]
             st["trigger_up"] = round(max(h["high"], float(prev.min()) + s.k * atr_now), 2)
+        if atr_now == atr_now and atr_now > 0:
+            st["atr"] = round(atr_now, 2)
+            if not st.get("shelf_up"):           # no shelf above: the trade aims 1 ATR past the hub top (same as target_for)
+                st["target_up"] = round(h["high"] + s.target_atr * atr_now, 2)
             st["trigger_down"] = round(min(h["low"], float(prev.max()) - s.k * atr_now), 2)
         return st
     trade = next((t for t in res["trades"] if t["hub"] is h), None)

@@ -3829,7 +3829,7 @@ function mapPlan(sym, st) {
   const pend = !hubLive && !other && !forming && (st.setups || []).find(x => x.kind === "gapfade" || x.kind === "double_bottom");
   if (hubLive) {
     const d = k === "breakout_up" ? 1 : -1, rt = st.retest;
-    Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, stop: d === 1 ? h.high : h.low,
+    Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, atrTarget: st.target_kind === "atr", stop: d === 1 ? h.high : h.low,
       steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2});
     if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
       P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (${rt.candles_left} candle${rt.candles_left === 1 ? "" : "s"} left).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
@@ -3844,7 +3844,8 @@ function mapPlan(sym, st) {
     P.tone = P.watch ? "bad" : "go";
   } else if (forming) {
     const tu = st.trigger_up || h.high;
-    Object.assign(P, {hub: h, trig: tu, shelf: st.shelf_up ? st.shelf_up.level : null, stop: Math.round((h.high + h.low) / 2 * 100) / 100, steps: "hub"});
+    Object.assign(P, {hub: h, trig: tu, shelf: st.shelf_up ? st.shelf_up.level : st.target_up ?? null, atrTarget: !st.shelf_up && st.target_up != null,
+      stop: Math.round((h.high + h.low) / 2 * 100) / 100, steps: "hub"});
     P.status = "Waiting for confirmation";
     P.sub = px > tu ? `Above ${money(tu)} now, but it hasn't closed there yet. The next check is ${nextCloseText()}.`
       : px > h.high ? "Above the top, but a close here only widens the hub."
@@ -3934,12 +3935,12 @@ function mapChart(P, chart, W) {
   parts.push(`<circle class="mp-now-halo" cx="${xNow}" cy="${y(P.px)}" r="10"/><circle class="mp-now" cx="${xNow}" cy="${y(P.px)}" r="5"/>`);
   // tags on the right, nudged apart so they never overlap
   const tags = [];
-  if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
+  if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.atrTarget ? "Target (1 ATR)" : P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
   if (P.obst) tags.push({v: P.obst.level, cls: "t-obst", t: P.obst.name});
   if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
   if (P.stop != null && P.stop !== P.trig) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
   // each tag sits just above its own line; when that would collide with the tag above, it drops just below its line instead
-  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly - 5; }); tags.sort((a, b) => a.ly - b.ly);
+  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly - 5 < 11 ? g.ly + 13 : g.ly - 5; }); tags.sort((a, b) => a.ly - b.ly);
   for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 14) tags[i].y = Math.max(tags[i].ly + 13, tags[i - 1].y + 14);
   const over = tags.length ? tags[tags.length - 1].y - (H - bot - 12) : 0; if (over > 0) tags.forEach(g => g.y -= over);
   tags.forEach(g => { const txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high") : g.t} ${money(g.v)}`;
@@ -3998,7 +3999,8 @@ function mapAnswer(q, P, st) {
     if (P.trig != null && P.phase === 0) parts.push(`If it never closes above ${money(P.trig)}, there's no trade.`);
     if (P.stop != null && !P.watch) parts.push(`The plan is wrong below <b>${money(P.stop)}</b>${P.hub && P.stop < P.hub.high ? " (the middle of the hub)" : ""}.`);
     if (P.obst) parts.push(`On the way up, the ${P.obst.name.toLowerCase()} at <b>${money(P.obst.level)}</b> could slow it: ${P.obst.why}. Some traders take part off there.`);
-    if (P.shelf == null && !P.watch) parts.push("There's no shelf above in range, so the target is less clear.");
+    if (P.atrTarget && !P.watch) parts.push(`There's no shelf above, so the target is one ATR (its typical 4-hour move) past the hub top: ${money(P.shelf)}. That's what the backtest traded.`);
+    else if (P.shelf == null && !P.watch) parts.push("There's no shelf above in range, so the target is less clear.");
     return (parts.join(" ") || "Nothing specific stands in the way right now.") + earnLine;
   }
   // like I'm new
@@ -4020,7 +4022,8 @@ function paintMap() {
   if (P.trig != null) cells.push(cell("c-trig", P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger", money(P.trig), P.steps === "gapfade" ? "daily close above" : `4H close ${P.dir === 1 ? "above" : "below"}`, "bolt"));
   if (P.stop != null && P.stop !== P.trig && !P.watch) cells.push(cell("c-stop", "Stop", money(P.stop), P.hub && P.stop < P.hub.high && P.stop > P.hub.low ? "middle of the hub" : P.steps === "gapfade" ? "the fade low" : "", ""));
   if (P.obst) cells.push(cell("c-obst", "Next obstacle", money(P.obst.level), P.obst.name));
-  cells.push(cell("c-shelf", P.steps === "hub" || P.steps === "hub_short" || P.steps === "none" ? "Next shelf" : "Target", P.shelf != null ? money(P.shelf) : "–", P.shelf != null ? pctTo(P.shelf) || "above" : "none in range", "flag"));
+  cells.push(cell("c-shelf", P.atrTarget ? "Target" : P.steps === "hub" || P.steps === "hub_short" || P.steps === "none" ? "Next shelf" : "Target", P.shelf != null ? money(P.shelf) : "–",
+    P.atrTarget ? `no shelf above: 1 ATR past the hub top${P.trig != null && P.shelf <= P.trig ? " (below the trigger: no room yet)" : ""}` : P.shelf != null ? pctTo(P.shelf) || "above" : "none in range", "flag"));
   const jr = steps.map(([t, ic], i) => `<div class="mp-j ${i < P.phase ? "done" : i === P.phase ? "now" : ""}"><span class="mp-jd">${mapIc(ic, 14)}</span><small>${t}${i === P.phase ? "<em>Now</em>" : ""}</small></div>`).join("");
   const qs = [["why", "Why is this interesting?"], ["next", "What needs to happen next?"], ["stop", "What could stop it?"], ["new", "Explain it like I'm new"]];
   el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
