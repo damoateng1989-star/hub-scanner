@@ -4303,7 +4303,7 @@ const SETUP_ICON = {
 const setupIcon = (k) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SETUP_ICON[k]}</svg>`;
 function styleCard() {
   const opts = (ME && ME.style_options) || [], picked = new Set((ME && ME.styles_picked) || ["hub"]), pro = isPro();
-  return `<div class="acct"><h3>My trading style</h3><p>Pick the setups you trade. You'll get alerts for these on your watchlist${pro ? "" : ". Hubs are free; triangles, channels and support &amp; resistance alerts are Pro"}.</p>
+  return `<div class="acct"><h3>My trading style</h3><p>Pick the setups you trade. You'll get alerts for these on your watchlist${pro ? "" : ". Hubs are free; double tops &amp; bottoms and gap fade alerts are Pro"}.</p>
     <div class="styles">${opts.map(o => { const lock = !pro && o.key !== "hub";
       return `<label class="style-opt${lock ? " lock" : ""}"><input type="checkbox" value="${o.key}" ${picked.has(o.key) ? "checked" : ""} ${lock ? "disabled" : ""} onchange="saveStyles()">
         <span class="so-ic">${setupIcon(o.key)}</span><span><b>${esc(o.name)}${lock ? ' <em>Pro</em>' : ""}${o.key === "hub" ? ' <em class="core">Core</em>' : ""}</b><small>${esc(o.about)}</small></span></label>`; }).join("")}</div>
@@ -4853,9 +4853,7 @@ async function loadRecord() {
   try { r = await api("/api/record?pattern=" + RECORD_PAT); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
-  const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["flag_bull", "Bull flags"], ["flag_bear", "Bear flags"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"],
-    ["triangle", "Triangles"], ["channel_down", "Descending channels"], ["channel_up", "Ascending channels"], ["sr", "Support & resistance"], ["gapfade", "Post-earnings gap fade & rip"],
-    ["flush", "Flush & reclaim"], ["fail_down", "Failed breakdowns"], ["fail_up", "Failed breakouts"]];
+  const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["gapfade", "Post-earnings gap fade & rip"]];
   const T = r.tested, mo = (t) => t ? new Date(t).toLocaleDateString(undefined, {month: "short", year: "numeric"}) : "";
   const testedBox = T && T.rows && T.rows.length ? `<div class="rec-test"><div class="eyebrow" style="margin:0 0 4px">Two-year test of today's rules</div>
       <p class="note" style="margin:0 0 12px">The setups NextShelf alerts on now, replayed on ${T.symbols} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}. A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>

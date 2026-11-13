@@ -50,6 +50,7 @@ STYLES = {   # what members pick in Settings
 FLUSH_DROP = 0.05       # flush day: a daily close 5%+ below the day before (often earnings)
 FLUSH_FROM = 5          # the level to reclaim = the highest close of the 5 sessions before the flush
 FLUSH_WITHIN = 10       # the reclaim (a daily close back above that level) must come within 10 sessions
+LIVE_STYLES = {"hub"} | {STYLE_OF[k] for k in LIVE_KINDS}   # what the site offers: Settings, Results tabs, menus
 FAKE_WITHIN = 3         # the fake-out must come within this many candles of the hub, and the reclaim within this many of the fake-out
 FAKE_VOL = 1.2          # the reclaim candle needs this much of normal volume for its time slot
 

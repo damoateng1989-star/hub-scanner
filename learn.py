@@ -98,7 +98,7 @@ MODULES = [
 <p><b>Heads-up — HONA.</b> Broke out on the 1:30 PM close at $164.18, out of a $149.59–$161.72 warehouse hub. That close isn't the entry. The plan is to wait for a 4-hour candle that pulls back near the hub top ($161.72) and closes above it. If that retest grades A, the entry is that close, the stop 1 ATR below it, and the aim the next shelf at $207.41. A gamma wall sits at $165, right above the hub top — the first test after any entry.</p>
 <div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 320" role="img" aria-label="Diagram: HONA at the Nov 9 close. Hub 149.59 to 161.72, entry 164.18, gamma wall 165, halfway 184.57, target shelf 207.41." style="display:block;width:100%;height:auto;"><rect x="180" y="214" width="240" height="46" fill="rgba(47,84,235,0.08)"/><line x1="180" y1="214" x2="420" y2="214" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="260" x2="420" y2="260" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="300" y1="30" x2="300" y2="280" stroke="#141412" stroke-width="2"/><line x1="180" y1="40" x2="420" y2="40" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="127" x2="420" y2="127" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="180" y1="201" x2="420" y2="201" stroke="#DC0058" stroke-width="1.5" stroke-dasharray="6 5"/><circle cx="300" cy="205" r="7" fill="#3DD68C"/><line x1="178" y1="195" x2="292" y2="202" stroke="#141412" stroke-width="1" opacity="0.45"/><text x="440" y="44" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">next shelf $207.41</text><text x="440" y="131" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">halfway $184.57</text><text x="440" y="205" font-family="JetBrains Mono, monospace" font-size="12" fill="#DC0058">gamma wall $165</text><text x="170" y="192" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">entry $164.18</text><text x="170" y="222" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub top $161.72</text><text x="170" y="264" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub bottom $149.59</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">HONA, Nov 9 close.</b> Warehouse hub, 6 sessions. Breakout close $164.18 · wall $165 · target $207.41. The entry waits for a retest of the hub top at $161.72.</p></div>
 <p><b>Watch — ABBV, GOOG, GOOGL.</b> All three are pressing the top of their hubs: ABBV at $294.17 under a $294.89 top, GOOG at $287.61 under $289.92, GOOGL at $289.61 under $291.67. Nothing to do until a 4-hour candle closes above the hub top, and then the entry is still the retest.</p>
-<p><b>Wait — the rest.</b> AAPL, AMZN, ARM, NVDA, QQQ, SPCX: no live setup. IBM's breakdown and ARM's bear flag are days old — moves that already happened, not entries. NVDA reports Nov 17, so nothing new goes on there into earnings.</p>
+<p><b>Wait — the rest.</b> AAPL, AMZN, ARM, NVDA, QQQ, SPCX: no live setup. IBM's and ARM's breakdowns are days old — moves that already happened, not entries. NVDA reports Nov 17, so nothing new goes on there into earnings.</p>
 <p>Start by watching a few alerts play out, and paper-trade them in your broker's practice account before any real money. If a setup's plan doesn't make sense to you, skip it — there will be another one at the next close.</p>""",
          ["The breakout close is a heads-up; the entry is the retest of the hub edge.",
           "Retest alerts are graded: an A setup comes with the entry plan, a watch doesn't.",
@@ -295,7 +295,7 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
           ["Find another trade quickly", "Wait for a real setup; don't force a trade", "Double the size on the next one"],
           1, "Revenge trading is forcing it. The next trade should come from a setup, not from the loss.")),
     ]),
-    ("More setups", "Live now: double tops & bottoms and the gap fade & rip. The rest are paused: NextShelf isn't alerting on them because the two-year test found no edge. They're here so you can recognise them.", [
+    ("More setups", "The two other setups NextShelf alerts on: double tops & bottoms, and the gap fade & rip.", [
         ("double-tops-and-bottoms", "Double tops and bottoms", 3, """
 <p>A <b>double top</b> is two tests of the same high, a few sessions apart, with a real dip between them. A <b>double bottom</b> is the mirror: two tests of the same low with a bounce between.</p>
 <h2>What NextShelf checks</h2>
@@ -410,6 +410,9 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
     ]),
 ]
 
+# paused setups are off the site (Nov 12): their lessons are kept in this file but not published
+_OFF_LESSONS = {"flags", "triangles", "channels", "support-and-resistance", "flush-and-reclaim", "failed-breakdowns"}
+MODULES = [(t, d, [l for l in ls if l[0] not in _OFF_LESSONS]) for t, d, ls in MODULES]
 LESSONS = [(m, l) for m in MODULES for l in m[2]]
 
 
