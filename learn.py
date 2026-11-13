@@ -116,8 +116,7 @@ MODULES = [
 <ul><li><b>Room 1.5× or more:</b> the distance to the next shelf is at least 1.5 times the distance back to the middle of the hub.</li>
 <li><b>A real hub:</b> it held for <b>4 or more sessions</b>.</li>
 <li><b>Stop 1 ATR from the entry</b>, on a 4-hour close.</li></ul>
-<h2>The B setup</h2>
-<p>A retest that just misses the A bars is a <b>B setup</b>: room of <b>1.0× or more</b> and a hub of <b>3 or more sessions</b>. It comes with the same plan and the same 1 ATR stop, by text only (no phone call). The B bar is looser and <b>hasn't been measured yet</b>, so size smaller than you would on an A. Anything below B arrives as watch only.</p>
+
 <p>Measured on longs (A setups): 319 trades, about half winners, <b>+0.5% per trade</b> on average. The same rule on the short side lost money in the test, so short retests arrive as watch only. A retest that misses a bar arrives as <b>watch only</b>, with the reason.</p>
 <h2>Double bottoms and tops</h2>
 <p>Double tops and bottoms get the same treatment: the breakout through the neckline is a heads-up, and the entry is the retest of the neckline. Their A setup is a retest that closes at <b>4:00 PM</b> and isn't past halfway to the aim, with the stop past the far side of the pattern.</p>
@@ -304,7 +303,6 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
 <p>A 4-hour <b>close through the neckline</b> within about 10 sessions of the second peak is the heads-up. A double top breaks down; a double bottom breaks up. If price makes a new high (or low) first, the pattern is void.</p>
 <h2>The entry: the retest</h2>
 <p>Like hubs, the entry is the <b>retest</b>: within 5 four-hour candles, a pullback to the neckline that closes back on the breakout side. It's an <b>A setup</b> when that retest is the <b>4:00 PM close</b> and price isn't past halfway to the aim. The stop is a close past the <b>far side</b> of the pattern: below the two lows for a double bottom. Measured on double bottoms, about 3 in 4 of those trades won. Double tops lost money on the same rule, so their retests arrive as watch only.</p>
-<p>The same retest at the <b>1:30 PM close</b> is a <b>B setup</b>: same plan and stop, a looser bar that hasn't been measured yet, so size smaller.</p>
 <p>That far-side stop is wider than a hub's, so size the position from it.</p>""",
          ["Two tests of the same level, with a real dip between.",
           "The close through the neckline is the heads-up; the retest is the entry.",

@@ -36,7 +36,7 @@ def record_start() -> str:
     return v
 
 
-RULES = "rules"   # the live record of today's rules: A/B retests (hubs, double bottoms) and gap fades, longs only
+RULES = "rules"   # the live record of today's rules: A retests (hubs, double bottoms) and gap fades, longs only
 
 
 def rules_start() -> str:
@@ -51,7 +51,7 @@ def rules_start() -> str:
 
 def _record_rules(sym: str, c4: pd.DataFrame, res: dict, pa: dict | None, start: pd.Timestamp):
     """Log the trades today's rules would take, the way the alerts give them: hub and double-bottom retests that grade
-    A or B (entry = the retest close; stop 1 ATR for hubs, the far side for doubles; aim the target; 10 candles), and
+    A (entry = the retest close; stop 1 ATR for hubs, the far side for doubles; aim the target; 10 candles), and
     gap fades (their own daily plan). Shorts are watch only, so they are never logged."""
     import lab_exits
     idx, s = res["close"].index, scanner.SETTINGS

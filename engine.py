@@ -381,7 +381,7 @@ def retest_check(close, low, high, atr, i0, d, edge, j):
     return "retest" if (touched and near) else None
 
 
-B_ROOM, B_SESSIONS = 1.0, 3      # the B setup: one notch looser than A (room 1.5, 4 sessions). Not measured yet; the Lab's B rows judge it
+B_ROOM, B_SESSIONS = 1.0, 3      # the old B bar (room 1.0, 3 sessions): tested and dropped Nov 13; kept so the Lab's B rows still measure it
 
 
 def retest_grade(trade, entry, atr_entry):
@@ -405,8 +405,8 @@ def retest_grade(trade, entry, atr_entry):
     if sessions < 4:
         reasons.append(f"pattern ran {sessions} sessions — below the 4-session bar")
     is_a = d == 1 and rr is not None and rr >= 1.5 and sessions >= 4
-    is_b = not is_a and d == 1 and rr is not None and rr >= B_ROOM and sessions >= B_SESSIONS
-    return dict(is_a=is_a, grade="A" if is_a else "B" if is_b else None,
+    # B (room 1.0+, 3+ sessions) was tried Nov 12 and lost money in the Lab (586 trades, -0.10%): watch only again
+    return dict(is_a=is_a, grade="A" if is_a else None,
                 rr=rr, sessions=sessions, stop=stop, reasons=reasons)
 
 
@@ -430,8 +430,8 @@ def double_retest_grade(trade, entry, is_pm):
     if chasing:
         reasons.append("entry is past halfway to the target — chasing")
     is_a = d == 1 and is_pm and not chasing
-    is_b = not is_a and d == 1 and not chasing              # the B setup: the same retest at the 1:30 PM close
-    return dict(is_a=is_a, grade="A" if is_a else "B" if is_b else None, stop=stop, reasons=reasons)
+    # B (the same retest at the 1:30 PM close) lost money in the Lab (125 trades, -0.18%): watch only again
+    return dict(is_a=is_a, grade="A" if is_a else None, stop=stop, reasons=reasons)
 
 
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
