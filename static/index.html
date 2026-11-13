@@ -2407,8 +2407,21 @@ const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefine
 const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : "";
 const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"}) : "";
 const TV_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 4v16M6 8h-2v6h2M12 6v14M12 9h-2v7h2M18 3v15M18 6h-2v6h2"/><path d="M15 21h6v-6" opacity=".0"/></svg>`;
-const rhUrl = (s) => `https://robinhood.com/stocks/${encodeURIComponent(s.toUpperCase())}`;
-const wbUrl = (s, ex) => ex ? `https://www.webull.com/quote/${ex}-${encodeURIComponent(s.toLowerCase())}` : null;
+const IS_ANDROID = /Android/i.test(navigator.userAgent || "");
+// On Android, open the broker's app when it's installed and fall back to the website when it isn't
+// (an intent link with the app's package and a browser fallback). iPhones use the plain link, which
+// opens the app through the broker's universal links when the broker supports them.
+const appHref = (url, pkg) => {
+  if (!url || !IS_ANDROID) return url;
+  const u = new URL(url);
+  return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=${pkg};S.browser_fallback_url=${encodeURIComponent(url)};end`;
+};
+if (IS_ANDROID) document.addEventListener("click", (e) => {   // open intent links in place, not a blank new tab
+  const a = e.target.closest && e.target.closest('a[href^="intent:"]');
+  if (a) { e.preventDefault(); location.href = a.href; }
+});
+const rhUrl = (s) => appHref(`https://robinhood.com/stocks/${encodeURIComponent(s.toUpperCase())}`, "com.robinhood.android");
+const wbUrl = (s, ex) => ex ? appHref(`https://www.webull.com/quote/${ex}-${encodeURIComponent(s.toLowerCase())}`, "org.dayup.stocks") : null;
 const brokerLinks = (s, ex, named) => {
   const wb = wbUrl(s, ex);
   if (named) return `${wb ? `<a class="broker named" href="${wb}" target="_blank" rel="noopener" title="Open ${esc(s)} in Webull"><img class="broker-logo" src="/vendor/webull-mark.png" alt="" width="16" height="16"><span class="broker-name">Webull</span></a>` : ""}<a class="broker named" href="${rhUrl(s)}" target="_blank" rel="noopener" title="Open ${esc(s)} in Robinhood"><img class="broker-logo" src="/vendor/robinhood.svg" alt="" width="16" height="16"><span class="broker-name">Robinhood</span></a>`;
