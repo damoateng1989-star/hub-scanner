@@ -26,7 +26,7 @@
 </script>
 <meta name="theme-color" content="#F6F6F3">
 <title>NextShelf: Pick a setup, trade it for years · Hub-breakout alerts</title>
-<meta name="description" content="Built for swing traders with day jobs. NextShelf checks over 540 stocks and ETFs after every 4-hour close for tight ranges, warns you before a breakout closes, and targets the next shelf.">
+<meta name="description" content="Built for swing traders with day jobs. NextShelf sweeps 400 stocks after every 4-hour close, from a 543-stock universe, for tight ranges, warns you before a breakout closes, and targets the next shelf.">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -866,17 +866,17 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
       <div class="sc-stats">
         <div><small>Trigger</small><b>$254.78</b><i>4H close above</i></div>
         <div><small>Aim</small><b>$271.27</b><i class="up">+6.5% from trigger</i></div>
-        <div><small>Wrong if</small><b>$254.78</b><i>4H close back below</i></div>
+        <div><small>Wrong if</small><b>$246.07</b><i>4H close below the hub</i></div>
       </div>
       <div class="sc-tabs" role="tablist"><button data-t="lv" class="on">Levels</button><button data-t="gp">Game plan</button><button data-t="ox">Options</button><button data-t="tr">Track record</button></div>
     </div>
     <div class="sc-body">
       <div class="sc-pane on" data-p="lv"><div class="sc-k">Level map</div>
         <div class="sc-lm">
-          <div class="up"><span>Next shelf above<small>zone $271.27–276.19</small></span><b>$271.27<small>+9.2%</small></b></div>
-          <div class="hub"><span>Hub top<small>close above = long setup</small></span><b>$254.78<small>+2.5%</small></b></div>
+          <div class="up"><span>Next shelf above<small>zone $271.27–276.19</small></span><b>$271.27<small>+9.2% from last close</small></b></div>
+          <div class="hub"><span>Hub top<small>close above = long setup</small></span><b>$254.78<small>+2.5% from last close</small></b></div>
           <div class="now"><span>Last 4-hour close</span><b>$248.48</b></div>
-          <div class="hub"><span>Hub bottom<small>close below = short setup</small></span><b>$246.07<small>−1.0%</small></b></div>
+          <div class="hub"><span>Hub bottom<small>close below = short setup</small></span><b>$246.07<small>−1.0% from last close</small></b></div>
           <div class="dn"><span>Next shelf below<small>zone $236.18–242.27</small></span><b>$242.27<small>−2.5%</small></b></div>
         </div></div>
       <div class="sc-pane" data-p="gp"><div class="sc-k">Game plan</div>
@@ -1139,7 +1139,7 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
     <details><summary>Which setups does NextShelf find?</summary><p>Three: hubs (the core setup), double tops and bottoms, and the post-earnings gap fade &amp; rip. For hubs and doubles, the close outside the pattern is the heads-up and the entry is the retest; the gap fade enters on a daily close back above the gap-day high. Each was replayed over two years on 500+ stocks, and those results sit next to the live log below.</p></details>
     <details><summary>Does NextShelf check gamma walls?</summary><p>Yes, on confirmed breakouts. NextShelf finds the strike with the most options gamma stacked near the price, from the Cboe delayed options chain, refreshed daily. If that wall sits between the breakout and the next shelf, the Shelf card and the alert flag it, because dealer hedging tends to slow price there. It is a flag, not a veto: the setup still counts.</p></details>
     <details><summary>Does NextShelf trade its own setups?</summary><p>On paper only. NextShelf paper-trades one setup a day in a paper account, with no real money, to test its rules in real time. The public track record above counts every hub setup NextShelf logs, not just the paper trades. Members can open any setup in Webull or Robinhood straight from the setups list or the chart.</p></details>
-    <details><summary>Which stocks are covered?</summary><p>Every S&amp;P 500 and Nasdaq-100 stock plus major ETFs, over 540 in all. You can also add any US-listed ticker to your own watchlist.</p></details>
+    <details><summary>Which stocks are covered?</summary><p>Every S&amp;P 500 and Nasdaq-100 stock plus major ETFs, 543 in all. You can also add any US-listed ticker to your own watchlist.</p></details>
     <details><summary>Is this financial advice?</summary><p>No. NextShelf is an educational tool describing past price behavior. Setups fail. Do your own research and never risk money you can't afford to lose.</p></details>
   </div>
 </div></section>
@@ -1223,7 +1223,7 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
     if (s.next) {
       const d = new Date(s.next), ny = {timeZone: "America/New_York"};
       const day = d.toLocaleDateString("en-US", {...ny, weekday: "short"}) === new Date().toLocaleDateString("en-US", {...ny, weekday: "short"}) ? "today" : d.toLocaleDateString("en-US", {...ny, weekday: "long"});
-      $("bpNext").textContent = `Next check ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
+      $("bpNext").textContent = `Next board sweep ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
     }
     if (s.tested && s.tested.rows && s.tested.rows.length) {
       const T = s.tested, mo = (t) => t ? new Date(t).toLocaleDateString("en-US", {month: "short", year: "numeric"}) : "";
@@ -1269,14 +1269,14 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
   const root = document.getElementById("flowDemo"); if (!root) return;
   const svg = document.getElementById("flSvg");
   const STEPS = [
-    {t: "After every 4H close", k: "Sika sweeps", pill: true, p: "Over 540 stocks checked about 20 minutes after each 4-hour close.", ph: "1:52"},
+    {t: "After every 4H close", k: "Sika sweeps", pill: true, p: "400 stocks swept about 20 minutes after each 4-hour close, from a 543-stock universe.", ph: "1:52"},
     {t: "Day 1–2", k: "A hub forms", p: "Price coils in a tight range for 4+ four-hour candles.", ph: "4:22"},
     {t: "3:45 PM", k: "15 minutes to the close", p: "Price is outside the hub. Pro members get a heads-up.", ph: "3:45"},
     {t: "4:00 PM", k: "The candle closes", p: "Breakout confirmed, aiming for the next shelf.", ph: "4:00"},
     {t: "Next sessions", k: "Next shelf", p: "Target reached, and logged in the track record.", ph: "11:31"},
   ];
   const NOTES = [
-    {h: "Sika", t: "Swept over 540 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs.", live: true},
+    {h: "Sika", t: "Swept 400 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs.", live: true},
     {h: "Telegram", t: "🟦 AMD: new hub", b: "4H closes held $176.80–$178.01 for 6 sessions. Watching for a close outside."},
     {h: "Telegram", t: "⚠️ AMD: trading above hub, ~15 min before the 4H close", b: "Now $179.40. If the candle closes above $178.01, that's the breakout.", pro: true},
     {h: "Telegram", t: "🚀 AMD: 4H close above hub", b: "Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01."},
@@ -1361,7 +1361,7 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
   const shelf = (sym) => "/app?shelf=" + encodeURIComponent(sym) + "#discover";
   let B = null, loaded = false, ME = null;
   function render() {
-    if (!B || !B.universe) { $("spLine").innerHTML = "I check <b>over 540</b> stocks and ETFs after every 4-hour close for tight ranges that are about to break. Ask me about any stock."; return; }
+    if (!B || !B.universe) { $("spLine").innerHTML = "I check <b>400</b> stocks after every 4-hour close, from a 543-stock universe, for tight ranges that are about to break. Ask me about any stock."; return; }
     const live = B.locked ? B.live_count : B.live.length, near = B.locked ? B.near_count : B.near.length, hubs = B.forming_count ?? B.forming.length;
     const when = B.updated ? new Date(B.updated).toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) : "";
     $("spLine").innerHTML = `I swept <b>${B.universe}</b> stocks${when ? " at the last 4-hour close (" + esc(when) + " ET)" : ""}: <b>${live}</b> breakout${live === 1 ? "" : "s"}, <b>${near}</b> at the edge of a hub, and <b>${hubs}</b> resting in hubs.`;
@@ -1371,7 +1371,7 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
     const lockedN = (B.live_count || 0) + (B.near_count || 0);
     $("spLock").hidden = !(B.locked && lockedN);
     if (B.locked && lockedN) $("spLock").innerHTML = `🔒 ${B.live_count} breakout${B.live_count === 1 ? "" : "s"} and ${B.near_count} at the edge are ${ME && !ME.guest ? "on Pro" : "for members"}. ${ME && !ME.guest ? '<a href="/app#account">See Pro</a>' : (window.NS_SIGNUPS_OPEN ? '<a href="/login#signup">Sign up free</a>' : '<a href="#join" onclick="document.getElementById(\'scoutFab\').click()">Join the waitlist</a>')} to see them.`;
-    const n = live + near; $("sfBadge").hidden = !n; $("sfBadge").textContent = n; $("sfBadge").title = `${live} breaking out now, ${near} at a hub edge`; $("scoutFab").setAttribute("aria-label", `Sika: ${live} breaking out now, ${near} at a hub edge`);
+    const n = live + near; $("sfBadge").hidden = !n || !ME || ME.guest; $("sfBadge").textContent = n; $("sfBadge").title = `${live} breaking out now, ${near} at a hub edge`; $("scoutFab").setAttribute("aria-label", `Sika: ${live} breaking out now, ${near} at a hub edge`);
     const so = document.querySelector(".sp-open"); if (so && !(ME && !ME.guest)) { so.href = "/login"; so.textContent = "Sign in to browse every setup →"; }
   }
   async function load() {

@@ -4436,7 +4436,7 @@ function setupCard(x) {
       : `<b>$${dd} ${up ? "below" : "above"} the trigger</b><br>${d.toFixed(1)}% ${up ? "below" : "above"} the ${lineName}`;
     meta = gap ? `Trigger: a daily close above <b>${money(trig)}</b> · gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left<br><b>Plan if it triggers:</b> enter at that close, out on a daily close below <b>${money(x.lower)}</b>, target 2× that risk, 10 days at most.`
       : (x.kind === "double_top" ? `Watch only: double tops lost money in the two-year test, so there's no entry plan on the short side.`
-        : x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> if the retest close is the 4:00 PM close and the entry isn't past halfway to the target (a <b>B setup</b> if it's the 1:30 PM close). Stop then sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
+        : x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> on a 4:00 PM retest close (a <b>B setup</b> on a 1:30 PM close), if the entry isn't past halfway to the target. Stop sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
   }
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
@@ -4744,7 +4744,7 @@ function renderScout() {
   else if (MY_SCAN) {
     const hits = MY_SCAN.results.filter(r => ["breakout_up", "breakdown", "forming"].includes(r.state));
     line = `Checked your <b>${MY_SCAN.results.length}</b> ticker${MY_SCAN.results.length === 1 ? "" : "s"} just now. ` + (hits.length ? `<b>${hits.length}</b> worth watching:` : "Nothing is setting up yet. Let the trade come to you.");
-  } else line = guest ? "I check over 540 stocks and ETFs after each 4-hour close. Sign in and I'll scan your own watchlist on demand."
+  } else line = guest ? "I sweep 400 stocks after each 4-hour close, from a 543-stock universe. Sign in and I'll scan your own watchlist on demand."
     : `I sweep the market after every 4-hour close${sc.next ? ` (next: <b>${agDay(sc.next)}</b>)` : ""}. Want me to check your watchlist right now?`;
   $("spLine").innerHTML = line;
   $("spActs").innerHTML = guest ? `<a class="sp-go" href="/login#signup">Sign up free to scan</a><a class="sp-alt" href="#discover" onclick="toggleScout(false)">See the market board</a>`
@@ -4819,7 +4819,7 @@ function renderAgent(sc) {
     const total = BOARD && BOARD.universe;
     $("agLine").innerHTML = !BOARD || !total ? `Waiting for the first sweep of the market.`
       : `Swept <b>${total}</b> stocks${last ? " " + agDay(last) : ""}: <b style="color:#3DD68C">${live}</b> breakout${live === 1 ? "" : "s"}, <b style="color:#F2C14E">${near}</b> at the edge.`
-        + (sc.next ? (() => { const c = closeOf(etHM(sc.next)); return ` Next closing check ${agDay(sc.next)}${c ? `, confirming the ${c} candle` : ""}.`; })() : "");
+        + (sc.next ? (() => { const c = closeOf(etHM(sc.next)); return ` Next board sweep ${agDay(sc.next)}${c ? `, showing the ${c} candle` : ""}.`; })() : "");
     $("agFinds").innerHTML = boardFinds();
   }
 }
