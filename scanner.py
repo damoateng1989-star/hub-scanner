@@ -57,6 +57,28 @@ def load_4h(symbol: str, days: int) -> pd.DataFrame:
 
 
 
+def forming_candle(sym: str, now: pd.Timestamp | None = None) -> dict | None:
+    """The 4H candle that's still forming (open/high/low/close so far), for drawing it faded on the setup map.
+    None outside market hours or when no bars have printed yet. Uses the shared bar cache (load_4h)."""
+    now = pd.Timestamp.now(tz="UTC") if now is None else now
+    if not data.market_open(now):
+        return None
+    load_4h(sym, SCAN_DAYS)                                   # fills / refreshes the cache (90 s)
+    hit = _BARS.get((sym, SCAN_DAYS))
+    bars = hit[1] if hit else None
+    if bars is None or bars.empty:
+        return None
+    start_ny = engine.current_candle_start(now)
+    part = bars[bars.index >= start_ny.tz_convert("UTC")]
+    if part.empty:
+        return None
+    end_min = engine.CLOSE_MIN if start_ny.hour >= 13 else engine.MID_MIN
+    return dict(time=int(start_ny.tz_localize(None).timestamp()), open=round(float(part["Open"].iloc[0]), 2),
+                high=round(float(part["High"].max()), 2), low=round(float(part["Low"].min()), 2),
+                close=round(float(part["Close"].iloc[-1]), 2),
+                closes_at=f"{(end_min // 60 - 1) % 12 + 1}:{end_min % 60:02d} PM")
+
+
 PROFILE_DAYS = int(os.getenv("VOLUME_PROFILE_DAYS", 30))
 
 

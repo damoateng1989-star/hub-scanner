@@ -1071,6 +1071,17 @@ async def news_for(symbol: str, candles: int | None = None, u: dict = User):
     return await run_in_threadpool(lambda: news.for_card(sym, candles))
 
 
+@app.get("/api/forming/{symbol}")
+async def forming_candle(symbol: str, u: dict = User):
+    """The 4H candle still forming, polled by the setup map while it's open (market hours only)."""
+    sym = scanner.clean_symbol(symbol)
+    try:
+        c = await run_in_threadpool(scanner.forming_candle, sym)
+    except Exception:
+        c = None
+    return dict(symbol=sym, candle=c)
+
+
 @app.get("/api/chart/{symbol}")
 async def chart_data(symbol: str, tf: str = "4h", u: dict = User):
     try:

@@ -621,7 +621,13 @@ def chart(sym: str, tf: str = "4h", lab_mode: bool = False) -> dict:
     trades = [dict(time=t(idx[x["i0"]]), direction=x["direction"], target=round(x["target"], 2),
                    outcome=x["outcome"], chase=x["chase"], ret=None if x.get("ret") is None else round(x["ret"], 3),
                    outcome_time=t(idx[x["oi"]]) if x["oi"] is not None else None) for x in res["trades"]]
-    out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st,
+    forming = None
+    if tf == "4h":
+        try:
+            forming = scanner.forming_candle(sym)
+        except Exception:
+            forming = None
+    out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st, forming=forming,
                stats=engine.stats(res["trades"]), watching=db.get_ticker(sym) is not None)
     try:      # other setups, drawn as lines on the chart
         pa = patterns.analyze_all(c4, res, scanner.SETTINGS)

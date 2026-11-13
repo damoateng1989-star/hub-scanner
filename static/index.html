@@ -3546,14 +3546,14 @@ async function openBrief(sym) {
   loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); }
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
   } catch (e) {
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
     if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#9AA0AC;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
   }
 }
-function closeBrief() { document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
+function closeBrief() { clearTimeout(MAP_FT); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
   renderStrip(); }
 // one-line summary for the top of the sheet (Patch 77); the long version lives in summary()
 function vizSummary(st) {
@@ -3887,6 +3887,8 @@ const mapIc = (n, s) => `<svg width="${s || 16}" height="${s || 16}" viewBox="0 
 function mapChart(P, chart, W) {
   const small = W < 560, H = small ? 260 : 330, R = small ? 54 : 64, top = 16, bot = 22, plotR = W - R, futX = plotR * (small ? 0.6 : 0.7);
   const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(W < 560 ? -36 : -64) : [];
+  const fc = mapFormingCandle(P, chart, cs);
+  if (fc) { cs.push(fc); if (cs.length > (W < 560 ? 36 : 64)) cs.shift(); }
   const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
   let lo = Math.min(...lv, ...cs.map(c => c.low)), hi = Math.max(...lv, ...cs.map(c => c.high));
   const pad = (hi - lo) * 0.08 || hi * 0.01; lo -= pad; hi += pad;
@@ -3917,7 +3919,7 @@ function mapChart(P, chart, W) {
   if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${plotR - futX}" height="12"/>`);
   // candles
   cs.forEach((c, i) => { const up = c.close >= c.open, X = cx(i), yo = y(c.open), yc = y(c.close);
-    parts.push(`<line class="${up ? "mp-cu" : "mp-cd"}" x1="${X}" x2="${X}" y1="${y(c.high)}" y2="${y(c.low)}"/><rect class="${up ? "mp-cuf" : "mp-cdf"}" x="${X - bw / 2}" y="${Math.min(yo, yc)}" width="${bw}" height="${Math.max(1, Math.abs(yc - yo))}"/>`); });
+    parts.push(`<g${c.forming ? ' class="mp-cf"' : ""}><line class="${up ? "mp-cu" : "mp-cd"}" x1="${X}" x2="${X}" y1="${y(c.high)}" y2="${y(c.low)}"/><rect class="${up ? "mp-cuf" : "mp-cdf"}" x="${X - bw / 2}" y="${Math.min(yo, yc)}" width="${bw}" height="${Math.max(1, Math.abs(yc - yo))}"/></g>`); });
   // level lines
   const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${plotR}" y1="${y(v)}" y2="${y(v)}"/>`;
   const hx = hubX0 != null ? hubX0 : n ? Math.max(8, xNow - 12 * step) : futX - 40;
@@ -3949,6 +3951,34 @@ function mapChart(P, chart, W) {
   return `<svg class="mp-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Setup map for ${esc(P.sym)}">
     <defs><marker id="mpArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow"/></marker>
     <marker id="mpArrowW" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow w"/></marker></defs>${parts.join("")}</svg>`;
+}
+// the 4H candle still forming: the server's bars so far, with the live price folded in so it moves every 30 s
+function mapFormingCandle(P, chart, cs) {
+  const f = chart && chart.forming; if (!f) return null;
+  const last = cs.length ? cs[cs.length - 1].time : 0; if (f.time <= last) return null;
+  const c = {...f, forming: true};
+  if (P.isLive && P.px != null) { c.close = P.px; c.high = Math.max(c.high, P.px); c.low = Math.min(c.low, P.px); }
+  return c;
+}
+// while the panel is open in market hours: refresh the forming candle every minute, and reload the chart when it closes
+let MAP_FT = null;
+function mapFormingPoll(sym) {
+  clearTimeout(MAP_FT);
+  if (!sym || BRIEF_SYM !== sym || !MAP_ON()) return;
+  MAP_FT = setTimeout(async () => {
+    if (BRIEF_SYM !== sym || !BRIEF_CHART || BRIEF_CHART.symbol !== sym) return;
+    if (document.visibilityState !== "hidden" && (LIVE_OPEN || BRIEF_CHART.forming)) {
+      try {
+        const r = await api(`/api/forming/${encodeURIComponent(sym)}`), old = BRIEF_CHART.forming, now = r.candle;
+        if (BRIEF_SYM !== sym) return;
+        if (old && (!now || now.time !== old.time)) {           // the candle closed: pull the finished chart
+          const c = await api(`/api/chart/${encodeURIComponent(sym)}`);
+          if (BRIEF_SYM === sym) { BRIEF_CHART = c; briefHead(sym, c.status); }
+        } else { BRIEF_CHART.forming = now; paintMap(); }
+      } catch (e) {}
+    }
+    mapFormingPoll(sym);
+  }, 60000);
 }
 function mapAnswer(q, P, st) {
   const S = esc(P.sym), h = P.hub, e = EARN[P.sym];
@@ -4002,7 +4032,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><b>Setup map</b><span>Where price is, what has to happen, and what's ahead. Right of the dot is the plan, not real prices.</span></div><div class="mp-cw" id="mpCw">${mapChart(P, chart, MAP_W())}</div></div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><b>Setup map</b><span>Where price is, what has to happen, and what's ahead. Right of the dot is the plan, not real prices.${chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw" id="mpCw">${mapChart(P, chart, MAP_W())}</div></div>
         <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
         <div id="mapGrade">${gradeHTML(st)}</div>
@@ -5579,6 +5609,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .14; stroke: var(--mp-hub); stroke-width: 1.5; }
 .mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
 .mp-svg .mp-shelfband { fill: var(--mp-shelf); opacity: .13; } .mp-svg .mp-obstband { fill: var(--mp-obst); opacity: .12; }
+.mp-svg .mp-cf { opacity: .45; } .mp-svg .mp-cf rect { stroke-dasharray: 2 2; fill-opacity: .35; stroke-width: 1.2; }
 .mp-svg .mp-cu, .mp-svg .mp-cuf { stroke: #3DD68C; fill: #3DD68C; } .mp-svg .mp-cd, .mp-svg .mp-cdf { stroke: #FF6B5E; fill: #FF6B5E; }
 html[data-theme="light"] .mp-svg .mp-cu, html[data-theme="light"] .mp-svg .mp-cuf { stroke: #16a34a; fill: #16a34a; }
 html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cdf { stroke: #dc2626; fill: #dc2626; }
