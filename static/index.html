@@ -4705,14 +4705,13 @@ async function pollLive() {
   LIVE_T = setTimeout(pollLive, LIVE_OPEN ? 30000 : 300000);    // every 30s while the market is open
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pollLive(); });
-// the next 4-hour close, in words: "the 1:30 PM close", "the 4:00 PM close", "Monday's 1:30 PM close" (holidays not checked)
+// the next 4-hour close, in words: "the 1:30 PM close", "the 4:00 PM close", or after the bell "the next day's 1:30 PM close"
 function nextCloseText(now) {
   const ny = new Date((now || new Date()).toLocaleString("en-US", {timeZone: "America/New_York"}));
   const m = ny.getHours() * 60 + ny.getMinutes(), wd = ny.getDay();
   if (wd >= 1 && wd <= 5 && m < 13 * 60 + 30) return "the 1:30 PM close";
   if (wd >= 1 && wd <= 5 && m < 16 * 60) return "the 4:00 PM close";
-  const next = wd === 5 ? "Monday" : wd === 6 ? "Monday" : wd === 0 ? "Monday" : "tomorrow";
-  return `${next === "tomorrow" ? "tomorrow" : next}'s 1:30 PM close`;
+  return "the next day's 1:30 PM close";
 }
 function liveVsHub(st, px) {
   // where the live price sits against the hub, BEFORE the candle closes
