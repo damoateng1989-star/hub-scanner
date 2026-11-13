@@ -288,6 +288,9 @@
   .prog span { display: block; height: 100%; background: var(--ink); border-radius: 99px; }
   .todo { display: grid; grid-template-columns: 26px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .todo:first-of-type { border-top: 0; }
+  .wsample { margin-top: 12px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--bg); }
+  .wsample .ws-k { font: 600 11px var(--sans); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .wsample pre { margin: 0; white-space: pre-wrap; font: 12px/1.55 var(--mono, ui-monospace, Menlo, monospace); color: var(--ink); }
   .todo .ck { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-2); display: grid; place-items: center; font-size: 12px; color: var(--bg); }
   .todo.done .ck { background: var(--ink); border-color: var(--ink); }
   .todo.done .tx { color: var(--faint); text-decoration: line-through; }
@@ -3974,6 +3977,24 @@ function renderPhoneNudge() {
     catch (err) { $("pnErr").textContent = err.message; b.disabled = false; }
   });
 }
+// the welcome checklist's example: what an A-setup alert looks like, so it's recognised when it arrives
+function welcomeSample(btn) {
+  try { localStorage.setItem("ns_ck_sample", "1"); } catch (e) {}
+  const box = $("welcomeSample"); if (!box) return;
+  box.hidden = false;
+  box.innerHTML = `<div class="wsample"><div class="ws-k">Example · an A setup alert</div>
+    <pre>🔄 XYZ: retesting the edge — A setup, entry on this close
+4H close $104.30 held above the edge $104.00 after pulling back to it.
+Room 2.6× to the target.
+Plan (not advice):
+• Entry ≈ $104.30 (the retest close)
+• Exit on a 4H close ≤ $103.50 — 1 ATR below the entry close
+• Next shelf $112.00 (+7.38%)</pre>
+    <p class="note" style="margin:8px 0 0">This is the one to act on: it carries the entry, the stop and the target. A breakout alert ("wait for the retest") and a "watch only" retest are heads-ups, not trades. Size from the stop, and you manage the trade from there. Not advice.</p></div>`;
+  if (btn) { btn.textContent = "Shown"; btn.disabled = true; const row = btn.closest(".todo"); if (row) { row.classList.add("done"); row.querySelector(".ck").textContent = "✓"; } }
+  const card = box.closest(".setup"), all = card ? card.querySelectorAll(".todo").length : 0, dn = card ? card.querySelectorAll(".todo.done").length : 0;
+  if (card && all) { card.querySelector(".prog span").style.width = Math.round(100 * dn / all) + "%"; const n = card.querySelector(".prog + .note"); if (n) n.textContent = `${dn} of ${all} done`; }
+}
 async function loadToday() {
   renderToday();
   const mb = $("mbrief"); if (mb && !mb.innerHTML.trim()) { mb.hidden = false; mb.innerHTML = '<p class="mb-quiet">Loading the board…</p>'; }
@@ -3992,22 +4013,28 @@ function renderToday() {
   renderKpis();
   renderPhoneNudge();
 
-  // setup checklist
-  const steps = [];
+  // welcome checklist: the few things that make NextShelf useful, in order
+  const flag = (k) => { try { return !!localStorage.getItem(k); } catch (e) { return false; } };
+  const steps = [];   // [done, title, sub, href, cta, onclick]
   if (!ME || ME.guest) steps.push([false, "Create a free account", "Save your watchlist and get alerts", "/login#signup", "Sign up"]);
-  steps.push([TICKERS.length > 0, "Add your first stock", "Type a ticker in your Watchlist, or pick one in Browse setups", "#list", "Add"]);
-  if (ME && !ME.guest && ME.telegram && ME.telegram.enabled)
-    steps.push([ME.telegram.linked, "Turn on Telegram alerts", "Get a message the moment something breaks out", "#account", "Connect"]);
-  steps.push([guideDone(), "Learn the setup", "Takes about a minute", "#guide", "Read"]);
+  const nT = TICKERS.length;
+  steps.push([nT >= 5, `Add 5 stocks you know${nT && nT < 5 ? ` (${nT} of 5)` : ""}`, "Alerts only fire for your watchlist, so this matters most. Pick names you already trade, or tap + on any card in Browse setups", "#list", "Add"]);
+  if (ME && !ME.guest) {
+    const tg = ME.telegram && ME.telegram.enabled, linked = (ME.telegram && ME.telegram.linked) || !!ME.phone;
+    steps.push([linked, "Turn on alerts", tg ? "Telegram is free: you get a message the moment a setup is ready, so you never have to watch the screen" : "Add your phone so setups reach you without watching the screen", "#account", "Connect"]);
+  }
+  steps.push([flag("ns_ck_retest"), "Read \u201cWait for the retest\u201d", "Four minutes. Why the breakout is a heads-up and the retest is the entry", "/learn/the-retest", "Read", "try{localStorage.setItem('ns_ck_retest','1')}catch(e){}"]);
+  steps.push([flag("ns_ck_sample"), "See the alert that matters", "Most messages are information. Only an A setup or a gap fade comes with a plan", "", "Show", "welcomeSample(this)"]);
   const done = steps.filter(x => x[0]).length;
-  let hidden = false; try { hidden = !!localStorage.getItem("hs_setup_hide"); } catch (e) {}
-  $("setup").innerHTML = (done === steps.length || hidden) ? "" : `<div class="setup">
-    <div style="display:flex;justify-content:space-between;align-items:center"><h2>Get set up</h2>
-      <button class="ghost" style="padding:4px 8px;font-size:13px" onclick="try{localStorage.setItem('hs_setup_hide','1')}catch(e){};renderToday()">Hide</button></div>
+  $("setup").innerHTML = (done === steps.length || flag("ns_welcome_hide")) ? "" : `<div class="setup">
+    <div style="display:flex;justify-content:space-between;align-items:center"><h2>Welcome to NextShelf</h2>
+      <button class="ghost" style="padding:4px 8px;font-size:13px" onclick="try{localStorage.setItem('ns_welcome_hide','1')}catch(e){};renderToday()">Hide</button></div>
+    <p class="note" style="margin:2px 0 10px">Five minutes to set up, then it works in the background. Most days it says nothing: that's the point.</p>
     <div class="prog"><span style="width:${Math.round(100 * done / steps.length)}%"></span></div>
     <div class="note" style="margin:0 0 6px">${done} of ${steps.length} done</div>
-    ${steps.map(([ok, t, sub, href, cta]) => `<div class="todo${ok ? " done" : ""}"><span class="ck">${ok ? "✓" : ""}</span>
-      <span class="tx">${t}<small>${sub}</small></span>${ok ? "" : `<a class="btnx sm" href="${href}">${cta}</a>`}</div>`).join("")}
+    ${steps.map(([ok, t, sub, href, cta, oc]) => `<div class="todo${ok ? " done" : ""}"><span class="ck">${ok ? "✓" : ""}</span>
+      <span class="tx">${t}<small>${sub}</small></span>${ok ? "" : href ? `<a class="btnx sm" href="${href}"${oc ? ` onclick="${oc}"` : ""}>${cta}</a>` : `<button class="btnx sm" type="button" onclick="${oc}">${cta}</button>`}</div>`).join("")}
+    <div id="welcomeSample" hidden></div>
   </div>`;
 
   // needs attention (my list)
