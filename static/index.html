@@ -2154,6 +2154,7 @@ html[data-theme="light"] .sg small { color: #4b5563; }
 html[data-theme="light"] .sg.ga, html[data-theme="light"] .sg-in.ga { --c: #12805C; } html[data-theme="light"] .sg.gb, html[data-theme="light"] .sg-in.gb { --c: #2F54EB; }
 html[data-theme="light"] .sg.gc, html[data-theme="light"] .sg-in.gc { --c: #B7791F; } html[data-theme="light"] .sg.gd, html[data-theme="light"] .sg-in.gd { --c: #C81E1E; }
 html[data-theme="light"] .sg-b { color: #fff; }
+.rec-setup { font-size: 12.5px; white-space: nowrap; } .rec-g { display: inline-block; margin-left: 4px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line); font-size: 11px; }
 .rec-test { margin: 0 0 6px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; }
 .rec-test .stats span { line-height: 1.45; }
 @media (max-width: 640px) { .rec-test .stats { grid-template-columns: 1fr !important; } }
@@ -4481,7 +4482,7 @@ function setupCard(x) {
     ${x.catalyst ? `<div class="sc-news">📰 Possible catalyst (${esc(x.catalyst.tag_label)}): ${x.catalyst.url ? `<a href="${esc(x.catalyst.url)}" target="_blank" rel="noopener">${esc(x.catalyst.headline)}</a>` : `<b>${esc(x.catalyst.headline)}</b>`} · ${esc(x.catalyst.source)}, ${when(x.catalyst.time)}</div>` : ""}
     <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="sc-trade"><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</span></div></div>`;
 }
-let RECORD_PAT = "hub";
+let RECORD_PAT = "rules";
 
 
 // ---------------------------------------------------------------- morning brief (Today card + settings)
@@ -4892,42 +4893,46 @@ async function loadRecord() {
   if (!$("record").querySelector("table, .stats")) $("record").innerHTML = loadingHTML("Loading results…");
   try { r = await api("/api/record?pattern=" + RECORD_PAT); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
   const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
-  const res = { "follow-through": ["hit shelf", "--ft"], "snap-back": ["failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
-  const pt = r.patterns || {}, tabs = [["hub", "Hubs"], ["double_top", "Double tops"], ["double_bottom", "Double bottoms"], ["gapfade", "Post-earnings gap fade & rip"]];
+  const RU = RECORD_PAT === "rules";
+  const res = { "follow-through": [RU ? "hit target" : "hit shelf", "--ft"], "snap-back": [RU ? "stopped" : "failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
+  // today's rules for everyone; the earlier breakout-close log is archived (admins can still open it)
+  const pt = r.patterns || {}, tabs = [["rules", "Today's rules"]].concat(ME && ME.is_admin ? [["hub", "Archive: hubs"], ["double_top", "Archive: double tops"], ["double_bottom", "Archive: double bottoms"], ["gapfade", "Archive: gap fade"]] : []);
   const T = r.tested, mo = (t) => t ? new Date(t).toLocaleDateString(undefined, {month: "short", year: "numeric"}) : "";
   const testedBox = T && T.rows && T.rows.length ? `<div class="rec-test"><div class="eyebrow" style="margin:0 0 4px">Two-year test of today's rules</div>
       <p class="note" style="margin:0 0 12px">The setups NextShelf alerts on now, replayed on ${T.symbols} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}. A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
       <div class="stats" style="margin:0;grid-template-columns:repeat(${T.rows.length},1fr)">${T.rows.map(x => `<div><b style="color:var(${x.avg >= 0 ? "--up" : "--down"})">${x.avg > 0 ? "+" : ""}${Number(x.avg).toFixed(2)}%</b><span>${esc(x.label)}<br>${x.n} trades · ${Math.round(x.win)}% won · profit factor ${x.pf ?? "–"}</span></div>`).join("")}</div></div>
-      <div class="eyebrow" style="margin:26px 0 10px">Live log since launch</div>` : "";
+      <div class="eyebrow" style="margin:26px 0 10px">${RU ? "Live record of today's rules" : "Archive: the earlier breakout-close log"}</div>` : "";
   $("record").innerHTML = testedBox + `
-    <div class="rec-tabs">${tabs.map(([k, l]) => { const x = pt[k] || {};
+    ${tabs.length > 1 ? `<div class="rec-tabs">${tabs.map(([k, l]) => { const x = k === "rules" ? (RU ? st : {}) : pt[k] || {};
       const tiny = x.closed && x.closed < 5;
       const sub = !x.closed ? "no results yet"
         : tiny ? `${x.closed} done · <span class="beta-tag">beta</span>`
         : `${x.win_rate ?? "–"}% winners · ${x.closed} done`;
-      return `<button class="${RECORD_PAT === k ? "on" : ""}${tiny ? " tiny" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${sub}</small></button>`; }).join("")}</div>
-    <p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.${RECORD_PAT === "hub" ? " That's the earlier rule. NextShelf now waits for the retest before an entry, which is what the test above measures." : ""}</p>
-    ${st.closed && st.closed < 5 ? `<div class="note"><b>Too few to judge yet.</b> This pattern has ${st.closed} completed setup${st.closed === 1 ? "" : "s"}, so the numbers below are a count, not a record. Hubs are NextShelf's tested setup.</div>
+      return `<button class="${RECORD_PAT === k ? "on" : ""}${tiny ? " tiny" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${sub}</small></button>`; }).join("")}</div>` : ""}
+    ${RU ? `<p class="lede" style="font-size:15px;margin-bottom:16px">Every trade today's rules take since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b>, logged automatically with its result: A and B retests on hubs and double bottoms, and post-earnings gap fades, longs only. The entry is the retest close (the reclaim close for a gap fade), with the plan's stop and target. Nothing is removed. The earlier breakout-close log is archived.</p>` : `<p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.${RECORD_PAT === "hub" ? " That's the earlier rule. NextShelf now waits for the retest before an entry, which is what the test above measures." : ""}</p>`}
+    ${RU && st.closed < 5 ? `<div class="note"><b>${st.closed ? "Too few to judge yet." : "Just started."}</b> ${st.closed ? `${st.closed} trade${st.closed === 1 ? " has" : "s have"} closed so far, so the numbers below are a count, not a record.` : "No trade has closed yet. Until it has 50 or more, the two-year test above is the better guide."}</div>
+    <div class="note">${st.closed} completed · ${st.win_rate == null ? "–" : st.win_rate + "%"} winners · avg ${sign(st.avg_ret)} · ${st.open} open now</div>`
+    : st.closed && st.closed < 5 ? `<div class="note"><b>Too few to judge yet.</b> This pattern has ${st.closed} completed setup${st.closed === 1 ? "" : "s"}, so the numbers below are a count, not a record. Hubs are NextShelf's tested setup.</div>
     <div class="note">${st.closed} completed · ${st.win_rate == null ? "–" : st.win_rate + "%"} winners · avg ${sign(st.avg_ret)} · ${st.open} open now</div>`
     : `<div class="stats" style="margin-top:0">
-      <div><b>${st.closed}</b><span>Completed setups</span></div>
+      <div><b>${st.closed}</b><span>${RU ? "Completed trades" : "Completed setups"}</span></div>
       <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
-      <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>Avg per setup</span></div>
+      <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>${RU ? "Avg per trade" : "Avg per setup"}</span></div>
       <div><b>${st.open}</b><span>Open now</span></div>
     </div>
-    ${st.closed ? `<div class="note">Hit shelf ${st.by_outcome["follow-through"]} · failed ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}${st.against_trend ? ` · ${st.against_trend} against the tape` : ""}</div>` : ""}
-    ${volSplit(st.by_volume)}${gradeSplit(st.by_grade)}`}
+    ${st.closed ? `<div class="note">${RU ? "Hit target" : "Hit shelf"} ${st.by_outcome["follow-through"]} · ${RU ? "stopped" : "failed"} ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}${st.against_trend ? ` · ${st.against_trend} against the tape` : ""}</div>` : ""}
+    ${RU ? "" : volSplit(st.by_volume) + gradeSplit(st.by_grade)}`}
     ${winRankHTML(r.by_symbol || [])}
     ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every setup</div><div class="tbl" style="margin-top:0"><table>
-      <tr><th>Breakout</th><th>Stock</th><th></th><th>Entry</th><th>Target</th><th>Result</th><th>Return</th></tr>
+      <tr><th>${RU ? "Entry day" : "Breakout"}</th><th>Stock</th><th>${RU ? "Setup" : ""}</th><th>Entry</th>${RU ? "<th>Stop</th>" : ""}<th>Target</th><th>Result</th><th>Return</th></tr>
       ${r.signals.map(x => { const [w, c] = x.chase ? ["skipped", "--faint"] : res[x.outcome] || [x.outcome, "--idle"];
-        return `<tr><td>${new Date(x.breakout_time).toLocaleDateString(undefined, {month: "short", day: "numeric"})}</td>
+        return `<tr><td>${new Date((RU && x.entry_time) || x.breakout_time).toLocaleDateString(undefined, {month: "short", day: "numeric"})}</td>
         <td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}"><b>${esc(x.symbol)}</b></a></td>
-        <td style="color:var(${x.direction === 1 ? "--up" : "--down"})">${x.direction === 1 ? "▲" : "▼"}</td>
-        <td>${money(x.entry)}</td><td>${money(x.target)}</td>
+        ${RU ? `<td class="rec-setup">${esc(x.setup || "")}${x.grade ? ` <b class="rec-g">${esc(x.grade)}</b>` : ""}</td>` : `<td style="color:var(${x.direction === 1 ? "--up" : "--down"})">${x.direction === 1 ? "▲" : "▼"}</td>`}
+        <td>${money(x.entry)}</td>${RU ? `<td>${x.stop == null ? "–" : money(x.stop)}</td>` : ""}<td>${money(x.target)}</td>
         <td style="color:var(${c})">${w}</td>
         <td style="color:var(${x.ret_pct == null ? "--muted" : x.ret_pct > 0 ? "--up" : "--down"})">${sign(x.ret_pct)}</td></tr>`; }).join("")}
-    </table></div>` : `<div class="empty" style="margin-top:14px">No setups yet. The first ones appear after the next breakout on the board.</div>`}
+    </table></div>` : `<div class="empty" style="margin-top:14px">${RU ? "No trades yet. The first one appears after the next A or B retest, or gap fade, on the board." : "No setups yet. The first ones appear after the next breakout on the board."}</div>`}
     <p class="note rec-end" style="text-align:center;margin-top:28px">End of record</p>`;
 }
 

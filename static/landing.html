@@ -1097,12 +1097,12 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
     <div class="rec-h"><b>Two-year test of today's rules</b><span id="recTestSub"></span></div>
     <div class="rec" id="recTestRow" style="margin-top:14px"></div>
     <p class="honest" style="margin-top:14px">A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
-    <div class="rec-h" style="margin-top:40px"><b>Live log since launch</b><span>Every hub breakout, entered at the breakout close: the earlier rule, before the retest entry.</span></div>
+    <div class="rec-h" style="margin-top:40px"><b>Live record of today's rules</b><span id="recLiveSub">Every trade the current rules take, logged as it happens. The earlier breakout-close log is archived.</span></div>
   </div>
   <div class="rec" id="recLive">
-    <div class="stat"><div class="big" id="recN">–</div><div class="cap" id="recNc">hub breakouts logged</div></div>
-    <div class="stat"><div class="big" id="recHit" style="color:var(--up)">–</div><div class="cap">reached the shelf target</div></div>
-    <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed setup</div></div>
+    <div class="stat"><div class="big" id="recN">–</div><div class="cap" id="recNc">trades logged</div></div>
+    <div class="stat"><div class="big" id="recHit" style="color:var(--up)">–</div><div class="cap">reached the target</div></div>
+    <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed trade</div></div>
   </div>
   <p class="honest" id="recNote">These are the board's setups, not trading advice, and past setups don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/board">See every setup →</a></p>
 </div></section>
@@ -1234,14 +1234,14 @@ html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
     }
     if (s.signals) {
       $("recN").textContent = n(s.signals);
-      $("recNc").textContent = `hub breakouts logged · ${n(s.open)} still open · ${n(s.reached)} of ${n(s.closed)} closed reached the shelf`;
+      $("recNc").textContent = `trades logged · ${n(s.open)} still open · ${n(s.reached)} of ${n(s.closed)} closed reached the target`;
       if (s.updated) $("recNote").insertAdjacentHTML("afterbegin", `Updated ${new Date(String(s.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})} ET. `);
       $("recHit").textContent = s.reached_pct == null ? "–" : s.reached_pct + "%";
       $("recAvg").textContent = s.avg_ret == null ? "–" : (s.avg_ret > 0 ? "+" : "") + s.avg_ret + "%";
       if (s.avg_ret != null) $("recAvg").style.color = s.avg_ret >= 0 ? "var(--up)" : "var(--down)";
     } else {
-      $("recN").textContent = "0"; $("recNc").textContent = "hub breakouts logged so far";
-      $("recNote").insertAdjacentHTML("afterbegin", "The record fills in as live setups close. ");
+      $("recN").textContent = "0"; $("recNc").textContent = "trades logged so far";
+      $("recNote").insertAdjacentHTML("afterbegin", "This record started on " + (s.since ? new Date(s.since).toLocaleDateString("en-US", {month: "long", day: "numeric"}) : "launch") + " and fills in as trades close. Until it has 50 or more, the two-year test above is the better guide. ");
     }
   }).catch(() => {});
 

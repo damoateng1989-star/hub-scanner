@@ -36,6 +36,81 @@ def record_start() -> str:
     return v
 
 
+RULES = "rules"   # the live record of today's rules: A/B retests (hubs, double bottoms) and gap fades, longs only
+
+
+def rules_start() -> str:
+    """The live record of today's rules counts only entries after it started (no hindsight). The earlier
+    breakout-close log is archived, not deleted."""
+    v = db.get_setting("rules_record_start")
+    if not v:
+        v = pd.Timestamp.now(tz=engine.NY).isoformat()
+        db.set_setting("rules_record_start", v)
+    return v
+
+
+def _record_rules(sym: str, c4: pd.DataFrame, res: dict, pa: dict | None, start: pd.Timestamp):
+    """Log the trades today's rules would take, the way the alerts give them: hub and double-bottom retests that grade
+    A or B (entry = the retest close; stop 1 ATR for hubs, the far side for doubles; aim the target; 10 candles), and
+    gap fades (their own daily plan). Shorts are watch only, so they are never logged."""
+    import lab_exits
+    idx, s = res["close"].index, scanner.SETTINGS
+    close = res["close"].to_numpy(float)
+    low, high, atr = c4["Low"].to_numpy(float), c4["High"].to_numpy(float), res["atr"].to_numpy(float)
+
+    def put(t, kind, label, grade, j, entry, stop):
+        if idx[j] <= start:
+            return
+        # the same close-based exits as lab_exits._exit (target, stop, or time), keeping which candle it happened on
+        outcome, ret, oi = "pending", None, None
+        for k in range(j + 1, min(j + 1 + s.horizon, len(close))):
+            if close[k] >= t["target"]:
+                outcome, ret, oi = "follow-through", (t["target"] / entry - 1) * 100, k
+                break
+            if close[k] <= stop:
+                outcome, ret, oi = "snap-back", (close[k] / entry - 1) * 100, k
+                break
+        else:
+            if j + s.horizon < len(close):
+                oi = j + s.horizon
+                outcome, ret = "stalled", (close[oi] / entry - 1) * 100
+        h = t["hub"]
+        db.upsert_signal(id=f"{RULES}|{kind}|{sym}|{idx[t['i0']].isoformat()}", pattern=RULES, setup=label, grade=grade,
+                         symbol=sym, direction=1, hub_low=round(h["low"], 2), hub_high=round(h["high"], 2),
+                         hub_sessions=h.get("sessions"), breakout_time=idx[t["i0"]].isoformat(), entry_time=idx[j].isoformat(),
+                         entry=round(entry, 2), target=round(t["target"], 2), stop=round(stop, 2),
+                         target_kind=t.get("target_kind") or ("shelf" if t.get("shelf") else "atr"),
+                         outcome=outcome, outcome_time=idx[oi].isoformat() if oi is not None else None,
+                         ret_pct=None if ret is None else round(ret, 2), chase=0, rvol=engine.rvol(c4, j))
+
+    for t in res["trades"]:                                   # hubs
+        if t["direction"] != 1:
+            continue
+        rt = lab_exits._retest_entry(close, low, high, atr, t["i0"], 1, t["edge"])
+        if rt:
+            j, entry = rt
+            g = engine.retest_grade(t, entry, float(atr[j]))
+            if g.get("grade"):
+                put(t, "hub", "Hub retest", g["grade"], j, entry, g["stop"])
+    for t in (pa or {}).get("trades", []):
+        if t["kind"] == "double_bottom":
+            rt = lab_exits._retest_entry(close, low, high, atr, t["i0"], 1, t["edge"])
+            if rt:
+                j, entry = rt
+                g = engine.double_retest_grade(t, entry, engine.candle_end(idx[j].tz_convert(engine.NY)).hour == 16)
+                if g.get("grade"):
+                    put(t, "double_bottom", "Double bottom retest", g["grade"], j, entry, g["stop"])
+        elif t["kind"] == "gapfade" and idx[t["i0"]] > start:
+            h = t["hub"]
+            db.upsert_signal(id=f"{RULES}|gapfade|{sym}|{idx[t['i0']].isoformat()}", pattern=RULES, setup="Gap fade & rip", grade=None,
+                             symbol=sym, direction=1, hub_low=round(h["low"], 2), hub_high=round(h["high"], 2),
+                             hub_sessions=h.get("sessions"), breakout_time=idx[t["i0"]].isoformat(), entry_time=idx[t["i0"]].isoformat(),
+                             entry=round(t["entry"], 2), target=round(t["target"], 2), stop=round(t["stop"], 2) if t.get("stop") else None,
+                             target_kind="2R", outcome=t["outcome"],
+                             outcome_time=idx[t["oi"]].isoformat() if t.get("oi") is not None else None,
+                             ret_pct=None if t["ret"] is None else round(t["ret"], 2), chase=0, rvol=None)
+
+
 def _board_status(c4: pd.DataFrame, res: dict) -> dict:
     st = engine.current_status(c4, res, scanner.SETTINGS)
     st.pop("spark", None)
@@ -244,6 +319,7 @@ def _scan_board() -> int:
         watch = {r["symbol"] for r in db.list_tickers()}
         syms = sorted(set(universe.board_universe()) | watch)
         start = pd.Timestamp(record_start())
+        rules_start_ts = pd.Timestamp(rules_start())
         now = pd.Timestamp.now(tz="UTC")
         SCAN.update(running=True, done=0, total=len(syms), current="loading prices", found=[],
                     started=pd.Timestamp.now(tz="UTC").isoformat())
@@ -318,6 +394,11 @@ def _scan_board() -> int:
                             SCAN["found"].append(dict(symbol=sym, kind="breakout" if st["state"] == "breakout_up" else "breakdown", setup=st["name"]))
                 except Exception as e:
                     log.warning("pattern scan failed for %s: %s", sym, e)
+                    pa = None
+                try:      # the live record of today's rules
+                    _record_rules(sym, c4, res, pa, rules_start_ts)
+                except Exception as e:
+                    log.warning("rules record failed for %s: %s", sym, e)
                 try:      # test mode: tightening hubs (triangles), admin-only
                     tri = engine.analyze_tightening(c4, res, scanner.SETTINGS)
                     _record(sym, c4, res, start, "tightening", tri["trades"])
@@ -475,12 +556,14 @@ def _by_volume(closed: list[dict]) -> dict:
 
 def track_record(pattern: str = "hub") -> dict:
     sigs = db.all_signals(1000, pattern)
+    if pattern == RULES:      # entries are the retest close, so sort by when the entry came
+        sigs.sort(key=lambda x: x.get("entry_time") or x.get("breakout_time") or "", reverse=True)
     closed = [s for s in sigs if s["outcome"] not in ("pending", None) and not s["chase"]]
     rets = [s["ret_pct"] for s in closed if s["ret_pct"] is not None]
     wins = [r for r in rets if r > 0]
     by = {o: sum(1 for s in closed if s["outcome"] == o) for o in ("follow-through", "snap-back", "stalled")}
     return dict(
-        since=record_start(),
+        since=rules_start() if pattern == RULES else record_start(),
         stats=dict(signals=len(sigs), closed=len(closed), open=sum(1 for s in sigs if s["outcome"] == "pending"),
                    chases=sum(1 for s in sigs if s["chase"]),
                    against_trend=sum(1 for s in sigs if s.get("regime") == "against"),

@@ -977,23 +977,26 @@ def scanner_status(request: Request):
 def public_summary():
     """Real numbers for the landing page: today's board and the hub track record (no symbols from the Pro groups)."""
     b = board.board()
-    rec = board.track_record("hub")["stats"]
+    tr = board.track_record(board.RULES)      # the live record of today's rules (the old breakout-close log is archived)
+    rec = tr["stats"]
     by = rec.get("by_outcome") or {}
     closed = rec.get("closed") or 0
-    done = [x for x in (board.track_record("hub").get("signals") or []) if x.get("outcome") not in (None, "pending")]
+    done = [x for x in (tr.get("signals") or []) if x.get("outcome") not in (None, "pending")]
     done.sort(key=lambda x: x.get("outcome_time") or x.get("breakout_time") or "", reverse=True)
     recent = [dict(symbol=x["symbol"], direction=x.get("direction"), outcome=x["outcome"]) for x in done[:14]]
     import lab_exits
     return dict(tested=lab_exits.tested_public(), recent=recent, updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
                 signals=rec.get("signals"), closed=closed, open=rec.get("open"), reached=by.get("follow-through", 0),
                 reached_pct=round(100 * by.get("follow-through", 0) / closed) if closed else None,
-                win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), next=_next_sweep(), times=sorted(BOARD_TIMES))
+                win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), since=tr.get("since"), next=_next_sweep(), times=sorted(BOARD_TIMES))
 
 
 @app.get("/api/record")
 def record_data(pattern: str = "hub", u: dict = User):
-    if pattern not in patterns.KINDS:
+    if pattern != board.RULES and pattern not in patterns.KINDS:
         raise HTTPException(400, "unknown setup")
+    if pattern != board.RULES and not (u and u.get("is_admin")):
+        raise HTTPException(403, "The earlier breakout-close log is archived")
     import lab_exits
     return dict(board.track_record(pattern), tested=lab_exits.tested_public())
 

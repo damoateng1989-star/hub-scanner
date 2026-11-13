@@ -107,6 +107,12 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    for _col, _ddl in [("setup", "TEXT"), ("stop", "REAL"), ("entry_time", "TEXT")]:
+        try:   # added later: the live record of today's rules (which setup, its stop, when the retest entry came)
+            _conn.execute(f"ALTER TABLE signals ADD COLUMN {_col} {_ddl}")
+            _conn.commit()
+        except sqlite3.OperationalError:
+            pass
     for _col, _ddl in [("kind", "TEXT DEFAULT 'share'"), ("occ", "TEXT"), ("expiry", "TEXT"), ("strike", "REAL"),
                        ("opt_iv", "REAL"), ("opt_delta", "REAL"), ("opt_premium", "REAL")]:
         try:   # added later: the paper OPTIONS experiment shares the journal table, kept apart by kind
@@ -247,7 +253,7 @@ def board_rows() -> list[dict]:
 # --- track record
 def upsert_signal(**f):
     cols = ", ".join(f)
-    updates = ", ".join(f"{k}=excluded.{k}" for k in ("outcome", "outcome_time", "ret_pct", "chase", "target", "target_kind") if k in f or k == "outcome") + ", rvol=COALESCE(excluded.rvol, signals.rvol)"
+    updates = ", ".join(f"{k}=excluded.{k}" for k in ("outcome", "outcome_time", "ret_pct", "chase", "target", "target_kind", "stop", "setup", "entry_time") if k in f or k == "outcome") + ", rvol=COALESCE(excluded.rvol, signals.rvol)"
     _run(f"INSERT INTO signals ({cols}) VALUES ({', '.join('?' * len(f))}) ON CONFLICT(id) DO UPDATE SET {updates}",
          tuple(f.values()))
 
