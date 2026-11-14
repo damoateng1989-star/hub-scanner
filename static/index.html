@@ -5260,7 +5260,7 @@ function squarify(items, x, y, w, h) {
 }
 function paintHeatmap() {
   const el = $("mktmap"); if (!el || !HEAT || !HEAT.tiles) return;
-  const W = Math.max(280, (el.clientWidth || 900) - 34), small = W < 640, H = small ? 560 : 440, caps = HEAT.tiles.map(t => t.cap).filter(Boolean).sort((a, b) => a - b);
+  const W = Math.max(280, (el.clientWidth || 900) - 34), small = W < 640, H = small ? 700 : 440, caps = HEAT.tiles.map(t => t.cap).filter(Boolean).sort((a, b) => a - b);
   const med = caps.length ? caps[Math.floor(caps.length / 2)] : 1e10;
   const bySec = {};
   for (const t of HEAT.tiles) (bySec[t.sec] = bySec[t.sec] || []).push({...t, v: Math.sqrt(t.cap || med)});   // √cap: mega caps big, small names still visible
@@ -5272,9 +5272,9 @@ function paintHeatmap() {
     const hd = S.h > 40 && S.w > 50 ? 15 : 0;
     html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(short[S.k] || S.k)}</div>` : ""}`;
     for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
-      const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fs = Math.max(8, Math.min(15, Math.min(t.w / 3.6, t.h / 1.8)));
+      const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fit = Math.min(t.w / (t.s.length * 0.62), t.h / 1.6), fs = Math.max(7, Math.min(15, fit));
       html += `<button class="hm-t ${cls}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}"
-        onclick="openBrief('${esc(t.s)}')">${t.w > 26 && t.h > 13 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
+        onclick="openBrief('${esc(t.s)}')">${fit >= 7 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
     }
     html += `</div>`;
   }
