@@ -4959,7 +4959,7 @@ function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else
 let BOARD_LOADING = false;
 // ---------------- market map: every stock as a tile, grouped by sector, coloured by where its setup stands
 let HEAT = null, HEAT_RT = null;
-const HEAT_ST = {up: ["Breaking out", "hm-up"], down: ["Breaking down", "hm-down"], edge: ["Near the hub top", "hm-edge"], edge_dn: ["Resting, near the hub bottom", "hm-rest"],
+const HEAT_ST = {up: ["Breaking out", "hm-up"], down: ["Breaking down", "hm-down"], edge: ["Close to the trigger", "hm-edge"], edge_dn: ["Resting, near the hub bottom", "hm-rest"],
                  resting: ["Resting in a hub", "hm-rest"], none: ["No setup", "hm-none"], locked: ["Pro: live state", "hm-lock"]};
 async function loadHeatmap() {
   try { HEAT = await api("/api/heatmap"); } catch (e) { return; }
@@ -5005,7 +5005,7 @@ function paintHeatmap() {
   }
   const legend = ["up", "edge", "resting", "down", "none"].concat(HEAT.locked ? ["locked"] : []).filter(k => counts[k])
     .map(k => `<span class="hm-lg"><i class="${HEAT_ST[k][1]}"></i>${HEAT_ST[k][0]} <b>${counts[k]}</b></span>`).join("");
-  el.innerHTML = `<div class="hm-card"><div class="hm-top"><div><b>Market map</b><small>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands. Tap one to open it.</small></div></div>
+  el.innerHTML = `<div class="hm-card"><div class="hm-top"><div><b>Market map</b><small>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands ("close to the trigger" = within half a typical 4-hour move of it). Tap one to open it.</small></div></div>
     <div class="hm-legend">${legend}</div>
     <div class="hm-box" style="height:${H}px">${html}<div class="hm-tip" id="hmTip"></div></div></div>`;
   const box = el.querySelector(".hm-box"), tip = $("hmTip");

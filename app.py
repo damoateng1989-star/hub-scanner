@@ -955,7 +955,10 @@ def heatmap(u: dict | None = Maybe):
     full = board_for(u)
     state = {}
     for r in b["forming"]:
-        state[r["symbol"]] = "edge" if r.get("near_edge") == "up" else "edge_dn" if r.get("near_edge") == "down" else "resting"
+        # amber only when a close at the trigger is a small move away: within half a typical 4-hour move (1% if unknown)
+        tu, px, atr = r.get("trigger_up"), r.get("last_close"), r.get("atr")
+        near = tu is not None and px is not None and 0 <= tu - px <= (0.5 * atr if atr else 0.01 * px)
+        state[r["symbol"]] = "edge" if near else "resting"
     for x in b["setups"]:                       # measured patterns only
         if x.get("kind") in ("double_bottom", "gapfade") and x["state"] == "breakout_up":
             state[x["symbol"]] = "up"
