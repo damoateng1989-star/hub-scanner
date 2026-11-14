@@ -948,6 +948,30 @@ def board_data(u: dict | None = Maybe):
     return b
 
 
+@app.get("/api/heatmap")
+def heatmap(u: dict | None = Maybe):
+    """Every stock on the board as a tile for the market map: sector, size (market cap) and where its setup stands."""
+    b = board.board()
+    full = board_for(u)
+    state = {}
+    for r in b["forming"]:
+        state[r["symbol"]] = "edge" if r.get("near_edge") == "up" else "edge_dn" if r.get("near_edge") == "down" else "resting"
+    for x in b["setups"]:                       # measured patterns only
+        if x.get("kind") in ("double_bottom", "gapfade") and x["state"] == "breakout_up":
+            state[x["symbol"]] = "up"
+        elif x.get("kind") == "double_top" and x["state"] == "breakdown":
+            state.setdefault(x["symbol"], "down")
+    for r in b["live"]:
+        state[r["symbol"]] = "up" if r.get("state") == "breakout_up" else "down"
+    tiles = []
+    for s in universe.board_universe():
+        st = state.get(s, "none")
+        if not full and st in ("up", "down", "edge", "edge_dn"):
+            st = "locked"                          # free plan: the timely states stay hidden, like the board
+        tiles.append(dict(s=s, sec=universe.sector(s), cap=universe.market_cap(s), st=st))
+    return dict(updated=b.get("updated"), tiles=tiles, locked=not full, guest=not u)
+
+
 @app.post("/api/board/scan")
 async def board_scan_now(u: dict = Admin):
     if board.SCAN["running"]:

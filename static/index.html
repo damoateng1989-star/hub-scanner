@@ -2285,6 +2285,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
     </div>
     <div class="ag-side"><button class="chip sweep-btn" id="bScan"><span>Sweep now</span></button></div>
   </div>
+  <div id="mktmap"></div>
   <div id="board"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 
@@ -3982,6 +3983,25 @@ function mapChart(P, chart, W) {
   // labels live in their own column at the right; lines, bands and the hub stop short of it, so nothing crosses the text
   const labW = Math.max(0, ...tags.map(g => g.txt.length * (small ? 6.2 : 6.8))) + 6;
   const lineEnd = Math.max(futX + 50, plotR - labW - 8);
+  // where volume traded, by price: a heat strip behind the price axis (busy zones are where shelves come from)
+  const vp = (() => {
+    const withVol = cs.filter(c => c.volume > 0); if (withVol.length < 5) return null;
+    const nb = Math.max(12, Math.round((H - top - bot) / 5)), bin = (hi - lo) / nb, v = new Array(nb).fill(0);
+    for (const c of withVol) {
+      const a = Math.max(lo, c.low), b = Math.min(hi, c.high); if (b < a) continue;
+      const i0 = Math.max(0, Math.floor((a - lo) / bin)), i1 = Math.min(nb - 1, Math.floor((b - lo) / bin)), per = c.volume / (i1 - i0 + 1);
+      for (let i = i0; i <= i1; i++) v[i] += per;
+    }
+    const mx = Math.max(...v), tot = v.reduce((p, q) => p + q, 0); if (!mx) return null;
+    return {nb, bin, v, mx, tot, top: v.indexOf(mx)};
+  })();
+  if (vp) {
+    for (let i = 0; i < vp.nb; i++) {
+      const k = vp.v[i] / vp.mx; if (k < 0.04) continue;
+      const y1 = Math.round(y(lo + (i + 1) * vp.bin)), y0 = Math.round(y(lo + i * vp.bin));
+      parts.push(`<rect class="mp-vp${i === vp.top ? " poc" : ""}" x="${plotR + 1}" y="${y1}" width="${Math.round((R - 3) * (0.25 + 0.75 * k))}" height="${Math.max(1, y0 - y1 - 1)}" style="opacity:${(0.10 + 0.55 * k).toFixed(2)}"/>`);
+    }
+  }
   // grid + price axis
   const tick = (() => { const raw = (hi - lo) / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * mag).find(m => m >= raw); })();
   for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick)
@@ -4050,7 +4070,7 @@ function mapChart(P, chart, W) {
     if (Math.abs(g.y - 4 - g.ly) > 3) parts.push(`<line class="mp-lead ${g.cls}" x1="${lineEnd}" y1="${g.ly}" x2="${lineEnd + 5}" y2="${g.y - 4}"/>`);   // label moved off its line: a short leader
     parts.push(`<text class="mp-tag ${g.cls}" x="${plotR - 2}" y="${g.y}" text-anchor="end">${g.txt.slice(0, g.txt.lastIndexOf(" "))} <tspan>${money(g.v)}</tspan></text>`); });
   if (!n) parts.push(`<text class="mp-ax" x="${futX / 2}" y="${H / 2}" text-anchor="middle">Loading candles…</text>`);
-  MAP_G = {P, W, H, top, bot, futX, plotR, lineEnd, n, step, cs, lo, hi, y, tags, daily};
+  MAP_G = {P, W, H, top, bot, futX, plotR, lineEnd, n, step, cs, lo, hi, y, tags, daily, vp};
   return `<svg class="mp-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Setup map for ${esc(P.sym)}">
     <defs><marker id="mpArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow"/></marker>
     <marker id="mpArrowW" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow w"/></marker></defs>${parts.join("")}</svg>`;
@@ -4150,7 +4170,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-ctop"><b>Setup map</b>${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div><span>Where price is, what has to happen, and what's ahead. Right of the line is the plan, not real prices.${MAP_TF === "1d" ? " Daily candles; the setup is still judged on 4-hour closes." : chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Drag the <b>stop</b> or <b>target</b> line up or down." : matchMedia("(hover: hover)").matches ? "Hover a candle or a line for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-ctop"><b>Setup map</b>${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div><span>Where price is, what has to happen, and what's ahead. Right of the line is the plan, not real prices.${MAP_TF === "1d" ? " Daily candles; the setup is still judged on 4-hour closes." : chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Drag the <b>stop</b> or <b>target</b> line up or down." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, or the volume strip by the prices for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
@@ -4352,7 +4372,11 @@ function mapShowAt(x, yy, quiet) {
   const G = MAP_G, tip = $("mpTip"), xh = $("mpXh"); if (!G || !tip || !xh) return;
   MAP_HOVER = {x, yy};
   let head = "", body = "", lineX = null;
-  if (x < G.futX && G.n) {                                  // a candle
+  if (x > G.plotR && G.vp) {                                // the volume strip
+    const V = G.vp, price = G.hi - (yy - G.top) / (G.H - G.top - G.bot) * (G.hi - G.lo), i = Math.max(0, Math.min(V.nb - 1, Math.floor((price - G.lo) / V.bin)));
+    head = `Traded ${money(G.lo + i * V.bin)}–${money(G.lo + (i + 1) * V.bin)}`;
+    body = `<div>${(V.v[i] / V.tot * 100).toFixed(1)}% of the volume in view changed hands here${i === V.top ? ": the busiest price zone" : ""}. Busy zones are where shelves form: price tends to pause there.</div>`;
+  } else if (x < G.futX && G.n) {                                  // a candle
     const i = Math.max(0, Math.min(G.n - 1, Math.floor((x - 8) / G.step))), c = G.cs[i];
     lineX = 8 + G.step * (i + 0.5);
     const d = new Date(c.time * 1000), wd = d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"});
@@ -4933,7 +4957,66 @@ function renderInstitutionalBoard(){
 function filterInstitutionalBoard(kind){if(kind)BOARD_KIND=kind;renderInstitutionalBoard();}
 function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else{BOARD_SORT=key;BOARD_SORT_DIR=1;}renderInstitutionalBoard();}
 let BOARD_LOADING = false;
+// ---------------- market map: every stock as a tile, grouped by sector, coloured by where its setup stands
+let HEAT = null, HEAT_RT = null;
+const HEAT_ST = {up: ["Breaking out", "hm-up"], down: ["Breaking down", "hm-down"], edge: ["Near the hub top", "hm-edge"], edge_dn: ["Resting, near the hub bottom", "hm-rest"],
+                 resting: ["Resting in a hub", "hm-rest"], none: ["No setup", "hm-none"], locked: ["Pro: live state", "hm-lock"]};
+async function loadHeatmap() {
+  try { HEAT = await api("/api/heatmap"); } catch (e) { return; }
+  paintHeatmap();
+}
+function squarify(items, x, y, w, h) {
+  // items: [{v,...}] sorted large → small; returns the same items with x, y, w, h (classic squarified treemap)
+  const out = [], total = items.reduce((a, b) => a + b.v, 0); if (!total || w <= 0 || h <= 0) return out;
+  let rest = items.map(it => ({...it, a: it.v / total * w * h})), X = x, Y = y, W = w, H = h;
+  const worst = (row, len) => { const s = row.reduce((a, b) => a + b.a, 0), mx = Math.max(...row.map(r => r.a)), mn = Math.min(...row.map(r => r.a));
+    return Math.max(len * len * mx / (s * s), s * s / (len * len * mn)); };
+  while (rest.length) {
+    const len = Math.min(W, H); let row = [rest[0]], i = 1;
+    while (i < rest.length && worst([...row, rest[i]], len) <= worst(row, len)) { row.push(rest[i]); i++; }
+    const s = row.reduce((a, b) => a + b.a, 0), thick = s / len;
+    let off = 0;
+    for (const r of row) { const l = r.a / thick;
+      if (W >= H) out.push({...r, x: X, y: Y + off, w: thick, h: l}); else out.push({...r, x: X + off, y: Y, w: l, h: thick}); off += l; }
+    if (W >= H) { X += thick; W -= thick; } else { Y += thick; H -= thick; }
+    rest = rest.slice(i);
+  }
+  return out;
+}
+function paintHeatmap() {
+  const el = $("mktmap"); if (!el || !HEAT || !HEAT.tiles) return;
+  const W = Math.max(280, (el.clientWidth || 900) - 34), small = W < 640, H = small ? 560 : 440, caps = HEAT.tiles.map(t => t.cap).filter(Boolean).sort((a, b) => a - b);
+  const med = caps.length ? caps[Math.floor(caps.length / 2)] : 1e10;
+  const bySec = {};
+  for (const t of HEAT.tiles) (bySec[t.sec] = bySec[t.sec] || []).push({...t, v: Math.sqrt(t.cap || med)});   // √cap: mega caps big, small names still visible
+  const secs = Object.entries(bySec).map(([k, list]) => ({k, list: list.sort((a, b) => b.v - a.v), v: list.reduce((a, b) => a + b.v, 0)})).sort((a, b) => b.v - a.v);
+  const counts = {}; HEAT.tiles.forEach(t => { const k = t.st === "edge_dn" ? "resting" : t.st; counts[k] = (counts[k] || 0) + 1; });
+  const short = {"Information Technology": "Tech", "Communication Services": "Comm.", "Consumer Discretionary": "Discretionary", "Consumer Staples": "Staples", "Health Care": "Health", "Real Estate": "Real estate"};
+  let html = "";
+  for (const S of squarify(secs, 0, 0, W, H)) {
+    const hd = S.h > 40 && S.w > 50 ? 15 : 0;
+    html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(short[S.k] || S.k)}</div>` : ""}`;
+    for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
+      const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fs = Math.max(8, Math.min(15, Math.min(t.w / 3.6, t.h / 1.8)));
+      html += `<button class="hm-t ${cls}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}"
+        onclick="openBrief('${esc(t.s)}')">${t.w > 26 && t.h > 13 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
+    }
+    html += `</div>`;
+  }
+  const legend = ["up", "edge", "resting", "down", "none"].concat(HEAT.locked ? ["locked"] : []).filter(k => counts[k])
+    .map(k => `<span class="hm-lg"><i class="${HEAT_ST[k][1]}"></i>${HEAT_ST[k][0]} <b>${counts[k]}</b></span>`).join("");
+  el.innerHTML = `<div class="hm-card"><div class="hm-top"><div><b>Market map</b><small>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands. Tap one to open it.</small></div></div>
+    <div class="hm-legend">${legend}</div>
+    <div class="hm-box" style="height:${H}px">${html}<div class="hm-tip" id="hmTip"></div></div></div>`;
+  const box = el.querySelector(".hm-box"), tip = $("hmTip");
+  box.addEventListener("pointermove", (e) => { const b = e.target.closest(".hm-t"); if (!b) { tip.classList.remove("on"); return; }
+    const r = box.getBoundingClientRect(); tip.textContent = b.dataset.tip; tip.classList.add("on");
+    const x = e.clientX - r.left, y = e.clientY - r.top; tip.style.left = Math.min(x + 12, r.width - tip.offsetWidth - 4) + "px"; tip.style.top = Math.max(4, y - 34) + "px"; });
+  box.addEventListener("pointerleave", () => tip.classList.remove("on"));
+}
+addEventListener("resize", () => { clearTimeout(HEAT_RT); HEAT_RT = setTimeout(paintHeatmap, 200); });
 async function loadBoard() {
+  loadHeatmap();
   if (BOARD_LOADING) return;
   BOARD_LOADING = true;
   if (!$("board").querySelector(".board-frame")) $("board").innerHTML = loadingHTML("Loading the market board…");
@@ -6077,6 +6160,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-svg .mp-plan { fill: var(--mp-mut); font: 600 9px var(--sans, system-ui); letter-spacing: .14em; }
 .mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .1; stroke: var(--mp-hub); stroke-width: 1.5; stroke-opacity: .85; }
 .mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
+.mp-svg .mp-vp { fill: var(--mp-hub); shape-rendering: crispEdges; } .mp-svg .mp-vp.poc { fill: var(--mp-trig); }
 .mp-svg .mp-shelfband.w { fill: var(--mp-mut); }
 .mp-svg .mp-dblzone { fill: var(--mp-hub); fill-opacity: .06; }
 .mp-svg .mp-neck { stroke: var(--mp-trig); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: .8; }
@@ -6160,7 +6244,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
   background: radial-gradient(60% 50% at 90% 0%, color-mix(in srgb, var(--mp-hub) 10%, transparent), transparent 70%); }
 .mp-svg .mp-grid { stroke: var(--mp-grid) !important; }
 .mp-svg line, .mp-svg .mp-hub, .mp-svg .mp-fut, .mp-svg .mp-shelfband, .mp-svg .mp-obstband { shape-rendering: crispEdges; }
-.mp-svg .mp-ax { fill: color-mix(in srgb, var(--mp-mut) 85%, transparent); font-size: 10.5px; }
+.mp-svg .mp-ax { fill: var(--mp-ink); opacity: .78; font-size: 10.5px; paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; stroke-linejoin: round; }
 .mp-svg [class^="mp-l-"] { stroke-width: 1; }
 .mp-svg .mp-hub { stroke-width: 1; fill-opacity: .08; }
 .mp-head h3 { letter-spacing: -.035em; font-weight: 700; }
@@ -6170,6 +6254,27 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
 .mp-st b { letter-spacing: -.01em; }
 .mp-c { border-left-color: var(--mp-line); }
 .mp-qs button, .mp-rng, .mp-planbtn, .mp-rp-ctl button { border-color: var(--mp-line); }
+
+/* ---- market map (Setups page) */
+#mktmap { margin: 0 0 18px; }
+.hm-card { background: var(--card, #15171C); border: 1px solid var(--line, #292A2D); border-radius: 18px; padding: 16px; }
+.hm-top b { font-size: 16px; letter-spacing: -.015em; display: block; } .hm-top small { color: var(--muted, #9AA0AC); font-size: 12.5px; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 12px; font-size: 12px; color: var(--muted, #9AA0AC); }
+.hm-lg { display: inline-flex; align-items: center; gap: 6px; } .hm-lg b { color: var(--ink, #F3F4F6); font-weight: 600; }
+.hm-lg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.hm-box { position: relative; width: 100%; overflow: hidden; border-radius: 10px; }
+.hm-sec { position: absolute; box-sizing: border-box; padding: 1px; }
+.hm-sh { position: absolute; left: 3px; top: 1px; right: 3px; height: 14px; font: 600 10px var(--sans, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #9AA0AC); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-t { position: absolute; box-sizing: border-box; border: 1px solid var(--bg, #0E0F12); border-radius: 3px; padding: 0; margin: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; transition: filter .12s; }
+.hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
+.hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
+.hm-up { background: #1f9d63; } .hm-down { background: #c2453b; } .hm-edge { background: #c8961f; } .hm-edgedn { background: #8a6a24; }
+.hm-rest { background: #34407a; } .hm-none { background: #24262c; } .hm-none span { color: rgba(255,255,255,.45); }
+.hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
+html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-none { background: #e6e8ee; } html[data-theme="light"] .hm-none span { color: #8a909c; }
+html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
+.hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--card, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.hm-tip.on { opacity: 1; }
 </style>
 </body>
 </html>

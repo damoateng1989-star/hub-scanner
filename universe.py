@@ -84,3 +84,22 @@ def market_cap(symbol: str) -> float | None:
     if symbol.upper() in ETFS:
         return None        # ETFs have no market cap; the volume filter still applies
     return MARKET_CAPS.get(symbol.upper())
+
+
+def _load_sectors() -> dict:
+    try:
+        with open(_os.path.join(_os.path.dirname(__file__), "sectors.json")) as f:
+            return {k.upper(): v for k, v in _json.load(f)["sectors"].items()}
+    except Exception:
+        return {}
+
+
+SECTORS = _load_sectors()
+
+
+def sector(symbol: str) -> str:
+    """GICS sector for the market heat map; ETFs are their own group; unknown names go to 'Other'."""
+    s = symbol.upper()
+    if s in ETFS:
+        return "ETFs"
+    return SECTORS.get(s, "Other")
