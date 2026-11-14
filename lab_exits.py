@@ -9,7 +9,9 @@ Nothing here changes live alerts. It only measures.
 from __future__ import annotations
 
 import json
+import gc
 import logging
+import sys
 import resource
 import threading
 import time
@@ -648,6 +650,105 @@ def _load_ckpt():
     return ck if ck.get("exits") == [k for k, _ in EXITS] and ck.get("entries") == ["breakout", "retest"] else None   # saved by an older version: start over
 
 
+# ---------------------------------------------------------------- compact rows (memory)
+# A full run keeps ~45-60k rows. As plain dicts with an exits dict of (ret, how) tuples that was ~2.3 KB a row,
+# enough to push the 512 MB server over. These slot-based rows act like the dicts every function here reads
+# (r["k"], r.get, "k" in r, r["ex"][k], k in r["ex"], .items()) at roughly a third of the memory.
+_HOW_CODE, _HOW_NAME, _EXKEYS = {}, [], {}
+
+
+class _Ex:
+    __slots__ = ("_k", "_r", "_h")
+
+    def __init__(self, d: dict):
+        ks = tuple(sorted(d))
+        self._k = _EXKEYS.setdefault(ks, ks)                  # identical key sets share one tuple
+        self._r = tuple(float(d[k][0]) for k in self._k)
+        codes = []
+        for k in self._k:
+            h = str(d[k][1])
+            if h not in _HOW_CODE:
+                _HOW_CODE[h] = chr(65 + len(_HOW_NAME)); _HOW_NAME.append(h)
+            codes.append(_HOW_CODE[h])
+        self._h = sys.intern("".join(codes))
+
+    def __contains__(self, k):
+        return k in self._k
+
+    def __getitem__(self, k):
+        try:
+            i = self._k.index(k)
+        except ValueError:
+            raise KeyError(k)
+        return (self._r[i], _HOW_NAME[ord(self._h[i]) - 65])
+
+    def get(self, k, default=None):
+        return self[k] if k in self._k else default
+
+    def keys(self):
+        return self._k
+
+    def items(self):
+        return [(k, self[k]) for k in self._k]
+
+    def __len__(self):
+        return len(self._k)
+
+
+_ROW_KEYS = ("sym", "grp", "entry", "t", "d", "dv", "board_ok", "rvol", "with_mkt", "with_trend", "chase", "margin", "rr",
+             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far")
+
+
+class _Row:
+    __slots__ = _ROW_KEYS + ("_x",)
+
+    def __init__(self, d: dict):
+        x = None
+        for k, v in d.items():
+            if k == "ex":
+                v = _Ex(v)
+            elif isinstance(v, str):
+                v = sys.intern(v)
+            elif isinstance(v, np.generic):
+                v = v.item()
+            if k in _ROW_KEYS:
+                object.__setattr__(self, k, v)
+            else:
+                x = x or {}
+                x[k] = v
+        self._x = x
+
+    def __getitem__(self, k):
+        try:
+            return object.__getattribute__(self, k) if k in _ROW_KEYS else self._x[k]
+        except (AttributeError, TypeError):
+            raise KeyError(k)
+
+    def get(self, k, default=None):
+        try:
+            return self[k]
+        except KeyError:
+            return default
+
+    def __contains__(self, k):
+        try:
+            self[k]
+            return True
+        except KeyError:
+            return False
+
+    def __setitem__(self, k, v):
+        if k in _ROW_KEYS:
+            object.__setattr__(self, k, v)
+        else:
+            self._x = self._x or {}
+            self._x[k] = v
+
+
+def _compact(rows: list[dict]) -> list:
+    return [_Row(r) for r in rows]
+
+
 def _rss_mb() -> float:
     """This process's CURRENT resident memory in MB (/proc VmRSS; falls back to the peak from getrusage,
     which on Linux is in kilobytes). 0 when it can't be read."""
@@ -711,11 +812,12 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 try:
                     b = bars.get(sym)
                     if b is not None and not b.empty:
-                        rows.extend(trades_for(sym, engine.to_4h(b), s, regime))
+                        rows.extend(_compact(trades_for(sym, engine.to_4h(b), s, regime)))
                 except Exception:
                     traceback.print_exc()
             bars = None
-            _save_ckpt(syms, min(i + CHUNK, len(syms)), rows, failed, failed_msg, started)
+            gc.collect()
+            # no checkpoint any more: runs don't resume (Patch 94), and rewriting every row to JSON each chunk was the biggest memory spike
             _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len([r for r in rows if r.get("entry", "breakout") == "breakout"]),
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
