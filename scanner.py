@@ -1004,6 +1004,11 @@ TRIGGER_ALERTS = os.getenv("TRIGGER_ALERTS", "on").lower() != "off"
 
 
 def format_trigger(sym: str, kind: str, trig: float, price: float, need: str, target: float | None, stop: float | None) -> str:
+    if kind == "double_top":                       # the short side: a heads-up only
+        return "\n".join([f"⚠️ {sym} broke below its double-top neckline {_money(trig)}: now {_money(price)}",
+                           f"Watch only: double tops lost money in the two-year test, so there's no entry plan. "
+                           f"It completes only on {need} below {_money(trig)}."]
+                          + ([f"Pattern target {_money(target)}"] if target is not None else []))
     name = {"hub": "its hub trigger", "double_bottom": "its double-bottom neckline", "gapfade": "its gap-day high"}[kind]
     lines = [f"⚡ {sym} crossed {name} {_money(trig)}: now {_money(price)}",
              f"Not a trade yet. It counts only on {need} above {_money(trig)}."]
@@ -1015,7 +1020,8 @@ def format_trigger(sym: str, kind: str, trig: float, price: float, need: str, ta
 
 
 def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
-    """Every few minutes in market hours: alert watchers when the live price crosses a setup's trigger (longs only).
+    """Every minute in market hours: alert watchers when the live price crosses a setup's trigger or neckline
+    (hub triggers, double-bottom necklines and gap-day highs going up; double-top necklines going down, as a heads-up).
     One alert per stock per 4H candle. Cheap: uses each ticker's last scanned status and one batched price request."""
     now = pd.Timestamp.now(tz="UTC") if now is None else now
     if not TRIGGER_ALERTS or not data.market_open(now):
@@ -1035,7 +1041,9 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
         for x in st.get("setups") or []:
             if x.get("state") != "forming":
                 continue
-            if x.get("kind") == "double_bottom" and x.get("neck") is not None:
+            if x.get("kind") == "double_top" and x.get("neck") is not None:
+                cands.append((sym, "double_top", float(x["neck"]), 2 * x["neck"] - x["peak"] if x.get("peak") else None, None))
+            elif x.get("kind") == "double_bottom" and x.get("neck") is not None:
                 cands.append((sym, "double_bottom", float(x["neck"]), 2 * x["neck"] - x["peak"] if x.get("peak") else None, x.get("peak")))
             elif x.get("kind") == "gapfade" and x.get("upper") is not None:
                 risk = x["upper"] - x["lower"] if x.get("lower") is not None else None
@@ -1047,7 +1055,7 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
     sent = []
     for sym, kind, trig, target, stop in cands:
         px = (prices.get(sym) or {}).get("price")
-        if px is None or px <= trig:
+        if px is None or (px >= trig if kind == "double_top" else px <= trig):
             continue
         need = "a daily close (4:00 PM)" if kind == "gapfade" else f"a 4-hour close ({'1:30 PM' if start.hour < 13 else '4:00 PM'})"
         msg = format_trigger(sym, kind, trig, px, need, round(target, 2) if target else None, round(stop, 2) if stop else None)

@@ -152,8 +152,8 @@ async def lifespan(_app: FastAPI):
         sched.add_job(scanner.early_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
                                                      timezone="America/New_York"),
                       misfire_grace_time=240, coalesce=True, max_instances=1)
-    # live price crosses a trigger: checked every 5 minutes in market hours (one alert per stock per 4H candle)
-    sched.add_job(scanner.trigger_all, CronTrigger(day_of_week="mon-fri", hour="9-15", minute="*/5", timezone="America/New_York"),
+    # live price crosses a trigger or neckline: checked every minute in market hours (one alert per stock per 4H candle)
+    sched.add_job(scanner.trigger_all, CronTrigger(day_of_week="mon-fri", hour="9-15", minute=f"*/{max(1, int(os.getenv('TRIGGER_EVERY_MIN', 1)))}", timezone="America/New_York"),
                   misfire_grace_time=120, coalesce=True, max_instances=1, id="trigger_alerts", replace_existing=True)
     for t in PRECLOSE_TIMES:
         h, m = t.split(":")
