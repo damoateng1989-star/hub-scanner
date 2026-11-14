@@ -3526,6 +3526,7 @@ function findStatus(sym) {
   return r;
 }
 let BRIEF_SYM = null, BRIEF_SEC = "levels", BRIEF_CHART = null;
+let BRIEF_FOCUS = null;   // which setup the panel was opened for (e.g. "double_bottom" from that setup's card)
 // Ask Scout on the homepage lands here as /app?shelf=QQQ: open that stock's Shelf card straight away
 function openShelfFromUrl() {
   const q = new URLSearchParams(location.search), sym = (q.get("shelf") || "").trim().toUpperCase().replace(/^\$/, "");
@@ -3534,7 +3535,8 @@ function openShelfFromUrl() {
   history.replaceState(null, "", location.pathname + (q.toString() ? "?" + q : "") + location.hash);
   if (/^[A-Z][A-Z.\-]{0,9}$/.test(sym)) openBrief(sym);
 }
-async function openBrief(sym) {
+async function openBrief(sym, focus) {
+  BRIEF_FOCUS = focus || null;
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null; MAP_Q = null; MAP_DCH = null;
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
@@ -3698,6 +3700,8 @@ const GRADE_CLS = {A: "ga", B: "gb", C: "gc", D: "gd", "?": "gq"};
 // briefHead / heroStats), else the hub side price is nearest. The grade must measure this setup, never the hub instead.
 function shownSetup(st) {
   if (!st) return {kind: "hub", dir: 1, name: "Long breakouts"};
+  const fx = BRIEF_FOCUS && BRIEF_FOCUS.startsWith("double") && (st.setups || []).find(x => x.kind === BRIEF_FOCUS);
+  if (fx) return {kind: fx.kind, dir: fx.kind === "double_top" ? -1 : 1, name: fx.name};      // opened from that pattern's card
   const k = st.state, live = k === "breakout_up" || k === "breakdown";
   if (live) return {kind: "hub", dir: k === "breakout_up" ? 1 : -1, name: k === "breakout_up" ? "Long breakouts" : "Short breakdowns"};
   const other = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
@@ -3833,11 +3837,34 @@ const MAP_STEPS = {
   gapfade: [["Gap & fade", "hub"], ["Daily close above gap high", "bolt"], ["Target", "flag"]],
   none: [["Waiting for a hub", "hub"], ["Hub forms", "bolt"], ["Breakout", "flag"]],
 };
+function mapDoublePlan(P, x) {
+  const top = x.kind === "double_top", d = top ? -1 : 1, live = x.state === "breakout_up" || x.state === "breakdown";
+  const neck = x.neck ?? x.edge, peak = x.peak ?? x.far;
+  const target = x.target ?? (neck != null && peak != null ? Math.round((neck + d * Math.abs(neck - peak)) * 100) / 100 : null);
+  Object.assign(P, {dir: d, hub: null, trig: neck, stop: live && x.far != null ? x.far : peak, shelf: target, watch: top,
+    steps: top ? "double_top" : "double_bottom", setupName: x.name || (top ? "Double top" : "Double bottom"),
+    phase: live ? (x.retest && x.retest.near ? 2 : 1) : 0, dbl: {kind: x.kind, peaks: x.peaks || [], neck, peak}});
+  if (top) {
+    P.status = live ? "Double top: broke down · watch only" : "Double top · watch only";
+    P.sub = live ? "Double tops lost money in the two-year test, so there's no entry plan on the short side."
+      : `Two peaks near ${money(peak)}. A close below the neckline ${money(neck)} would complete it. Double tops lost money in testing: watch only.`;
+    P.tone = "bad";
+  } else {
+    P.status = live ? (x.retest && x.retest.near ? "Double bottom: retesting the neckline" : "Double bottom: broke out · waiting for the retest") : "Double bottom · forming";
+    P.sub = live ? `The entry is a 4-hour close back near ${money(neck)} that holds above it. Wrong below the lows, ${money(P.stop)}.`
+      : `Two lows near ${money(peak)}. A 4-hour close above the neckline ${money(neck)} starts it.`;
+    P.tone = live ? "go" : "wait";
+  }
+  return P;
+}
 function mapPlan(sym, st) {
   const k = st.state, h = st.hub, L = LIVE[sym], isLive = !!(LIVE_OPEN && L && L.price != null);
   const px = isLive ? L.price : st.last_close;
   const P = {sym, px, isLive, chg: isLive ? L.change_pct : null, hub: null, trig: null, stop: null, shelf: null, obst: null,
              dir: 1, steps: "none", phase: 0, watch: false, status: "", sub: "", tone: "wait", setupName: "Hub breakout"};
+  // opened from a double top / bottom card: show that pattern, not the hub
+  const fx = BRIEF_FOCUS && BRIEF_FOCUS.startsWith("double") && (st.setups || []).find(x => x.kind === BRIEF_FOCUS);
+  if (fx) { mapDoublePlan(P, fx); return mapObstacle(P, sym, st); }
   const hubLive = (k === "breakout_up" || k === "breakdown") && h;
   const MEASURED = (x) => x.kind === "gapfade" || x.kind === "double_top" || x.kind === "double_bottom";
   const other = !hubLive && (st.setups || []).find(x => MEASURED(x) && (x.state === "breakout_up" || x.state === "breakdown"));
@@ -3850,6 +3877,8 @@ function mapPlan(sym, st) {
     if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
       P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (${rt.candles_left} candle${rt.candles_left === 1 ? "" : "s"} left).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
     else { P.status = "Broke down · watch only"; P.sub = "Short breakdowns lost money in the two-year test, so there's no entry plan."; P.tone = "bad"; }
+  } else if (other && other.kind.startsWith("double")) {
+    mapDoublePlan(P, other);
   } else if (other) {
     const d = other.state === "breakout_up" ? 1 : -1, kd = other.kind.startsWith("double") ? other.kind : other.kind === "gapfade" ? "gapfade" : "hub";
     Object.assign(P, {dir: d, trig: other.edge, shelf: other.target, stop: other.stop ?? other.edge, steps: kd === "hub" ? (d === 1 ? "hub" : "hub_short") : kd,
@@ -3871,14 +3900,14 @@ function mapPlan(sym, st) {
       const risk = pend.upper - pend.lower;
       Object.assign(P, {trig: pend.upper, stop: pend.lower, shelf: Math.round((pend.upper + 2 * risk) * 100) / 100, steps: "gapfade", setupName: pend.name});
       P.status = "Gap fade · waiting for the rip"; P.sub = `A daily close above ${money(pend.upper)} in the next ${pend.days_left} day${pend.days_left === 1 ? "" : "s"} starts it.`;
-    } else {
-      Object.assign(P, {trig: pend.neck, stop: pend.peak, shelf: Math.round((2 * pend.neck - pend.peak) * 100) / 100, steps: "double_bottom", setupName: pend.name});
-      P.status = "Double bottom · forming"; P.sub = `A 4-hour close above the neckline ${money(pend.neck)} starts it.`;
-    }
+    } else mapDoublePlan(P, pend);
   } else {
     P.status = "No setup in play"; P.sub = "NextShelf flags it once price settles into a tight range for 4+ four-hour candles.";
     P.shelf = st.shelf_up ? st.shelf_up.level : null;
   }
+  return mapObstacle(P, sym, st);
+}
+function mapObstacle(P, sym, st) {
   // what's in the way: a call wall (or put wall) between trigger and target, else a 3+-touch level, else an old high
   if (P.trig != null && P.shelf != null) {
     const d = P.dir, between = (v) => v != null && (d === 1 ? v > P.trig * 1.001 && v < P.shelf * 0.999 : v < P.trig * 0.999 && v > P.shelf * 1.001);
@@ -3913,7 +3942,8 @@ function mapChart(P, chart, W) {
     if (new Date(last.time * 1000).toISOString().slice(0, 10) === today)
       cs[cs.length - 1] = {...last, close: P.px, high: Math.max(last.high, P.px), low: Math.min(last.low, P.px)};
   }
-  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
+  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high,
+              ...(P.dbl ? P.dbl.peaks.map(q => q.price) : [])].filter(v => v != null);
   const near = want > 60 ? cs : cs.slice(-24);   // zoom on the setup: older candles far away are clipped instead of squashing the plan (3M shows everything)
   let lo = Math.min(...lv, ...near.map(c => c.low)), hi = Math.max(...lv, ...near.map(c => c.high));
   const pad = (hi - lo) * 0.04 || hi * 0.01; lo -= pad; hi += pad;
@@ -3925,7 +3955,7 @@ function mapChart(P, chart, W) {
   if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.atrTarget ? "Target (1 ATR)" : P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
   if (P.obst) tags.push({v: P.obst.level, cls: "t-obst", t: P.obst.name});
   if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
-  if (P.stop != null && P.stop !== P.trig) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
+  if (P.stop != null && P.stop !== P.trig && !P.watch) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
   tags.forEach(g => g.txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high").replace("Target (1 ATR)", "Target") : g.t} ${money(g.v)}`);
   // labels live in their own column at the right; lines, bands and the hub stop short of it, so nothing crosses the text
   const labW = Math.max(0, ...tags.map(g => g.txt.length * (small ? 6.2 : 6.8))) + 6;
@@ -3953,8 +3983,22 @@ function mapChart(P, chart, W) {
       : Math.max(y(P.hub.high) - 7, top + 10);                                             // over it
     parts.push(`<text class="mp-hubt" x="${futX + 6}" y="${ly}">HUB ${money(P.hub.low)}–${money(P.hub.high)}</text>`);
   }
+  // double top / bottom: the two lows (or highs), the neckline back to the first one, and the W / M they make
+  if (P.dbl && n) {
+    const xi = (t) => { const j = cs.findIndex(c => c.time + dur > t); return j < 0 ? null : cx(j); };
+    const pts = P.dbl.peaks.map(q => ({x: xi(q.time), y: y(q.price), p: q.price})).filter(q => q.x != null);
+    const top = P.dbl.kind === "double_top", word = top ? "high" : "low";
+    if (pts.length === 2) {
+      const xm = (pts[0].x + pts[1].x) / 2, yn = y(P.dbl.neck);
+      parts.push(`<rect class="mp-dblzone" x="${pts[0].x}" y="${Math.min(yn, pts[0].y, pts[1].y) - 3}" width="${futX - pts[0].x}" height="${Math.abs(yn - (top ? Math.min(pts[0].y, pts[1].y) : Math.max(pts[0].y, pts[1].y))) + 6}" rx="4"/>`);
+      parts.push(`<line class="mp-neck" x1="${pts[0].x}" x2="${futX}" y1="${yn}" y2="${yn}"/>`);
+      parts.push(`<polyline class="mp-wm ${top ? "m" : "w"}" points="${pts[0].x},${pts[0].y} ${xm},${yn} ${pts[1].x},${pts[1].y} ${xNow},${y(P.px)}"/>`);
+      pts.forEach((q, i) => parts.push(`<circle class="mp-pk ${top ? "m" : "w"}" cx="${q.x}" cy="${q.y}" r="5"/><text class="mp-pkt ${top ? "m" : "w"}" x="${Math.max(24, q.x)}" y="${top ? q.y - 10 : q.y + 18}" text-anchor="middle">${i ? "2nd" : "1st"} ${word}</text>`));
+      parts.push(`<text class="mp-hubt dbl" x="${Math.max(4, pts[0].x)}" y="${top ? yn + 15 : yn - 7}">${top ? "DOUBLE TOP" : "DOUBLE BOTTOM"} · neckline ${money(P.dbl.neck)}</text>`);
+    }
+  }
   // shelf band, obstacle band
-  if (P.shelf != null) parts.push(`<rect class="mp-shelfband" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${lineEnd - futX}" height="14"/>`);
+  if (P.shelf != null) parts.push(`<rect class="mp-shelfband${P.watch ? " w" : ""}" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${lineEnd - futX}" height="14"/>`);
   if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${lineEnd - futX}" height="12"/>`);
   // candles
   parts.push(`<clipPath id="mpClip"><rect x="0" y="${top}" width="${futX}" height="${H - top - bot}"/></clipPath><g clip-path="url(#mpClip)">`);
@@ -3963,7 +4007,7 @@ function mapChart(P, chart, W) {
   parts.push("</g>");
   // level lines
   const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${lineEnd}" y1="${y(v)}" y2="${y(v)}"/>`;
-  parts.push(line(P.stop !== P.trig ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
+  parts.push(line(P.stop !== P.trig && !P.watch ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
              line(P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", futX));
   // the path: current price → trigger → target (dashed; nothing to the right of "now" is real price)
   if (P.shelf != null && P.trig != null) {
@@ -4044,6 +4088,9 @@ function mapAnswer(q, P, st) {
   }
   // like I'm new
   if (P.steps === "gapfade") return `Think of it as a second chance: the stock jumped on news, people sold the jump, and now it's trying to climb back. If it closes above the day's high, the buyers won. If it drops under ${money(P.stop)}, they didn't, and you step aside.`;
+  if (P.dbl) return P.dbl.kind === "double_top"
+    ? `Price climbed to about ${money(P.dbl.peak)} twice and got pushed back both times, like a ceiling. If it closes below the dip in between (${money(P.dbl.neck)}), sellers have won. NextShelf only watches these: they lost money in testing.`
+    : `Price fell to about ${money(P.dbl.peak)} twice and bounced both times, like a floor that held. If it closes above the bounce in between (${money(P.dbl.neck)}), buyers have taken over. NextShelf then waits for a pullback to that line that holds, and that's the entry.`;
   if (h) return `Picture a shelf in a cupboard. Price has been sitting on one shelf (${money(h.low)}–${money(h.high)}). NextShelf waits for it to step up to the next one${P.shelf != null ? ` near ${money(P.shelf)}` : ""}. A 4-hour candle closing above ${money(P.trig)} is that step. Until then: no trade.`;
   return `NextShelf looks for stocks resting in a tight range, then waits for them to step out of it. ${S} isn't resting in one right now.`;
 }
@@ -4069,7 +4116,7 @@ function paintMap() {
   const cell = (cls, label, v, sub, ic) => `<div class="mp-c ${cls}"><small>${label}</small><b>${ic ? mapIc(ic, 15) : ""}${v}</b>${sub ? `<i>${sub}</i>` : ""}</div>`;
   const cells = [cell("c-now", P.isLive ? "Now" : "Last close", money(P.px), P.chg != null ? `${P.chg >= 0 ? "+" : ""}${P.chg}% today` : "4-hour close")];
   if (P.trig != null) cells.push(cell("c-trig", P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger", money(P.trig), P.steps === "gapfade" ? "daily close above" : `4H close ${P.dir === 1 ? "above" : "below"}`, "bolt"));
-  if (P.stop != null && P.stop !== P.trig && !P.watch) cells.push(cell("c-stop", "Stop", money(P.stop), P.hub && P.stop < P.hub.high && P.stop > P.hub.low ? "middle of the hub" : P.steps === "gapfade" ? "the fade low" : "", ""));
+  if (P.stop != null && P.stop !== P.trig && !P.watch) cells.push(cell("c-stop", "Stop", money(P.stop), P.hub && P.stop < P.hub.high && P.stop > P.hub.low ? "middle of the hub" : P.dbl ? "under the two lows" : P.steps === "gapfade" ? "the fade low" : "", ""));
   if (P.obst) cells.push(cell("c-obst", "Next obstacle", money(P.obst.level), P.obst.name));
   cells.push(cell("c-shelf", P.atrTarget ? "Target" : P.steps === "hub" || P.steps === "hub_short" || P.steps === "none" ? "Next shelf" : "Target", P.shelf != null ? money(P.shelf) : "–",
     P.atrTarget ? `no shelf above: 1 ATR past the hub top${P.trig != null && P.shelf <= P.trig ? " (below the trigger: no room yet)" : ""}` : P.shelf != null ? pctTo(P.shelf) || "above" : "none in range", "flag"));
@@ -4274,7 +4321,7 @@ function mapLevelInfo(g, P) {
     : P.steps.startsWith("double") ? `A 4-hour close above the neckline confirms the double bottom. ${pct(g.v)}.`
     : P.phase >= 1 ? `It already closed above here: that was the breakout. Now NextShelf waits for a pullback to this edge that holds (the retest) for the A entry. ${pct(g.v)}.`
     : `A 4-hour close above here confirms the breakout. Until then there's no trade. It sits far enough above recent closes that a close there is a real move, not noise. ${pct(g.v)}.`];
-  if (t === "t-stop") return [`Stop ${money(g.v)}`, `If price closes below here, the plan is wrong and you step aside.${P.hub && g.v < P.hub.high && g.v > P.hub.low ? " It's the middle of the hub." : ""} ${pct(g.v)}.`];
+  if (t === "t-stop") return [`Stop ${money(g.v)}`, `If price closes below here, the plan is wrong and you step aside.${P.dbl ? " It's just under the two lows." : P.hub && g.v < P.hub.high && g.v > P.hub.low ? " It's the middle of the hub." : ""} ${pct(g.v)}.`];
   if (t === "t-obst") return [`${g.t} ${money(g.v)}`, `Between the trigger and the target: ${P.obst ? P.obst.why : ""}. Price may slow down here. ${pct(g.v)}.`];
   return [`${g.t} ${money(g.v)}`, P.atrTarget ? `There's no shelf above, so the target is one typical 4-hour move (1 ATR) past the hub top. ${pct(g.v)}.`
     : P.steps.startsWith("hub") ? `The next zone above where price paused before. A breakout aims here. ${pct(g.v)}.` : `Where this setup aims. ${pct(g.v)}.`];
@@ -5158,7 +5205,7 @@ function setupCard(x) {
     ${setupSketch(x)}
     <div class="msc-meta">${meta}</div>
     ${x.catalyst ? `<div class="sc-news">📰 Possible catalyst (${esc(x.catalyst.tag_label)}): ${x.catalyst.url ? `<a href="${esc(x.catalyst.url)}" target="_blank" rel="noopener">${esc(x.catalyst.headline)}</a>` : `<b>${esc(x.catalyst.headline)}</b>`} · ${esc(x.catalyst.source)}, ${when(x.catalyst.time)}</div>` : ""}
-    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="sc-trade"><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</span></div></div>`;
+    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}', '${esc(x.kind)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="sc-trade"><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</span></div></div>`;
 }
 let RECORD_PAT = "rules";
 
@@ -5977,6 +6024,12 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-svg .mp-plan { fill: var(--mp-mut); font: 600 9px var(--sans, system-ui); letter-spacing: .14em; }
 .mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .1; stroke: var(--mp-hub); stroke-width: 1.5; stroke-opacity: .85; }
 .mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
+.mp-svg .mp-shelfband.w { fill: var(--mp-mut); }
+.mp-svg .mp-dblzone { fill: var(--mp-hub); fill-opacity: .06; }
+.mp-svg .mp-neck { stroke: var(--mp-trig); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: .8; }
+.mp-svg .mp-wm { fill: none; stroke-width: 2; stroke-linejoin: round; opacity: .55; } .mp-svg .mp-wm.w { stroke: var(--mp-shelf); } .mp-svg .mp-wm.m { stroke: var(--mp-obst); }
+.mp-svg .mp-pk { stroke: var(--mp-card); stroke-width: 2; } .mp-svg .mp-pk.w { fill: var(--mp-shelf); } .mp-svg .mp-pk.m { fill: var(--mp-obst); }
+.mp-svg .mp-pkt { font: 700 11px var(--sans, system-ui); paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; } .mp-svg .mp-pkt.w { fill: var(--mp-shelf); } .mp-svg .mp-pkt.m { fill: var(--mp-obst); }
 .mp-svg .mp-shelfband { fill: var(--mp-shelf); opacity: .13; } .mp-svg .mp-obstband { fill: var(--mp-obst); opacity: .12; }
 .mp-svg .mp-cf { opacity: .45; } .mp-svg .mp-cf rect { stroke-dasharray: 2 2; fill-opacity: .35; stroke-width: 1.2; }
 .mp-svg .mp-cu, .mp-svg .mp-cuf { stroke: #3DD68C; fill: #3DD68C; } .mp-svg .mp-cd, .mp-svg .mp-cdf { stroke: #FF6B5E; fill: #FF6B5E; }

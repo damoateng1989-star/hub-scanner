@@ -719,6 +719,14 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
                 row.update(trigger="up", gap_pct=round(L["gap_pct"] * 100, 1), days_left=L["left"], sessions_unit="days",
                            next_pct=L.get("next_pct"))
                 row["near_edge"] = "up" if pos >= 0.8 else None
+        if k.startswith("double"):           # the two lows (or highs) and the neckline, for drawing the W / M on the map
+            pp = L["trade"].get("p") if L["state"] in ("breakout_up", "breakdown") else L.get("p")
+            if pp and "i1" in pp:
+                col = c4["High"] if k == "double_top" else c4["Low"]
+                wall = lambda i: int(idx[i].tz_localize(None).timestamp())
+                row["peaks"] = [dict(time=wall(i), price=round(float(col.iloc[i]), 2)) for i in (pp["i1"], pp["i2"]) if 0 <= i < n]
+                row.setdefault("neck", round(float(pp["neck"]), 2))
+                row.setdefault("peak", round(float(pp["peak"]), 2))
         out.append(row)
     order = {"breakout_up": 0, "breakdown": 0, "testing": 1, "forming": 2, "between": 3}
     out.sort(key=lambda r: order.get(r["state"], 9))
