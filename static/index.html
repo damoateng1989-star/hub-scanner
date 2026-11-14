@@ -3991,13 +3991,14 @@ function mapChart(P, chart, W) {
 let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null;
 function initLightweightMapChart() {
   const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
+  if (MAP_LWC_RO) { MAP_LWC_RO.disconnect(); MAP_LWC_RO = null; }
+  if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
+  document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove());
   if (!host || !D || !L || !D.cs || !D.cs.length) {
     if (host) host.innerHTML = '<div class="mp-lwc-empty">Chart data is loading…</div>';
     return;
   }
   try {
-    if (MAP_LWC_RO) { MAP_LWC_RO.disconnect(); MAP_LWC_RO = null; }
-    if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
     const light = document.documentElement.dataset.theme === "light";
     const bg = light ? "#F8F9FD" : "#121418", grid = light ? "rgba(13,17,23,.07)" : "rgba(255,255,255,.07)";
     const colors = candleColors(), up = colors[0] || "#22C55E", down = colors[1] || "#EF4444";
@@ -4037,7 +4038,7 @@ function initLightweightMapChart() {
     MAP_LWC_CHART=chart; MAP_LWC_CANDLE=candles; MAP_LWC_VOLUME=vol;
     MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected)MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});});
     MAP_LWC_RO.observe(host);
-    const foot=document.createElement("div");foot.className="mp-lwc-foot";foot.innerHTML='<a href="https://www.tradingview.com/" target="_blank" rel="noopener">Charting by TradingView · Lightweight Charts™</a>';host.after(foot);
+    const foot=document.createElement("div");foot.className="mp-lwc-foot";foot.innerHTML='TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc. · <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>';host.after(foot);
   } catch(err) { console.error("NextShelf chart init failed",err); host.innerHTML='<div class="mp-lwc-empty">Chart unavailable. Please refresh.</div>'; }
 }
 
@@ -4229,7 +4230,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">⚡ Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Drag the <b>stop</b> or <b>target</b> line up or down." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, or the volume strip by the prices for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">⚡ Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, or the volume strip by the prices for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
