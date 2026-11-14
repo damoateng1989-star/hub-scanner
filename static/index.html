@@ -3562,7 +3562,7 @@ function closeBrief() { clearTimeout(MAP_FT); if (typeof mapReplayStop === "func
 function vizSummary(st) {
   if (!st) return "";
   const h = st.hub, k = st.state;
-  if ((k === "forming" || k === "watching") && h) return `Resting between ${money(h.low)} and ${money(h.high)}. Nothing counts until a 4-hour close above ${money(st.trigger_up ?? h.high)} or below ${money(st.trigger_down ?? h.low)}; the next is ${nextCloseText()}.`;
+  if ((k === "forming" || k === "watching") && h) return `Resting between ${money(h.low)} and ${money(h.high)}. Nothing counts until a 4-hour close above ${money(st.trigger_up ?? h.high)} or below ${money(st.trigger_down ?? h.low)}. The next 4-hour close is ${nextCloseWhen().join(" at ")}.`;
   if ((k === "breakout_up" || k === "breakdown") && h) {
     const up = k === "breakout_up", edge = up ? h.high : h.low;
     return `Closed ${up ? "above" : "below"} the hub at ${money(edge)}. Aiming for ${money(st.target)}.`;
@@ -5449,14 +5449,17 @@ async function pollLive() {
   LIVE_T = setTimeout(pollLive, LIVE_OPEN ? 30000 : 300000);    // every 30s while the market is open
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pollLive(); });
-// the next 4-hour close, in words: "the 1:30 PM close", "the 4:00 PM close", or after the bell "the next day's 1:30 PM close"
-function nextCloseText(now) {
+// the next 4-hour close, in words: "today's 1:30 PM close", "tomorrow's 1:30 PM close", "Monday's 1:30 PM close"
+// when the next 4-hour close is: [day word, time], e.g. ["today", "4:00 PM"], ["tomorrow", "1:30 PM"], ["Monday", "1:30 PM"]
+function nextCloseWhen(now) {
   const ny = new Date((now || new Date()).toLocaleString("en-US", {timeZone: "America/New_York"}));
   const m = ny.getHours() * 60 + ny.getMinutes(), wd = ny.getDay();
-  if (wd >= 1 && wd <= 5 && m < 13 * 60 + 30) return "the 1:30 PM close";
-  if (wd >= 1 && wd <= 5 && m < 16 * 60) return "the 4:00 PM close";
-  return "the next day's 1:30 PM close";
+  if (wd >= 1 && wd <= 5 && m < 13 * 60 + 30) return ["today", "1:30 PM"];
+  if (wd >= 1 && wd <= 5 && m < 16 * 60) return ["today", "4:00 PM"];
+  if (wd >= 1 && wd <= 4) return ["tomorrow", "1:30 PM"];
+  return ["Monday", "1:30 PM"];                        // Friday after the close, or the weekend (holidays aren't known here)
 }
+function nextCloseText(now) { const [d, t] = nextCloseWhen(now); return `${d === "Monday" ? "Monday" : d}'s ${t} close`; }   // "tomorrow's 1:30 PM close"
 function liveVsHub(st, px) {
   // where the live price sits against the hub, BEFORE the candle closes
   const h = st && st.hub;
