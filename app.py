@@ -131,7 +131,7 @@ def handle_command(cmd: str, args: list[str], u: dict) -> str:
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    try:      # a Lab test cut off by a deploy carries on from its last saved chunk
+    try:      # a Lab test cut off by a restart is marked stopped, not resumed (it used to resume itself and OOM-loop)
         import lab_exits
         lab_exits.resume_if_interrupted()
     except Exception as e:

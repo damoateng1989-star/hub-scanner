@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import resource
 import threading
 import time
 import traceback
@@ -26,6 +27,7 @@ log = logging.getLogger("lab")
 DAYS = 720                       # the test period; each run can pick its own (2, 3, 5 or 10 years)
 YEARS_OK = (2, 3, 5, 10)
 CHUNK = 20
+LAB_RSS_STOP_MB = 400   # stop the test before Render kills the whole instance at 512 MB; tune only if the baseline moves
 _LOCK = threading.Lock()
 _CANCEL = threading.Event()   # set by stop(): the run quits at the next stock
 _RESTART = {"on": False}      # stop(restart=True): start a fresh run as soon as the old one has quit
@@ -646,6 +648,22 @@ def _load_ckpt():
     return ck if ck.get("exits") == [k for k, _ in EXITS] and ck.get("entries") == ["breakout", "retest"] else None   # saved by an older version: start over
 
 
+def _rss_mb() -> float:
+    """This process's CURRENT resident memory in MB (/proc VmRSS; falls back to the peak from getrusage,
+    which on Linux is in kilobytes). 0 when it can't be read."""
+    try:
+        with open("/proc/self/status") as fh:
+            for line in fh:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024.0
+    except Exception:
+        pass
+    try:
+        return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / 1024.0
+    except Exception:
+        return 0.0
+
+
 def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None):
     global DAYS
     if not _LOCK.acquire(blocking=False):
@@ -701,6 +719,12 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len([r for r in rows if r.get("entry", "breakout") == "breakout"]),
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
+            rss = _rss_mb()
+            if rss > LAB_RSS_STOP_MB:
+                CKPT.unlink(missing_ok=True)
+                _set(status="stopped", error=f"Stopped at {int(rss)} MB to stay under the server's 512 MB limit. Tap Run the test again.")
+                log.info("lab test: stopped at %d MB to stay under the memory limit", int(rss))
+                return
             time.sleep(0.2)                   # leave room for the site and the live scan
         if not rows:
             raise RuntimeError("no breakouts found: the market data download failed" + (f" ({failed_msg})" if failed_msg else ""))
@@ -748,20 +772,26 @@ def stop(restart: bool = False) -> dict:
 
 
 def resume_if_interrupted():
-    """Called at server start: a test that was running when the server restarted (a deploy) carries on by itself."""
+    """Called at server start: a test that was running when the server restarted does NOT carry on.
+
+    It used to resume itself here, with no cap and no memory check, so when Render killed the
+    instance for running out of memory mid-test, the next start resumed the same test, grew the
+    memory again, and got killed again, about every 5 minutes. An interrupted run now stops
+    cleanly instead; the admin starts a fresh run from the Lab page when they want one.
+    """
     st = json.loads(db.get_setting("lab_exits") or "{}")
-    if st.get("status") == "running" and _load_ckpt() is not None:
-        start(resume=True)
+    if st.get("status") == "running":
+        CKPT.unlink(missing_ok=True)   # same as stop() when nothing is running: a cut-off run is cleared, not resumed
+        _set(status="stopped", error="The test was interrupted (the server restarted part-way). Tap Run the test again.")
+        log.info("lab test: interrupted run stopped at server start, not resumed")
 
 
 def status() -> dict:
     st = json.loads(db.get_setting("lab_exits") or "{}")
     if st.get("status") == "running" and not _LOCK.locked():
         # saved as running, but nothing is running in this server: it restarted (a deploy, or it ran out of memory)
-        if _load_ckpt() is not None and st.get("resumes", 0) < 3:
-            _set(resumes=st.get("resumes", 0) + 1)
-            start(resume=True)
-            return json.loads(db.get_setting("lab_exits") or "{}")
-        st.update(status="error", error="The test was interrupted (the server restarted part-way). Tap Run the test again.")
+        # Do not resume it here: a page view must never silently restart a memory-heavy test.
+        CKPT.unlink(missing_ok=True)
+        st.update(status="stopped", error="The test was interrupted (the server restarted part-way). Tap Run the test again.")
         db.set_setting("lab_exits", json.dumps(st))
     return st
