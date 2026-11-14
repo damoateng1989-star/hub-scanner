@@ -5216,6 +5216,8 @@ function briefCard() {
   return `<div class="acct"><h3>Morning brief</h3><p>Every weekday at ${esc((ME.brief_time || "08:45").replace(/^0/, ""))} AM ET: the stocks closest to a breakout, breakouts still in play, and your watchlist.${where ? ` Sent by ${where}.` : " Connect Telegram below to receive it."}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.brief ? "checked" : ""} onchange="setBriefOn(this.checked)"> Send me the morning brief</label>
       <button class="btnx sm" onclick="testBrief(this)">Send one now</button></div></div>
+  <div class="acct"><h3>Every A setup</h3><p>Get an alert whenever an A setup confirms on <b>any</b> of the stocks NextShelf scans, not just your watchlist: about 8 a week across hub and double-bottom retests and gap fades. One message per scan (after the 1:30 PM and 4:00 PM closes) with each stock's entry, stop and target. Stocks on your watchlist still alert on their own, so they're left out.</p>
+    <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.a_all ? "checked" : ""} onchange="setEveryA(this.checked)"> Alert me on every A setup</label></div></div>
   <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
       <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>
@@ -5305,6 +5307,10 @@ async function saveQuiet() {
   catch (e) { toast(friendly(e)); }
 }
 function fmtET(t) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; }
+async function setEveryA(on) {
+  try { await api("/api/me/every_a", {method: "POST", body: JSON.stringify({on})}); ME.a_all = on; toast(on ? "You'll get every A setup" : "Every-A-setup alerts are off"); }
+  catch (e) { toast(friendly(e)); }
+}
 async function setRecapOn(on) {
   try { await api("/api/me/recap", {method: "POST", body: JSON.stringify({on})}); ME.recap = on; toast(on ? "Evening recap is on" : "Evening recap is off"); }
   catch (e) { toast(friendly(e)); }

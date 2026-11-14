@@ -145,6 +145,11 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    try:   # added later: alert on every A setup across the whole board, not just the watchlist (opt-in)
+        _conn.execute("ALTER TABLE users ADD COLUMN a_all INTEGER DEFAULT 0")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     try:   # added later: which setups a member wants alerts for ("hub,triangle,channel,sr"); NULL = hubs only
         _conn.execute("ALTER TABLE users ADD COLUMN styles TEXT")
         _conn.commit()
@@ -269,7 +274,7 @@ def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
 
 
 # --- users
-USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes")
+USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes", "a_all")
 
 
 def create_user(**f) -> int:

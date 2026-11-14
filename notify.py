@@ -80,6 +80,50 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
             phone.safe_call(speech, to=u["phone"])
 
 
+def every_a_alert(items: list[dict]):
+    """Opt-in: every A setup confirmed in a board sweep, across all stocks, in one message per member.
+    Skips stocks the member watches (they already get that stock's own alert) and setups they haven't picked."""
+    import patterns
+    fresh = []
+    for x in items:                                           # once per setup, even if a sweep reruns
+        key = f"every_a|{x['symbol']}|{x['kind']}|{x['entry_time']}"
+        try:
+            if db.add_alert(key, x["symbol"], "every_a", x["entry_time"], x["setup"]):
+                fresh.append(x)
+        except Exception:
+            fresh.append(x)
+    if not fresh:
+        return 0
+    money = lambda v: f"${v:,.2f}"
+    sent = 0
+    for u in db.all_users():
+        if not u.get("a_all"):
+            continue
+        mine = set(db.user_symbols(u["id"]))
+        late = all(late_close(x["entry_time"]) for x in fresh)
+        if (u.get("closes") or "both") == "midday" and late:
+            continue
+        picks = [x for x in fresh if x["symbol"] not in mine and patterns.STYLE_OF.get(x["kind"], "hub") in styles_of(u)]
+        if not picks:
+            continue
+        lines = [f"🅰️ {len(picks)} A setup{'s' if len(picks) != 1 else ''} just confirmed (all stocks)"]
+        for x in picks[:12]:
+            rr = (x["target"] - x["entry"]) / (x["entry"] - x["stop"]) if x["entry"] > x["stop"] else 0
+            lines.append(f"• {x['symbol']} · {x['setup']}: entry {money(x['entry'])} · stop {money(x['stop'])} · target {money(x['target'])}"
+                         + (f" · {rr:.1f}R" if rr else ""))
+        if len(picks) > 12:
+            lines.append(f"…and {len(picks) - 12} more on the Setups page.")
+        msg = "\n".join(lines)
+        quiet = quiet_now(u)
+        if u["telegram_chat"]:
+            telegram_bot.send(msg, u["telegram_chat"], silent=quiet)
+        _push(u["id"], msg, "/app#setups", "every-a", quiet)
+        if _pro(u) and u["phone"] and not quiet:
+            phone.safe_text(msg, to=u["phone"])
+        sent += 1
+    return sent
+
+
 def _push(user_id: int, text: str, url: str, tag: str | None = None, silent: bool = False):
     """iPhone / browser notification, off the alert loop's thread so a slow push service never delays Telegram."""
     title, body = push.split(text)

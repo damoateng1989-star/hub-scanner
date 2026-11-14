@@ -49,6 +49,9 @@ def rules_start() -> str:
     return v
 
 
+FRESH_A: list[dict] = []     # A setups confirmed on the latest candle during this sweep (for the "every A setup" alert)
+
+
 def _record_rules(sym: str, c4: pd.DataFrame, res: dict, pa: dict | None, start: pd.Timestamp):
     """Log the trades today's rules would take, the way the alerts give them: hub and double-bottom retests that grade
     A (entry = the retest close; stop 1 ATR for hubs, the far side for doubles; aim the target; 10 candles), and
@@ -75,6 +78,9 @@ def _record_rules(sym: str, c4: pd.DataFrame, res: dict, pa: dict | None, start:
                 oi = j + s.horizon
                 outcome, ret = "stalled", (close[oi] / entry - 1) * 100
         h = t["hub"]
+        if j == len(close) - 1 and grade == "A":              # confirmed on the candle that just closed
+            FRESH_A.append(dict(symbol=sym, kind=kind, setup=label, entry=round(entry, 2), stop=round(stop, 2),
+                                target=round(t["target"], 2), entry_time=idx[j].isoformat()))
         db.upsert_signal(id=f"{RULES}|{kind}|{sym}|{idx[t['i0']].isoformat()}", pattern=RULES, setup=label, grade=grade,
                          symbol=sym, direction=1, hub_low=round(h["low"], 2), hub_high=round(h["high"], 2),
                          hub_sessions=h.get("sessions"), breakout_time=idx[t["i0"]].isoformat(), entry_time=idx[j].isoformat(),
@@ -102,6 +108,9 @@ def _record_rules(sym: str, c4: pd.DataFrame, res: dict, pa: dict | None, start:
                     put(t, "double_bottom", "Double bottom retest", g["grade"], j, entry, g["stop"])
         elif t["kind"] == "gapfade" and idx[t["i0"]] > start:
             h = t["hub"]
+            if t["i0"] == len(close) - 1 and t.get("stop"):
+                FRESH_A.append(dict(symbol=sym, kind="gapfade", setup="Gap fade & rip", entry=round(t["entry"], 2),
+                                    stop=round(t["stop"], 2), target=round(t["target"], 2), entry_time=idx[t["i0"]].isoformat()))
             db.upsert_signal(id=f"{RULES}|gapfade|{sym}|{idx[t['i0']].isoformat()}", pattern=RULES, setup="Gap fade & rip", grade=None,
                              symbol=sym, direction=1, hub_low=round(h["low"], 2), hub_high=round(h["high"], 2),
                              hub_sessions=h.get("sessions"), breakout_time=idx[t["i0"]].isoformat(), entry_time=idx[t["i0"]].isoformat(),
@@ -317,6 +326,7 @@ def scan_board() -> int:
 def _scan_board() -> int:
     if True:
         watch = {r["symbol"] for r in db.list_tickers()}
+        FRESH_A.clear()
         syms = sorted(set(universe.board_universe()) | watch)
         start = pd.Timestamp(record_start())
         rules_start_ts = pd.Timestamp(rules_start())
@@ -419,6 +429,9 @@ def _scan_board() -> int:
         log.info("board scan done: %d/%d symbols (%d skipped: illiquid, %d skipped: small-cap)",
                  done, len(syms), skipped_illiquid, skipped_smallcap)
         threading.Thread(target=_warm_gamma, daemon=True).start()   # walls for the fresh breakouts, off the hot path
+        if FRESH_A:
+            import notify
+            threading.Thread(target=notify.every_a_alert, args=(list(FRESH_A),), daemon=True).start()
         return done
 
 
