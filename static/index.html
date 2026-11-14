@@ -4020,13 +4020,27 @@ function initLightweightMapChart() {
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
     const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Dashed,axisLabelVisible:true,axisLabelColor:color});};
-    line(D.P.trig,"TRIGGER","#E9C46A"); line(D.P.stop,"STOP","#E5736A"); line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF","#3DD68C");
-    if(D.P.obst) line(D.P.obst.level,"OBSTACLE","#B6A0E8",L.LineStyle.Dotted);
-    const hubColor = light ? "#4f46e5" : "#5B7BFF";
+    const css = getComputedStyle(document.documentElement);
+    const signal = name => css.getPropertyValue(name).trim();
+    const hubColor = signal("--hub") || (light ? "#4f46e5" : "#7f9ec7");
+    const upColor = signal("--up") || (light ? "#15803d" : "#39c98a");
+    const downColor = signal("--down") || (light ? "#dc2626" : "#e46d70");
+    line(D.P.trig,"TRIGGER","#E9C46A");
+    line(D.P.stop,"STOP","#E5736A");
+    line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",D.P.dir === -1 ? downColor : upColor);
     if(D.P.hub){
       line(D.P.hub.high,"HUB HIGH",hubColor,L.LineStyle.Dotted);
       line(D.P.hub.low,"HUB LOW",hubColor,L.LineStyle.Dotted);
     }
+    const gamma = GAMMA[D.P.sym];
+    const callWall = gamma && gamma !== "loading" ? gamma.call_wall : null;
+    const putWall = gamma && gamma !== "loading" ? gamma.put_wall : null;
+    const callWallColor = light ? "#B7791F" : "#F2C14E";
+    const putWallColor = light ? "#7C3AED" : "#B58CFF";
+    if(callWall != null) line(callWall,"CALL WALL",callWallColor,L.LineStyle.Dotted);
+    if(putWall != null) line(putWall,"PUT WALL",putWallColor,L.LineStyle.Dotted);
+    if(D.P.obst && !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
+      line(D.P.obst.level,D.P.obst.name || "OBSTACLE","#B6A0E8",L.LineStyle.Dotted);
     chart.timeScale().fitContent();
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
