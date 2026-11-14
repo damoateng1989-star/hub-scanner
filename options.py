@@ -205,10 +205,37 @@ def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: 
     views = [_contract_view(atm, entry, target, fail_px, need, iv_fallback, "At the money", prep)]
     if itm:
         views.append(_contract_view(itm, entry, target, fail_px, need, iv_fallback, "One strike in the money", prep))
-    return dict(direction=d, side="call" if call else "put", setup=setup, kind=kind, mode=mode, entry=round(entry, 2), edge=round(edge, 2),
+    spread = _spread(cs, atm, call, views[0], entry, target, fail_px, need, iv_fallback, prep)
+    return dict(direction=d, side="call" if call else "put", setup=setup, spread=spread, kind=kind, mode=mode, entry=round(entry, 2), edge=round(edge, 2),
                 target=round(target, 2), target_kind=target_kind, target_pct=round((target / entry - 1) * 100, 2),
                 expiry=exp.isoformat(), dte=(exp - date.today()).days, contracts=views, history=hist,
                 days_to_target=need, fail_px=round(fail_px, 2))
+
+
+def _spread(cs: list[dict], atm: dict, call: bool, long_v: dict, entry: float, target: float, fail_px: float,
+            need: float, iv_fallback: float, prep: bool) -> dict | None:
+    """Vertical debit spread: buy the at-the-money contract, sell the strike nearest the target (on the near side of it),
+    so the trade costs less and the most you can lose is the debit. Gains are capped at the strike width."""
+    if call:
+        side = [r for r in cs if atm["strike"] < r["strike"] <= target]
+    else:
+        side = [r for r in cs if target <= r["strike"] < atm["strike"]]
+    if not side:     # target closer than one strike: use the very next strike out
+        side = [r for r in cs if r["strike"] > atm["strike"]][:1] if call else [r for r in cs if r["strike"] < atm["strike"]][-1:]
+    if not side:
+        return None
+    short = max(side, key=lambda r: r["strike"]) if call else min(side, key=lambda r: r["strike"])
+    sv = _contract_view(short, entry, target, fail_px, need, iv_fallback, "Short leg", prep)
+    debit = round(long_v["mid"] - sv["mid"], 2)
+    width = abs(short["strike"] - atm["strike"])
+    if debit <= 0 or debit >= width:
+        return None
+    at_shelf = min(width, max(0.0, long_v["at_shelf"] - sv["at_shelf"]))
+    at_fail = max(0.0, long_v["at_fail"] - sv["at_fail"])
+    return dict(long_strike=atm["strike"], short_strike=short["strike"], short_symbol=short["symbol"], short_mid=sv["mid"],
+                debit=debit, cost=round(debit * 100, 2), width=width, max_gain=round((width - debit) * 100, 2),
+                at_shelf=round(at_shelf, 2), at_fail=round(at_fail, 2),
+                breakeven=round(atm["strike"] + debit if call else atm["strike"] - debit, 2))
 
 
 _FROZEN: dict[str, tuple[str, dict]] = {}   # symbol -> (session, plan) kept while the market is closed
@@ -322,7 +349,7 @@ def alert_line(sym: str, d: int, close: float, edge: float, target: float) -> st
         if (c.get("at_shelf_pct") or 0) <= 0:      # don't suggest a contract that loses money even when right
             return None
         exp = date.fromisoformat(pl["expiry"]).strftime("%b %-d")
-        gain = f" · est. {c['at_shelf_pct']:+d}% at the shelf" if c.get("at_shelf_pct") is not None else ""
+        gain = f" · simulated {c['at_shelf_pct']:+d}% at the shelf" if c.get("at_shelf_pct") is not None else ""
         return (f"🎯 Options swing (educational): {exp} ${c['strike']:g} {pl['side']}s ({pl['dte']} days) ≈ ${c['mid']:.2f}"
                 f"{gain} · max risk ${c['cost']:,.0f}/contract")
     except Exception:

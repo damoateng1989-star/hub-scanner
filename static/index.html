@@ -4489,35 +4489,54 @@ function mapTicketOptionsHTML(sym, P, T, acct, risk, ex) {
   if (!o) return `<div class="tk-lock"><p>Pricing the option chain… this can take a few seconds.</p></div>`;
   const p = (o.plans || []).find(x => x.direction === 1);
   if (!p || !p.contracts || !p.contracts.length) return `<div class="tk-lock"><p>${esc(o.message || "No call contract fits this plan right now.")}</p></div>`;
-  const c = p.contracts[0], day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
-  const per = c.cost, lossAtStop = Math.max(0, (c.mid - c.at_fail) * 100), gainAtTgt = (c.at_shelf - c.mid) * 100, good = gainAtTgt > 0;
-  const budget = acct * risk / 100, n = lossAtStop > 0 ? Math.floor(budget / lossAtStop) : 0, n2 = Math.max(0, Math.min(n, Math.floor(acct / per)));
-  const contract = `${sym} ${day(p.expiry)} $${c.strike} call`, k = n2 || 1, per1 = n2 ? "" : " <i>for 1</i>", needPct = lossAtStop > 0 ? Math.ceil(lossAtStop / acct * 1000) / 10 : 0;
-  const order = `${contract}\nBUY ${n2} contract${n2 === 1 ? "" : "s"} · limit ${money(c.mid)} (mid)\nTAKE PROFIT when ${sym} reaches ${money(p.target)} (option ≈ ${money(c.at_shelf)})\nEXIT on a 4-hour close back below ${money(T.stop)}\nCost ${money(n2 * per)} · most you can lose ${money(n2 * per)}`;
+  const c = p.contracts[0], sp = p.spread, day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+  const budget = acct * risk / 100;
+  // one leg = a single call; spread = buy this call, sell a higher one near the target (cheaper, gain capped)
+  const legs = {
+    call: {per: c.cost, debit: c.mid, atT: c.at_shelf, atF: c.at_fail, cap: null},
+    spread: sp ? {per: sp.cost, debit: sp.debit, atT: sp.at_shelf, atF: sp.at_fail, cap: sp.max_gain} : null};
+  const fit = (L) => { const loss = Math.max(0, (L.debit - L.atF) * 100); const n = loss > 0 ? Math.floor(budget / loss) : 0; return Math.max(0, Math.min(n, Math.floor(acct / L.per))); };
+  let leg = MAP_TK.leg || "call"; if (leg === "spread" && !legs.spread) leg = "call";
+  const L = legs[leg], lossAtStop = Math.max(0, (L.debit - L.atF) * 100), gainAtTgt = (L.atT - L.debit) * 100, good = gainAtTgt > 0;
+  const n2 = fit(L), k = n2 || 1, per1 = n2 ? "" : " <i>for 1</i>", needPct = lossAtStop > 0 ? Math.ceil(lossAtStop / acct * 1000) / 10 : 0;
+  const spreadFits = leg === "call" && legs.spread && fit(legs.spread) > 0;
+  const contract = leg === "spread" ? `${sym} ${day(p.expiry)} $${sp.long_strike}/$${sp.short_strike} call spread` : `${sym} ${day(p.expiry)} $${c.strike} call`;
+  const qty = n2 || 1, over = n2 ? "" : "  (1 contract is over your risk budget)";
+  const order = leg === "spread"
+    ? `${contract}\nBUY ${qty} ${sym} ${day(p.expiry)} $${sp.long_strike} call\nSELL ${qty} ${sym} ${day(p.expiry)} $${sp.short_strike} call\nAs one spread order · limit net debit ${money(sp.debit)}${over}\nTAKE PROFIT when ${sym} reaches ${money(p.target)} (spread ≈ ${money(sp.at_shelf)}, simulated)\nEXIT on a 4-hour close back below ${money(T.stop)}\nCost ${money(qty * sp.cost)} · most you can lose ${money(qty * sp.cost)} · most you can make ${money(qty * sp.max_gain)}`
+    : `${contract}\nBUY ${qty} contract${qty === 1 ? "" : "s"} · limit ${money(c.mid)} (mid)${over}\nTAKE PROFIT when ${sym} reaches ${money(p.target)} (option ≈ ${money(c.at_shelf)}, simulated)\nEXIT on a 4-hour close back below ${money(T.stop)}\nCost ${money(qty * c.cost)} · most you can lose ${money(qty * c.cost)}`;
   const earn = o.earnings && o.earnings.date <= p.expiry ? `<p class="tk-warn">📅 Earnings ${esc(o.earnings.label)}, before this contract expires: option prices usually drop right after a report.</p>` : "";
-  return `<div class="tk-order">
-      <div class="tk-r"><span>${c.estimated ? `Estimated price once it breaks out (about ${money(c.quote_now)} now)` : "Buy to open, limit near the middle of bid and ask"}</span></div>
+  const what = leg === "spread" ? "spread" : "option";
+  return `${legs.spread ? `<div class="tk-legs"><button class="${leg === "call" ? "on" : ""}" onclick="mapTicketLeg('call')">Single call<small>${money(c.cost)}</small></button><button class="${leg === "spread" ? "on" : ""}" onclick="mapTicketLeg('spread')">Call spread<small>${money(sp.cost)} · gain capped</small></button></div>` : ""}
+    <div class="tk-order">
+      <div class="tk-r"><span>${leg === "spread" ? `Buy the $${sp.long_strike} call and sell the $${sp.short_strike} call as one order: cheaper, but the gain stops at $${sp.short_strike}` : c.estimated ? `Estimated price once it breaks out (about ${money(c.quote_now)} now)` : "Buy to open, limit near the middle of bid and ask"}</span></div>
       <div class="tk-r big"><span>Contract</span><b>${esc(contract)}</b></div>
-      <div class="tk-r"><span>Buy</span><b>${n2 ? `${n2} contract${n2 === 1 ? "" : "s"}` : `<span class="d">None at your budget</span>`} · limit ${money(c.mid)}</b></div>
-      <div class="tk-r"><span>Take profit</span><b class="u">when ${esc(sym)} reaches ${money(p.target)} <i>option ≈ ${money(c.at_shelf)} (simulated)</i></b></div>
-      <div class="tk-r"><span>Exit</span><b>4H close back below ${money(T.stop)} <i>option ≈ ${money(c.at_fail)} (simulated)</i></b></div>
-      <div class="tk-r sum"><span>Cost</span><b>${money(k * per)}${per1}</b></div>
+      <div class="tk-r"><span>Buy</span><b>${n2 ? `${n2} ${leg === "spread" ? "spread" : "contract"}${n2 === 1 ? "" : "s"}` : `<span class="d">None at your budget</span>`} · limit ${money(L.debit)}${leg === "spread" ? " net" : ""}</b></div>
+      <div class="tk-r"><span>Take profit</span><b class="u">when ${esc(sym)} reaches ${money(p.target)} <i>${what} ≈ ${money(L.atT)} (simulated)</i></b></div>
+      <div class="tk-r"><span>Exit</span><b>4H close back below ${money(T.stop)} <i>${what} ≈ ${money(L.atF)} (simulated)</i></b></div>
+      <div class="tk-r sum"><span>Cost</span><b>${money(k * L.per)}${per1}</b></div>
       <div class="tk-r sum"><span>If it fails and you exit <i>simulated</i></span><b class="d">≈ −${money(k * lossAtStop)}${per1}</b></div>
       <div class="tk-r sum"><span>If it reaches the target <i>simulated</i></span><b class="${good ? "u" : "d"}">≈ ${good ? "+" : "−"}${money(Math.abs(k * gainAtTgt))}${per1}</b></div>
-      <div class="tk-r sum"><span>Most you can lose</span><b class="d">${money(k * per)} <i>the whole cost${n2 ? "" : ", 1 contract"}</i></b></div>
+      ${L.cap ? `<div class="tk-r sum"><span>Most you can make</span><b class="u">${money(k * L.cap)} <i>if ${esc(sym)} is above $${sp.short_strike} at expiry</i></b></div>` : ""}
+      <div class="tk-r sum"><span>Most you can lose</span><b class="d">${money(k * L.per)} <i>the whole cost${n2 ? "" : ", 1 contract"}</i></b></div>
     </div>
-    ${n2 ? "" : `<p class="tk-warn">Buy shows none because one contract would risk about ${money(lossAtStop)} if it fails, more than your ${money(budget)} budget (${risk}% of ${money(acct)}). The money lines above are for 1 contract as an example. To size in at least 1, risk ${needPct}% or more, or use shares.</p>`}
-    ${good ? "" : `<p class="tk-warn">⚠ This contract loses money even if the stock reaches ${money(p.target)}: the move is too small to pay for its time value. Use shares instead.</p>`}
+    ${n2 ? "" : `<div class="tk-warn">Buy shows none because one ${what} would risk about ${money(lossAtStop)} if it fails, more than your ${money(budget)} budget (${risk}% of ${money(acct)}). The money lines above are for 1 as an example. To size in at least 1, risk ${needPct}% or more.
+      <div class="tk-alt">${spreadFits ? `<button onclick="mapTicketLeg('spread')">Try the call spread: ${fit(legs.spread)} fit${fit(legs.spread) === 1 ? "s" : ""}</button>` : ""}<button onclick="mapTicketMode('shares')">Use shares instead</button></div></div>`}
+    ${good ? "" : `<p class="tk-warn">⚠ This ${what} loses money even if the stock reaches ${money(p.target)}: the move is too small to pay for its time value. Use shares instead.</p>`}
     ${earn}${o.demo ? `<p class="tk-tip">Demo prices. Real option quotes appear once live data is connected.</p>` : ""}
     <div class="tk-acct">Sized for <label>$<input type="number" value="${acct}" min="0" step="100" onchange="mapTicketAcct(this.value, null)"></label> risking
       <label><input type="number" value="${risk}" min="0.1" max="10" step="0.1" onchange="mapTicketAcct(null, this.value)">%</label> if it fails · ${p.dte} days to expiry</div>
-    <div class="tk-acts"><button class="tk-copy" onclick="mapTicketCopy(this)" data-order="${esc(order)}">Copy order</button>
+    <div class="tk-acts"><button class="tk-copy" data-label="${n2 ? "Copy order" : "Copy 1-contract order"}" onclick="mapTicketCopy(this)" data-order="${esc(order)}">${n2 ? "Copy order" : "Copy 1-contract order"}</button>
       <a class="tk-brk" href="${rhUrl(sym)}" target="_blank" rel="noopener">Open in Robinhood</a>
       ${wbUrl(sym, ex) ? `<a class="tk-brk" href="${wbUrl(sym, ex)}" target="_blank" rel="noopener">Open in Webull</a>` : ""}</div>
-    <p class="tk-tip">In the broker: open the option chain, pick <b>${esc(day(p.expiry))}</b> and the <b>$${c.strike} call</b>, buy to open with a <b>limit</b> near the middle of bid and ask${c.wide_spread ? " (the spread is wide here, so be patient)" : ""}. Options can lose 100% of their value. <b>Simulated:</b> the option prices at the target and at the exit (and the profit and loss from them) are estimates from Black-Scholes at today's volatility, not real quotes. The real price then will differ.</p>`;
+    <p class="tk-tip">${leg === "spread"
+      ? `In the broker: open the option chain, pick <b>${esc(day(p.expiry))}</b>, choose a <b>vertical / call debit spread</b>: buy the <b>$${sp.long_strike} call</b>, sell the <b>$${sp.short_strike} call</b>, with a <b>limit</b> net debit near ${money(sp.debit)}. Spreads need options level 2 or higher at most brokers. You can lose the whole debit.`
+      : `In the broker: open the option chain, pick <b>${esc(day(p.expiry))}</b> and the <b>$${c.strike} call</b>, buy to open with a <b>limit</b> near the middle of bid and ask${c.wide_spread ? " (the spread is wide here, so be patient)" : ""}. Options can lose 100% of their value.`}
+      <b>Simulated:</b> the ${what} prices at the target and at the exit (and the profit and loss from them) are estimates from Black-Scholes at today's volatility, not real quotes. The real price then will differ.</p>`;
 }
+function mapTicketLeg(l) { if (!MAP_TK) return; MAP_TK.leg = l; try { localStorage.setItem("ns-tk-leg", l); } catch (e) {} mapTicketPaint(); }
 async function mapTicketOpen() {
-  MAP_TK = {sym: BRIEF_SYM, alerts: [], mode: (() => { try { return localStorage.getItem("ns-tk-mode") || "shares"; } catch (e) { return "shares"; } })()}; mapTicketPaint();
+  MAP_TK = {sym: BRIEF_SYM, alerts: [], leg: (() => { try { return localStorage.getItem("ns-tk-leg") || "call"; } catch (e) { return "call"; } })(), mode: (() => { try { return localStorage.getItem("ns-tk-mode") || "shares"; } catch (e) { return "shares"; } })()}; mapTicketPaint();
   if (MAP_TK.mode === "options") mapTicketMode("options");
   try { const r = await api(`/api/alerts/price?symbol=${encodeURIComponent(BRIEF_SYM)}`); if (MAP_TK && MAP_TK.sym === BRIEF_SYM) { MAP_TK.alerts = r.alerts || []; mapTicketPaint(); } } catch (e) {}
 }
@@ -4535,7 +4554,7 @@ async function mapTicketCopy(btn) {
   const txt = btn.dataset.order;
   try { await navigator.clipboard.writeText(txt); btn.textContent = "✓ Copied"; }
   catch (e) { const t = document.createElement("textarea"); t.value = txt; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); btn.textContent = "✓ Copied"; } catch (er) {} t.remove(); }
-  setTimeout(() => { btn.textContent = "Copy order"; }, 1800);
+  setTimeout(() => { btn.textContent = btn.dataset.label || "Copy order"; }, 1800);
 }
 async function mapTicketAlert(label, price, dir) {
   if (!MAP_TK) return;
@@ -5378,10 +5397,10 @@ function optionsHTML(o) {
       <div class="oc-t"><b>${day(p.expiry)} $${c.strike} ${side}s</b><small>${cond}</small></div>
       <div class="oc-rows">
         <div><span>${c.estimated ? "Est. cost at the " + move : "Cost now (mid)"}</span><b>${c.estimated ? "≈ " : ""}${money(c.mid)}</b></div>
-        <div><span>If it reaches the aim</span><b>≈ ${money(c.at_shelf)} <em class="${good ? "up" : "dn"}">${sgn(c.at_shelf_pct)}</em></b></div>
+        <div><span>If it reaches the aim <i class="ox-sim">simulated</i></span><b>≈ ${money(c.at_shelf)} <em class="${good ? "up" : "dn"}">${sgn(c.at_shelf_pct)}</em></b></div>
         <p class="oc-note">${note}</p>
-        <div><span>If the ${move} fails</span><b>≈ ${money(c.at_fail)} <em class="dn">${sgn(c.at_fail_pct)}</em></b></div>
-        <div><span>Est. gain at the aim</span><b class="${good ? "oc-gain" : "oc-lossv"}">≈ ${good ? "+" : "−"}${money(Math.abs((c.at_shelf - c.mid) * 100))}</b></div>
+        <div><span>If the ${move} fails <i class="ox-sim">simulated</i></span><b>≈ ${money(c.at_fail)} <em class="dn">${sgn(c.at_fail_pct)}</em></b></div>
+        <div><span>Gain at the aim <i class="ox-sim">simulated</i></span><b class="${good ? "oc-gain" : "oc-lossv"}">≈ ${good ? "+" : "−"}${money(Math.abs((c.at_shelf - c.mid) * 100))}</b></div>
         <div><span>Max loss</span><b>${money(c.cost)}</b></div>
         <p class="oc-note">Per contract (100 shares). The gain isn't capped, so this is what the plan aims for, not a ceiling; the loss is capped at what you pay.</p>
       </div>
@@ -5392,7 +5411,7 @@ function optionsHTML(o) {
         <div><span>Strike</span><b>${esc(c.label)} · delta ${c.delta}</b></div>
         <div><span>Bid / ask now</span><b>${c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted"}</b></div>
         <div><span>Implied volatility</span><b>${c.iv}%</b></div></div>
-        <p class="oc-note">Black-Scholes estimates. The cost${c.estimated ? " assumes the stock is at " + money(p.entry) + " when it breaks out" : " is the middle of the bid and ask"}; the other values assume the volatility stays the same.</p></details>
+        <p class="oc-note"><b>Simulated:</b> the values at the aim and on a failure are Black-Scholes estimates, not real quotes. The cost${c.estimated ? " assumes the stock is at " + money(p.entry) + " when it breaks out" : " is the middle of the bid and ask"}; the other values assume the volatility stays the same.</p></details>
       <p class="oc-note oc-assume">Figures assume the aim is reached in about ${p.days_to_target} trading day${p.days_to_target === 1 ? "" : "s"} at today's implied volatility (${c.iv}%). Slower moves or falling volatility mean less.</p>
       ${c.wide_spread ? `<p class="oc-warn">⚠ Wide bid/ask spread (${money(c.bid)} / ${money(c.ask)}). Use a limit order near the middle.</p>` : ""}
     </div>`;
@@ -5409,7 +5428,7 @@ function optionsHTML(o) {
       <div data-n="1" style="--c:#3DD68C"><span>Take profit when the stock reaches the <b>shelf</b>, not when the option "feels" high.</span></div>
       <div data-n="2" style="--c:#FF6B5E"><span>Exit on a 4-hour <b>close back inside</b> the pattern, whatever the option is worth.</span></div>
       <div data-n="3" style="--c:#F2C14E"><span>Size small. The most you can lose is what you pay for the contract.</span></div></div>
-    <p class="bf-fine">Educational example, not a recommendation. Estimates use Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
+    <p class="bf-fine">Educational example, not a recommendation. Prices at the aim and on a failure are simulated with Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
 const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"]];   // Patch 82: the measured setups only
@@ -6614,6 +6633,9 @@ html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117;
 @keyframes sheetIn { from { transform: translateY(30px); opacity: .4; } }
 .mp-cx.open > button { background: color-mix(in srgb, var(--mp-hub) 8%, transparent); border-radius: 8px; }
 
+.ox-sim { font-style: normal; font-size: 9.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 5px; margin-left: 4px; border-radius: 5px; border: 1px solid rgba(127,127,127,.35); opacity: .85; vertical-align: 1px; }
+.tk-legs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0 2px; } .tk-legs button { background: none; border: 1px solid var(--tk-line); border-radius: 10px; padding: 7px 8px; color: var(--tk-mut); font: 600 12.5px var(--sans, system-ui); cursor: pointer; text-align: left; } .tk-legs button small { display: block; font-weight: 500; font-size: 11px; margin-top: 1px; } .tk-legs button.on { color: var(--tk-ink); border-color: color-mix(in srgb, var(--tk-ink) 45%, transparent); background: color-mix(in srgb, var(--tk-ink) 7%, transparent); }
+.tk-alt { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .tk-alt button { background: none; border: 1px solid currentColor; color: inherit; border-radius: 8px; padding: 5px 10px; font: 600 12px var(--sans, system-ui); cursor: pointer; }
 .tk-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--tk-line); border-radius: 10px; padding: 3px; gap: 3px; }
 .tk-tabs button { background: none; border: 0; color: var(--tk-mut); font: 600 13px var(--sans, system-ui); padding: 7px; border-radius: 8px; cursor: pointer; }
 .tk-tabs button.on { background: color-mix(in srgb, var(--tk-ink) 10%, transparent); color: var(--tk-ink); }
