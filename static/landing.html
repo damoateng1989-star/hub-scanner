@@ -839,7 +839,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
   <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#how">See how it works</a></div>
   <div class="micro">Free tier · No card needed · Educational, not financial advice</div>
   </div>
-  <div class="hx-band" aria-label="Recently finished setups from the track record"><div class="hx-lv ht" aria-hidden="true"><span>Hub top · $178.01</span></div><div class="hx-lv hb" aria-hidden="true"><span>Hub bottom · $170.40</span></div><div class="hx-tape"><div class="hx-track static" id="hxTrack"><span class="hx-it">Every A setup is logged with its result</span></div></div></div>
+  <div class="hx-band" aria-label="Recently finished setups from the track record"><div class="hx-lv ht" aria-hidden="true"><span>Hub top · $178.01</span></div><div class="hx-lv hb" aria-hidden="true"><span>Hub bottom · $170.40</span></div><div class="hx-tape"><div class="hx-track static" id="hxTrack"><span class="hx-it">Every setup is logged with its result</span></div></div></div>
   <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
     <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
     <div class="bp-in">
@@ -1216,8 +1216,8 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
       if ($("hxTrack") && s.recent && s.recent.length) {
         const it = s.recent.map(x => {
           const o = x.outcome, cls = o === "follow-through" ? "ok" : (o === "failed" || o === "snap-back") ? "no" : "to";
-          const word = o === "follow-through" ? "reached its target ✓" : (o === "failed" || o === "snap-back") ? "hit its stop ✗"
-            : o === "open" ? `${(x.setup || "A setup").toLowerCase()} · open` : o === "live" ? "breaking out now" : "ran out of time";
+          const how = x.setup === "Hub breakdown" ? "broke down · " : x.setup === "Hub breakout" ? "broke out · " : "";
+          const word = how + (o === "follow-through" ? (how ? "reached its shelf ✓" : "reached its target ✓") : (o === "failed" || o === "snap-back") ? (how ? "closed back inside ✗" : "hit its stop ✗") : "ran out of time");
           return `<span class="hx-it"><b>${x.symbol}</b><span class="${cls}">${word}</span></span>`; }).join("");
         // the tape slides by half its width, so it needs two identical halves that are each wider than the screen
         const reps = Math.max(1, Math.ceil(16 / s.recent.length));

@@ -995,13 +995,11 @@ def public_summary():
     done = [x for x in (tr.get("signals") or []) if x.get("outcome") not in (None, "pending")]
     done.sort(key=lambda x: x.get("outcome_time") or x.get("breakout_time") or "", reverse=True)
     recent = [dict(symbol=x["symbol"], direction=x.get("direction"), outcome=x["outcome"], setup=x.get("setup")) for x in done[:14]]
-    if len(recent) < 8:      # the live record is young: top the landing tape up with open A setups, then today's breakouts
-        opn = [x for x in (tr.get("signals") or []) if x.get("outcome") == "pending"]
-        opn.sort(key=lambda x: x.get("entry_time") or x.get("breakout_time") or "", reverse=True)
-        recent += [dict(symbol=x["symbol"], direction=x.get("direction"), outcome="open", setup=x.get("setup")) for x in opn[:14 - len(recent)]]
-        seen = {x["symbol"] for x in recent}
-        recent += [dict(symbol=r["symbol"], direction=1 if r.get("state") == "breakout_up" else -1, outcome="live", setup="Hub breakout")
-                   for r in b["live"] if r["symbol"] not in seen and r.get("state") == "breakout_up"][:max(0, 14 - len(recent))]
+    if len(recent) < 8:      # the live record is young: show finished breakouts and breakdowns from the earlier hub log as examples
+        old = [x for x in db.all_signals(400, "hub") if x.get("outcome") not in (None, "pending")]
+        old.sort(key=lambda x: x.get("outcome_time") or x.get("breakout_time") or "", reverse=True)
+        recent += [dict(symbol=x["symbol"], direction=x.get("direction"), outcome=x["outcome"], setup="Hub breakdown" if x.get("direction") == -1 else "Hub breakout")
+                   for x in old[:16 - len(recent)]]
     import lab_exits
     return dict(tested=lab_exits.tested_public(), recent=recent, updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
                 signals=rec.get("signals"), closed=closed, open=rec.get("open"), reached=by.get("follow-through", 0),
