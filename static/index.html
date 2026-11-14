@@ -3557,7 +3557,7 @@ async function openBrief(sym, focus) {
     if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#9AA0AC;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
   }
 }
-function closeBrief() { clearTimeout(MAP_FT); if (typeof MAP_TK !== "undefined" && MAP_TK) mapTicketClose(); if (typeof mapReplayStop === "function" && MAP_RP) mapReplayStop(true); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
+function closeBrief() { clearTimeout(MAP_FT); if (typeof MAP_POP !== "undefined" && MAP_POP) mapPopClose(); if (typeof MAP_TK !== "undefined" && MAP_TK) mapTicketClose(); if (typeof mapReplayStop === "function" && MAP_RP) mapReplayStop(true); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
   renderStrip(); }
 // one-line summary for the top of the sheet (Patch 77); the long version lives in summary()
 function vizSummary(st) {
@@ -4158,13 +4158,33 @@ function mapSummary(P, st) {
   return `${esc(P.status)}. ${esc(P.sub)}`;
 }
 // ---- the right-hand column: one compact "Context" card, a line per item, tap a line for the detail
-let MAP_CTX = new Set(), MAP_ASK = false;
-function mapCtx(k) { MAP_CTX.has(k) ? MAP_CTX.delete(k) : MAP_CTX.add(k); mapSidePaint(); }
+let MAP_CTX = new Set(), MAP_ASK = false, MAP_CTXD = {}, MAP_POP = null;
+// a Context line opens its detail in a pop-out card next to it (a sheet from the bottom on phones)
+function mapCtx(k, btn) {
+  if (MAP_POP === k) return mapPopClose();
+  const d = MAP_CTXD[k]; if (!d) return;
+  MAP_POP = k;
+  let el = $("mpPop"); if (!el) { el = document.createElement("div"); el.id = "mpPop"; document.body.appendChild(el); }
+  el.innerHTML = `<div class="pop-card" role="dialog" aria-label="${esc(d.title)}"><div class="pop-h"><span>${d.icon}</span><b>${esc(d.title)}</b><button onclick="mapPopClose()" aria-label="Close">✕</button></div><div class="pop-b">${d.html}</div></div>`;
+  const card = el.firstElementChild, r = btn.getBoundingClientRect(), phone = innerWidth < 700;
+  el.className = phone ? "sheet" : "";
+  if (!phone) {
+    const w = 340, h = card.offsetHeight;
+    let left = r.left - w - 12; if (left < 8) left = Math.min(innerWidth - w - 8, r.right + 12);
+    card.style.left = left + "px"; card.style.top = Math.max(8, Math.min(r.top - 8, innerHeight - h - 8)) + "px";
+  }
+  document.querySelectorAll(".mp-cx").forEach(x => x.classList.toggle("open", x.dataset.k === k));
+}
+function mapPopClose() { MAP_POP = null; const el = $("mpPop"); if (el) el.remove(); document.querySelectorAll(".mp-cx.open").forEach(x => x.classList.remove("open")); }
+document.addEventListener("pointerdown", (e) => { if (MAP_POP && !e.target.closest("#mpPop .pop-card") && !e.target.closest(".mp-cx")) mapPopClose(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && MAP_POP) mapPopClose(); });
 function mapSideHTML(P, st, chart) {
   const sym = P.sym, lines = [];
-  const line = (k, icon, text, detail, tone) => lines.push(`<div class="mp-cx ${tone || ""} ${MAP_CTX.has(k) ? "open" : ""}">
-      <button onclick="mapCtx('${k}')"><span class="mp-cxi">${icon}</span><span class="mp-cxt">${text}</span>${detail ? `<span class="mp-cxc">›</span>` : ""}</button>
-      ${detail && MAP_CTX.has(k) ? `<div class="mp-cxd">${detail}</div>` : ""}</div>`);
+  const titles = {earn: "Earnings", rec: `${sym}'s past breakouts`, mkt: "Market & sector", news: "Latest news", walls: "Options walls"};
+  const line = (k, icon, text, detail, tone) => {
+    if (detail) MAP_CTXD[k] = {title: titles[k] || k, icon, html: detail};
+    lines.push(`<div class="mp-cx ${tone || ""} ${MAP_POP === k ? "open" : ""}" data-k="${k}">
+      <button onclick="mapCtx('${k}', this)"><span class="mp-cxi">${icon}</span><span class="mp-cxt">${text}</span>${detail ? `<span class="mp-cxc">›</span>` : ""}</button></div>`); };
   const dd = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
   // earnings
   const e = EARN[sym]; earnAsk(sym);
@@ -6516,6 +6536,24 @@ html[data-theme="light"] .tkt { --tk-card: #F8F9FD; --tk-line: rgba(13,17,23,.1)
 .tk-al { border: 1px solid var(--tk-line); background: none; color: var(--tk-ink); border-radius: 9px; padding: 7px 10px; font: 600 12px var(--sans, system-ui); cursor: pointer; }
 .tk-al.on { border-color: var(--tk-up); color: var(--tk-up); background: color-mix(in srgb, var(--tk-up) 10%, transparent); }
 @media (max-width: 559px) { .tk-back { place-items: end center; padding: 0; } .tkt { border-radius: 18px 18px 0 0; max-height: 92vh; } }
+
+/* Context pop-out */
+#mpPop { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+#mpPop .pop-card { position: fixed; width: 340px; max-height: 70vh; overflow: auto; pointer-events: auto; background: #15171C; color: #F3F4F6; border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 14px 16px; box-shadow: 0 18px 50px rgba(0,0,0,.45); display: grid; gap: 10px; animation: popIn .14s ease-out; }
+#mpPop .pop-card { --mp-shelf: #3DD68C; --mp-obst: #FF6B5E; --mp-trig: #E9C46A; --mp-mut: #9AA0AC; --mp-ink: #F3F4F6; --mp-line: rgba(255,255,255,.12); --mp-hub: #5B7BFF; }
+html[data-theme="light"] #mpPop .pop-card { --mp-shelf: #15803d; --mp-obst: #dc2626; --mp-trig: #b7791f; --mp-mut: #5b6472; --mp-ink: #0d1117; --mp-line: rgba(13,17,23,.12); --mp-hub: #4f46e5; }
+html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117; border-color: rgba(13,17,23,.1); box-shadow: 0 18px 50px rgba(15,23,42,.18); }
+@keyframes popIn { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+.pop-h { display: flex; align-items: center; gap: 8px; } .pop-h b { font-size: 14.5px; letter-spacing: -.01em; }
+.pop-h button { margin-left: auto; background: none; border: 0; color: #9AA0AC; font-size: 14px; cursor: pointer; }
+.pop-b { font-size: 13px; line-height: 1.55; color: #9AA0AC; display: grid; gap: 8px; } html[data-theme="light"] .pop-b { color: #5b6472; }
+.pop-b .mp-rcs { margin-bottom: 2px; } .pop-b .mp-nw { color: inherit; border-top: 1px solid rgba(127,127,127,.18); padding: 8px 0 2px; } .pop-b .mp-nw:first-child { border-top: 0; padding-top: 0; }
+.pop-b .mp-nw b { color: #F3F4F6; font-size: 13.5px; } html[data-theme="light"] .pop-b .mp-nw b { color: #0d1117; }
+#mpPop.sheet { pointer-events: auto; background: rgba(5,7,10,.45); }
+#mpPop.sheet .pop-card { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 75vh; border-radius: 18px 18px 0 0; padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); animation: sheetIn .18s ease-out; }
+@keyframes sheetIn { from { transform: translateY(30px); opacity: .4; } }
+.mp-cx.open > button { background: color-mix(in srgb, var(--mp-hub) 8%, transparent); border-radius: 8px; }
 </style>
 </body>
 </html>
