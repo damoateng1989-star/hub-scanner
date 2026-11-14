@@ -2163,6 +2163,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
 .rec-test .stats span { line-height: 1.45; }
 @media (max-width: 640px) { .rec-test .stats { grid-template-columns: 1fr !important; } }
 </style>
+<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -3819,7 +3820,7 @@ const MAP_RANGE_DEF = {"4h": 42, "1d": 63};
 const mapRanges = () => MAP_RANGE_SETS[MAP_TF];
 const mapNKey = () => MAP_TF === "1d" ? "ns-map-n-1d" : "ns-map-n";
 let MAP_N = (() => { try { return +localStorage.getItem(mapNKey()) || MAP_RANGE_DEF[MAP_TF]; } catch (e) { return MAP_RANGE_DEF[MAP_TF]; } })();
-let MAP_G = null, MAP_HOVER = null;
+let MAP_G = null, MAP_HOVER = null, MAP_LWC_DATA = null, MAP_LWC = null;
 // "plan my trade": drag the stop and target on the map, see reward:risk and position size. {sym, stop, target, on}
 let MAP_WI = null;
 // candle style, per device (Account > Chart style). type: candles | hollow | bars | line; up/down: colours (null = theme default)
@@ -3967,132 +3968,79 @@ function mapTimeAxis(cs, cx, yBase, xMax, daily) {
   return out.join("");
 }
 function mapChart(P, chart, W) {
-  const small = W < 560, H = small ? 336 : 430, R = small ? 54 : 64, top = 14, bot = 26, volH = small ? 52 : 66, volGap = 8, priceBot = H - bot - volH - volGap, plotR = W - R, futX = plotR * (small ? 0.6 : 0.7);
   const want = Math.max(8, Math.min(MAP_N, 200));
   const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(-want) : [];
   const fc = mapFormingCandle(P, chart, cs);
   if (fc) { cs.push(fc); if (cs.length > want) cs.shift(); }
-  const daily = chart && chart.tf === "1d", dur = daily ? 86400 : 1;
-  if (daily && P.isLive && cs.length) {      // today's daily candle moves with the live price
+  const daily = chart && chart.tf === "1d";
+  if (daily && P.isLive && cs.length) {
     const last = cs[cs.length - 1], today = new Date(Date.now() - 5 * 3600e3).toISOString().slice(0, 10);
     if (new Date(last.time * 1000).toISOString().slice(0, 10) === today)
       cs[cs.length - 1] = {...last, close: P.px, high: Math.max(last.high, P.px), low: Math.min(last.low, P.px)};
   }
-  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high,
-              ...(P.dbl ? P.dbl.peaks.map(q => q.price) : [])].filter(v => v != null);
-  const near = want > 60 ? cs : cs.slice(-24);   // zoom on the setup: older candles far away are clipped instead of squashing the plan (3M shows everything)
-  let lo = Math.min(...lv, ...near.map(c => c.low)), hi = Math.max(...lv, ...near.map(c => c.high));
-  const pad = (hi - lo) * 0.04 || hi * 0.01; lo -= pad; hi += pad;
-  const y = (v) => top + (hi - v) / (hi - lo) * (priceBot - top);
-  const n = cs.length, step = n ? (futX - 14) / n : 0, cx = (i) => 8 + step * (i + 0.5), bw = Math.max(1, step * 0.5);
-  const xNow = n ? cx(n - 1) : futX - 10;
-  const parts = [];
-  const tags = [];
-  if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.atrTarget ? "Target (1 ATR)" : P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
-  if (P.obst) tags.push({v: P.obst.level, cls: "t-obst", t: P.obst.name});
-  if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
-  if (P.stop != null && P.stop !== P.trig && !P.watch) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
-  tags.forEach(g => g.txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high").replace("Target (1 ATR)", "Target") : g.t} ${money(g.v)}`);
-  // labels live in their own column at the right; lines, bands and the hub stop short of it, so nothing crosses the text
-  const labW = Math.max(0, ...tags.map(g => g.txt.length * (small ? 6.2 : 6.8))) + 6;
-  const lineEnd = Math.max(futX + 50, plotR - labW - 8);
-  // where volume traded, by price: a heat strip behind the price axis (busy zones are where shelves come from)
-  const vp = (() => {
-    const withVol = cs.filter(c => c.volume > 0); if (withVol.length < 5) return null;
-    const nb = Math.max(12, Math.round((H - top - bot) / 5)), bin = (hi - lo) / nb, v = new Array(nb).fill(0);
-    for (const c of withVol) {
-      const a = Math.max(lo, c.low), b = Math.min(hi, c.high); if (b < a) continue;
-      const i0 = Math.max(0, Math.floor((a - lo) / bin)), i1 = Math.min(nb - 1, Math.floor((b - lo) / bin)), per = c.volume / (i1 - i0 + 1);
-      for (let i = i0; i <= i1; i++) v[i] += per;
-    }
-    const mx = Math.max(...v), tot = v.reduce((p, q) => p + q, 0); if (!mx) return null;
-    return {nb, bin, v, mx, tot, top: v.indexOf(mx)};
-  })();
-  if (vp) {
-    for (let i = 0; i < vp.nb; i++) {
-      const k = vp.v[i] / vp.mx; if (k < 0.04) continue;
-      const y1 = Math.round(y(lo + (i + 1) * vp.bin)), y0 = Math.round(y(lo + i * vp.bin));
-      parts.push(`<rect class="mp-vp${i === vp.top ? " poc" : ""}" x="${plotR + 1}" y="${y1}" width="${Math.round((R - 3) * (0.25 + 0.75 * k))}" height="${Math.max(1, y0 - y1 - 1)}" style="opacity:${(0.10 + 0.55 * k).toFixed(2)}"/>`);
-    }
-  }
-  // grid + price axis
-  const tick = (() => { const raw = (hi - lo) / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * mag).find(m => m >= raw); })();
-  for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick)
-    parts.push(`<line class="mp-grid" x1="0" x2="${plotR}" y1="${Math.round(y(v)) + 0.5}" y2="${Math.round(y(v)) + 0.5}"/><text class="mp-ax" x="${plotR + 8}" y="${y(v) + 4}">${v >= 1000 ? v.toFixed(0) : v.toFixed(2)}</text>`);
-  // future zone
-  parts.push(`<rect class="mp-fut" x="${futX}" y="${top}" width="${plotR - futX}" height="${priceBot - top}"/>`);
-  parts.push(`<line class="mp-futdiv" x1="${futX}" y1="${top}" x2="${futX}" y2="${priceBot}"/>`);
-  const topLevel = Math.min(H, ...[P.trig, P.shelf, P.stop, P.obst && P.obst.level, P.hub && P.hub.high].filter(v => v != null).map(y));
-  if (!small && topLevel > top + 26) parts.push(`<text class="mp-plan" x="${(futX + plotR) / 2}" y="${top + 10}" text-anchor="middle">PLAN</text>`);   // only when nothing is up there
-  // hub box
-  if (P.hub) {
-    let i0 = n - (P.hub.sessions || 6);
-    const hb = chart && chart.hubs && chart.hubs.length ? chart.hubs[chart.hubs.length - 1] : null;
-    if (daily) i0 = n - Math.ceil((P.hub.sessions || 3));
-    if (hb && Math.abs(hb.high - P.hub.high) < 0.02 * P.hub.high) { const j = cs.findIndex(c => c.time + dur > hb.start); if (j >= 0) i0 = j; }
-    const x0 = n ? cx(Math.max(0, i0)) - step / 2 : 8, x1 = lineEnd;
-    parts.push(`<rect class="mp-hub" x="${x0}" y="${y(P.hub.high)}" width="${Math.max(8, x1 - x0)}" height="${Math.max(2, y(P.hub.low) - y(P.hub.high))}" rx="4"/>`);
-    // the label sits in the plan zone (no candles there): under the band, or over it when there's no room below
-    const ly = y(P.hub.low) + 15 <= H - bot - 2 ? y(P.hub.low) + 15                    // under the band
-      : y(P.hub.low) - y(P.hub.high) >= 20 ? y(P.hub.low) - 6                            // inside it, at the bottom
-      : Math.max(y(P.hub.high) - 7, top + 10);                                             // over it
-    parts.push(`<text class="mp-hubt" x="${futX + 6}" y="${ly}">HUB ${money(P.hub.low)}–${money(P.hub.high)}</text>`);
-  }
-  // double top / bottom: the two lows (or highs), the neckline back to the first one, and the W / M they make
-  if (P.dbl && n) {
-    const xi = (t) => { const j = cs.findIndex(c => c.time + dur > t); return j < 0 ? null : cx(j); };
-    const pts = P.dbl.peaks.map(q => ({x: xi(q.time), y: y(q.price), p: q.price})).filter(q => q.x != null);
-    const top = P.dbl.kind === "double_top", word = top ? "high" : "low";
-    if (pts.length === 2) {
-      const xm = (pts[0].x + pts[1].x) / 2, yn = y(P.dbl.neck);
-      parts.push(`<rect class="mp-dblzone" x="${pts[0].x}" y="${Math.min(yn, pts[0].y, pts[1].y) - 3}" width="${futX - pts[0].x}" height="${Math.abs(yn - (top ? Math.min(pts[0].y, pts[1].y) : Math.max(pts[0].y, pts[1].y))) + 6}" rx="4"/>`);
-      parts.push(`<line class="mp-neck" x1="${pts[0].x}" x2="${futX}" y1="${yn}" y2="${yn}"/>`);
-      parts.push(`<polyline class="mp-wm ${top ? "m" : "w"}" points="${pts[0].x},${pts[0].y} ${xm},${yn} ${pts[1].x},${pts[1].y} ${xNow},${y(P.px)}"/>`);
-      pts.forEach((q, i) => parts.push(`<circle class="mp-pk ${top ? "m" : "w"}" cx="${q.x}" cy="${q.y}" r="5"/><text class="mp-pkt ${top ? "m" : "w"}" x="${Math.max(24, q.x)}" y="${top ? q.y - 10 : q.y + 18}" text-anchor="middle">${i ? "2nd" : "1st"} ${word}</text>`));
-      parts.push(`<text class="mp-hubt dbl" x="${Math.max(4, pts[0].x)}" y="${top ? yn + 15 : yn - 7}">${top ? "DOUBLE TOP" : "DOUBLE BOTTOM"} · neckline ${money(P.dbl.neck)}</text>`);
-    }
-  }
-  // shelf band, obstacle band
-  if (P.shelf != null) parts.push(`<rect class="mp-shelfband${P.watch ? " w" : ""}" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${lineEnd - futX}" height="14"/>`);
-  if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${lineEnd - futX}" height="12"/>`);
-  // candles
-  parts.push(`<clipPath id="mpClip"><rect x="0" y="${top}" width="${futX}" height="${priceBot - top}"/></clipPath><g clip-path="url(#mpClip)">`);
-  if ((candlePref().type || "candles") === "line") parts.push(candleLine(cs, cx, y));
-  else cs.forEach((c, i) => parts.push(candleSVG(c, cx(i), bw, y, c.forming ? "mp-cf" : "")));
-  parts.push("</g>");
-  const maxVol = Math.max(1, ...cs.map(c => +c.volume || 0)), volTop = priceBot + volGap, volBase = H - bot;
-  parts.push(`<line class="mp-vol-sep" x1="0" x2="${plotR}" y1="${volTop - 4}" y2="${volTop - 4}"/>`);
-  cs.forEach((c, i) => { const vh = Math.max(1, ((+c.volume || 0) / maxVol) * volH), up = c.close >= c.open; parts.push(`<rect class="mp-vol ${up ? "up" : "dn"}" x="${Math.max(0, cx(i) - bw / 2)}" y="${volBase - vh}" width="${Math.max(1, bw)}" height="${vh}" rx="1"/>`); });
-  if (cs.some(c => c.volume > 0)) parts.push(`<text class="mp-vol-lab" x="6" y="${volTop + 11}">VOLUME</text>`);
-  parts.push(mapTimeAxis(cs, cx, H - bot + 2, futX, daily));
-  // level lines
-  const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${lineEnd}" y1="${Math.round(y(v)) + 0.5}" y2="${Math.round(y(v)) + 0.5}"/>`;
-  parts.push(line(P.stop !== P.trig && !P.watch ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
-             line(P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", futX));
-  // the path: current price → trigger → target (dashed; nothing to the right of "now" is real price)
-  if (P.shelf != null && P.trig != null) {
-    const xa = futX + 18, xb = Math.max(xa + 30, lineEnd - 12), ya = y(P.trig), yb = y(P.shelf);
-    parts.push(`<path class="mp-path ${P.watch ? "w" : ""}" d="M${xNow} ${y(P.px)} L${xa} ${ya} C${xa + (xb - xa) * 0.55} ${ya}, ${xb - (xb - xa) * 0.25} ${yb + (ya - yb) * 0.35}, ${xb} ${yb}" marker-end="url(#mpArrow${P.watch ? "W" : ""})"/>`);
-    parts.push(`<circle class="mp-trigdot" cx="${xa}" cy="${ya}" r="5"/><circle class="mp-tgtdot ${P.watch ? "w" : ""}" cx="${xb}" cy="${yb}" r="5"/>`);
-  }
-  if (P.planning) for (const [v, k] of [[P.stop, "stop"], [P.shelf, "target"]])      // drag handles
-    parts.push(`<g class="mp-hdl h-${k}"><rect x="${futX + 4}" y="${y(v) - 9}" width="${lineEnd - futX - 8}" height="18" rx="9"/><circle cx="${(futX + lineEnd) / 2}" cy="${y(v)}" r="7"/><path d="M${(futX + lineEnd) / 2 - 3} ${y(v) - 1.5}h6M${(futX + lineEnd) / 2 - 3} ${y(v) + 1.5}h6"/></g>`);
-  // now dot
-  parts.push(`<circle class="mp-now-halo" cx="${xNow}" cy="${y(P.px)}" r="10"/><circle class="mp-now" cx="${xNow}" cy="${y(P.px)}" r="5"/>`);
-  // labels: level with their line in the label column, pushed apart (15 px) so they never touch
-  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly + 4; }); tags.sort((a, b) => a.ly - b.ly);
-  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 15) tags[i].y = tags[i - 1].y + 15;
-  const over = tags.length ? tags[tags.length - 1].y - (H - bot - 2) : 0; if (over > 0) tags.forEach(g => g.y -= over);
-  for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < 15) tags[i].y = tags[i + 1].y - 15;
-  tags.forEach(g => {
-    if (Math.abs(g.y - 4 - g.ly) > 3) parts.push(`<line class="mp-lead ${g.cls}" x1="${lineEnd}" y1="${g.ly}" x2="${lineEnd + 5}" y2="${g.y - 4}"/>`);   // label moved off its line: a short leader
-    parts.push(`<text class="mp-tag ${g.cls}" x="${plotR - 2}" y="${g.y}" text-anchor="end">${g.txt.slice(0, g.txt.lastIndexOf(" "))} <tspan>${money(g.v)}</tspan></text>`); });
-  if (!n) parts.push(`<text class="mp-ax" x="${futX / 2}" y="${H / 2}" text-anchor="middle">Loading candles…</text>`);
-  MAP_G = {P, W, H, top, bot, futX, plotR, lineEnd, n, step, cs, lo, hi, y, tags, daily, vp};
-  return `<svg class="mp-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Setup map for ${esc(P.sym)}">
-    <defs><marker id="mpArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow"/></marker>
-    <marker id="mpArrowW" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow w"/></marker></defs>${parts.join("")}</svg>`;
+  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
+  const near = want > 60 ? cs : cs.slice(-24);
+  let lo = Math.min(...lv, ...near.map(x => x.low)), hi = Math.max(...lv, ...near.map(x => x.high));
+  const pad = (hi - lo) * .04 || hi * .01; lo -= pad; hi += pad;
+  MAP_G = {P, cs, n:cs.length, lo, hi, daily, tags:[]};
+  MAP_LWC_DATA = {P, cs, daily, chart};
+  return '<div id="mpLwc" class="mp-lwc" role="img" aria-label="Interactive candlestick chart with volume for '+esc(P.sym)+'"></div>';
 }
+
+
+let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null;
+function initLightweightMapChart() {
+  const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
+  if (!host || !D || !L || !D.cs || !D.cs.length) {
+    if (host) host.innerHTML = '<div class="mp-lwc-empty">Chart data is loading…</div>';
+    return;
+  }
+  try {
+    if (MAP_LWC_RO) { MAP_LWC_RO.disconnect(); MAP_LWC_RO = null; }
+    if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
+    const light = document.documentElement.dataset.theme === "light";
+    const bg = light ? "#F8F9FD" : "#121418", grid = light ? "rgba(13,17,23,.07)" : "rgba(255,255,255,.07)";
+    const colors = candleColors(), up = colors[0] || "#22C55E", down = colors[1] || "#EF4444";
+    const chart = L.createChart(host, {
+      width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 390,
+      layout: {background:{type:"solid",color:bg}, textColor:light?"#5b6472":"#9AA0AC", fontFamily:'Inter,system-ui,sans-serif', fontSize:11},
+      grid:{vertLines:{color:grid},horzLines:{color:grid}},
+      rightPriceScale:{borderColor:grid,scaleMargins:{top:.08,bottom:.08}},
+      timeScale:{borderColor:grid,timeVisible:!D.daily,secondsVisible:false,rightOffset:4,barSpacing:Math.max(4,Math.min(12,host.clientWidth/(D.cs.length+10))),fixLeftEdge:false},
+      crosshair:{mode:L.CrosshairMode.Normal,vertLine:{color:"#7C93FF",width:1,style:L.LineStyle.Dashed},horzLine:{color:"#7C93FF",width:1,style:L.LineStyle.Dashed}},
+      handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
+      handleScale:{axisPressedMouseMove:true,mouseWheel:true,pinch:true},
+    });
+    const candles = chart.addSeries(L.CandlestickSeries,{upColor:up,downColor:down,borderVisible:false,wickUpColor:up,wickDownColor:down,priceLineVisible:true,lastValueVisible:true});
+    candles.setData(D.cs.filter(x=>Number.isFinite(+x.time)&&Number.isFinite(+x.open)&&Number.isFinite(+x.high)&&Number.isFinite(+x.low)&&Number.isFinite(+x.close)).map(x=>({time:+x.time,open:+x.open,high:+x.high,low:+x.low,close:+x.close})));
+    const volPane = chart.addPane();
+    volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
+    const vol = chart.addSeries(L.HistogramSeries,{priceFormat:{type:"volume"},priceScaleId:"",lastValueVisible:false,priceLineVisible:false},1);
+    vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
+    vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
+    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Dashed,axisLabelVisible:true,axisLabelColor:color});};
+    line(D.P.trig,"TRIGGER","#E9C46A"); line(D.P.stop,"STOP","#E5736A"); line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF","#3DD68C");
+    if(D.P.obst) line(D.P.obst.level,"OBSTACLE","#B6A0E8",L.LineStyle.Dotted);
+    if(D.P.hub){line(D.P.hub.high,"HUB HIGH","#7C93FF",L.LineStyle.Dotted);line(D.P.hub.low,"HUB LOW","#7C93FF",L.LineStyle.Dotted);}
+    chart.timeScale().fitContent();
+    chart.subscribeCrosshairMove(param=>{
+      const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
+      const bar=param.seriesData&&param.seriesData.get(candles);
+      if(!bar||!param.point){tip.classList.remove("on");if(xh)xh.classList.remove("on");return;}
+      const date=typeof param.time==="number"?new Date(param.time*1000):null;
+      const when=date?date.toLocaleString("en-US",{month:"short",day:"numeric",hour:D.daily?undefined:"numeric",minute:D.daily?undefined:"2-digit",timeZone:"America/New_York"}):"";
+      const chg=bar.close>=bar.open, volBar=param.seriesData.get(vol);
+      tip.innerHTML='<b>'+when+'</b><div class="mp-ohlc"><span>O <b>'+money(bar.open)+'</b></span><span>H <b>'+money(bar.high)+'</b></span><span>L <b>'+money(bar.low)+'</b></span><span>C <b class="'+(chg?"u":"d")+'">'+money(bar.close)+'</b></span></div>'+(volBar?'<div>Volume <b>'+Number(volBar.value).toLocaleString()+'</b></div>':'');
+      tip.classList.add("on");tip.style.left=Math.max(4,Math.min(param.point.x+12,cw.clientWidth-190))+"px";tip.style.top=Math.max(4,Math.min(param.point.y+10,host.clientHeight-95))+"px";
+      if(xh){xh.style.left=param.point.x+"px";xh.style.top="0";xh.style.height=host.clientHeight+"px";xh.classList.add("on");}
+    });
+    MAP_LWC_CHART=chart; MAP_LWC_CANDLE=candles; MAP_LWC_VOLUME=vol;
+    MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected)MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});});
+    MAP_LWC_RO.observe(host);
+    const foot=document.createElement("div");foot.className="mp-lwc-foot";foot.innerHTML='<a href="https://www.tradingview.com/" target="_blank" rel="noopener">Charting by TradingView · Lightweight Charts™</a>';host.after(foot);
+  } catch(err) { console.error("NextShelf chart init failed",err); host.innerHTML='<div class="mp-lwc-empty">Chart unavailable. Please refresh.</div>'; }
+}
+
 // the 4H candle still forming: the server's bars so far, with the live price folded in so it moves every 30 s
 function mapFormingCandle(P, chart, cs) {
   const f = chart && chart.forming; if (!f) return null;
@@ -4299,6 +4247,7 @@ function paintMap() {
     </div>`;
   const ava = $("mpAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
   const slot = $("mpBodySlot"), body = $("bfBody"); if (slot && body) slot.appendChild(body);   // Game plan etc. sit right under the grade
+  initLightweightMapChart();
   mapWire();
   if (MAP_HOVER) mapShowAt(MAP_HOVER.x, MAP_HOVER.yy, true);
 }
@@ -4686,6 +4635,7 @@ function mapShowAt(x, yy, quiet) {
 function mapHideTip() { MAP_HOVER = null; const t = $("mpTip"), x = $("mpXh"); if (t) t.classList.remove("on"); if (x) x.classList.remove("on"); }
 function mapWire() {
   const cw = $("mpCw"); if (!cw || cw.dataset.wired) return;
+  if ($("mpLwc")) { cw.dataset.wired = "1"; return; }
   cw.dataset.wired = "1";
   const at = (e) => { const r = cw.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   let pinch = null, touchMoved = false, drag = null, raf = 0;
@@ -6388,6 +6338,10 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="light"] .mp-svg .mp-vol.dn { fill:#dc2626; }
 @media (max-width:559px) { .mp-protitle small { font-size:10.5px; } }
 .mp-cw { width: 100%; overflow: hidden; position: relative; touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.mp-lwc { width:100%; height:430px; min-height:330px; position:relative; touch-action:pan-x pan-y; }
+@media(max-width:559px){.mp-lwc{height:390px;min-height:350px;}}
+.mp-lwc-foot { display:flex; justify-content:flex-end; padding:5px 8px 0; font-size:10px; color:var(--mp-mut); }
+.mp-lwc-foot a { color:inherit; text-decoration:none; } .mp-lwc-foot a:hover{text-decoration:underline;}
 .mp-ctop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .mp-rng { display: inline-flex; border: 1px solid var(--mp-line); border-radius: 9px; padding: 2px; gap: 2px; }
 .mp-rng button { background: none; border: 0; color: var(--mp-mut); font: 600 12px var(--sans, system-ui); padding: 4px 9px; border-radius: 7px; cursor: pointer; }
