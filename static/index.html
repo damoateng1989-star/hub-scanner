@@ -3804,6 +3804,10 @@ function setMapView(on) {
 }
 document.body.classList.toggle("map-v2", MAP_ON());
 let MAP_Q = null;   // which Sika question is open
+// how much history the map shows (4H candles: 2 a session). Pinch / ctrl-scroll zooms between 8 and 3 months.
+const MAP_RANGES = [["1W", 10], ["2W", 20], ["1M", 42], ["3M", 126]];
+let MAP_N = (() => { try { return +localStorage.getItem("ns-map-n") || 42; } catch (e) { return 42; } })();
+let MAP_G = null, MAP_HOVER = null;   // geometry of the last drawn map (for hover), and what's being inspected
 // the chart is drawn at the real pixel width (text stays readable on phones), so measure the space it gets
 const MAP_W = () => { const el = $("mpCw") || $("bfMap"), w = el ? el.clientWidth : 0;
   if ($("mpCw")) return Math.max(300, w);
@@ -3888,11 +3892,12 @@ const MAP_IC = {
 const mapIc = (n, s) => `<svg width="${s || 16}" height="${s || 16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MAP_IC[n] || ""}</svg>`;
 function mapChart(P, chart, W) {
   const small = W < 560, H = small ? 260 : 330, R = small ? 54 : 64, top = 12, bot = 14, plotR = W - R, futX = plotR * (small ? 0.6 : 0.7);
-  const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(W < 560 ? -36 : -64) : [];
+  const want = Math.max(8, Math.min(MAP_N, 200));
+  const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(-want) : [];
   const fc = mapFormingCandle(P, chart, cs);
-  if (fc) { cs.push(fc); if (cs.length > (W < 560 ? 36 : 64)) cs.shift(); }
+  if (fc) { cs.push(fc); if (cs.length > want) cs.shift(); }
   const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
-  const near = cs.slice(-24);        // zoom on the setup: older candles far away are clipped instead of squashing the plan
+  const near = want > 60 ? cs : cs.slice(-24);   // zoom on the setup: older candles far away are clipped instead of squashing the plan (3M shows everything)
   let lo = Math.min(...lv, ...near.map(c => c.low)), hi = Math.max(...lv, ...near.map(c => c.high));
   const pad = (hi - lo) * 0.04 || hi * 0.01; lo -= pad; hi += pad;
   const y = (v) => top + (hi - v) / (hi - lo) * (H - top - bot);
@@ -3957,6 +3962,7 @@ function mapChart(P, chart, W) {
     if (Math.abs(g.y - 4 - g.ly) > 3) parts.push(`<line class="mp-lead ${g.cls}" x1="${lineEnd}" y1="${g.ly}" x2="${lineEnd + 5}" y2="${g.y - 4}"/>`);   // label moved off its line: a short leader
     parts.push(`<text class="mp-tag ${g.cls}" x="${plotR - 2}" y="${g.y}" text-anchor="end">${g.txt.slice(0, g.txt.lastIndexOf(" "))} <tspan>${money(g.v)}</tspan></text>`); });
   if (!n) parts.push(`<text class="mp-ax" x="${futX / 2}" y="${H / 2}" text-anchor="middle">Loading candles…</text>`);
+  MAP_G = {P, W, H, top, bot, futX, plotR, lineEnd, n, step, cs, lo, hi, y, tags};
   return `<svg class="mp-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Setup map for ${esc(P.sym)}">
     <defs><marker id="mpArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow"/></marker>
     <marker id="mpArrowW" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow w"/></marker></defs>${parts.join("")}</svg>`;
@@ -4043,7 +4049,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><b>Setup map</b><span>Where price is, what has to happen, and what's ahead. Right of the line is the plan, not real prices.${chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw" id="mpCw">${mapChart(P, chart, MAP_W())}</div></div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-ctop"><b>Setup map</b><div class="mp-rng">${MAP_RANGES.map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div><span>Where price is, what has to happen, and what's ahead. Right of the line is the plan, not real prices.${chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw" id="mpCw">${mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div><div class="mp-hint">${matchMedia("(hover: hover)").matches ? "Hover a candle or a line for details." : "Tap a candle or a line for details · pinch to zoom."}</div></div>
         <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
         <div id="mapGrade">${gradeHTML(st)}</div>
@@ -4054,7 +4060,83 @@ function paintMap() {
         <p class="mp-fine">Based on NextShelf's rules and past prices. For education only, not financial advice.</p></div>
     </div>`;
   const ava = $("mpAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
+  mapWire();
+  if (MAP_HOVER) mapShowAt(MAP_HOVER.x, MAP_HOVER.yy, true);
 }
+function mapRange(k) { MAP_N = k; MAP_HOVER = null; try { localStorage.setItem("ns-map-n", k); } catch (e) {} paintMap(); }
+// ---- inspect: what's under the pointer (a candle, a level, the hub) ----
+function mapLevelInfo(g, P) {
+  const now = P.px, pct = (v) => `${v >= now ? "+" : ""}${((v / now - 1) * 100).toFixed(1)}% from the current price`;
+  const t = g.cls;
+  if (t === "t-trig") return [`${g.t} ${money(g.v)}`, P.steps === "gapfade" ? `A daily close above the gap day's high starts this setup. ${pct(g.v)}.`
+    : P.steps.startsWith("double") ? `A 4-hour close above the neckline confirms the double bottom. ${pct(g.v)}.`
+    : P.phase >= 1 ? `It already closed above here: that was the breakout. Now NextShelf waits for a pullback to this edge that holds (the retest) for the A entry. ${pct(g.v)}.`
+    : `A 4-hour close above here confirms the breakout. Until then there's no trade. It sits far enough above recent closes that a close there is a real move, not noise. ${pct(g.v)}.`];
+  if (t === "t-stop") return [`Stop ${money(g.v)}`, `If price closes below here, the plan is wrong and you step aside.${P.hub && g.v < P.hub.high && g.v > P.hub.low ? " It's the middle of the hub." : ""} ${pct(g.v)}.`];
+  if (t === "t-obst") return [`${g.t} ${money(g.v)}`, `Between the trigger and the target: ${P.obst ? P.obst.why : ""}. Price may slow down here. ${pct(g.v)}.`];
+  return [`${g.t} ${money(g.v)}`, P.atrTarget ? `There's no shelf above, so the target is one typical 4-hour move (1 ATR) past the hub top. ${pct(g.v)}.`
+    : P.steps.startsWith("hub") ? `The next zone above where price paused before. A breakout aims here. ${pct(g.v)}.` : `Where this setup aims. ${pct(g.v)}.`];
+}
+function mapShowAt(x, yy, quiet) {
+  const G = MAP_G, tip = $("mpTip"), xh = $("mpXh"); if (!G || !tip || !xh) return;
+  MAP_HOVER = {x, yy};
+  let head = "", body = "", lineX = null;
+  if (x < G.futX && G.n) {                                  // a candle
+    const i = Math.max(0, Math.min(G.n - 1, Math.floor((x - 8) / G.step))), c = G.cs[i];
+    lineX = 8 + G.step * (i + 0.5);
+    const d = new Date(c.time * 1000), wd = d.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"});
+    const hh = d.getUTCHours(), slot = hh < 13 ? "9:30 AM–1:30 PM" : "1:30–4:00 PM";
+    const chg = i > 0 ? (c.close / G.cs[i - 1].close - 1) * 100 : null, P = G.P;
+    head = `${wd} · ${slot}${c.forming ? " · still forming" : ""}`;
+    body = `<div class="mp-ohlc"><span>Open <b>${money(c.open)}</b></span><span>High <b>${money(c.high)}</b></span><span>Low <b>${money(c.low)}</b></span><span>Close <b class="${c.close >= c.open ? "u" : "d"}">${money(c.close)}</b></span></div>`
+      + (chg != null ? `<div>${chg >= 0 ? "+" : ""}${chg.toFixed(2)}% vs the previous close</div>` : "")
+      + (P.trig != null ? `<div>${c.close >= P.trig ? "Closed above" : "Closed " + ((1 - c.close / P.trig) * 100).toFixed(1) + "% below"} the ${P.steps.startsWith("double") ? "neckline" : "trigger"}</div>` : "")
+      + (P.hub && c.close >= P.hub.low && c.close <= P.hub.high ? `<div>Closed inside the hub</div>` : "");
+  } else {                                                   // the plan zone: the nearest level line or label
+    let best = null, bd = 12;
+    for (const g of G.tags) { const d = Math.min(Math.abs(yy - g.ly), Math.abs(yy - (g.y - 4))); if (d < bd) { bd = d; best = g; } }
+    if (best) { const [h, b] = mapLevelInfo(best, G.P); head = h; body = `<div>${b}</div>`; }
+    else if (G.P.hub && yy >= G.y(G.P.hub.high) - 2 && yy <= G.y(G.P.hub.low) + 16) {
+      head = `Hub ${money(G.P.hub.low)}–${money(G.P.hub.high)}`;
+      body = `<div>4-hour closes have stayed in this range for ${G.P.hub.sessions} sessions. A close above the trigger is the breakout; NextShelf then waits for a retest of the top.</div>`;
+    } else { if (!quiet) mapHideTip(); return; }
+  }
+  tip.innerHTML = `<b>${head}</b>${body}`;
+  tip.classList.add("on");
+  const cw = $("mpCw").clientWidth, tw = tip.offsetWidth, th = tip.offsetHeight;
+  let tx = (lineX ?? x) + 14; if (tx + tw > cw - 4) tx = (lineX ?? x) - tw - 14; tx = Math.max(4, tx);
+  tip.style.left = tx + "px"; tip.style.top = Math.max(4, Math.min(yy - th / 2, G.H - th - 4)) + "px";
+  if (lineX != null) { xh.style.left = lineX + "px"; xh.style.height = (G.H - G.bot - G.top) + "px"; xh.style.top = G.top + "px"; xh.classList.add("on"); }
+  else xh.classList.remove("on");
+}
+function mapHideTip() { MAP_HOVER = null; const t = $("mpTip"), x = $("mpXh"); if (t) t.classList.remove("on"); if (x) x.classList.remove("on"); }
+function mapWire() {
+  const cw = $("mpCw"); if (!cw || cw.dataset.wired) return;
+  cw.dataset.wired = "1";
+  const at = (e) => { const r = cw.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
+  let pinch = null, touchMoved = false;
+  cw.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" || e.buttons) { const [x, yy] = at(e); mapShowAt(x, yy); touchMoved = true; } });
+  cw.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") mapHideTip(); });
+  cw.addEventListener("pointerdown", (e) => { touchMoved = false; if (e.pointerType !== "mouse") { const [x, yy] = at(e); mapShowAt(x, yy); } });
+  cw.addEventListener("click", (e) => { if (e.pointerType === "mouse" || touchMoved) return; });
+  // pinch (two fingers) and ctrl/trackpad-pinch wheel zoom the history between 8 candles and 3 months
+  cw.addEventListener("touchstart", (e) => { if (e.touches.length === 2) { pinch = {d: Math.abs(e.touches[0].clientX - e.touches[1].clientX) || 1, n: MAP_N}; mapHideTip(); } }, {passive: true});
+  cw.addEventListener("touchmove", (e) => {
+    if (!pinch || e.touches.length !== 2) return;
+    e.preventDefault();
+    const d = Math.abs(e.touches[0].clientX - e.touches[1].clientX) || 1, n = Math.round(Math.max(8, Math.min(126, pinch.n * pinch.d / d)));
+    if (n !== MAP_N) { MAP_N = n; clearTimeout(MAP_RT); MAP_RT = setTimeout(paintMap, 16); }
+  }, {passive: false});
+  cw.addEventListener("touchend", (e) => { if (pinch && e.touches.length < 2) { pinch = null; try { localStorage.setItem("ns-map-n", MAP_N); } catch (er) {} } });
+  cw.addEventListener("wheel", (e) => {
+    if (!e.ctrlKey) return;                                  // plain scrolling still scrolls the panel
+    e.preventDefault();
+    MAP_N = Math.round(Math.max(8, Math.min(126, MAP_N * (e.deltaY > 0 ? 1.12 : 0.89))));
+    clearTimeout(MAP_RT); MAP_RT = setTimeout(() => { paintMap(); try { localStorage.setItem("ns-map-n", MAP_N); } catch (er) {} }, 30);
+  }, {passive: false});
+}
+// tap outside the chart closes the details
+document.addEventListener("pointerdown", (e) => { if (MAP_HOVER && !e.target.closest("#mpCw")) mapHideTip(); });
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
 async function loadGamma(sym) {
@@ -5613,7 +5695,19 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-card { background: var(--mp-card); border: 1px solid var(--mp-line); border-radius: 18px; padding: 16px; }
 .mp-ct { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; } .mp-ct b { font-size: 16px; } .mp-ct span { font-size: 12.5px; color: var(--mp-mut); }
 .mp-chartcard { padding: 14px 10px 8px 14px; }
-.mp-cw { width: 100%; overflow: hidden; } .mp-svg { display: block; overflow: visible; }
+.mp-cw { width: 100%; overflow: hidden; position: relative; touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.mp-ctop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mp-rng { display: inline-flex; border: 1px solid var(--mp-line); border-radius: 9px; padding: 2px; gap: 2px; }
+.mp-rng button { background: none; border: 0; color: var(--mp-mut); font: 600 12px var(--sans, system-ui); padding: 4px 9px; border-radius: 7px; cursor: pointer; }
+.mp-rng button.on { background: color-mix(in srgb, var(--mp-hub) 18%, transparent); color: var(--mp-hub); }
+.mp-xh { position: absolute; width: 0; border-left: 1px dashed var(--mp-mut); pointer-events: none; opacity: 0; }
+.mp-xh.on { opacity: .7; }
+.mp-tip { position: absolute; z-index: 3; pointer-events: none; opacity: 0; transition: opacity .1s; max-width: 250px; min-width: 170px;
+  background: var(--mp-card); border: 1px solid var(--mp-line); border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.45; color: var(--mp-ink); box-shadow: 0 8px 24px rgba(0,0,0,.28); }
+.mp-tip.on { opacity: 1; } .mp-tip > b { display: block; margin-bottom: 4px; font-size: 12.5px; } .mp-tip div { color: var(--mp-mut); }
+.mp-ohlc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-bottom: 4px; color: var(--mp-mut); }
+.mp-ohlc b { color: var(--mp-ink); font-family: var(--mono, ui-monospace, monospace); font-weight: 600; } .mp-ohlc b.u { color: var(--mp-shelf); } .mp-ohlc b.d { color: var(--mp-obst); }
+.mp-hint { font-size: 11.5px; color: var(--mp-mut); padding: 4px 4px 0; } .mp-svg { display: block; overflow: visible; }
 .mp-grid line.mp-grid, .mp-svg .mp-grid { stroke: var(--mp-line); stroke-width: 1; }
 .mp-svg .mp-ax { fill: var(--mp-mut); font: 11px var(--mono, ui-monospace, monospace); }
 .mp-svg .mp-fut { fill: var(--mp-ink); opacity: .025; }
