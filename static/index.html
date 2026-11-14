@@ -4022,7 +4022,11 @@ function initLightweightMapChart() {
     const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Dashed,axisLabelVisible:true,axisLabelColor:color});};
     line(D.P.trig,"TRIGGER","#E9C46A"); line(D.P.stop,"STOP","#E5736A"); line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF","#3DD68C");
     if(D.P.obst) line(D.P.obst.level,"OBSTACLE","#B6A0E8",L.LineStyle.Dotted);
-    if(D.P.hub){line(D.P.hub.high,"HUB HIGH","#7C93FF",L.LineStyle.Dotted);line(D.P.hub.low,"HUB LOW","#7C93FF",L.LineStyle.Dotted);}
+    const hubColor = light ? "#4f46e5" : "#5B7BFF";
+    if(D.P.hub){
+      line(D.P.hub.high,"HUB HIGH",hubColor,L.LineStyle.Dotted);
+      line(D.P.hub.low,"HUB LOW",hubColor,L.LineStyle.Dotted);
+    }
     chart.timeScale().fitContent();
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
