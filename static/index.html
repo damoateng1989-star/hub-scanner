@@ -3805,7 +3805,7 @@ function setMapView(on) {
   try { localStorage.setItem("ns-map", on ? "on" : "off"); } catch (e) {}
   document.body.classList.toggle("map-v2", on);
   document.querySelectorAll("[data-mapopt]").forEach(b => b.classList.toggle("on", (b.dataset.mapopt === "on") === on));
-  if (!on && $("bfMap")) $("bfMap").innerHTML = "";
+  if (!on && $("bfMap")) { mapBodyHome(); $("bfMap").innerHTML = ""; }
   if (BRIEF_SYM) openBrief(BRIEF_SYM);
 }
 document.body.classList.toggle("map-v2", MAP_ON());
@@ -4168,16 +4168,18 @@ function mapCtx(k, btn) {
   el.innerHTML = `<div class="pop-card" role="dialog" aria-label="${esc(d.title)}"><div class="pop-h"><span>${d.icon}</span><b>${esc(d.title)}</b><button onclick="mapPopClose()" aria-label="Close">✕</button></div><div class="pop-b">${d.html}</div></div>`;
   const card = el.firstElementChild, r = btn.getBoundingClientRect(), phone = innerWidth < 700;
   el.className = phone ? "sheet" : "";
-  if (!phone) {
-    const w = 340, h = card.offsetHeight;
-    let left = r.left - w - 12; if (left < 8) left = Math.min(innerWidth - w - 8, r.right + 12);
-    card.style.left = left + "px"; card.style.top = Math.max(8, Math.min(r.top - 8, innerHeight - h - 8)) + "px";
+  if (!phone) {                            // centred in the stock panel
+    const pane = ($("brief") || document.body).getBoundingClientRect(), w = Math.min(420, pane.width - 32), h = card.offsetHeight;
+    card.style.width = w + "px";
+    card.style.left = Math.round(pane.left + (pane.width - w) / 2) + "px";
+    card.style.top = Math.round(Math.max(16, (innerHeight - card.offsetHeight) / 2)) + "px";
+    el.classList.add("center");
   }
   document.querySelectorAll(".mp-cx").forEach(x => x.classList.toggle("open", x.dataset.k === k));
 }
 function mapPopClose() { MAP_POP = null; const el = $("mpPop"); if (el) el.remove(); document.querySelectorAll(".mp-cx.open").forEach(x => x.classList.remove("open")); }
 document.addEventListener("pointerdown", (e) => { if (MAP_POP && !e.target.closest("#mpPop .pop-card") && !e.target.closest(".mp-cx")) mapPopClose(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape" && MAP_POP) mapPopClose(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && MAP_POP) { e.stopImmediatePropagation(); e.preventDefault(); mapPopClose(); } }, true);   // Escape closes the pop-out, not the whole panel
 function mapSideHTML(P, st, chart) {
   const sym = P.sym, lines = [];
   const titles = {earn: "Earnings", rec: `${sym}'s past breakouts`, mkt: "Market & sector", news: "Latest news", walls: "Options walls"};
@@ -4244,7 +4246,8 @@ function mapQ(q) { MAP_Q = MAP_Q === q ? null : q; paintMap(); }
 function paintMap() {
   const el = $("bfMap"); if (!el) return;
   if (!MAP_ON() || !BRIEF_SYM) { el.innerHTML = ""; return; }
-  if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#mpCalc, .mp-rp")) return;   // typing: don't redraw under the cursor
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#mpCalc, .mp-rp")) return;
+  mapBodyHome();                         // put the lower sections back before redrawing (they live inside the map's left column)   // typing: don't redraw under the cursor
   const sym = BRIEF_SYM, chart4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart4 && chart4.status) || findStatus(sym);
   // the candles drawn: daily when 1D is picked and loaded, else the 4-hour chart (levels and status always come from 4H)
   const chart = MAP_TF === "1d" ? (MAP_DCH && MAP_DCH.symbol === sym && chart4 ? {...MAP_DCH, status: chart4.status, tf: "1d"} : null) : chart4;
@@ -4279,6 +4282,7 @@ function paintMap() {
         <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
         <div id="mapGrade">${gradeHTML(st)}</div>
+        <div id="mpBodySlot"></div>
       </div>
       <div class="mp-right">
       <div class="mp-card mp-sika"><div class="mp-sh"><span class="sika-ava mp-ava" id="mpAva"></span><b>Sika</b><small>Plain English</small></div>
@@ -4290,6 +4294,7 @@ function paintMap() {
       </div>
     </div>`;
   const ava = $("mpAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
+  const slot = $("mpBodySlot"), body = $("bfBody"); if (slot && body) slot.appendChild(body);   // Game plan etc. sit right under the grade
   mapWire();
   if (MAP_HOVER) mapShowAt(MAP_HOVER.x, MAP_HOVER.yy, true);
 }
@@ -4443,6 +4448,8 @@ function mapTicketHTML() {
   return `<div class="tk-back" onclick="if(event.target===this)mapTicketClose()"><div class="tkt" role="dialog" aria-label="Trade ${esc(sym)}">
     <div class="tk-h"><b>Trade ${esc(sym)}</b><span>${esc(T.name)}</span><button class="tk-x" onclick="mapTicketClose()" aria-label="Close">✕</button></div>
     <div class="tk-st ${tone[1]}"><b>${tone[0]}</b><span>${esc(T.note)}</span></div>
+    <div class="tk-tabs"><button class="${MAP_TK.mode !== "options" ? "on" : ""}" onclick="mapTicketMode('shares')">Shares</button><button class="${MAP_TK.mode === "options" ? "on" : ""}" onclick="mapTicketMode('options')">Options</button></div>
+    ${MAP_TK.mode === "options" ? mapTicketOptionsHTML(sym, P, T, acct, risk, ex) : `
     <div class="tk-order">
       <div class="tk-r"><span>${esc(T.how)}</span></div>
       <div class="tk-r big"><span>Buy</span><b>${shares} share${shares === 1 ? "" : "s"} · limit ${money(T.entry)}</b></div>
@@ -4458,14 +4465,60 @@ function mapTicketHTML() {
     <div class="tk-acts"><button class="tk-copy" onclick="mapTicketCopy(this)" data-order="${esc(order)}">Copy order</button>
       <a class="tk-brk" href="${rhUrl(sym)}" target="_blank" rel="noopener">Open in Robinhood</a>
       ${wbUrl(sym, ex) ? `<a class="tk-brk" href="${wbUrl(sym, ex)}" target="_blank" rel="noopener">Open in Webull</a>` : ""}</div>
-    <p class="tk-tip">In the broker: place the buy as a <b>limit</b> order, then add the stop loss and the take-profit (often called a <b>bracket</b> or <b>OCO</b>). If your broker can't attach them, place them as two separate sell orders once the buy fills.</p>
+    <p class="tk-tip">In the broker: place the buy as a <b>limit</b> order, then add the stop loss and the take-profit (often called a <b>bracket</b> or <b>OCO</b>). If your broker can't attach them, place them as two separate sell orders once the buy fills.</p>`}
     <div class="tk-alh">Safety net: alerts to your phone</div>
     <div class="tk-als">${P.phase === 0 ? alBtn("trigger", P.trig, 1, "Trigger") : alBtn("entry", T.entry, -1, "Entry")}${alBtn("stop", T.stop, -1, "Stop")}${alBtn("target", T.target, 1, "Target")}</div>
     <p class="tk-fine">You place the order yourself; NextShelf never trades for you. Based on NextShelf's rules and past prices, for education only, not financial advice.</p>
   </div></div>`;
 }
+function mapTicketMode(m) {
+  if (!MAP_TK) return; MAP_TK.mode = m; try { localStorage.setItem("ns-tk-mode", m); } catch (e) {} mapTicketPaint();
+  const sym = MAP_TK.sym;
+  if (m === "options" && ME && !ME.guest && (isPro() || ME.options) && !OPT_CACHE[sym] && !OPT_FETCHING[sym]) {
+    OPT_FETCHING[sym] = true;
+    api(`/api/options/${encodeURIComponent(sym)}`, {timeout: 45000}).then(o => { o._t = Date.now(); OPT_CACHE[sym] = o; })
+      .catch(() => { OPT_CACHE[sym] = {plans: [], message: "Couldn't price the options right now."}; })
+      .finally(() => { delete OPT_FETCHING[sym]; mapTicketPaint(); });
+  }
+}
+// the options version of the same plan: one call contract from the Options swing, sized to the member's risk
+function mapTicketOptionsHTML(sym, P, T, acct, risk, ex) {
+  if (!ME || ME.guest || !(isPro() || ME.options))
+    return `<div class="tk-lock"><b>Trade it with options</b><p>The call contract that gives this move room, what it costs, what it might be worth at the target, and what you'd lose if it fails.</p><a class="tk-brk" href="#account" onclick="mapTicketClose();closeBrief()">Pro feature · see plans</a></div>`;
+  const o = OPT_CACHE[sym];
+  if (!o) return `<div class="tk-lock"><p>Pricing the option chain… this can take a few seconds.</p></div>`;
+  const p = (o.plans || []).find(x => x.direction === 1);
+  if (!p || !p.contracts || !p.contracts.length) return `<div class="tk-lock"><p>${esc(o.message || "No call contract fits this plan right now.")}</p></div>`;
+  const c = p.contracts[0], day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+  const per = c.cost, lossAtStop = Math.max(0, (c.mid - c.at_fail) * 100), gainAtTgt = (c.at_shelf - c.mid) * 100, good = gainAtTgt > 0;
+  const budget = acct * risk / 100, n = lossAtStop > 0 ? Math.floor(budget / lossAtStop) : 0, n2 = Math.max(0, Math.min(n, Math.floor(acct / per)));
+  const contract = `${sym} ${day(p.expiry)} $${c.strike} call`, k = n2 || 1, per1 = n2 ? "" : " <i>for 1 contract</i>";
+  const order = `${contract}\nBUY ${n2} contract${n2 === 1 ? "" : "s"} · limit ${money(c.mid)} (mid)\nTAKE PROFIT when ${sym} reaches ${money(p.target)} (option ≈ ${money(c.at_shelf)})\nEXIT on a 4-hour close back below ${money(T.stop)}\nCost ${money(n2 * per)} · most you can lose ${money(n2 * per)}`;
+  const earn = o.earnings && o.earnings.date <= p.expiry ? `<p class="tk-warn">📅 Earnings ${esc(o.earnings.label)}, before this contract expires: option prices usually drop right after a report.</p>` : "";
+  return `<div class="tk-order">
+      <div class="tk-r"><span>${c.estimated ? `Estimated price once it breaks out (about ${money(c.quote_now)} now)` : "Buy to open, limit near the middle of bid and ask"}</span></div>
+      <div class="tk-r big"><span>Contract</span><b>${esc(contract)}</b></div>
+      <div class="tk-r"><span>Buy</span><b>${n2} contract${n2 === 1 ? "" : "s"} · limit ${money(c.mid)}</b></div>
+      <div class="tk-r"><span>Take profit</span><b class="u">when ${esc(sym)} reaches ${money(p.target)} <i>option ≈ ${money(c.at_shelf)}</i></b></div>
+      <div class="tk-r"><span>Exit</span><b>4H close back below ${money(T.stop)} <i>option ≈ ${money(c.at_fail)}</i></b></div>
+      <div class="tk-r sum"><span>Cost</span><b>${money(k * per)}${per1}</b></div>
+      <div class="tk-r sum"><span>If it fails and you exit</span><b class="d">≈ −${money(k * lossAtStop)}${per1}</b></div>
+      <div class="tk-r sum"><span>If it reaches the target</span><b class="${good ? "u" : "d"}">≈ ${good ? "+" : "−"}${money(Math.abs(k * gainAtTgt))}${per1}</b></div>
+      <div class="tk-r sum"><span>Most you can lose</span><b class="d">${money(k * per)} <i>the whole cost${n2 ? "" : ", 1 contract"}</i></b></div>
+    </div>
+    ${n2 ? "" : `<p class="tk-warn">One contract would risk about ${money(lossAtStop)} if it fails, more than your ${money(budget)} budget (${risk}% of ${money(acct)}).</p>`}
+    ${good ? "" : `<p class="tk-warn">⚠ This contract loses money even if the stock reaches ${money(p.target)}: the move is too small to pay for its time value. Use shares instead.</p>`}
+    ${earn}${o.demo ? `<p class="tk-tip">Demo prices. Real option quotes appear once live data is connected.</p>` : ""}
+    <div class="tk-acct">Sized for <label>$<input type="number" value="${acct}" min="0" step="100" onchange="mapTicketAcct(this.value, null)"></label> risking
+      <label><input type="number" value="${risk}" min="0.1" max="10" step="0.1" onchange="mapTicketAcct(null, this.value)">%</label> if it fails · ${p.dte} days to expiry</div>
+    <div class="tk-acts"><button class="tk-copy" onclick="mapTicketCopy(this)" data-order="${esc(order)}">Copy order</button>
+      <a class="tk-brk" href="${rhUrl(sym)}" target="_blank" rel="noopener">Open in Robinhood</a>
+      ${wbUrl(sym, ex) ? `<a class="tk-brk" href="${wbUrl(sym, ex)}" target="_blank" rel="noopener">Open in Webull</a>` : ""}</div>
+    <p class="tk-tip">In the broker: open the option chain, pick <b>${esc(day(p.expiry))}</b> and the <b>$${c.strike} call</b>, buy to open with a <b>limit</b> near the middle of bid and ask${c.wide_spread ? " (the spread is wide here, so be patient)" : ""}. Options can lose 100% of their value. Estimates use Black-Scholes at today's volatility.</p>`;
+}
 async function mapTicketOpen() {
-  MAP_TK = {sym: BRIEF_SYM, alerts: []}; mapTicketPaint();
+  MAP_TK = {sym: BRIEF_SYM, alerts: [], mode: (() => { try { return localStorage.getItem("ns-tk-mode") || "shares"; } catch (e) { return "shares"; } })()}; mapTicketPaint();
+  if (MAP_TK.mode === "options") mapTicketMode("options");
   try { const r = await api(`/api/alerts/price?symbol=${encodeURIComponent(BRIEF_SYM)}`); if (MAP_TK && MAP_TK.sym === BRIEF_SYM) { MAP_TK.alerts = r.alerts || []; mapTicketPaint(); } } catch (e) {}
 }
 function mapTicketPaint() {
@@ -4552,6 +4605,10 @@ function mapTf(tf) {
   MAP_TF = tf; MAP_HOVER = null; if (MAP_RP) mapReplayStop(true);
   try { localStorage.setItem("ns-map-tf", tf); MAP_N = +localStorage.getItem(mapNKey()) || MAP_RANGE_DEF[tf]; } catch (e) { MAP_N = MAP_RANGE_DEF[tf]; }
   paintMap();
+}
+function mapBodyHome() {
+  const body = $("bfBody"), map = $("bfMap");
+  if (body && map && map.contains(body)) map.after(body);
 }
 function mapRange(k) { MAP_N = k; MAP_HOVER = null; try { localStorage.setItem(mapNKey(), k); } catch (e) {} paintMap(); }
 // ---- inspect: what's under the pointer (a candle, a level, the hub) ----
@@ -6311,6 +6368,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-tip.on { opacity: 1; } .mp-tip > b { display: block; margin-bottom: 4px; font-size: 12.5px; } .mp-tip div { color: var(--mp-mut); }
 .mp-ohlc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-bottom: 4px; color: var(--mp-mut); }
 .mp-ohlc b { color: var(--mp-ink); font-family: var(--mono, ui-monospace, monospace); font-weight: 600; } .mp-ohlc b.u { color: var(--mp-shelf); } .mp-ohlc b.d { color: var(--mp-obst); }
+#mpBodySlot:empty { display: none; } #mpBodySlot #bfBody { padding: 0; } #mpBodySlot .vz-card { margin: 0; }
 .mp-hint { font-size: 11.5px; color: var(--mp-mut); padding: 4px 4px 0; }
 .mp-ctop > div:last-child, .mp-ctop .mp-rng { margin-left: 0; } .mp-ctop b { margin-right: auto; }
 .mp-tf button { min-width: 34px; }
@@ -6550,10 +6608,16 @@ html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117;
 .pop-b { font-size: 13px; line-height: 1.55; color: #9AA0AC; display: grid; gap: 8px; } html[data-theme="light"] .pop-b { color: #5b6472; }
 .pop-b .mp-rcs { margin-bottom: 2px; } .pop-b .mp-nw { color: inherit; border-top: 1px solid rgba(127,127,127,.18); padding: 8px 0 2px; } .pop-b .mp-nw:first-child { border-top: 0; padding-top: 0; }
 .pop-b .mp-nw b { color: #F3F4F6; font-size: 13.5px; } html[data-theme="light"] .pop-b .mp-nw b { color: #0d1117; }
+#mpPop.center { pointer-events: auto; background: rgba(5,7,10,.35); }
 #mpPop.sheet { pointer-events: auto; background: rgba(5,7,10,.45); }
 #mpPop.sheet .pop-card { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 75vh; border-radius: 18px 18px 0 0; padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); animation: sheetIn .18s ease-out; }
 @keyframes sheetIn { from { transform: translateY(30px); opacity: .4; } }
 .mp-cx.open > button { background: color-mix(in srgb, var(--mp-hub) 8%, transparent); border-radius: 8px; }
+
+.tk-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--tk-line); border-radius: 10px; padding: 3px; gap: 3px; }
+.tk-tabs button { background: none; border: 0; color: var(--tk-mut); font: 600 13px var(--sans, system-ui); padding: 7px; border-radius: 8px; cursor: pointer; }
+.tk-tabs button.on { background: color-mix(in srgb, var(--tk-ink) 10%, transparent); color: var(--tk-ink); }
+.tk-lock { border: 1px dashed var(--tk-line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; font-size: 13px; color: var(--tk-mut); } .tk-lock b { color: var(--tk-ink); } .tk-lock p { margin: 0; }
 </style>
 </body>
 </html>
