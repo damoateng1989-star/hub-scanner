@@ -4149,6 +4149,68 @@ function mapAnswer(q, P, st) {
   if (h) return `Picture a shelf in a cupboard. Price has been sitting on one shelf (${money(h.low)}–${money(h.high)}). NextShelf waits for it to step up to the next one${P.shelf != null ? ` near ${money(P.shelf)}` : ""}. A 4-hour candle closing above ${money(P.trig)} is that step. Until then: no trade.`;
   return `NextShelf looks for stocks resting in a tight range, then waits for them to step out of it. ${S} isn't resting in one right now.`;
 }
+// Sika's opening line describes the setup the map is showing (a gap fade or double, not the hub behind it)
+function mapSummary(P, st) {
+  if (P.steps === "hub" || P.steps === "hub_short" || P.steps === "none") return vizSummary(st);
+  const x = (st.setups || []).find(s => (s.state === "breakout_up" || s.state === "breakdown") && (P.dbl ? s.kind === P.dbl.kind : s.kind === "gapfade"));
+  if (x) return setupSummary(P.sym, x, st);
+  return `${esc(P.status)}. ${esc(P.sub)}`;
+}
+// ---- the right-hand column: earnings, this stock's record, the market and sector, news, options walls
+function mapSideHTML(P, st, chart) {
+  const sym = P.sym, cards = [];
+  const card = (t, body) => `<div class="mp-card mp-sc"><div class="mp-sct">${t}</div>${body}</div>`;
+  // 1. earnings
+  const e = EARN[sym]; earnAsk(sym);
+  if (e) {
+    const L = e.last, d = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+    const nxt = e.days != null ? `<div class="mp-row ${e.days <= 7 ? "warn" : ""}"><span>Next earnings</span><b>${d(e.date)}${e.days === 0 ? " · today" : e.days === 1 ? " · tomorrow" : ` · in ${e.days} days`}</b></div>` : "";
+    const last = L ? `<div class="mp-row"><span>Last earnings</span><b>${d(L.date)} · ${L.days_ago} days ago</b></div>` : "";
+    const note = e.days != null && e.days <= 7 ? `<p class="mp-scn warn">Earnings within a week: price can gap past every level on the map.</p>` : "";
+    if (nxt || last) cards.push(card("Earnings", nxt + last + note));
+  } else cards.push(card("Earnings", `<p class="mp-scn">Checking the calendar…</p>`));
+  // 2. this stock's record: its last hub breakouts and how each ended
+  const done = ((chart && chart.trades) || []).filter(t => t.outcome && t.outcome !== "pending").slice(-8);
+  if (done.length) {
+    const hit = done.filter(t => t.outcome === "follow-through").length;
+    const chip = (t) => { const ok = t.outcome === "follow-through", bad = t.outcome === "snap-back" || t.outcome === "failed";
+      return `<span class="mp-rc ${ok ? "ok" : bad ? "no" : "to"}" title="${new Date(t.time * 1000).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.direction === 1 ? "breakout" : "breakdown"} · ${t.outcome.replace(/-/g, " ")}">${t.direction === 1 ? "▲" : "▼"}${ok ? "✓" : bad ? "✗" : "–"}</span>`; };
+    cards.push(card(`${esc(sym)}'s last breakouts`, `<div class="mp-rcs">${done.map(chip).join("")}</div>
+      <p class="mp-scn"><b>${hit} of ${done.length}</b> reached the next shelf (▲ breakout, ▼ breakdown, ✓ reached it, ✗ snapped back, – ran out of time). Entered at the breakout close, the old way; the A retest is stricter.</p>`));
+  }
+  // 3. market and sector
+  if (!HEAT && !mapSideHTML.asked) { mapSideHTML.asked = true; api("/api/heatmap").then(h => { HEAT = h; mapSidePaint(); paintHeatmap(); }).catch(() => {}); }
+  if (HEAT) {
+    const rg = HEAT.regime, me = (HEAT.tiles || []).find(t => t.s === sym), sec = me && me.sec;
+    const peers = sec ? HEAT.tiles.filter(t => t.sec === sec) : [];
+    const n = (k) => peers.filter(t => t.st === k).length;
+    const mk = rg && rg.regime ? `<div class="mp-row ${rg.regime === "up" ? "good" : "bad"}"><span>Market (${esc(rg.index || "SPY")})</span><b>${rg.regime === "up" ? "Uptrend ✓" : "Downtrend"}</b></div>
+      <p class="mp-scn">${esc(rg.index || "SPY")} ${money(rg.close)} vs its ${rg.days || 50}-day average ${money(rg.sma)}. Breakouts work better with the market behind them.</p>` : "";
+    const sc = sec && sec !== "Other" ? `<div class="mp-row"><span>${esc(sec)}</span><b>${n("up")} breaking out · ${n("edge")} close to the trigger</b></div><p class="mp-scn">Out of ${peers.length} stocks in the sector${n("down") ? `; ${n("down")} breaking down` : ""}.</p>` : "";
+    if (mk || sc) cards.push(card("Market &amp; sector", mk + sc));
+  }
+  // 4. news (loaded by the panel after the chart; never slows it down)
+  const nw = NEWS[sym];
+  if (nw && nw !== "loading" && nw.ok !== false) {
+    const items = [...(nw.catalyst ? [nw.catalyst] : []), ...(nw.items || []).filter(x => !nw.catalyst || x.headline !== nw.catalyst.headline)].slice(0, 3);
+    cards.push(card("Latest news", items.length ? items.map((x, i) => `<${x.url ? `a href="${esc(x.url)}" target="_blank" rel="noopener"` : "div"} class="mp-nw">${i === 0 && nw.catalyst ? `<i>Possible catalyst</i>` : ""}<b>${esc(x.headline)}</b><small>${esc(x.source || "")} · ${when(x.time)}</small></${x.url ? "a" : "div"}>`).join("") : `<p class="mp-scn">No recent headlines.</p>`));
+  } else if (!nw || nw === "loading") cards.push(card("Latest news", `<p class="mp-scn">Checking the news…</p>`));
+  // 5. options walls
+  const g = GAMMA[sym];
+  if (g && g !== "loading" && (g.call_wall || g.put_wall)) {
+    const pct = (v) => `${v >= P.px ? "+" : ""}${((v / P.px - 1) * 100).toFixed(1)}%`;
+    cards.push(card("Options walls", (g.call_wall ? `<div class="mp-row"><span>Call wall</span><b>${money(g.call_wall)} · ${pct(g.call_wall)}</b></div>` : "")
+      + (g.put_wall ? `<div class="mp-row"><span>Put wall</span><b>${money(g.put_wall)} · ${pct(g.put_wall)}</b></div>` : "")
+      + `<p class="mp-scn">Strikes with the most open options. Price often stalls near them.</p>`));
+  }
+  return cards.join("");
+}
+function mapSidePaint() {
+  const el = $("mpSide"); if (!el || !BRIEF_SYM || !MAP_ON()) return;
+  const sym = BRIEF_SYM, c4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(sym);
+  if (!st || st.last_close == null) return;
+  el.innerHTML = mapSideHTML(mapPlan(sym, st), st, c4);
+}
 function mapQ(q) { MAP_Q = MAP_Q === q ? null : q; paintMap(); }
 function paintMap() {
   const el = $("bfMap"); if (!el) return;
@@ -4189,10 +4251,13 @@ function paintMap() {
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
         <div id="mapGrade">${gradeHTML(st)}</div>
       </div>
+      <div class="mp-right">
       <div class="mp-card mp-sika"><div class="mp-sh"><span class="sika-ava mp-ava" id="mpAva"></span><b>Sika</b><small>Plain English</small></div>
-        <p class="mp-say">${MAP_Q ? mapAnswer(MAP_Q, P, st) : vizSummary(st)}</p>
+        <p class="mp-say">${MAP_Q ? mapAnswer(MAP_Q, P, st) : mapSummary(P, st)}</p>
         <div class="mp-qs">${qs.map(([k, t]) => `<button class="${MAP_Q === k ? "on" : ""}" onclick="mapQ('${k}')">${t}<span>›</span></button>`).join("")}</div>
         <p class="mp-fine">Based on NextShelf's rules and past prices. For education only, not financial advice.</p></div>
+      <div id="mpSide">${mapSideHTML(P, st, chart)}</div>
+      </div>
     </div>`;
   const ava = $("mpAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
   mapWire();
@@ -4541,7 +4606,7 @@ async function loadNews(sym, st) {
   }
   paintNews(sym);
 }
-function paintNews(sym) { const el = $("bfNews"); if (el && BRIEF_SYM === sym) { el.innerHTML = newsHTML(sym); if ($("bfNewsSum")) $("bfNewsSum").textContent = newsSum(sym); } }
+function paintNews(sym) { if (BRIEF_SYM === sym) mapSidePaint(); const el = $("bfNews"); if (el && BRIEF_SYM === sym) { el.innerHTML = newsHTML(sym); if ($("bfNewsSum")) $("bfNewsSum").textContent = newsSum(sym); } }
 function newsSum(sym) {
   const n = NEWS[sym];
   if (!n || n === "loading") return "Checking…";
@@ -5896,6 +5961,7 @@ function earnAsk(sym) {
       try { Object.assign(EARN, await api("/api/earnings?symbols=" + encodeURIComponent(list.slice(i, i + 150).join(",")))); } catch (e) {}
     }
     earnPaint(document);
+    if (BRIEF_SYM && list.includes(BRIEF_SYM)) mapSidePaint();
   }, 200);
 }
 function earnShort(e) { const d = new Date(e.date + "T12:00:00"); return e.days === 0 ? "📅 Earnings today" : e.days === 1 ? "📅 Earnings tomorrow" : "📅 Earnings " + d.toLocaleDateString(undefined, {month: "short", day: "numeric"}).replace(/ /g, "\u00a0"); }
@@ -6220,7 +6286,23 @@ html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cd
 .mp-j small { font-size: 12px; color: var(--mp-mut); line-height: 1.3; } .mp-j.now small { color: var(--mp-ink); font-weight: 600; }
 .mp-j small em { display: block; font-style: normal; color: var(--mp-hub); font-size: 11px; }
 #mapGrade .sg { margin: 0; }
-.mp-sika { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 12px; }
+.mp-sika { display: flex; flex-direction: column; gap: 12px; }
+.mp-right { display: grid; gap: 12px; align-content: start; min-width: 0; }
+#mpSide { display: grid; gap: 12px; }
+.mp-sc { padding: 14px 16px; display: grid; gap: 8px; }
+.mp-sct { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mp-mut); font-weight: 600; }
+.mp-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; }
+.mp-row span { color: var(--mp-mut); } .mp-row b { font-weight: 600; text-align: right; }
+.mp-row.warn b { color: var(--mp-trig); } .mp-row.good b { color: var(--mp-shelf); } .mp-row.bad b { color: var(--mp-obst); }
+.mp-scn { margin: 0; font-size: 12px; line-height: 1.45; color: var(--mp-mut); } .mp-scn.warn { color: var(--mp-trig); } .mp-scn b { color: var(--mp-ink); }
+.mp-rcs { display: flex; flex-wrap: wrap; gap: 5px; }
+.mp-rc { font: 600 11.5px var(--mono, ui-monospace, monospace); padding: 4px 6px; border-radius: 7px; border: 1px solid var(--mp-line); cursor: default; }
+.mp-rc.ok { color: var(--mp-shelf); border-color: color-mix(in srgb, var(--mp-shelf) 40%, transparent); }
+.mp-rc.no { color: var(--mp-obst); border-color: color-mix(in srgb, var(--mp-obst) 40%, transparent); } .mp-rc.to { color: var(--mp-mut); }
+.mp-nw { display: grid; gap: 2px; text-decoration: none; color: var(--mp-ink); padding: 6px 0; border-top: 1px solid var(--mp-line); }
+.mp-nw:first-of-type { border-top: 0; } .mp-nw b { font-size: 13px; font-weight: 600; line-height: 1.35; } .mp-nw small { font-size: 11.5px; color: var(--mp-mut); }
+.mp-nw i { font-style: normal; font-size: 10.5px; color: var(--mp-trig); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+.mp-nw:hover b { text-decoration: underline; }
 .mp-sh { display: flex; align-items: center; gap: 10px; } .mp-sh b { font-size: 17px; }
 .mp-sh small { margin-left: auto; font-size: 11.5px; color: var(--mp-shelf); border: 1px solid color-mix(in srgb, var(--mp-shelf) 50%, transparent); border-radius: 999px; padding: 3px 9px; }
 .mp-ava { width: 34px !important; height: 34px !important; display: inline-grid; place-items: center; }

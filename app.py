@@ -972,7 +972,11 @@ def heatmap(u: dict | None = Maybe):
         if not full and st in ("up", "down", "edge", "edge_dn"):
             st = "locked"                          # free plan: the timely states stay hidden, like the board
         tiles.append(dict(s=s, sec=universe.sector(s), cap=universe.market_cap(s), st=st))
-    return dict(updated=b.get("updated"), tiles=tiles, locked=not full, guest=not u)
+    try:
+        regime = json.loads(db.get_setting("regime") or "null")
+    except Exception:
+        regime = None
+    return dict(updated=b.get("updated"), tiles=tiles, locked=not full, guest=not u, regime=regime)
 
 
 @app.post("/api/board/scan")
