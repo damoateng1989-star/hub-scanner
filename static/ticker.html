@@ -491,11 +491,23 @@ function render(d) {
     timeScale: { borderColor: css("--line"), timeVisible: !daily, secondsVisible: false },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
   });
-  const candles = chart.addCandlestickSeries({
-    upColor: css("--up"), downColor: css("--down"), borderVisible: false,
-    wickUpColor: css("--up"), wickDownColor: css("--down"), priceLineVisible: false,
-  });
-  candles.setData(d.candles);
+  // the member's candle style (Account > Chart style): candles, hollow, bars or line, and their own colours
+  const CP = (() => { try { return JSON.parse(localStorage.getItem("ns-candles") || "{}"); } catch (e) { return {}; } })();
+  const upC = CP.up || css("--up"), dnC = CP.down || css("--down"), ctype = CP.type || "candles";
+  let candles;
+  if (ctype === "bars") {
+    candles = chart.addBarSeries({ upColor: upC, downColor: dnC, thinBars: false, priceLineVisible: false });
+    candles.setData(d.candles);
+  } else if (ctype === "line") {
+    candles = chart.addLineSeries({ color: upC, lineWidth: 2, priceLineVisible: false });
+    candles.setData(d.candles.map(c => ({ time: c.time, value: c.close })));
+  } else {
+    candles = chart.addCandlestickSeries({
+      upColor: ctype === "hollow" ? "rgba(0,0,0,0)" : upC, downColor: dnC, borderVisible: ctype === "hollow",
+      borderUpColor: upC, borderDownColor: dnC, wickUpColor: upC, wickDownColor: dnC, priceLineVisible: false,
+    });
+    candles.setData(d.candles);
+  }
 
   // volume: own scale in the bottom pane, coloured by candle direction.
   // Skipped entirely when the payload carries no volume (fail-open).
@@ -506,7 +518,7 @@ function render(d) {
     return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
   };
   if (d.candles.length && typeof d.candles[0].volume === "number") {
-    const upV = hexA(css("--up"), .45), dnV = hexA(css("--down"), .45);
+    const upV = hexA(upC, .45) || hexA(css("--up"), .45), dnV = hexA(dnC, .45) || hexA(css("--down"), .45);
     const vol = chart.addHistogramSeries({ priceFormat: { type: "volume" }, priceScaleId: "vol",
                                            lastValueVisible: false, priceLineVisible: false });
     vol.setData(d.candles.filter(c => typeof c.volume === "number").map(c => ({ time: c.time, value: c.volume,
