@@ -486,7 +486,9 @@ function render(d) {
   chart = LightweightCharts.createChart(el, {
     autoSize: true,
     layout: { background: { color: "transparent" }, textColor: css("--muted"), fontFamily: "Geist Mono, ui-monospace, monospace", fontSize: 11 },
-    grid: { vertLines: { color: css("--line") }, horzLines: { color: css("--line") } },
+    // hairline grid: faint enough that the candles carry the picture
+    grid: { vertLines: { color: document.documentElement.dataset.theme === "light" ? "rgba(13,17,23,.05)" : "rgba(255,255,255,.045)" },
+            horzLines: { color: document.documentElement.dataset.theme === "light" ? "rgba(13,17,23,.05)" : "rgba(255,255,255,.045)" } },
     rightPriceScale: { borderColor: css("--line") },
     timeScale: { borderColor: css("--line"), timeVisible: !daily, secondsVisible: false },
     crosshair: { mode: LightweightCharts.CrosshairMode.Normal },

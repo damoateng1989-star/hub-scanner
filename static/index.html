@@ -3832,10 +3832,11 @@ function candleColors() {
 // one candle as SVG in the member's style (the line style is drawn by the caller as one path)
 function candleSVG(c, X, bw, y, cls) {
   const p = candlePref(), [U, D] = candleColors(), up = c.close >= c.open, col = up ? U : D, t = p.type || "candles";
-  const yo = y(c.open), yc = y(c.close), yh = y(c.high), yl = y(c.low);
+  X = Math.round(X) + 0.5; bw = Math.max(1, Math.round(bw));          // whole pixels: 1px wicks stay sharp on any screen
+  const yo = Math.round(y(c.open)), yc = Math.round(y(c.close)), yh = Math.round(y(c.high)), yl = Math.round(y(c.low));
   if (t === "bars") return `<g${cls ? ` class="${cls}"` : ""} stroke="${col}" stroke-width="1.4"><line x1="${X}" x2="${X}" y1="${yh}" y2="${yl}"/><line x1="${X - bw / 2}" x2="${X}" y1="${yo}" y2="${yo}"/><line x1="${X}" x2="${X + bw / 2}" y1="${yc}" y2="${yc}"/></g>`;
   const hollow = t === "hollow" && up;
-  return `<g${cls ? ` class="${cls}"` : ""}><line x1="${X}" x2="${X}" y1="${yh}" y2="${yl}" stroke="${col}"/><rect x="${X - bw / 2}" y="${Math.min(yo, yc)}" width="${bw}" height="${Math.max(1, Math.abs(yc - yo))}" fill="${hollow ? "var(--mp-card)" : col}" stroke="${col}" stroke-width="${hollow ? 1.2 : 0}"/></g>`;
+  return `<g${cls ? ` class="${cls}"` : ""}><line x1="${X}" x2="${X}" y1="${yh}" y2="${yl}" stroke="${col}"/><rect x="${Math.round(X - bw / 2)}" y="${Math.min(yo, yc)}" width="${bw}" height="${Math.max(1, Math.abs(yc - yo))}" fill="${hollow ? "var(--mp-card)" : col}" stroke="${col}" stroke-width="${hollow ? 1 : 0}"/></g>`;
 }
 function candleLine(cs, cx, y, upTo) {
   const [U] = candleColors(), pts = cs.slice(0, upTo == null ? cs.length : upTo + 1).map((c, i) => `${cx(i)},${y(c.close)}`).join(" ");
@@ -3969,7 +3970,7 @@ function mapChart(P, chart, W) {
   let lo = Math.min(...lv, ...near.map(c => c.low)), hi = Math.max(...lv, ...near.map(c => c.high));
   const pad = (hi - lo) * 0.04 || hi * 0.01; lo -= pad; hi += pad;
   const y = (v) => top + (hi - v) / (hi - lo) * (H - top - bot);
-  const n = cs.length, step = n ? (futX - 14) / n : 0, cx = (i) => 8 + step * (i + 0.5), bw = Math.max(1.5, step * 0.58);
+  const n = cs.length, step = n ? (futX - 14) / n : 0, cx = (i) => 8 + step * (i + 0.5), bw = Math.max(1, step * 0.5);
   const xNow = n ? cx(n - 1) : futX - 10;
   const parts = [];
   const tags = [];
@@ -3984,7 +3985,7 @@ function mapChart(P, chart, W) {
   // grid + price axis
   const tick = (() => { const raw = (hi - lo) / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * mag).find(m => m >= raw); })();
   for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick)
-    parts.push(`<line class="mp-grid" x1="0" x2="${plotR}" y1="${y(v)}" y2="${y(v)}"/><text class="mp-ax" x="${plotR + 8}" y="${y(v) + 4}">${v >= 1000 ? v.toFixed(0) : v.toFixed(2)}</text>`);
+    parts.push(`<line class="mp-grid" x1="0" x2="${plotR}" y1="${Math.round(y(v)) + 0.5}" y2="${Math.round(y(v)) + 0.5}"/><text class="mp-ax" x="${plotR + 8}" y="${y(v) + 4}">${v >= 1000 ? v.toFixed(0) : v.toFixed(2)}</text>`);
   // future zone
   parts.push(`<rect class="mp-fut" x="${futX}" y="${top}" width="${plotR - futX}" height="${H - top - bot}"/>`);
   parts.push(`<line class="mp-futdiv" x1="${futX}" y1="${top}" x2="${futX}" y2="${H - bot}"/>`);
@@ -4027,7 +4028,7 @@ function mapChart(P, chart, W) {
   else cs.forEach((c, i) => parts.push(candleSVG(c, cx(i), bw, y, c.forming ? "mp-cf" : "")));
   parts.push("</g>");
   // level lines
-  const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${lineEnd}" y1="${y(v)}" y2="${y(v)}"/>`;
+  const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${lineEnd}" y1="${Math.round(y(v)) + 0.5}" y2="${Math.round(y(v)) + 0.5}"/>`;
   parts.push(line(P.stop !== P.trig && !P.watch ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
              line(P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", futX));
   // the path: current price → trigger → target (dashed; nothing to the right of "now" is real price)
@@ -6145,6 +6146,30 @@ html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cd
   .mp-c:nth-child(odd) { border-left: 0; padding-left: 0; }
   .mp-j small { font-size: 11px; }
 }
+
+/* ---- polish: hairlines, fewer colours, depth (dark + light) */
+#bfMap { --mp-card: #121418; --mp-line: rgba(255,255,255,.08); --mp-grid: rgba(255,255,255,.045); --mp-trig: #E9C46A; --mp-obst: #E5736A; --mp-shelf: #3DD68C; }
+html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.09); --mp-grid: rgba(13,17,23,.055); }
+#bfMap .mp-card { background: linear-gradient(180deg, color-mix(in srgb, var(--mp-ink) 3.5%, var(--mp-card)) 0%, var(--mp-card) 55%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--mp-ink) 7%, transparent), 0 1px 2px rgba(0,0,0,.18); }
+#bfMap .mp-chartcard { position: relative; isolation: isolate; }
+#bfMap .mp-chartcard::before { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(color-mix(in srgb, var(--mp-ink) 7%, transparent) 1px, transparent 1.2px) 0 0 / 18px 18px;
+  -webkit-mask-image: radial-gradient(120% 90% at 85% 0%, #000 0%, transparent 70%); mask-image: radial-gradient(120% 90% at 85% 0%, #000 0%, transparent 70%); }
+#bfMap .mp-chartcard::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(60% 50% at 90% 0%, color-mix(in srgb, var(--mp-hub) 10%, transparent), transparent 70%); }
+.mp-svg .mp-grid { stroke: var(--mp-grid) !important; }
+.mp-svg line, .mp-svg .mp-hub, .mp-svg .mp-fut, .mp-svg .mp-shelfband, .mp-svg .mp-obstband { shape-rendering: crispEdges; }
+.mp-svg .mp-ax { fill: color-mix(in srgb, var(--mp-mut) 85%, transparent); font-size: 10.5px; }
+.mp-svg [class^="mp-l-"] { stroke-width: 1; }
+.mp-svg .mp-hub { stroke-width: 1; fill-opacity: .08; }
+.mp-head h3 { letter-spacing: -.035em; font-weight: 700; }
+.mp-ct b { font-size: 15px; letter-spacing: -.015em; font-weight: 650; }
+.mp-c small, .mp-k small { text-transform: uppercase; letter-spacing: .08em; font-size: 10px; font-weight: 600; }
+.mp-c b, .mp-k b { letter-spacing: -.01em; }
+.mp-st b { letter-spacing: -.01em; }
+.mp-c { border-left-color: var(--mp-line); }
+.mp-qs button, .mp-rng, .mp-planbtn, .mp-rp-ctl button { border-color: var(--mp-line); }
 </style>
 </body>
 </html>
