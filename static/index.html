@@ -3538,7 +3538,7 @@ function openShelfFromUrl() {
 }
 async function openBrief(sym, focus) {
   BRIEF_FOCUS = focus || null;
-  BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null; MAP_Q = null; MAP_DCH = null;
+  BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null; MAP_Q = null; MAP_DCH = null; MAP_ASK = false; MAP_CTX = new Set();
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
   paintBriefWatch(sym);
@@ -4156,54 +4156,62 @@ function mapSummary(P, st) {
   if (x) return setupSummary(P.sym, x, st);
   return `${esc(P.status)}. ${esc(P.sub)}`;
 }
-// ---- the right-hand column: earnings, this stock's record, the market and sector, news, options walls
+// ---- the right-hand column: one compact "Context" card, a line per item, tap a line for the detail
+let MAP_CTX = new Set(), MAP_ASK = false;
+function mapCtx(k) { MAP_CTX.has(k) ? MAP_CTX.delete(k) : MAP_CTX.add(k); mapSidePaint(); }
 function mapSideHTML(P, st, chart) {
-  const sym = P.sym, cards = [];
-  const card = (t, body) => `<div class="mp-card mp-sc"><div class="mp-sct">${t}</div>${body}</div>`;
-  // 1. earnings
+  const sym = P.sym, lines = [];
+  const line = (k, icon, text, detail, tone) => lines.push(`<div class="mp-cx ${tone || ""} ${MAP_CTX.has(k) ? "open" : ""}">
+      <button onclick="mapCtx('${k}')"><span class="mp-cxi">${icon}</span><span class="mp-cxt">${text}</span>${detail ? `<span class="mp-cxc">›</span>` : ""}</button>
+      ${detail && MAP_CTX.has(k) ? `<div class="mp-cxd">${detail}</div>` : ""}</div>`);
+  const dd = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+  // earnings
   const e = EARN[sym]; earnAsk(sym);
-  if (e) {
-    const L = e.last, d = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
-    const nxt = e.days != null ? `<div class="mp-row ${e.days <= 7 ? "warn" : ""}"><span>Next earnings</span><b>${d(e.date)}${e.days === 0 ? " · today" : e.days === 1 ? " · tomorrow" : ` · in ${e.days} days`}</b></div>` : "";
-    const last = L ? `<div class="mp-row"><span>Last earnings</span><b>${d(L.date)} · ${L.days_ago} days ago</b></div>` : "";
-    const note = e.days != null && e.days <= 7 ? `<p class="mp-scn warn">Earnings within a week: price can gap past every level on the map.</p>` : "";
-    if (nxt || last) cards.push(card("Earnings", nxt + last + note));
-  } else cards.push(card("Earnings", `<p class="mp-scn">Checking the calendar…</p>`));
-  // 2. this stock's record: its last hub breakouts and how each ended
+  if (e && (e.days != null || e.last)) {
+    const soon = e.days != null && e.days <= 7;
+    const txt = e.days == null ? `Last earnings ${dd(e.last.date)}` : e.days === 0 ? "<b>Earnings today</b>" : e.days === 1 ? "<b>Earnings tomorrow</b>" : soon ? `<b>Earnings in ${e.days} days</b>` : `Earnings ${dd(e.date)} (${e.days} days)`;
+    line("earn", "📅", txt, (e.days != null ? `Next report ${dd(e.date)}${e.label ? `, ${esc(e.label.split(", ")[1] || "")}` : ""}. ` : "") + (e.last ? `Last one ${dd(e.last.date)}, ${e.last.days_ago} days ago. ` : "")
+      + (soon ? "Price can gap past every level on the map around a report." : ""), soon ? "warn" : "");
+  }
+  // this stock's record
   const done = ((chart && chart.trades) || []).filter(t => t.outcome && t.outcome !== "pending").slice(-8);
   if (done.length) {
-    const hit = done.filter(t => t.outcome === "follow-through").length;
+    const hit = done.filter(t => t.outcome === "follow-through").length, good = hit / done.length >= 0.5;
     const chip = (t) => { const ok = t.outcome === "follow-through", bad = t.outcome === "snap-back" || t.outcome === "failed";
-      return `<span class="mp-rc ${ok ? "ok" : bad ? "no" : "to"}" title="${new Date(t.time * 1000).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.direction === 1 ? "breakout" : "breakdown"} · ${t.outcome.replace(/-/g, " ")}">${t.direction === 1 ? "▲" : "▼"}${ok ? "✓" : bad ? "✗" : "–"}</span>`; };
-    cards.push(card(`${esc(sym)}'s last breakouts`, `<div class="mp-rcs">${done.map(chip).join("")}</div>
-      <p class="mp-scn"><b>${hit} of ${done.length}</b> reached the next shelf (▲ breakout, ▼ breakdown, ✓ reached it, ✗ snapped back, – ran out of time). Entered at the breakout close, the old way; the A retest is stricter.</p>`));
+      return `<span class="mp-rc ${ok ? "ok" : bad ? "no" : "to"}" title="${new Date(t.time * 1000).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"})} · ${t.outcome.replace(/-/g, " ")}">${t.direction === 1 ? "▲" : "▼"}${ok ? "✓" : bad ? "✗" : "–"}</span>`; };
+    line("rec", good ? "✓" : "✗", `${hit} of ${done.length} past breakouts reached the shelf`,
+      `<div class="mp-rcs">${done.map(chip).join("")}</div>▲ breakout, ▼ breakdown · ✓ reached the shelf, ✗ snapped back, – ran out of time. These entered at the breakout close (the old way); the A retest is stricter.`, good ? "" : "dim");
   }
-  // 3. market and sector
+  // market and sector
   if (!HEAT && !mapSideHTML.asked) { mapSideHTML.asked = true; api("/api/heatmap").then(h => { HEAT = h; mapSidePaint(); paintHeatmap(); }).catch(() => {}); }
   if (HEAT) {
-    const rg = HEAT.regime, me = (HEAT.tiles || []).find(t => t.s === sym), sec = me && me.sec;
-    const peers = sec ? HEAT.tiles.filter(t => t.sec === sec) : [];
-    const n = (k) => peers.filter(t => t.st === k).length;
-    const mk = rg && rg.regime ? `<div class="mp-row ${rg.regime === "up" ? "good" : "bad"}"><span>Market (${esc(rg.index || "SPY")})</span><b>${rg.regime === "up" ? "Uptrend ✓" : "Downtrend"}</b></div>
-      <p class="mp-scn">${esc(rg.index || "SPY")} ${money(rg.close)} vs its ${rg.days || 50}-day average ${money(rg.sma)}. Breakouts work better with the market behind them.</p>` : "";
-    const sc = sec && sec !== "Other" ? `<div class="mp-row"><span>${esc(sec)}</span><b>${n("up")} breaking out · ${n("edge")} close to the trigger</b></div><p class="mp-scn">Out of ${peers.length} stocks in the sector${n("down") ? `; ${n("down")} breaking down` : ""}.</p>` : "";
-    if (mk || sc) cards.push(card("Market &amp; sector", mk + sc));
+    const rg = HEAT.regime, me = (HEAT.tiles || []).find(t => t.s === sym), sec = me && me.sec, peers = sec ? HEAT.tiles.filter(t => t.sec === sec) : [];
+    const n = (k) => peers.filter(t => t.st === k).length, shortSec = {"Information Technology": "Tech", "Communication Services": "Comm.", "Consumer Discretionary": "Discretionary", "Consumer Staples": "Staples", "Health Care": "Health"}[sec] || sec;
+    if (rg && rg.regime) {
+      const up = rg.regime === "up";
+      line("mkt", up ? "📈" : "📉", `Market ${up ? "uptrend" : "<b>downtrend</b>"}${sec && sec !== "Other" ? ` · ${esc(shortSec)}: ${n("up")} breaking out` : ""}`,
+        `${esc(rg.index || "SPY")} ${money(rg.close)} vs its ${rg.days || 50}-day average ${money(rg.sma)}. ` + (sec && sec !== "Other" ? `${esc(sec)}: ${n("up")} breaking out, ${n("edge")} close to the trigger${n("down") ? `, ${n("down")} breaking down` : ""}, out of ${peers.length}. ` : "") + "Breakouts work better with the market behind them.", up ? "" : "warn");
+    }
   }
-  // 4. news (loaded by the panel after the chart; never slows it down)
+  // news
   const nw = NEWS[sym];
   if (nw && nw !== "loading" && nw.ok !== false) {
     const items = [...(nw.catalyst ? [nw.catalyst] : []), ...(nw.items || []).filter(x => !nw.catalyst || x.headline !== nw.catalyst.headline)].slice(0, 3);
-    cards.push(card("Latest news", items.length ? items.map((x, i) => `<${x.url ? `a href="${esc(x.url)}" target="_blank" rel="noopener"` : "div"} class="mp-nw">${i === 0 && nw.catalyst ? `<i>Possible catalyst</i>` : ""}<b>${esc(x.headline)}</b><small>${esc(x.source || "")} · ${when(x.time)}</small></${x.url ? "a" : "div"}>`).join("") : `<p class="mp-scn">No recent headlines.</p>`));
-  } else if (!nw || nw === "loading") cards.push(card("Latest news", `<p class="mp-scn">Checking the news…</p>`));
-  // 5. options walls
+    if (items.length) {
+      const top = items[0], cut = (t) => t.length > 64 ? t.slice(0, 62) + "…" : t;
+      line("news", "📰", nw.catalyst ? `<b>Possible catalyst:</b> ${esc(cut(top.headline))}` : `${esc(cut(top.headline))} <small>${when(top.time)}</small>`,
+        items.map(x => `<${x.url ? `a href="${esc(x.url)}" target="_blank" rel="noopener"` : "div"} class="mp-nw"><b>${esc(x.headline)}</b><small>${esc(x.source || "")} · ${when(x.time)}</small></${x.url ? "a" : "div"}>`).join(""), nw.catalyst ? "hot" : "");
+    }
+  }
+  // options walls
   const g = GAMMA[sym];
   if (g && g !== "loading" && (g.call_wall || g.put_wall)) {
-    const pct = (v) => `${v >= P.px ? "+" : ""}${((v / P.px - 1) * 100).toFixed(1)}%`;
-    cards.push(card("Options walls", (g.call_wall ? `<div class="mp-row"><span>Call wall</span><b>${money(g.call_wall)} · ${pct(g.call_wall)}</b></div>` : "")
-      + (g.put_wall ? `<div class="mp-row"><span>Put wall</span><b>${money(g.put_wall)} · ${pct(g.put_wall)}</b></div>` : "")
-      + `<p class="mp-scn">Strikes with the most open options. Price often stalls near them.</p>`));
+    const pct = (v) => `${v >= P.px ? "+" : ""}${((v / P.px - 1) * 100).toFixed(1)}%`, w = g.call_wall || g.put_wall;
+    line("walls", "🧱", `${g.call_wall ? "Call" : "Put"} wall ${money(w)} (${pct(w)})`,
+      (g.call_wall ? `Call wall ${money(g.call_wall)} (${pct(g.call_wall)}). ` : "") + (g.put_wall ? `Put wall ${money(g.put_wall)} (${pct(g.put_wall)}). ` : "") + "Strikes with the most open options; price often stalls near them.");
   }
-  return cards.join("");
+  if (!lines.length) return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div><p class="mp-scn">Checking earnings, news and the market…</p></div>`;
+  return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div>${lines.join("")}</div>`;
 }
 function mapSidePaint() {
   const el = $("mpSide"); if (!el || !BRIEF_SYM || !MAP_ON()) return;
@@ -4254,7 +4262,8 @@ function paintMap() {
       <div class="mp-right">
       <div class="mp-card mp-sika"><div class="mp-sh"><span class="sika-ava mp-ava" id="mpAva"></span><b>Sika</b><small>Plain English</small></div>
         <p class="mp-say">${MAP_Q ? mapAnswer(MAP_Q, P, st) : mapSummary(P, st)}</p>
-        <div class="mp-qs">${qs.map(([k, t]) => `<button class="${MAP_Q === k ? "on" : ""}" onclick="mapQ('${k}')">${t}<span>›</span></button>`).join("")}</div>
+        ${matchMedia("(max-width: 899px)").matches && !MAP_ASK && !MAP_Q ? `<div class="mp-qs"><button onclick="MAP_ASK=true;paintMap()">Ask Sika<span>›</span></button></div>`
+          : `<div class="mp-qs">${qs.map(([k, t]) => `<button class="${MAP_Q === k ? "on" : ""}" onclick="mapQ('${k}')">${t}<span>›</span></button>`).join("")}</div>`}
         <p class="mp-fine">Based on NextShelf's rules and past prices. For education only, not financial advice.</p></div>
       <div id="mpSide">${mapSideHTML(P, st, chart)}</div>
       </div>
@@ -6372,6 +6381,19 @@ html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] 
 html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
 .hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
 .hm-tip.on { opacity: 1; }
+
+/* compact Context card; the old duplicate rows below the map are hidden in the map view */
+body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: none !important; }
+.mp-cx { border-top: 1px solid var(--mp-line); } .mp-cx:first-of-type { border-top: 0; }
+.mp-cx > button { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 9px 0; color: var(--mp-ink); font: 500 13px var(--sans, system-ui); text-align: left; cursor: pointer; }
+.mp-cx > button { white-space: normal !important; min-width: 0; }
+.mp-cxt { min-width: 0; overflow-wrap: anywhere; }
+.mp-right, .mp-right .mp-card, .mp-say { min-width: 0; overflow-wrap: anywhere; }
+.mp-cxi { width: 20px; text-align: center; flex: none; font-size: 14px; } .mp-cxt { flex: 1; line-height: 1.35; } .mp-cxt small { color: var(--mp-mut); font-size: 11.5px; }
+.mp-cxc { color: var(--mp-mut); font-size: 16px; transition: transform .15s; } .mp-cx.open .mp-cxc { transform: rotate(90deg); }
+.mp-cx.warn .mp-cxt, .mp-cx.warn .mp-cxt b { color: var(--mp-trig); } .mp-cx.hot .mp-cxt b { color: var(--mp-trig); } .mp-cx.dim .mp-cxt { color: var(--mp-mut); }
+.mp-cxd { padding: 0 0 10px 30px; font-size: 12px; line-height: 1.5; color: var(--mp-mut); display: grid; gap: 6px; }
+.mp-cxd .mp-nw { border-top: 0; padding: 2px 0; }
 </style>
 </body>
 </html>
