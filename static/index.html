@@ -4492,21 +4492,21 @@ function mapTicketOptionsHTML(sym, P, T, acct, risk, ex) {
   const c = p.contracts[0], day = (iso) => new Date(iso + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
   const per = c.cost, lossAtStop = Math.max(0, (c.mid - c.at_fail) * 100), gainAtTgt = (c.at_shelf - c.mid) * 100, good = gainAtTgt > 0;
   const budget = acct * risk / 100, n = lossAtStop > 0 ? Math.floor(budget / lossAtStop) : 0, n2 = Math.max(0, Math.min(n, Math.floor(acct / per)));
-  const contract = `${sym} ${day(p.expiry)} $${c.strike} call`, k = n2 || 1, per1 = n2 ? "" : " <i>for 1 contract</i>";
+  const contract = `${sym} ${day(p.expiry)} $${c.strike} call`, k = n2 || 1, per1 = n2 ? "" : " <i>for 1</i>", needPct = lossAtStop > 0 ? Math.ceil(lossAtStop / acct * 1000) / 10 : 0;
   const order = `${contract}\nBUY ${n2} contract${n2 === 1 ? "" : "s"} · limit ${money(c.mid)} (mid)\nTAKE PROFIT when ${sym} reaches ${money(p.target)} (option ≈ ${money(c.at_shelf)})\nEXIT on a 4-hour close back below ${money(T.stop)}\nCost ${money(n2 * per)} · most you can lose ${money(n2 * per)}`;
   const earn = o.earnings && o.earnings.date <= p.expiry ? `<p class="tk-warn">📅 Earnings ${esc(o.earnings.label)}, before this contract expires: option prices usually drop right after a report.</p>` : "";
   return `<div class="tk-order">
       <div class="tk-r"><span>${c.estimated ? `Estimated price once it breaks out (about ${money(c.quote_now)} now)` : "Buy to open, limit near the middle of bid and ask"}</span></div>
       <div class="tk-r big"><span>Contract</span><b>${esc(contract)}</b></div>
-      <div class="tk-r"><span>Buy</span><b>${n2} contract${n2 === 1 ? "" : "s"} · limit ${money(c.mid)}</b></div>
-      <div class="tk-r"><span>Take profit</span><b class="u">when ${esc(sym)} reaches ${money(p.target)} <i>option ≈ ${money(c.at_shelf)}</i></b></div>
-      <div class="tk-r"><span>Exit</span><b>4H close back below ${money(T.stop)} <i>option ≈ ${money(c.at_fail)}</i></b></div>
+      <div class="tk-r"><span>Buy</span><b>${n2 ? `${n2} contract${n2 === 1 ? "" : "s"}` : `<span class="d">None at your budget</span>`} · limit ${money(c.mid)}</b></div>
+      <div class="tk-r"><span>Take profit</span><b class="u">when ${esc(sym)} reaches ${money(p.target)} <i>option ≈ ${money(c.at_shelf)} (simulated)</i></b></div>
+      <div class="tk-r"><span>Exit</span><b>4H close back below ${money(T.stop)} <i>option ≈ ${money(c.at_fail)} (simulated)</i></b></div>
       <div class="tk-r sum"><span>Cost</span><b>${money(k * per)}${per1}</b></div>
-      <div class="tk-r sum"><span>If it fails and you exit</span><b class="d">≈ −${money(k * lossAtStop)}${per1}</b></div>
-      <div class="tk-r sum"><span>If it reaches the target</span><b class="${good ? "u" : "d"}">≈ ${good ? "+" : "−"}${money(Math.abs(k * gainAtTgt))}${per1}</b></div>
+      <div class="tk-r sum"><span>If it fails and you exit <i>simulated</i></span><b class="d">≈ −${money(k * lossAtStop)}${per1}</b></div>
+      <div class="tk-r sum"><span>If it reaches the target <i>simulated</i></span><b class="${good ? "u" : "d"}">≈ ${good ? "+" : "−"}${money(Math.abs(k * gainAtTgt))}${per1}</b></div>
       <div class="tk-r sum"><span>Most you can lose</span><b class="d">${money(k * per)} <i>the whole cost${n2 ? "" : ", 1 contract"}</i></b></div>
     </div>
-    ${n2 ? "" : `<p class="tk-warn">One contract would risk about ${money(lossAtStop)} if it fails, more than your ${money(budget)} budget (${risk}% of ${money(acct)}).</p>`}
+    ${n2 ? "" : `<p class="tk-warn">Buy shows none because one contract would risk about ${money(lossAtStop)} if it fails, more than your ${money(budget)} budget (${risk}% of ${money(acct)}). The money lines above are for 1 contract as an example. To size in at least 1, risk ${needPct}% or more, or use shares.</p>`}
     ${good ? "" : `<p class="tk-warn">⚠ This contract loses money even if the stock reaches ${money(p.target)}: the move is too small to pay for its time value. Use shares instead.</p>`}
     ${earn}${o.demo ? `<p class="tk-tip">Demo prices. Real option quotes appear once live data is connected.</p>` : ""}
     <div class="tk-acct">Sized for <label>$<input type="number" value="${acct}" min="0" step="100" onchange="mapTicketAcct(this.value, null)"></label> risking
@@ -4514,7 +4514,7 @@ function mapTicketOptionsHTML(sym, P, T, acct, risk, ex) {
     <div class="tk-acts"><button class="tk-copy" onclick="mapTicketCopy(this)" data-order="${esc(order)}">Copy order</button>
       <a class="tk-brk" href="${rhUrl(sym)}" target="_blank" rel="noopener">Open in Robinhood</a>
       ${wbUrl(sym, ex) ? `<a class="tk-brk" href="${wbUrl(sym, ex)}" target="_blank" rel="noopener">Open in Webull</a>` : ""}</div>
-    <p class="tk-tip">In the broker: open the option chain, pick <b>${esc(day(p.expiry))}</b> and the <b>$${c.strike} call</b>, buy to open with a <b>limit</b> near the middle of bid and ask${c.wide_spread ? " (the spread is wide here, so be patient)" : ""}. Options can lose 100% of their value. Estimates use Black-Scholes at today's volatility.</p>`;
+    <p class="tk-tip">In the broker: open the option chain, pick <b>${esc(day(p.expiry))}</b> and the <b>$${c.strike} call</b>, buy to open with a <b>limit</b> near the middle of bid and ask${c.wide_spread ? " (the spread is wide here, so be patient)" : ""}. Options can lose 100% of their value. <b>Simulated:</b> the option prices at the target and at the exit (and the profit and loss from them) are estimates from Black-Scholes at today's volatility, not real quotes. The real price then will differ.</p>`;
 }
 async function mapTicketOpen() {
   MAP_TK = {sym: BRIEF_SYM, alerts: [], mode: (() => { try { return localStorage.getItem("ns-tk-mode") || "shares"; } catch (e) { return "shares"; } })()}; mapTicketPaint();
@@ -6577,7 +6577,7 @@ html[data-theme="light"] .tkt { --tk-card: #F8F9FD; --tk-line: rgba(13,17,23,.1)
 .tk-order { border: 1px solid var(--tk-line); border-radius: 12px; padding: 4px 12px; font-family: var(--mono, ui-monospace, monospace); }
 .tk-r { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--tk-line); font-size: 13px; }
 .tk-r:first-child { border-top: 0; color: var(--tk-mut); font-family: var(--sans, system-ui); font-size: 12px; }
-.tk-r span { color: var(--tk-mut); font-family: var(--sans, system-ui); } .tk-r b { font-weight: 700; text-align: right; } .tk-r b i { font-style: normal; font-weight: 500; color: var(--tk-mut); font-size: 11.5px; margin-left: 6px; }
+.tk-r span { color: var(--tk-mut); font-family: var(--sans, system-ui); } .tk-r b { font-weight: 700; text-align: right; } .tk-r > span i { font-style: normal; font-size: 10.5px; margin-left: 5px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--tk-line); color: var(--tk-mut); text-transform: uppercase; letter-spacing: .04em; } .tk-r b span.d { font-family: inherit; } .tk-r b i { font-style: normal; font-weight: 500; color: var(--tk-mut); font-size: 11.5px; margin-left: 6px; }
 .tk-r.big b { font-size: 15px; } .tk-r.sum { font-size: 12.5px; } .tkt .tk-r .u { color: var(--tk-up) !important; } .tkt .tk-r .d { color: var(--tk-dn) !important; } .tkt .tk-r .w { color: var(--tk-w) !important; }
 .tk-acct { font-size: 12.5px; color: var(--tk-mut); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tk-acct label { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--tk-line); border-radius: 7px; padding: 2px 6px; color: var(--tk-ink); }
