@@ -3807,7 +3807,10 @@ let MAP_Q = null;   // which Sika question is open
 // how much history the map shows (4H candles: 2 a session). Pinch / ctrl-scroll zooms between 8 and 3 months.
 const MAP_RANGES = [["1W", 10], ["2W", 20], ["1M", 42], ["3M", 126]];
 let MAP_N = (() => { try { return +localStorage.getItem("ns-map-n") || 42; } catch (e) { return 42; } })();
-let MAP_G = null, MAP_HOVER = null;   // geometry of the last drawn map (for hover), and what's being inspected
+let MAP_G = null, MAP_HOVER = null;
+// "plan my trade": drag the stop and target on the map, see reward:risk and position size. {sym, stop, target, on}
+let MAP_WI = null;
+const MAP_ACCT = () => { try { return JSON.parse(localStorage.getItem("ns-plan") || "{}"); } catch (e) { return {}; } };   // geometry of the last drawn map (for hover), and what's being inspected
 // the chart is drawn at the real pixel width (text stays readable on phones), so measure the space it gets
 const MAP_W = () => { const el = $("mpCw") || $("bfMap"), w = el ? el.clientWidth : 0;
   if ($("mpCw")) return Math.max(300, w);
@@ -3951,6 +3954,8 @@ function mapChart(P, chart, W) {
     parts.push(`<path class="mp-path ${P.watch ? "w" : ""}" d="M${xNow} ${y(P.px)} L${xa} ${ya} C${xa + (xb - xa) * 0.55} ${ya}, ${xb - (xb - xa) * 0.25} ${yb + (ya - yb) * 0.35}, ${xb} ${yb}" marker-end="url(#mpArrow${P.watch ? "W" : ""})"/>`);
     parts.push(`<circle class="mp-trigdot" cx="${xa}" cy="${ya}" r="5"/><circle class="mp-tgtdot ${P.watch ? "w" : ""}" cx="${xb}" cy="${yb}" r="5"/>`);
   }
+  if (P.planning) for (const [v, k] of [[P.stop, "stop"], [P.shelf, "target"]])      // drag handles
+    parts.push(`<g class="mp-hdl h-${k}"><rect x="${futX + 4}" y="${y(v) - 9}" width="${lineEnd - futX - 8}" height="18" rx="9"/><circle cx="${(futX + lineEnd) / 2}" cy="${y(v)}" r="7"/><path d="M${(futX + lineEnd) / 2 - 3} ${y(v) - 1.5}h6M${(futX + lineEnd) / 2 - 3} ${y(v) + 1.5}h6"/></g>`);
   // now dot
   parts.push(`<circle class="mp-now-halo" cx="${xNow}" cy="${y(P.px)}" r="10"/><circle class="mp-now" cx="${xNow}" cy="${y(P.px)}" r="5"/>`);
   // labels: level with their line in the label column, pushed apart (15 px) so they never touch
@@ -4029,9 +4034,14 @@ function mapQ(q) { MAP_Q = MAP_Q === q ? null : q; paintMap(); }
 function paintMap() {
   const el = $("bfMap"); if (!el) return;
   if (!MAP_ON() || !BRIEF_SYM) { el.innerHTML = ""; return; }
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#mpCalc")) return;   // typing: don't redraw under the cursor
   const sym = BRIEF_SYM, chart = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart && chart.status) || findStatus(sym);
   if (!st || st.last_close == null) { el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()">← Back</button><h3>${esc(sym)}</h3><button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>`; return; }
-  const P = mapPlan(sym, st), steps = MAP_STEPS[P.steps];
+  const P0 = mapPlan(sym, st), steps = MAP_STEPS[P0.steps];
+  const canPlan = !P0.watch && P0.trig != null && P0.stop != null && P0.shelf != null && P0.dir === 1;
+  if (MAP_WI && MAP_WI.sym !== sym) MAP_WI = null;
+  const wi = MAP_WI && MAP_WI.on && canPlan ? MAP_WI : null;
+  const P = wi ? {...P0, stop: wi.stop, shelf: wi.target, planning: true} : P0;
   const chg = P.chg != null ? `<em class="${P.chg >= 0 ? "u" : "d"}">${P.chg >= 0 ? "+" : ""}${P.chg}%</em>` : "";
   const pctTo = (v) => v == null || P.trig == null ? "" : `${(v / P.trig - 1) * 100 >= 0 ? "+" : ""}${((v / P.trig - 1) * 100).toFixed(1)}% from trigger`;
   const cell = (cls, label, v, sub, ic) => `<div class="mp-c ${cls}"><small>${label}</small><b>${ic ? mapIc(ic, 15) : ""}${v}</b>${sub ? `<i>${sub}</i>` : ""}</div>`;
@@ -4049,7 +4059,8 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-ctop"><b>Setup map</b><div class="mp-rng">${MAP_RANGES.map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div><span>Where price is, what has to happen, and what's ahead. Right of the line is the plan, not real prices.${chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw" id="mpCw">${mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div><div class="mp-hint">${matchMedia("(hover: hover)").matches ? "Hover a candle or a line for details." : "Tap a candle or a line for details · pinch to zoom."}</div></div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-ctop"><b>Setup map</b>${canPlan ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}<div class="mp-rng">${MAP_RANGES.map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div><span>Where price is, what has to happen, and what's ahead. Right of the line is the plan, not real prices.${chart && chart.forming ? ` The faded candle is still forming: it closes at ${chart.forming.closes_at}.` : ""}</span></div><div class="mp-cw${wi ? " planning" : ""}" id="mpCw">${mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div><div class="mp-hint">${wi ? "Drag the <b>stop</b> or <b>target</b> line up or down." : matchMedia("(hover: hover)").matches ? "Hover a candle or a line for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
+          ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
         <div id="mapGrade">${gradeHTML(st)}</div>
@@ -4062,6 +4073,53 @@ function paintMap() {
   const ava = $("mpAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
   mapWire();
   if (MAP_HOVER) mapShowAt(MAP_HOVER.x, MAP_HOVER.yy, true);
+}
+function mapPlanToggle() {
+  const sym = BRIEF_SYM, st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || findStatus(sym), P = mapPlan(sym, st);
+  if (MAP_WI && MAP_WI.on) MAP_WI.on = false;
+  else MAP_WI = MAP_WI && MAP_WI.sym === sym ? {...MAP_WI, on: true} : {sym, stop: P.stop, target: P.shelf, on: true};
+  mapHideTip(); paintMap();
+}
+function mapPlanReset() { MAP_WI = null; mapPlanToggle(); }
+function mapCalcHTML(P0, wi) {
+  const a = MAP_ACCT(), acct = a.acct ?? 10000, riskPct = a.risk ?? 1;
+  return `<div class="mp-calc" id="mpCalc">
+    <div class="mp-calc-in"><label>Account <span>$<input id="mpAcct" type="number" inputmode="decimal" min="0" step="100" value="${acct}" oninput="mapCalcSave()"></span></label>
+      <label>Risk per trade <span><input id="mpRisk" type="number" inputmode="decimal" min="0.1" max="10" step="0.1" value="${riskPct}" oninput="mapCalcSave()">%</span></label>
+      <button class="mp-reset" onclick="mapPlanReset()">Reset to NextShelf's plan</button></div>
+    <div id="mpCalcOut">${mapCalcOut(P0, wi)}</div></div>`;
+}
+function mapCalcOut(P0, wi) {
+  const a = MAP_ACCT(), acct = +(a.acct ?? 10000), riskPct = +(a.risk ?? 1), entry = P0.trig;
+  const rps = entry - wi.stop, gps = wi.target - entry, rr = rps > 0 ? gps / rps : 0;
+  const budget = acct * riskPct / 100, sharesRisk = rps > 0 ? Math.floor(budget / rps) : 0, sharesCash = Math.floor(acct / entry);
+  const shares = Math.max(0, Math.min(sharesRisk, sharesCash)), capped = sharesCash < sharesRisk;
+  const baseRR = (P0.shelf - P0.trig) / (P0.trig - P0.stop), moved = Math.abs(wi.stop - P0.stop) > 0.004 || Math.abs(wi.target - P0.shelf) > 0.004;
+  const c = (l, v, sub, cls) => `<div class="mp-k ${cls || ""}"><small>${l}</small><b>${v}</b>${sub ? `<i>${sub}</i>` : ""}</div>`;
+  return `<div class="mp-ks">
+      ${c("Entry", money(entry), P0.phase >= 1 ? "the retest of the edge" : "the trigger close")}
+      ${c("Stop", money(wi.stop), `−${money(rps)} · ${(rps / entry * 100).toFixed(1)}%`, "k-stop")}
+      ${c("Target", money(wi.target), `+${money(gps)} · ${(gps / entry * 100).toFixed(1)}%`, "k-tgt")}
+      ${c("Reward : risk", rr ? rr.toFixed(2) : "–", rr >= 1.5 ? "room for an A setup (1.5+)" : "under 1.5: thin", rr >= 1.5 ? "k-good" : "k-thin")}
+    </div>
+    <div class="mp-size">${shares ? `Buy <b>${shares} share${shares === 1 ? "" : "s"}</b> (${money(shares * entry)}). If the stop hits you lose about <b class="d">${money(shares * rps)}</b>${capped ? " (capped by the account size)" : ` (${riskPct}% of the account)`}; at the target you make about <b class="u">${money(shares * gps)}</b>.`
+      : "With this account and risk, the stop is too far away to buy even one share."}</div>
+    <p class="mp-fine">${moved ? `NextShelf's plan: stop ${money(P0.stop)}, target ${money(P0.shelf)}, reward:risk ${baseRR.toFixed(2)}. The tested results are for NextShelf's plan; a moved stop or target wasn't tested. ` : ""}Not financial advice. Fills, gaps and fees can make real results worse.</p>`;
+}
+// while dragging, redraw only the chart and the numbers (the chart's element must survive: it holds the pointer)
+function mapDragRedraw() {
+  const sym = BRIEF_SYM, chart = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart && chart.status) || findStatus(sym);
+  const cw = $("mpCw"), svg = cw && cw.querySelector("svg"); if (!svg || !MAP_WI) return;
+  const P0 = mapPlan(sym, st), tmp = document.createElement("div");
+  tmp.innerHTML = mapChart({...P0, stop: MAP_WI.stop, shelf: MAP_WI.target, planning: true}, chart, MAP_W());
+  svg.replaceWith(tmp.firstElementChild);
+  if ($("mpCalcOut")) $("mpCalcOut").innerHTML = mapCalcOut(P0, MAP_WI);
+}
+function mapCalcSave() {
+  const acct = parseFloat($("mpAcct").value), risk = parseFloat($("mpRisk").value);
+  try { localStorage.setItem("ns-plan", JSON.stringify({acct: isFinite(acct) ? acct : 10000, risk: isFinite(risk) ? risk : 1})); } catch (e) {}
+  const sym = BRIEF_SYM, st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || findStatus(sym);
+  if (MAP_WI && $("mpCalcOut")) $("mpCalcOut").innerHTML = mapCalcOut(mapPlan(sym, st), MAP_WI);
 }
 function mapRange(k) { MAP_N = k; MAP_HOVER = null; try { localStorage.setItem("ns-map-n", k); } catch (e) {} paintMap(); }
 // ---- inspect: what's under the pointer (a candle, a level, the hub) ----
@@ -4114,10 +4172,29 @@ function mapWire() {
   const cw = $("mpCw"); if (!cw || cw.dataset.wired) return;
   cw.dataset.wired = "1";
   const at = (e) => { const r = cw.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-  let pinch = null, touchMoved = false;
-  cw.addEventListener("pointermove", (e) => { if (e.pointerType === "mouse" || e.buttons) { const [x, yy] = at(e); mapShowAt(x, yy); touchMoved = true; } });
+  let pinch = null, touchMoved = false, drag = null, raf = 0;
+  const valAt = (yy) => { const G = MAP_G; return G.hi - (yy - G.top) / (G.H - G.top - G.bot) * (G.hi - G.lo); };
+  cw.addEventListener("pointerdown", (e) => {
+    if (!MAP_WI || !MAP_WI.on || !MAP_G) return;
+    const [x, yy] = at(e), G = MAP_G; if (x < G.futX - 10) return;
+    const ds = Math.abs(yy - G.y(MAP_WI.stop)), dt = Math.abs(yy - G.y(MAP_WI.target));
+    if (Math.min(ds, dt) > 22) return;
+    drag = ds <= dt ? "stop" : "target"; cw.setPointerCapture(e.pointerId); e.preventDefault(); e.stopImmediatePropagation();
+  });
+  cw.addEventListener("pointermove", (e) => {
+    if (drag) {
+      const [, yy] = at(e), entry = MAP_G.P.trig; let v = Math.round(valAt(yy) * 100) / 100;
+      v = drag === "stop" ? Math.min(v, entry - 0.01) : Math.max(v, entry + 0.01);
+      MAP_WI[drag] = Math.max(0.01, v);
+      if (!raf) raf = requestAnimationFrame(() => { raf = 0; mapDragRedraw(); });
+      e.stopImmediatePropagation(); return;
+    }
+  });
+  const endDrag = () => { if (drag) { drag = null; paintMap(); } };
+  cw.addEventListener("pointerup", endDrag); cw.addEventListener("pointercancel", endDrag);
+  cw.addEventListener("pointermove", (e) => { if (MAP_WI && MAP_WI.on) return; if (e.pointerType === "mouse" || e.buttons) { const [x, yy] = at(e); mapShowAt(x, yy); touchMoved = true; } });
   cw.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") mapHideTip(); });
-  cw.addEventListener("pointerdown", (e) => { touchMoved = false; if (e.pointerType !== "mouse") { const [x, yy] = at(e); mapShowAt(x, yy); } });
+  cw.addEventListener("pointerdown", (e) => { touchMoved = false; if (MAP_WI && MAP_WI.on) return; if (e.pointerType !== "mouse") { const [x, yy] = at(e); mapShowAt(x, yy); } });
   cw.addEventListener("click", (e) => { if (e.pointerType === "mouse" || touchMoved) return; });
   // pinch (two fingers) and ctrl/trackpad-pinch wheel zoom the history between 8 candles and 3 months
   cw.addEventListener("touchstart", (e) => { if (e.touches.length === 2) { pinch = {d: Math.abs(e.touches[0].clientX - e.touches[1].clientX) || 1, n: MAP_N}; mapHideTip(); } }, {passive: true});
@@ -5707,7 +5784,27 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-tip.on { opacity: 1; } .mp-tip > b { display: block; margin-bottom: 4px; font-size: 12.5px; } .mp-tip div { color: var(--mp-mut); }
 .mp-ohlc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-bottom: 4px; color: var(--mp-mut); }
 .mp-ohlc b { color: var(--mp-ink); font-family: var(--mono, ui-monospace, monospace); font-weight: 600; } .mp-ohlc b.u { color: var(--mp-shelf); } .mp-ohlc b.d { color: var(--mp-obst); }
-.mp-hint { font-size: 11.5px; color: var(--mp-mut); padding: 4px 4px 0; } .mp-svg { display: block; overflow: visible; }
+.mp-hint { font-size: 11.5px; color: var(--mp-mut); padding: 4px 4px 0; }
+.mp-ctop > div:last-child, .mp-ctop .mp-rng { margin-left: 0; } .mp-ctop b { margin-right: auto; }
+.mp-planbtn { background: none; border: 1px solid var(--mp-line); color: var(--mp-ink); font: 600 12px var(--sans, system-ui); padding: 5px 10px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.mp-planbtn.on { background: var(--mp-hub); border-color: var(--mp-hub); color: #fff; }
+.mp-cw.planning { touch-action: none; cursor: ns-resize; }
+.mp-svg .mp-hdl rect { fill: var(--mp-ink); opacity: .05; } .mp-svg .mp-hdl circle { stroke-width: 2; fill: var(--mp-card); }
+.mp-svg .mp-hdl path { stroke-width: 1.4; stroke-linecap: round; }
+.mp-svg .h-stop circle, .mp-svg .h-stop path { stroke: var(--mp-stop); } .mp-svg .h-target circle, .mp-svg .h-target path { stroke: var(--mp-shelf); }
+.mp-calc { margin-top: 10px; border-top: 1px solid var(--mp-line); padding-top: 12px; display: grid; gap: 10px; }
+.mp-calc-in { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.mp-calc-in label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--mp-mut); }
+.mp-calc-in label span { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--mp-line); border-radius: 8px; padding: 4px 8px; color: var(--mp-ink); }
+.mp-calc-in input { width: 74px; background: none; border: 0; color: var(--mp-ink); font: 600 13px var(--mono, ui-monospace, monospace); outline: none; }
+.mp-calc-in #mpRisk { width: 42px; }
+.mp-reset { margin-left: auto; background: none; border: 0; color: var(--mp-hub); font: 600 12.5px var(--sans, system-ui); cursor: pointer; padding: 4px 0; }
+.mp-ks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mp-k { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--mp-ink) 4%, transparent); }
+.mp-k small { font-size: 11px; color: var(--mp-mut); } .mp-k b { font: 700 16px var(--mono, ui-monospace, monospace); } .mp-k i { font-style: normal; font-size: 11px; color: var(--mp-mut); }
+.mp-k.k-stop b { color: var(--mp-ink); } .mp-k.k-tgt b, .mp-k.k-good b { color: var(--mp-shelf); } .mp-k.k-thin b { color: var(--mp-trig); }
+.mp-size { font-size: 13.5px; line-height: 1.5; } .mp-size b.u { color: var(--mp-shelf); } .mp-size b.d { color: var(--mp-obst); }
+@media (max-width: 899px) { .mp-ks { grid-template-columns: repeat(2, 1fr); } .mp-reset { margin-left: 0; } .mp-ctop { flex-wrap: wrap; } } .mp-svg { display: block; overflow: visible; }
 .mp-grid line.mp-grid, .mp-svg .mp-grid { stroke: var(--mp-line); stroke-width: 1; }
 .mp-svg .mp-ax { fill: var(--mp-mut); font: 11px var(--mono, ui-monospace, monospace); }
 .mp-svg .mp-fut { fill: var(--mp-ink); opacity: .025; }
