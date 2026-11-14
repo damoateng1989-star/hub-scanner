@@ -3892,12 +3892,22 @@ function mapChart(P, chart, W) {
   const fc = mapFormingCandle(P, chart, cs);
   if (fc) { cs.push(fc); if (cs.length > (W < 560 ? 36 : 64)) cs.shift(); }
   const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
-  let lo = Math.min(...lv, ...cs.map(c => c.low)), hi = Math.max(...lv, ...cs.map(c => c.high));
+  const near = cs.slice(-24);        // zoom on the setup: older candles far away are clipped instead of squashing the plan
+  let lo = Math.min(...lv, ...near.map(c => c.low)), hi = Math.max(...lv, ...near.map(c => c.high));
   const pad = (hi - lo) * 0.04 || hi * 0.01; lo -= pad; hi += pad;
   const y = (v) => top + (hi - v) / (hi - lo) * (H - top - bot);
   const n = cs.length, step = n ? (futX - 14) / n : 0, cx = (i) => 8 + step * (i + 0.5), bw = Math.max(1.5, step * 0.58);
   const xNow = n ? cx(n - 1) : futX - 10;
   const parts = [];
+  const tags = [];
+  if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.atrTarget ? "Target (1 ATR)" : P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
+  if (P.obst) tags.push({v: P.obst.level, cls: "t-obst", t: P.obst.name});
+  if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
+  if (P.stop != null && P.stop !== P.trig) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
+  tags.forEach(g => g.txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high").replace("Target (1 ATR)", "Target") : g.t} ${money(g.v)}`);
+  // labels live in their own column at the right; lines, bands and the hub stop short of it, so nothing crosses the text
+  const labW = Math.max(0, ...tags.map(g => g.txt.length * (small ? 6.2 : 6.8))) + 6;
+  const lineEnd = Math.max(futX + 50, plotR - labW - 8);
   // grid + price axis
   const tick = (() => { const raw = (hi - lo) / 6, mag = Math.pow(10, Math.floor(Math.log10(raw))); return [1, 2, 2.5, 5, 10].map(m => m * mag).find(m => m >= raw); })();
   for (let v = Math.ceil(lo / tick) * tick; v <= hi; v += tick)
@@ -3905,47 +3915,47 @@ function mapChart(P, chart, W) {
   // future zone
   parts.push(`<rect class="mp-fut" x="${futX}" y="${top}" width="${plotR - futX}" height="${H - top - bot}"/>`);
   parts.push(`<line class="mp-futdiv" x1="${futX}" y1="${top}" x2="${futX}" y2="${H - bot}"/>`);
-  if (!small) parts.push(`<text class="mp-plan" x="${(futX + plotR) / 2}" y="${top + 10}" text-anchor="middle">PLAN</text>`);
+  const topLevel = Math.min(H, ...[P.trig, P.shelf, P.stop, P.obst && P.obst.level, P.hub && P.hub.high].filter(v => v != null).map(y));
+  if (!small && topLevel > top + 26) parts.push(`<text class="mp-plan" x="${(futX + plotR) / 2}" y="${top + 10}" text-anchor="middle">PLAN</text>`);   // only when nothing is up there
   // hub box
   if (P.hub) {
     let i0 = n - (P.hub.sessions || 6);
     const hb = chart && chart.hubs && chart.hubs.length ? chart.hubs[chart.hubs.length - 1] : null;
     if (hb && Math.abs(hb.high - P.hub.high) < 0.02 * P.hub.high) { const j = cs.findIndex(c => c.time >= hb.start); if (j >= 0) i0 = j; }
-    const x0 = n ? cx(Math.max(0, i0)) - step / 2 : 8, x1 = plotR;
+    const x0 = n ? cx(Math.max(0, i0)) - step / 2 : 8, x1 = lineEnd;
     parts.push(`<rect class="mp-hub" x="${x0}" y="${y(P.hub.high)}" width="${Math.max(8, x1 - x0)}" height="${Math.max(2, y(P.hub.low) - y(P.hub.high))}" rx="4"/>`);
-    const ly = Math.max(y(P.hub.high) - 7, top + 10);
-    parts.push(`<text class="mp-hubt" x="${small ? x0 + 2 : Math.min(x0, futX - 150)}" y="${ly}">HUB${small ? "" : ` ${money(P.hub.low)}–${money(P.hub.high)}`}</text>`);
+    // the label sits in the plan zone (no candles there): under the band, or over it when there's no room below
+    const ly = y(P.hub.low) + 15 <= H - bot - 2 ? y(P.hub.low) + 15 : Math.max(y(P.hub.high) - 7, top + 10);
+    parts.push(`<text class="mp-hubt" x="${futX + 6}" y="${ly}">HUB ${money(P.hub.low)}–${money(P.hub.high)}</text>`);
   }
   // shelf band, obstacle band
-  if (P.shelf != null) parts.push(`<rect class="mp-shelfband" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${plotR - futX}" height="14"/>`);
-  if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${plotR - futX}" height="12"/>`);
+  if (P.shelf != null) parts.push(`<rect class="mp-shelfband" x="${futX}" y="${Math.min(y(P.shelf), y(P.shelf) + (P.dir === 1 ? 0 : -14))}" width="${lineEnd - futX}" height="14"/>`);
+  if (P.obst) parts.push(`<rect class="mp-obstband" x="${futX}" y="${y(P.obst.level) - 6}" width="${lineEnd - futX}" height="12"/>`);
   // candles
+  parts.push(`<clipPath id="mpClip"><rect x="0" y="${top}" width="${futX}" height="${H - top - bot}"/></clipPath><g clip-path="url(#mpClip)">`);
   cs.forEach((c, i) => { const up = c.close >= c.open, X = cx(i), yo = y(c.open), yc = y(c.close);
     parts.push(`<g${c.forming ? ' class="mp-cf"' : ""}><line class="${up ? "mp-cu" : "mp-cd"}" x1="${X}" x2="${X}" y1="${y(c.high)}" y2="${y(c.low)}"/><rect class="${up ? "mp-cuf" : "mp-cdf"}" x="${X - bw / 2}" y="${Math.min(yo, yc)}" width="${bw}" height="${Math.max(1, Math.abs(yc - yo))}"/></g>`); });
+  parts.push("</g>");
   // level lines
-  const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${plotR}" y1="${y(v)}" y2="${y(v)}"/>`;
+  const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${lineEnd}" y1="${y(v)}" y2="${y(v)}"/>`;
   parts.push(line(P.stop !== P.trig ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
              line(P.shelf, "mp-l-shelf", futX), line(P.trig, "mp-l-trig", futX));
   // the path: current price → trigger → target (dashed; nothing to the right of "now" is real price)
   if (P.shelf != null && P.trig != null) {
-    const xa = futX + 18, xb = Math.max(xa + 40, plotR - (small ? 118 : 160)), ya = y(P.trig), yb = y(P.shelf);
+    const xa = futX + 18, xb = Math.max(xa + 30, lineEnd - 12), ya = y(P.trig), yb = y(P.shelf);
     parts.push(`<path class="mp-path ${P.watch ? "w" : ""}" d="M${xNow} ${y(P.px)} L${xa} ${ya} C${xa + (xb - xa) * 0.55} ${ya}, ${xb - (xb - xa) * 0.25} ${yb + (ya - yb) * 0.35}, ${xb} ${yb}" marker-end="url(#mpArrow${P.watch ? "W" : ""})"/>`);
     parts.push(`<circle class="mp-trigdot" cx="${xa}" cy="${ya}" r="5"/><circle class="mp-tgtdot ${P.watch ? "w" : ""}" cx="${xb}" cy="${yb}" r="5"/>`);
   }
   // now dot
   parts.push(`<circle class="mp-now-halo" cx="${xNow}" cy="${y(P.px)}" r="10"/><circle class="mp-now" cx="${xNow}" cy="${y(P.px)}" r="5"/>`);
-  // tags on the right, nudged apart so they never overlap
-  const tags = [];
-  if (P.shelf != null) tags.push({v: P.shelf, cls: P.watch ? "t-mut" : "t-shelf", t: P.atrTarget ? "Target (1 ATR)" : P.steps === "hub" || P.steps === "hub_short" ? "Next shelf" : "Target"});
-  if (P.obst) tags.push({v: P.obst.level, cls: "t-obst", t: P.obst.name});
-  if (P.trig != null) tags.push({v: P.trig, cls: "t-trig", t: P.steps === "gapfade" ? "Gap-day high" : P.steps.startsWith("double") ? "Neckline" : "Trigger"});
-  if (P.stop != null && P.stop !== P.trig) tags.push({v: P.stop, cls: "t-stop", t: "Stop"});
-  // each tag sits just above its own line; when that would collide with the tag above, it drops just below its line instead
-  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly - 5 < 11 ? g.ly + 13 : g.ly - 5; }); tags.sort((a, b) => a.ly - b.ly);
-  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 14) tags[i].y = Math.max(tags[i].ly + 13, tags[i - 1].y + 14);
-  const over = tags.length ? tags[tags.length - 1].y - (H - bot - 12) : 0; if (over > 0) tags.forEach(g => g.y -= over);
-  tags.forEach(g => { const txt = `${small ? g.t.replace("Next shelf", "Shelf").replace("Gap-day high", "Gap high") : g.t} ${money(g.v)}`;
-    parts.push(`<text class="mp-tag ${g.cls}" x="${plotR - 4}" y="${g.y}" text-anchor="end">${txt.slice(0, txt.lastIndexOf(" "))} <tspan>${money(g.v)}</tspan></text>`); });
+  // labels: level with their line in the label column, pushed apart (15 px) so they never touch
+  tags.forEach(g => { g.ly = y(g.v); g.y = g.ly + 4; }); tags.sort((a, b) => a.ly - b.ly);
+  for (let i = 1; i < tags.length; i++) if (tags[i].y - tags[i - 1].y < 15) tags[i].y = tags[i - 1].y + 15;
+  const over = tags.length ? tags[tags.length - 1].y - (H - bot - 2) : 0; if (over > 0) tags.forEach(g => g.y -= over);
+  for (let i = tags.length - 2; i >= 0; i--) if (tags[i + 1].y - tags[i].y < 15) tags[i].y = tags[i + 1].y - 15;
+  tags.forEach(g => {
+    if (Math.abs(g.y - 4 - g.ly) > 3) parts.push(`<line class="mp-lead ${g.cls}" x1="${lineEnd}" y1="${g.ly}" x2="${lineEnd + 5}" y2="${g.y - 4}"/>`);   // label moved off its line: a short leader
+    parts.push(`<text class="mp-tag ${g.cls}" x="${plotR - 2}" y="${g.y}" text-anchor="end">${g.txt.slice(0, g.txt.lastIndexOf(" "))} <tspan>${money(g.v)}</tspan></text>`); });
   if (!n) parts.push(`<text class="mp-ax" x="${futX / 2}" y="${H / 2}" text-anchor="middle">Loading candles…</text>`);
   return `<svg class="mp-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Setup map for ${esc(P.sym)}">
     <defs><marker id="mpArrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" class="mp-arrow"/></marker>
@@ -5624,6 +5634,8 @@ html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cd
 .mp-svg .mp-tgtdot { fill: var(--mp-shelf); } .mp-svg .mp-tgtdot.w { fill: var(--mp-mut); }
 .mp-svg .mp-now { fill: var(--mp-hub); stroke: var(--mp-card); stroke-width: 2; } .mp-svg .mp-now-halo { fill: var(--mp-hub); opacity: .22; }
 .mp-svg .mp-tag { font: 600 12px var(--sans, system-ui); paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; stroke-linejoin: round; } .mp-svg .mp-tag tspan { font-family: var(--mono, ui-monospace, monospace); }
+.mp-svg .mp-lead { stroke-width: 1; } .mp-svg .mp-lead.t-trig { stroke: var(--mp-trig); } .mp-svg .mp-lead.t-obst { stroke: var(--mp-obst); }
+.mp-svg .mp-lead.t-shelf { stroke: var(--mp-shelf); } .mp-svg .mp-lead.t-stop, .mp-svg .mp-lead.t-mut { stroke: var(--mp-stop); }
 .mp-svg .mp-tag.t-trig { fill: var(--mp-trig); }
 .mp-svg .mp-tag.t-obst { fill: var(--mp-obst); }
 .mp-svg .mp-tag.t-shelf { fill: var(--mp-shelf); }
