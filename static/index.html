@@ -4014,9 +4014,9 @@ function initLightweightMapChart() {
     });
     const candles = chart.addSeries(L.CandlestickSeries,{upColor:up,downColor:down,borderVisible:false,wickUpColor:up,wickDownColor:down,priceLineVisible:true,lastValueVisible:true});
     candles.setData(D.cs.filter(x=>Number.isFinite(+x.time)&&Number.isFinite(+x.open)&&Number.isFinite(+x.high)&&Number.isFinite(+x.low)&&Number.isFinite(+x.close)).map(x=>({time:+x.time,open:+x.open,high:+x.high,low:+x.low,close:+x.close})));
-    const volPane = chart.addPane();
-    volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
     const vol = chart.addSeries(L.HistogramSeries,{priceFormat:{type:"volume"},priceScaleId:"",lastValueVisible:false,priceLineVisible:false},1);
+    const volPane = chart.panes()[1];
+    if (volPane) volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
     const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Dashed,axisLabelVisible:true,axisLabelColor:color});};
