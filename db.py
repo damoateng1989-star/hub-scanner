@@ -59,6 +59,10 @@ with _lock:
     CREATE TABLE IF NOT EXISTS board (
         symbol TEXT PRIMARY KEY, status TEXT, updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS price_alerts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, symbol TEXT, price REAL, direction INTEGER,
+        label TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, fired_at TEXT
+    );
     CREATE TABLE IF NOT EXISTS signals (
         id TEXT PRIMARY KEY, symbol TEXT, direction INTEGER,
         hub_low REAL, hub_high REAL, hub_sessions INTEGER,
@@ -465,3 +469,29 @@ def del_push_sub(endpoint: str, user_id: int | None = None):
         _run("DELETE FROM push_subs WHERE endpoint=?", (endpoint,))
     else:
         _run("DELETE FROM push_subs WHERE endpoint=? AND user_id=?", (endpoint, user_id))
+
+
+# --- price alerts ("alert me at the trigger / at my stop") from the trade ticket
+def add_price_alert(uid: int, symbol: str, price: float, direction: int, label: str) -> int:
+    _run("DELETE FROM price_alerts WHERE user_id=? AND symbol=? AND label=? AND fired_at IS NULL", (uid, symbol, label))
+    return _run("INSERT INTO price_alerts (user_id, symbol, price, direction, label) VALUES (?,?,?,?,?)",
+                (uid, symbol, price, direction, label)).lastrowid
+
+
+def price_alerts_for(uid: int, symbol: str | None = None) -> list[dict]:
+    q, a = "SELECT * FROM price_alerts WHERE user_id=? AND fired_at IS NULL", [uid]
+    if symbol:
+        q += " AND symbol=?"; a.append(symbol)
+    return [dict(r) for r in _run(q + " ORDER BY id", tuple(a)).fetchall()]
+
+
+def pending_price_alerts() -> list[dict]:
+    return [dict(r) for r in _run("SELECT * FROM price_alerts WHERE fired_at IS NULL").fetchall()]
+
+
+def fire_price_alert(aid: int):
+    _run("UPDATE price_alerts SET fired_at=CURRENT_TIMESTAMP WHERE id=?", (aid,))
+
+
+def delete_price_alert(uid: int, aid: int):
+    _run("DELETE FROM price_alerts WHERE id=? AND user_id=?", (aid, uid))

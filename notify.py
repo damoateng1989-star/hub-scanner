@@ -124,6 +124,16 @@ def every_a_alert(items: list[dict]):
     return sent
 
 
+def user_alert(u: dict, text: str, url: str, tag: str | None = None):
+    """One message to one member (their own price alerts): Telegram, push, and a text for Pro members with a number."""
+    quiet = quiet_now(u)
+    if u.get("telegram_chat"):
+        telegram_bot.send(text, u["telegram_chat"], silent=quiet)
+    _push(u["id"], text, url, tag, quiet)
+    if _pro(u) and u.get("phone") and not quiet:
+        phone.safe_text(text, to=u["phone"])
+
+
 def _push(user_id: int, text: str, url: str, tag: str | None = None, silent: bool = False):
     """iPhone / browser notification, off the alert loop's thread so a slow push service never delays Telegram."""
     title, body = push.split(text)

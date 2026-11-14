@@ -1024,11 +1024,47 @@ def format_trigger(sym: str, kind: str, trig: float, price: float, need: str, ta
     return "\n".join(lines)
 
 
+def price_alerts_check(now: pd.Timestamp | None = None) -> int:
+    """Members' own price alerts (set from the trade ticket): fire once when the live price reaches the level."""
+    now = pd.Timestamp.now(tz="UTC") if now is None else now
+    if not data.market_open(now):
+        return 0
+    pend = db.pending_price_alerts()
+    if not pend:
+        return 0
+    prices = data.latest_prices(sorted({a["symbol"] for a in pend}))
+    fired = 0
+    for a in pend:
+        px = (prices.get(a["symbol"]) or {}).get("price")
+        if px is None or (px < a["price"] if a["direction"] == 1 else px > a["price"]):
+            continue
+        u = db.get_user(a["user_id"])
+        db.fire_price_alert(a["id"])
+        if not u:
+            continue
+        word = "reached" if a["direction"] == 1 else "fell to"
+        msg = f"🔔 {a['symbol']} {word} your {a['label']} level {_money(a['price'])}: now {_money(px)}"
+        if a["label"] == "stop":
+            msg += "\nThe plan says step aside if a 4-hour close stays below it."
+        elif a["label"] == "target":
+            msg += "\nThat's the plan's target."
+        try:
+            notify.user_alert(u, msg, f"/t/{a['symbol']}", f"{a['symbol']}-price-{a['id']}")
+            fired += 1
+        except Exception as e:
+            log.warning("price alert failed: %s", e)
+    return fired
+
+
 def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
     """Every minute in market hours: alert watchers when the live price crosses a setup's trigger or neckline
     (hub triggers, double-bottom necklines and gap-day highs going up; double-top necklines going down, as a heads-up).
     One alert per stock per 4H candle. Cheap: uses each ticker's last scanned status and one batched price request."""
     now = pd.Timestamp.now(tz="UTC") if now is None else now
+    try:
+        price_alerts_check(now)
+    except Exception as e:
+        log.warning("price alerts check failed: %s", e)
     if not TRIGGER_ALERTS or not data.market_open(now):
         return []
     rows = db.list_tickers()

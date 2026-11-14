@@ -613,6 +613,35 @@ def set_brief(body: OnBody, u: dict = User):
     return {"brief": body.on}
 
 
+class PriceAlertBody(BaseModel):
+    symbol: str
+    price: float
+    direction: int          # 1: alert when price reaches it from below, -1: from above
+    label: str = "price"    # trigger | stop | target | price
+
+
+@app.post("/api/alerts/price")
+def add_price_alert(body: PriceAlertBody, u: dict = User):
+    sym = scanner.clean_symbol(body.symbol)
+    if body.price <= 0 or body.direction not in (1, -1) or body.label not in ("trigger", "stop", "target", "entry", "price"):
+        raise HTTPException(400, "Bad alert")
+    if len(db.price_alerts_for(u["id"])) >= 60:
+        raise HTTPException(400, "You have 60 price alerts already. Remove a few first.")
+    aid = db.add_price_alert(u["id"], sym, round(body.price, 2), body.direction, body.label)
+    return {"id": aid}
+
+
+@app.get("/api/alerts/price")
+def list_price_alerts(symbol: str | None = None, u: dict = User):
+    return {"alerts": db.price_alerts_for(u["id"], scanner.clean_symbol(symbol) if symbol else None)}
+
+
+@app.delete("/api/alerts/price/{aid}")
+def remove_price_alert(aid: int, u: dict = User):
+    db.delete_price_alert(u["id"], aid)
+    return {"ok": True}
+
+
 @app.post("/api/me/every_a")
 def set_every_a(body: OnBody, u: dict = User):
     db.update_user(u["id"], a_all=1 if body.on else 0)
