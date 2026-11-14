@@ -610,16 +610,83 @@ def _seg(p, idx, t, a, b, kind, live):
                 ua=round(ua, 2), ub=round(ub, 2), la=round(da, 2), lb=round(db_, 2))
 
 
-def chart(sym: str, tf: str = "4h", lab_mode: bool = False) -> dict:
+_CHART_CACHE: dict = {}      # (sym, tf, lab_mode) -> (expires, payload): candles only change at a 4-hour close
+_CHART_LOCK = threading.Lock()
+
+
+def _chart_expiry(now: pd.Timestamp) -> pd.Timestamp:
+    """Keep a chart until just after the next 4-hour close (when new candles exist); 30 minutes outside market hours."""
+    if not data.market_open(now):
+        return now + pd.Timedelta(minutes=30)
+    end = engine.candle_end(engine.current_candle_start(now))
+    return end.tz_convert("UTC") + pd.Timedelta(minutes=3)
+
+
+def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False) -> dict:
+    """The stock panel's chart, served from a cache until the next close; only the forming candle is refreshed per call."""
     sym = scanner.clean_symbol(sym)
     if tf not in ("4h", "1d"):
-        tf = "4h"          # unknown timeframe falls back, never 400s
+        tf = "4h"
+    t0, now = time.time(), pd.Timestamp.now(tz="UTC")
+    key = (sym, tf, bool(lab_mode))
+    hit = _CHART_CACHE.get(key)
+    if hit and hit[0] > now and not fresh:
+        out = dict(hit[1])
+        out["forming"] = _forming(sym) if tf == "4h" else None
+        out["timing"] = dict(cached=True, total=round((time.time() - t0) * 1000))
+        return out
+    out = _build_chart(sym, tf, lab_mode)
+    with _CHART_LOCK:
+        if len(_CHART_CACHE) > 400:                 # stay small on a 512 MB server
+            for k in sorted(_CHART_CACHE, key=lambda k: _CHART_CACHE[k][0])[:100]:
+                _CHART_CACHE.pop(k, None)
+        _CHART_CACHE[key] = (_chart_expiry(now), {k: v for k, v in out.items() if k not in ("forming", "timing")})
+    out["timing"]["total"] = round((time.time() - t0) * 1000)
+    return out
+
+
+_FORMING: dict = {}          # sym -> (time, candle): the forming candle, refreshed at most once a minute
+
+
+def _forming(sym: str):
+    hit = _FORMING.get(sym)
+    if hit and time.time() - hit[0] < 60:
+        return hit[1]
+    try:
+        c = scanner.forming_candle(sym)
+    except Exception:
+        c = None
+    _FORMING[sym] = (time.time(), c)
+    return c
+
+
+def warm_charts(symbols: list[str] | None = None):
+    """After a scan: build the 4H charts for watchlist stocks so the panel opens instantly."""
+    syms = symbols if symbols is not None else [r["symbol"] for r in db.list_tickers()]
+    n = 0
+    for s in syms[:150]:
+        try:
+            _CHART_CACHE.pop((s, "4h", False), None)
+            chart(s, "4h", False)
+            n += 1
+        except Exception:
+            pass
+        time.sleep(0.05)                            # leave room for live requests
+    log.info("warmed %d charts", n)
+
+
+def _build_chart(sym: str, tf: str, lab_mode: bool) -> dict:
+    tm = {}
+    t0 = time.time()
     c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
+    tm["bars"] = round((time.time() - t0) * 1000)
     if c4.empty:
         raise ValueError("no price data")
     frame = engine.to_daily(c4) if tf == "1d" else c4     # the view's candles; all analysis stays on c4
+    t1 = time.time()
     res = engine.analyze(c4, scanner.SETTINGS)
     st = engine.current_status(c4, res, scanner.SETTINGS)
+    tm["analyze"] = round((time.time() - t1) * 1000)
     idx = c4.index
 
     def t(ts):   # chart library uses UTC seconds; shift so labels read in New York time
@@ -634,17 +701,24 @@ def chart(sym: str, tf: str = "4h", lab_mode: bool = False) -> dict:
     trades = [dict(time=t(idx[x["i0"]]), direction=x["direction"], target=round(x["target"], 2),
                    outcome=x["outcome"], chase=x["chase"], ret=None if x.get("ret") is None else round(x["ret"], 3),
                    outcome_time=t(idx[x["oi"]]) if x["oi"] is not None else None) for x in res["trades"]]
-    forming = None
-    if tf == "4h":
-        try:
-            forming = scanner.forming_candle(sym)
-        except Exception:
-            forming = None
-    out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st, forming=forming,
+    t2 = time.time()
+    forming = _forming(sym) if tf == "4h" else None
+    tm["forming"] = round((time.time() - t2) * 1000)
+    out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st, forming=forming, timing=tm,
                stats=engine.stats(res["trades"]), watching=db.get_ticker(sym) is not None)
     try:      # other setups, drawn as lines on the chart
+        t3 = time.time()
         pa = patterns.analyze_all(c4, res, scanner.SETTINGS)
-        st["setups"] = patterns.live_json(sym, c4, res, pa)
+        st["setups"] = patterns.live_json(sym, c4, res, pa, with_news=False)
+        try:      # the possible catalyst comes from the board scan's copy (no news call while the panel waits)
+            brow = db.board_row(sym)
+            cats = {(x.get("kind"), x.get("since")): x.get("catalyst") for x in (json.loads(brow["status"] or "{}").get("setups") or [])} if brow else {}
+            for x in st["setups"]:
+                if cats.get((x.get("kind"), x.get("since"))):
+                    x["catalyst"] = cats[(x["kind"], x["since"])]
+        except Exception:
+            pass
+        tm["patterns"] = round((time.time() - t3) * 1000)
         draw = []
         for L in pa["live"]:
             if L["kind"] != "sr" and L["state"] == "forming":

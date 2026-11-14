@@ -1124,11 +1124,16 @@ async def forming_candle(symbol: str, u: dict = User):
 
 
 @app.get("/api/chart/{symbol}")
-async def chart_data(symbol: str, tf: str = "4h", u: dict = User):
+async def chart_data(symbol: str, response: Response, tf: str = "4h", fresh: int = 0, u: dict = User):
     try:
-        d = await run_in_threadpool(lambda: board.chart(symbol, tf=tf, lab_mode=bool(u and u["is_admin"])))
+        d = await run_in_threadpool(lambda: board.chart(symbol, tf=tf, lab_mode=bool(u and u["is_admin"]), fresh=bool(fresh)))
     except Exception as e:
         raise HTTPException(400, str(e))
+    tm = d.get("timing") or {}           # where the time went (browser dev tools show it under Timing; also logged)
+    response.headers["Server-Timing"] = ", ".join(f"{k};dur={v}" for k, v in tm.items() if isinstance(v, (int, float)) and not isinstance(v, bool)) \
+        + (", cache;desc=hit" if tm.get("cached") else "")
+    if (tm.get("total") or 0) > 800:
+        log.info("slow chart %s %s: %s", symbol, tf, tm)
     d["watching"] = bool(u) and d["symbol"] in db.user_symbols(u["id"])
     d["guest"] = not u
     d["exchange"] = data.exchange_for(symbol)

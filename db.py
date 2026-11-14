@@ -255,6 +255,11 @@ def board_rows() -> list[dict]:
     return [dict(r) for r in _run("SELECT * FROM board ORDER BY symbol").fetchall()]
 
 
+def board_row(symbol: str) -> dict | None:
+    r = _run("SELECT * FROM board WHERE symbol=?", (symbol,)).fetchone()
+    return dict(r) if r else None
+
+
 # --- track record
 def upsert_signal(**f):
     cols = ", ".join(f)

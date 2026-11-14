@@ -809,6 +809,11 @@ def scan_all() -> list[str]:
                 log.warning("scan failed for %s: %s", sym, e)
                 db.update_ticker(sym, row["last_candle"], json.dumps({"error": str(e)[:200]}))
         log.info("scan done, %d alerts", len(sent))
+        try:      # fresh candles exist now: pre-build the watchlist charts so the panel opens instantly
+            import board
+            threading.Thread(target=board.warm_charts, daemon=True).start()
+        except Exception:
+            pass
         return sent
 
 

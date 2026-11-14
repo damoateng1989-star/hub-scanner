@@ -3953,8 +3953,20 @@ const MAP_IC = {
   eye: '<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/>',
 };
 const mapIc = (n, s) => `<svg width="${s || 16}" height="${s || 16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${MAP_IC[n] || ""}</svg>`;
+// dates along the bottom: one label per trading day (4H) or per week (daily), thinned so they never crowd
+function mapTimeAxis(cs, cx, yBase, xMax, daily) {
+  const out = [], minGap = 58; let lastX = -1e9, lastKey = null;
+  cs.forEach((c, i) => {
+    const d = new Date(c.time * 1000), key = daily ? `${d.getUTCFullYear()}-${Math.floor((c.time / 86400 + 3) / 7)}` : d.toISOString().slice(0, 10);
+    if (key === lastKey) return; lastKey = key;
+    const x = cx(i); if (x < 22 || x - lastX < minGap || x > xMax - 18) return; lastX = x;
+    const lab = d.toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"});
+    out.push(`<line class="mp-tk" x1="${Math.round(x) + 0.5}" x2="${Math.round(x) + 0.5}" y1="${yBase}" y2="${yBase + 4}"/><text class="mp-ax mp-axt" x="${x}" y="${yBase + 15}" text-anchor="middle">${lab}</text>`);
+  });
+  return out.join("");
+}
 function mapChart(P, chart, W) {
-  const small = W < 560, H = small ? 260 : 330, R = small ? 54 : 64, top = 12, bot = 14, plotR = W - R, futX = plotR * (small ? 0.6 : 0.7);
+  const small = W < 560, H = small ? 272 : 344, R = small ? 54 : 64, top = 12, bot = 26, plotR = W - R, futX = plotR * (small ? 0.6 : 0.7);
   const want = Math.max(8, Math.min(MAP_N, 200));
   const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(-want) : [];
   const fc = mapFormingCandle(P, chart, cs);
@@ -4047,6 +4059,7 @@ function mapChart(P, chart, W) {
   if ((candlePref().type || "candles") === "line") parts.push(candleLine(cs, cx, y));
   else cs.forEach((c, i) => parts.push(candleSVG(c, cx(i), bw, y, c.forming ? "mp-cf" : "")));
   parts.push("</g>");
+  parts.push(mapTimeAxis(cs, cx, H - bot + 2, futX, daily));
   // level lines
   const line = (v, cls, from) => v == null ? "" : `<line class="${cls}" x1="${from}" x2="${lineEnd}" y1="${Math.round(y(v)) + 0.5}" y2="${Math.round(y(v)) + 0.5}"/>`;
   parts.push(line(P.stop !== P.trig && !P.watch ? P.stop : null, "mp-l-stop", futX), line(P.obst && P.obst.level, "mp-l-obst", futX),
@@ -4095,8 +4108,8 @@ function mapFormingPoll(sym) {
         const r = await api(`/api/forming/${encodeURIComponent(sym)}`), old = BRIEF_CHART.forming, now = r.candle;
         if (BRIEF_SYM !== sym) return;
         if (old && (!now || now.time !== old.time)) {           // the candle closed: pull the finished chart
-          const c = await api(`/api/chart/${encodeURIComponent(sym)}`);
-          if (BRIEF_SYM === sym) { BRIEF_CHART = c; briefHead(sym, c.status); }
+          const c = await api(`/api/chart/${encodeURIComponent(sym)}?fresh=1`);
+          if (BRIEF_SYM === sym) { BRIEF_CHART = c; MAP_DCH = null; briefHead(sym, c.status); }
         } else { BRIEF_CHART.forming = now; paintMap(); }
       } catch (e) {}
     }
@@ -4220,7 +4233,7 @@ function mapReplayEvents(chart, cs) {
   return ev;
 }
 function mapReplayChart(chart, W) {
-  const small = W < 560, H = small ? 260 : 330, R = small ? 54 : 64, top = 12, bot = 14, plotR = W - R;
+  const small = W < 560, H = small ? 272 : 344, R = small ? 54 : 64, top = 12, bot = 26, plotR = W - R;
   const cs = mapReplayCandles(chart), n = cs.length, k = Math.min(MAP_RP.k, n - 1), ev = mapReplayEvents(chart, cs);
   let lo = Math.min(...cs.map(c => c.low)), hi = Math.max(...cs.map(c => c.high)); const pad = (hi - lo) * 0.05 || 1; lo -= pad; hi += pad;
   const y = (v) => top + (hi - v) / (hi - lo) * (H - top - bot), step = (plotR - 16) / n, cx = (i) => 8 + step * (i + 0.5), bw = Math.max(1.5, step * 0.58);
@@ -4242,6 +4255,7 @@ function mapReplayChart(chart, W) {
     const t = i === k ? t0 : t0.split(" ")[0];               // only the event on the current candle gets words; older ones keep just the icon
     const yy = above ? y(c.high) - 8 - j * 13 : y(c.low) + 16 + j * 13;
     parts.push(`<text class="mp-mk ${cls}" x="${cx(i)}" y="${yy}" text-anchor="middle">${t}</text>`); }); });
+  parts.push(mapTimeAxis(cs, cx, H - bot + 2, plotR, chart.tf === "1d"));
   parts.push(`<line class="mp-rp-now" x1="${cx(k)}" x2="${cx(k)}" y1="${top}" y2="${H - bot}"/>`);
   MAP_G = null;
   MAP_RP.n = n; MAP_RP.ev = ev; MAP_RP.cs = cs;
@@ -6160,6 +6174,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-svg .mp-plan { fill: var(--mp-mut); font: 600 9px var(--sans, system-ui); letter-spacing: .14em; }
 .mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .1; stroke: var(--mp-hub); stroke-width: 1.5; stroke-opacity: .85; }
 .mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
+.mp-svg .mp-tk { stroke: var(--mp-line); } .mp-svg .mp-axt { font-size: 10px; opacity: .7; }
 .mp-svg .mp-vp { fill: var(--mp-hub); shape-rendering: crispEdges; } .mp-svg .mp-vp.poc { fill: var(--mp-trig); }
 .mp-svg .mp-shelfband.w { fill: var(--mp-mut); }
 .mp-svg .mp-dblzone { fill: var(--mp-hub); fill-opacity: .06; }

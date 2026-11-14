@@ -645,7 +645,7 @@ def _gapfade(c4: pd.DataFrame, close: pd.Series, n: int, s: engine.Settings, out
                                     gap_pct=pend["gap_pct"], left=pend["left"], next_pct=pend.get("next_pct")))
 
 
-def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
+def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict, with_news: bool = True) -> list[dict]:
     """Compact, JSON-safe list of what each pattern says about this stock right now."""
     close, n = res["close"], len(res["close"])
     last = float(close.iloc[-1])
@@ -659,6 +659,8 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict) -> list[dict]:
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
             try:      # Patch 85: the same possible catalyst the alert carries, for the setup card
+                if not with_news:                  # the chart view skips the news call (it can take seconds)
+                    raise LookupError
                 cat = news.catalyst(news.recent(sym, timeout=4), L["since"])
                 if cat:
                     row["catalyst"] = dict(headline=cat["headline"], source=cat["source"], url=cat["url"],
