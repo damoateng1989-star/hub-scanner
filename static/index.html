@@ -2164,7 +2164,11 @@ html[data-theme="light"] .sg-b { color: #fff; }
 @media (max-width: 640px) { .rec-test .stats { grid-template-columns: 1fr !important; } }
 </style>
 <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-</head>
+<style id="patch98-watchlist">
+.wl-sort-note{display:block;flex-basis:100%;margin-top:4px;font-size:12px;color:var(--muted)}
+.wl-section{margin:0 0 18px}.wl-section-h{font-size:12px;font-weight:700;color:var(--muted);margin:0 0 8px;padding:0 2px}.wl-gauge{display:none}
+@media(max-width:760px){#list{padding-bottom:64px}.lrow>summary{grid-template-columns:76px 1fr auto 18px!important;align-items:start}.lrow .one{grid-column:2 / 5}.lrow .wl-gauge{display:block;grid-column:1 / 5;margin:2px 4px 4px}.lrow.wl-forming .badge{display:none}}
+</style></head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
   <div class="sb-head">
@@ -2266,8 +2270,11 @@ html[data-theme="light"] .sg-b { color: #fff; }
   <div class="err" id="err"></div>
   <div class="chips" id="chips" style="margin:6px 0 14px">
     <button class="chip on" data-f="all">All</button>
-    <button class="chip" data-f="hub">Inside a hub</button>
-    <button class="chip" data-f="live">Breaking out</button>
+    <button class="chip" data-f="edge">At the edge</button>
+    <button class="chip" data-f="play">In play</button>
+    <button class="chip" data-f="look">Needs a look</button>
+    <button class="chip" data-f="rest">Resting</button>
+    <span class="wl-sort-note">Sorted by how close each ticker is to its trigger.</span>
   </div>
   <div id="list"><div class="loading"><span class="spin"></span>Loading…</div></div>
   <div class="stats" hidden><b id="sWatch"></b><b id="sHub"></b><b id="sLive"></b><b id="sAlerts"></b></div>
@@ -2702,34 +2709,69 @@ function details(t) {
     </div>
     <div class="bt" id="bt-${S}" hidden></div>`;
 }
-function listRow(t) {
-  const st = t.status || {};
-  const key = st.error ? "error" : (st.state || "none");
-  const liveSetup = liveOther(st);
-  const [label, color] = liveSetup
-    ? [esc(liveSetup.name), liveSetup.state === "breakout_up" ? "--up" : "--down"]
-    : (STATES[key] || [key, "--idle"]);
-  const S = esc(t.symbol);
-  return `<details class="lrow" id="c-${S}"${OPEN.has(t.symbol) ? " open" : ""} ontoggle="this.open ? OPEN.add('${S}') : OPEN.delete('${S}')">
-    <summary><span class="s">${S}<small>${money(st.last_close)}</small></span>
-      <span class="one">${oneLine(st, liveSetup ? "setup" : key)}</span>
-      <span class="badge" style="--c: var(${color})">${label}</span><span class="chev">›</span></summary>
-    <div class="body">${details(t)}</div></details>`;
+// Patch 98: watchlist urgency and hub gauge
+function wlDist(st) {
+  const h=st&&st.hub,p=Number(st&&st.last_close);
+  if(!h||h.low==null||h.high==null||!Number.isFinite(p)||p<=0)return null;
+  return Math.min(Math.abs(h.high-p),Math.abs(p-h.low))/p*100;
 }
-
+const WL_EDGE_PCT=1;
+function wlSection(t){
+  const st=t.status||{};
+  if(liveOther(st)||st.state==="breakout_up"||st.state==="breakdown")return "play";
+  if(st.state==="forming"&&st.hub){
+    const p=Number(st.last_close);
+    if(Number.isFinite(p)&&(p<st.hub.low||p>st.hub.high))return "look";
+    const d=wlDist(st); if(d!=null&&d<=WL_EDGE_PCT)return "edge";
+  }
+  return "rest";
+}
+function wlOneLine(st,sec){
+  const h=st.hub,p=Number(st.last_close),live=liveOther(st);
+  if(sec==="play"){
+    const x=live||st, up=x.state==="breakout_up", edge=Number(x.edge),target=Number(x.target);
+    const base=oneLine(st,live?"setup":st.state);
+    if(Number.isFinite(edge)&&Number.isFinite(target)&&Number.isFinite(p)&&target!==edge){
+      const raw=up?(p-edge)/(target-edge):(edge-p)/(edge-target);
+      return base+" — "+Math.round(Math.max(0,Math.min(1,raw))*100)+"% there.";
+    }
+    return base;
+  }
+  if(!h||!Number.isFinite(p))return oneLine(st,st.state||"none");
+  if(p<h.low)return "Closed below the lower trigger — the hub may be stale.";
+  if(p>h.high)return "Closed above the upper trigger — the hub may be stale.";
+  const top=(h.high-p)/p*100, bottom=(p-h.low)/p*100;
+  if(Math.min(top,bottom)<=WL_EDGE_PCT)return top<=bottom?"One close above "+money(h.high)+" triggers the long.":"One close below "+money(h.low)+" triggers the short.";
+  return "Inside the hub — "+top.toFixed(1)+"% to the top, "+bottom.toFixed(1)+"% to the bottom.";
+}
+function wlGauge(st,sec,live){
+  if(sec==="play"&&live&&live.edge!=null&&live.target!=null)return boardGauge({hub:{low:live.edge,high:live.target},last_close:st.last_close},"live",live.state==="breakdown"?"down":"up");
+  if(!st.hub)return "";
+  const p=Number(st.last_close),dir=p<st.hub.low?"down":p>st.hub.high?"up":null;
+  return boardGauge({hub:st.hub,last_close:st.last_close},dir?"live":"forming",dir||undefined);
+}
+function listRow(t) {
+  const st=t.status||{}, sec=wlSection(t), key=st.error?"error":(st.state||"none"), liveSetup=liveOther(st);
+  const pair=liveSetup?[esc(liveSetup.name),liveSetup.state==="breakout_up"?"--up":"--down"]:(STATES[key]||[key,"--idle"]);
+  const label=pair[0],color=pair[1],S=esc(t.symbol),gauge=wlGauge(st,sec,liveSetup),forming=sec!=="play";
+  return '<details class="lrow wl-'+sec+(forming?' wl-forming':'')+'" id="c-'+S+'"'+(OPEN.has(t.symbol)?" open":"")+' ontoggle="this.open ? OPEN.add(\\''+S+'\\') : OPEN.delete(\\''+S+'\\')">'+
+    '<summary><span class="s">'+S+'<small>'+money(st.last_close)+'</small></span>'+
+    '<span class="one">'+wlOneLine(st,sec)+'</span><span class="wl-gauge">'+gauge+'</span>'+
+    '<span class="badge" style="--c: var('+color+')">'+label+'</span><span class="chev">›</span></summary>'+
+    '<div class="body">'+details(t)+'</div></details>';
+}
+function wlProgress(t){const st=t.status||{},x=liveOther(st)||((st.state==="breakout_up"||st.state==="breakdown")?st:null);if(!x)return-1;const p=Number(st.last_close),e=Number(x.edge),tar=Number(x.target);if(!Number.isFinite(p)||!Number.isFinite(e)||!Number.isFinite(tar)||tar===e)return-1;return Math.max(0,Math.min(1,x.state==="breakdown"?(e-p)/(e-tar):(p-e)/(tar-e)));}
 function render() {
-  const st = (t) => t.status?.error ? "error" : t.status?.state;
-  $("sWatch").textContent = TICKERS.length;
-  $("sHub").textContent = TICKERS.filter(t => st(t) === "forming").length;
-  $("sLive").textContent = TICKERS.filter(t => ["breakout_up", "breakdown"].includes(st(t))).length;
-  const pr = (t) => PRIORITY[st(t)] ?? 4;
-  const shown = [...TICKERS].sort((a, b) => pr(a) - pr(b) || a.symbol.localeCompare(b.symbol)).filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
-  $("list").innerHTML = shown.length ? `<div class="lrows">${shown.map(listRow).join("")}</div>` :
-    `<div class="empty">${ME && ME.guest
-      ? `Add a ticker above, or <a href="#discover">browse setups</a> and tap <b>+ Add to watchlist</b>. You'll create a free account to save them.`
-      : TICKERS.length ? "Nothing matches this filter right now." :
-        `Your list is empty. Type a ticker above (for example <b>NVDA</b>), or <a href="#discover">browse setups</a> for ideas.`}</div>`;
-  if (CUR === "today") renderToday();
+  const st=t=>t.status?.error?"error":t.status?.state;
+  $("sWatch").textContent=TICKERS.length;
+  $("sHub").textContent=TICKERS.filter(t=>st(t)==="forming").length;
+  $("sLive").textContent=TICKERS.filter(t=>["breakout_up","breakdown"].includes(st(t))).length;
+  const order={edge:0,play:1,look:2,rest:3},titles={edge:"At the edge · within 1% of a trigger",play:"In play · broke out, working toward the shelf",look:"Needs a look · price moved past a level",rest:"Resting · inside the hub, nothing near"};
+  const shown=[...TICKERS].filter(t=>FILTER==="all"||wlSection(t)===FILTER).sort((a,b)=>{const sa=wlSection(a),sb=wlSection(b);if(sa!==sb)return order[sa]-order[sb];if(sa==="edge"||sa==="rest")return (wlDist(a.status)??Infinity)-(wlDist(b.status)??Infinity)||a.symbol.localeCompare(b.symbol);if(sa==="play")return wlProgress(b)-wlProgress(a)||a.symbol.localeCompare(b.symbol);return a.symbol.localeCompare(b.symbol);});
+  let html="";
+  if(shown.length){if(FILTER==="all"){["edge","play","look","rest"].forEach(sec=>{const rows=shown.filter(t=>wlSection(t)===sec);if(rows.length)html+='<div class="wl-section"><div class="wl-section-h">'+titles[sec]+'</div><div class="lrows">'+rows.map(listRow).join("")+'</div></div>';});}else html='<div class="lrows">'+shown.map(listRow).join("")+'</div>';}
+  $("list").innerHTML=html||'<div class="empty">'+(ME&&ME.guest?'Add a ticker above, or <a href="#discover">browse setups</a> and tap <b>+ Add to watchlist</b>. You\\'ll create a free account to save them.':TICKERS.length?"Nothing matches this filter right now.":'Your list is empty. Type a ticker above (for example <b>NVDA</b>), or <a href="#discover">browse setups</a> for ideas.')+'</div>';
+  if(CUR==="today")renderToday();
 }
 
 let TICKERS_ERR = null;
