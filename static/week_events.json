@@ -1,7 +1,8 @@
 {
   "_note": "Market events only — never personal deadlines (Porkbun stays out). The code ignores keys starting with _.",
   "notable": [
-    "DELL"
+    "DELL",
+    "NVDA"
   ],
   "events": [
     {
