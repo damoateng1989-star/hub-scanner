@@ -365,6 +365,12 @@ def landing():
     return FileResponse(STATIC / "landing.html")
 
 
+@app.get("/week_events.json")
+def week_events():
+    """Public market calendar data used by the This Week card on Today."""
+    return FileResponse(STATIC / "week_events.json", media_type="application/json")
+
+
 @app.get("/app")
 def index(request: Request):
     """The app. Members only: visitors who aren't signed in go to the sign-in page."""
