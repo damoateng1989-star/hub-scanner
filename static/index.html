@@ -5078,7 +5078,8 @@ Plan (not advice):
   if (card && all) { card.querySelector(".prog span").style.width = Math.round(100 * dn / all) + "%"; const n = card.querySelector(".prog + .note"); if (n) n.textContent = `${dn} of ${all} done`; }
 }
 function weekDateKey(date) {
-  return new Intl.DateTimeFormat("en-CA", {timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
+  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date).map(x => [x.type, x.value]));
+  return p.year + "-" + p.month + "-" + p.day;
 }
 function renderWeek() {
   const el = $("week"); if (!el) return;
