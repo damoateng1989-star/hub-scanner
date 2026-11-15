@@ -5184,7 +5184,11 @@ function renderRetest() {
   }
   const now = rows.filter(x => x.near).sort((a, b) => a.left - b.left);
   const wait = rows.filter(x => !x.near).sort((a, b) => a.left - b.left);
-  if (!now.length && !wait.length) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!now.length && !wait.length) {
+    el.innerHTML = '<div class="week-head"><div class="week-k">RETESTING NOW</div></div><p class="mb-quiet" style="margin:8px 0 0">No active retests right now. This section will update when a setup enters its retest window.</p>';
+    el.hidden = false;
+    return;
+  }
   const row = (x, kind) => {
     const up = x.state !== "breakdown";
     const txt = kind === "now"
