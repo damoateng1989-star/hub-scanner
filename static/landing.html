@@ -202,7 +202,7 @@ footer nav[aria-label="Social"] svg { width: 20px; height: 20px; display: block;
 /* Footer giant wordmark: the brand as the stamp, with the hero's blue glow behind it */
 footer { position: relative; overflow: hidden; }
 .ft-giant { text-align: center; white-space: nowrap; line-height: .78; letter-spacing: -0.045em; font-size: min(18.5vw, 300px); font-weight: 800; color: rgba(20,20,18,.055); background: radial-gradient(60% 95% at 50% 100%, rgba(47,84,235,.16), rgba(47,84,235,0) 70%); transform: translateY(22%); user-select: none; pointer-events: none; }
-html[data-theme="dark"] .ft-giant { color: rgba(233,235,239,.06); background: radial-gradient(60% 95% at 50% 100%, rgba(70,98,255,.22), rgba(70,98,255,0) 70%); }
+
 
 @media (max-width: 860px) {
   .nav-toggle { margin-left: auto; display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-size: 18px; }
@@ -219,27 +219,6 @@ html[data-theme="dark"] .ft-giant { color: rgba(233,235,239,.06); background: ra
   .navend .signin { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .live .dot,  .btn:hover { transform: none; } }
-
-/* ---------- light / dark ---------- */
-.theme-btn { display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; }
-.theme-btn:hover { border-color: var(--ink3); }
-.theme-btn .ic-moon { display: none; } [data-theme="light"] .theme-btn .ic-sun { display: none; } [data-theme="light"] .theme-btn .ic-moon { display: block; }
-html[data-theme="dark"] {
-  --paper: #0E0F12; --card: #15171C; --sunk: #1A1C22; --ink: #E9EBEF; --ink2: #9AA0AC; --ink3: #646B78;
-  --line: #23262E; --blue: #4F6BFF; --up: #3DD68C; --down: #FF6B5E; --warn: #E5A13D; color-scheme: dark;
-}
-html[data-theme="dark"] nav.top { background: rgba(14,15,18,.86); }
-html[data-theme="dark"] .btn.solid { background: #F2F3F5; color: #0E0F12; }
-html[data-theme="dark"] .live { background: #15171C; border: 1px solid #23262E; color: #E9EBEF; }
-html[data-theme="dark"] .plan.pro { background: #1C1F26; border-color: #2E323B; color: #E9EBEF; }
-html[data-theme="dark"] .cmp-row > div:last-child { background: #151A2B; } html[data-theme="dark"] .cmp-row.head > div:last-child { background: #1B2240; }
-html[data-theme="dark"] .illus { background: #F6F6F3; border-color: #2E323B; }
-html[data-theme="dark"] .rec .big[style*="--up"] { color: #3DD68C !important; }
-html[data-theme="dark"] .join input[type=email] { background: #15171C; }
-html[data-theme="dark"] .alt a, html[data-theme="dark"] .honest a, html[data-theme="dark"] .feat .when, html[data-theme="dark"] .step .num { color: #8EA2FF; }
-html[data-theme="dark"] em { color: #C3C7CF; }
-.navend { display: flex; align-items: center; gap: 14px; } .navend .btn { white-space: nowrap; }
-@media (max-width: 460px) { .wordmark em { display: none; } .navend { gap: 8px; } .navend .btn.sm { padding: 9px 13px; font-size: 12px; } nav.top .wrap { padding: 0 16px; } }
 
 /* ---------- sample Shelf card ---------- */
 #card { padding-top: 40px; }
@@ -289,7 +268,7 @@ html[data-theme="dark"] em { color: #C3C7CF; }
 .sc-tiles b { display: block; font-size: 20px; } .sc-tiles small { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
 .sc-trs { margin-top: 10px; } .sc-trs div { display: flex; justify-content: space-between; padding: 9px 2px; border-top: 1px solid var(--c2); color: #C3C7CF; }
 .sc-trs i { font-style: normal; color: var(--t2); }
-html[data-theme="dark"] .sc { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-color: #2E323B; }
+
 @media (max-width: 860px) { .sc-wrap { grid-template-columns: 1fr; gap: 32px; } .sc { max-width: 400px; width: 100%; margin: 0 auto; } }
 .sc { font-size: 11.5px; padding: 12px; border-radius: 22px; }
 .sc-hero, .sc-body { padding: 15px; border-radius: 17px; } .sc-body { min-height: 260px; margin-top: 8px; }
@@ -300,7 +279,7 @@ html[data-theme="dark"] .sc { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 @media (max-width: 420px) { .sc-stats b { font-size: 14.5px; } .sc-tabs button { font-size: 11.5px; } }
 
 /* centered sections: track record, pricing, FAQ */
-#record .wrap, #pricing .wrap, #faq .wrap, #day .wrap { text-align: center; }
+#record .wrap, #faq .wrap { text-align: center; }
 /* every section heading centered */
 #why > .wrap > .kicker, #why > .wrap > h2, #why > .wrap > .sub,
 #how > .wrap > .kicker, #how > .wrap > h2, #how > .wrap > .sub { text-align: center; margin-left: auto; margin-right: auto; }
@@ -309,10 +288,10 @@ html[data-theme="dark"] .sc { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 .sc-copy .kicker, .sc-copy h2, .sc-copy .sub, .sc-copy > .micro { text-align: center; margin-left: auto; margin-right: auto; }
 .stage-note { text-align: center; }
 #day h2, #day .sub { margin-left: auto; margin-right: auto; } #day .feat { text-align: left; }
-#record h2, #pricing h2, #faq h2, #record .sub, #pricing .sub, #faq .sub { margin-left: auto; margin-right: auto; }
-#pricing .plans { margin-left: auto; margin-right: auto; text-align: left; }
+#record h2, #faq h2, #record .sub, #faq .sub { margin-left: auto; margin-right: auto; }
+
 #faq .faq { margin-left: auto; margin-right: auto; text-align: left; }
-#pricing .micro { text-align: center; }
+
 
 /* ---------- hero preview of Browse setups ---------- */
 .bp { margin: 48px auto 0; max-width: 960px; text-align: left; border-radius: 18px; overflow: hidden; background: #0E0F12; color: #E9EBEF; border: 1px solid #23262E; box-shadow: 0 30px 80px rgba(20,20,18,.18); }
@@ -324,8 +303,8 @@ html[data-theme="dark"] .sc { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 .bp-s { font-size: 11.5px; color: #9AA0AC; margin-top: 2px; }
 .bp-live { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 99px; border: 1px solid rgba(61,214,140,.55); background: #0E1512; color: #3DD68C; font: 700 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; box-shadow: 0 0 12px rgba(61,214,140,.28); flex: none; }
 .bp-live b { width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); animation: none; }
-html[data-theme="light"] .bp-live { background: #fff; border-color: rgba(18,128,92,.55); color: #12805C; box-shadow: 0 0 12px rgba(18,128,92,.18); }
-html[data-theme="light"] .bp-live b { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
+
+
 .bp-scout { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #15171C; border: 1px solid #23262E; font-size: 12.5px; color: #C3C7CF; }
 .bp-scout > b { color: #fff; margin-right: 4px; } .bp-scout span b { color: #fff; } .bp-scout .g { color: #3DD68C; } .bp-scout .y { color: #E5A13D; }
 .bp-next { color: #9AA0AC; }
@@ -342,7 +321,7 @@ html[data-theme="light"] .bp-live b { background: #12805C; box-shadow: 0 0 8px r
 .bp-an { display: inline-block; padding: 6px 12px; border-radius: 8px; border: 1px solid #2E323B; color: #E9EBEF; text-decoration: none; font-size: 11px; font-weight: 600; }
 .bp-an:hover { border-color: #9AA0AC; }
 .bp-note { margin-top: 12px; font-size: 11px; color: #646B78; }
-html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-color: #2E323B; }
+
 @media (max-width: 760px) {
   .bp-in { padding: 16px 14px 14px; } .bp-h { font-size: 20px; } .bp-s { display: none; }
   .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-row > :nth-child(3), .bp-row > :nth-child(4), .bp-row > :nth-child(5) { display: none; }
@@ -418,11 +397,11 @@ html[data-theme="dark"] .bp { box-shadow: 0 30px 80px rgba(0,0,0,.5); border-col
 .h2-stairs .st.hub { background: #23262E; }
 .h2-stairs .st.next { background: #2F54EB; color: #fff; }
 .h2-note { font-size: 11.5px; color: var(--ink2); margin-top: 10px; }
-html[data-theme="dark"] .h2-stairs { border-bottom-color: #2E323B; }
-html[data-theme="dark"] .h2-stairs .st { background: #1E2127; }
-html[data-theme="dark"] .h2-stairs .st.hub { background: #2B2F38; }
-html[data-theme="dark"] .h2-stairs .st.next { background: #2F54EB; }
-html[data-theme="dark"] .h2-alert { box-shadow: 0 24px 60px rgba(0,0,0,.5); }
+
+
+
+
+
 .h2-alert { position: relative; margin: -62px 0 0 auto; max-width: 460px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; box-shadow: 0 24px 60px rgba(20,20,18,.16); }
 .h2-ah { display: flex; justify-content: space-between; gap: 10px; font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
 .h2-alert b { display: block; font-size: 19px; letter-spacing: -0.02em; margin-top: 8px; }
@@ -451,7 +430,7 @@ footer .wrap > nav[aria-label="Social"] { grid-area: social; justify-content: fl
   footer .wrap { grid-template-columns: 1fr; grid-template-areas: "brand" "links" "social" "copy"; }
   footer .wrap > nav[aria-label="Footer"], footer .wrap > nav[aria-label="Social"] { justify-content: flex-start; }
 }
-</style>
+.hero.ns{position:relative;overflow:hidden;padding:78px 0 68px;background:radial-gradient(ellipse 70% 44% at 50% 0%,rgba(37,99,235,.20),transparent 72%)}.hero.ns .wrap{position:relative;z-index:1}.hero.ns h1{max-width:18ch;margin-left:auto;margin-right:auto;font-size:clamp(36px,6vw,64px)}.hero.ns .lede{max-width:62ch}.hero-market{max-width:940px;margin:48px auto 0;padding:22px;border:1px solid #252a35;border-radius:18px;background:linear-gradient(145deg,#11151d,#0d0f13);text-align:left;box-shadow:0 24px 80px rgba(37,99,235,.13)}.hero-market-head{display:flex;justify-content:space-between;align-items:center;gap:16px}.hero-market-head h2{font-size:24px;margin-top:5px}.hero-market-head h2 span{color:var(--ink2);font-size:14px;font-weight:500}.hero-quote{text-align:right;font-variant-numeric:tabular-nums}.hero-quote b{display:block;font:700 24px var(--mono)}.hero-quote small{color:var(--ink3)}.hero-chart{height:260px;margin-top:16px;position:relative;overflow:hidden}.hero-chart svg{width:100%;height:100%;display:block}.chart-loading{height:100%;display:grid;place-items:center;color:var(--ink3)}.hero-market-foot{display:flex;justify-content:space-between;gap:12px;color:var(--ink2);font:11px var(--mono);margin-top:10px;flex-wrap:wrap}.hero-board{max-width:940px;margin:14px auto 0;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}.hero-board div{padding:15px 12px;text-align:center;border-right:1px solid var(--line)}.hero-board div:last-child{border:0}.hero-board b{display:block;font:700 21px var(--mono)}.hero-board span{color:var(--ink2);font-size:11px}.steps{grid-template-columns:repeat(4,minmax(0,1fr))}.setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:36px}.setup-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;text-align:left}.setup-art{height:145px;position:relative;display:flex;align-items:end;background:#0d1118;border:1px solid #252a35;border-radius:12px;padding:10px;margin-bottom:18px}.setup-art svg{width:100%;height:100%}.setup-chip{position:absolute;top:10px;left:12px;color:#9AA0AC;font:10px var(--mono);letter-spacing:.08em}.setup-card h3{font-size:17px;margin-bottom:8px}.setup-card p{color:var(--ink2);font-size:12.5px;min-height:82px}.setup-card a{display:inline-block;color:#8EA2FF;text-decoration:none;font-size:12px;font-weight:600;margin-top:14px}#discipline{background:#0c1017;border-top:1px solid #202938;border-bottom:1px solid #202938}.discipline-wrap{text-align:center}.discipline-wrap h2,.discipline-wrap .sub{margin-left:auto;margin-right:auto}.discipline-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:34px;text-align:left}.discipline-item{padding:22px;border:1px solid #273244;border-radius:14px;background:#111722}.discipline-item b{display:block;margin-bottom:8px}.discipline-item span{color:var(--ink2);font-size:12.5px}.discipline-cta{display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;margin-top:28px}.discipline-cta span{color:var(--ink3);font-size:11.5px}@media(max-width:860px){.steps,.setup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.discipline-grid{grid-template-columns:1fr}}@media(max-width:560px){.hero-market{padding:15px;margin-top:32px}.hero-chart{height:210px}.hero-board{grid-template-columns:repeat(2,1fr)}.hero-board div:nth-child(2){border-right:0}.hero-board div:nth-child(-n+2){border-bottom:1px solid var(--line)}.steps,.setup-grid{grid-template-columns:1fr}.setup-card p{min-height:0}.hero-market-head h2{font-size:20px}.hero-quote b{font-size:18px}}</style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
 .flow-sec { padding-top: 10px; }
@@ -459,8 +438,7 @@ footer .wrap > nav[aria-label="Social"] { grid-area: social; justify-content: fl
   box-shadow: 0 30px 80px var(--fl-shadow); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3);
   --fl-bg: rgba(14,20,29,.72); --fl-line: rgba(255,255,255,.08); --fl-shadow: rgba(0,0,0,.35); --fl-ink: #eef2f7; --fl-mut: #8a9aae; --fl-card: #0b1119;
   --fl-grid: rgba(255,255,255,.05); --fl-up: #3DD68C; --fl-down: #FF6B5E; --fl-hub: #7C93FF; --fl-candle-up: #e8eef5; --fl-candle-dn: #5b6b7f; }
-html[data-theme="light"] .flow { --fl-bg: rgba(255,255,255,.78); --fl-line: rgba(15,23,42,.08); --fl-shadow: rgba(15,23,42,.12); --fl-ink: #0d1117;
-  --fl-mut: #5f6b7a; --fl-card: #ffffff; --fl-grid: rgba(15,23,42,.06); --fl-up: #16a34a; --fl-hub: #5b6cf0; --fl-candle-up: #111827; --fl-candle-dn: #9aa4b2; }
+
 .fl-stage { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: stretch; }
 .fl-chart { position: relative; padding: 14px 14px 6px; border-radius: 18px; background: var(--fl-card); border: 1px solid var(--fl-line); min-width: 0; }
 .fl-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--fl-mut); font-size: 13px; }
@@ -491,11 +469,11 @@ html[data-theme="light"] .flow { --fl-bg: rgba(255,255,255,.78); --fl-line: rgba
 /* phone */
 .fl-phone { position: relative; padding: 34px 12px 14px; border-radius: 34px; overflow: hidden; min-height: 330px;
   background: radial-gradient(120% 70% at 50% 0%, #253a5a, #0b1220 70%); border: 6px solid #0a0f17; box-shadow: 0 8px 18px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.06); }
-html[data-theme="light"] .fl-phone { background: radial-gradient(120% 70% at 50% 0%, #cfe0f7, #eef3fa 70%); border-color: #111827; }
+
 .fl-notch { position: absolute; top: 8px; left: 50%; width: 84px; height: 20px; margin-left: -42px; border-radius: 12px; background: #05080d; }
 .fl-time { text-align: center; color: #fff; font-size: 44px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
 .fl-date { text-align: center; color: rgba(255,255,255,.7); font-size: 12px; margin: 4px 0 14px; font-weight: 500; }
-html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .fl-date { color: #4b5563; }
+ 
 .fl-stack { display: flex; flex-direction: column-reverse; gap: 8px; }
 .fl-note { padding: 10px 11px; border-radius: 16px; background: rgba(245,247,250,.9); color: #0d1117; box-shadow: 0 8px 20px rgba(0,0,0,.18);
   -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); animation: flIn .5s cubic-bezier(.2,1.3,.4,1) both; transform-origin: top center; }
@@ -520,12 +498,12 @@ html[data-theme="light"] .fl-time { color: #0d1117; } html[data-theme="light"] .
 .al-avatar { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto; background: #0d1117 url("/favicon.svg") center / 60% no-repeat; box-shadow: 0 0 0 5px rgba(61,214,140,.18), 0 0 0 10px rgba(61,214,140,.07); }
 .al-call-name { color: #fff; font-weight: 650; font-size: 20px; margin-top: 12px; letter-spacing: -0.01em; }
 .al-call-sub { color: rgba(255,255,255,.7); font-size: 12px; margin-top: 2px; font-weight: 500; }
-html[data-theme="light"] .al-call-name { color: #0d1117; } html[data-theme="light"] .al-call-sub { color: #4b5563; }
+ 
 .al-call .fl-note { margin-top: 16px; text-align: left; }
 .al-call-btns { display: flex; justify-content: space-between; margin: 22px 22px 0; }
 .al-call-btns span { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
 .al-call-btns small { display: block; text-align: center; color: rgba(255,255,255,.75); font-size: 11px; margin-top: 6px; }
-html[data-theme="light"] .al-call-btns small { color: #4b5563; }
+
 .al-decline { background: #D1352B; }
 .al-answer { background: #12805C; }
 .al-cap { margin-top: 18px; text-align: left; }
@@ -621,15 +599,15 @@ html[data-theme="light"] .al-call-btns small { color: #4b5563; }
 .sp-open { display: block; margin-top: 14px; padding: 11px; border-radius: 12px; border: 1px solid #2a3a50; text-align: center; color: #eef2f7; font-weight: 700;
   font-size: 14px; text-decoration: none; }
 .sp-open:hover { background: rgba(255,255,255,.04); }
-html[data-theme="light"] .scout-pop { background: rgba(255,255,255,.92); color: #0d1117; border-color: rgba(15,23,42,.08); box-shadow: 0 30px 80px rgba(15,23,42,.18); }
-html[data-theme="light"] .sp-ask button { background: #0d1117; color: #fff; } html[data-theme="light"] .sp-ask input:focus { border-color: #0d1117; }
-html[data-theme="light"] .sp-line { color: #4b5563; } html[data-theme="light"] .sp-line b { color: #0d1117; }
-html[data-theme="light"] .sp-x, html[data-theme="light"] .sp-open, html[data-theme="light"] .sp-lock { border-color: #e3e6ea; color: #0d1117; }
-html[data-theme="light"] .sp-lock { color: #4b5563; } html[data-theme="light"] .sp-lock a { color: #0d1117; }
-html[data-theme="light"] .sp-ask input { background: #f4f5f7 !important; border-color: #e3e6ea !important; color: #0d1117 !important; }
-html[data-theme="light"] .sp-ask input:focus { border-color: #0d1117 !important; }
-html[data-theme="light"] .sp-row { background: #f4f5f7; color: #0d1117; } html[data-theme="light"] .sp-row:hover { background: #eceef1; }
-html[data-theme="light"] .sp-row span { color: #55606e; } html[data-theme="light"] .sp-head small { color: #0d1117; border-color: rgba(13,17,23,.35); }
+
+ 
+ 
+
+ 
+
+
+ 
+ 
 @media (max-width: 640px) {
   .scout-fab { right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); width: 62px; height: 62px; border-radius: 21px; }
   .scout-fab::before { border-radius: 23px; } .scout-fab::after { border-radius: 20px; } .sf-halo { border-radius: 28px; }
@@ -647,12 +625,12 @@ html .live-pill::after { content: ""; position: absolute; inset: 0; z-index: -1;
 html .run .live-pill, html .live-pill.run { color: #12805C !important; background: #F4F6F9 !important; border-color: rgba(18,128,92,.55) !important; box-shadow: 0 0 18px rgba(18,128,92,.30) !important; }
 html .run .live-pill::before, html .live-pill.run::before { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); animation: none; }
 html .run .live-pill::after, html .live-pill.run::after { opacity: 1; animation: sikaScan 1.2s ease-in-out infinite; }
-html[data-theme="light"] .live-pill { color: #12805C !important; border-color: rgba(18,128,92,.55) !important; background: #fff !important; box-shadow: 0 0 12px rgba(18,128,92,.18) !important; }
-html[data-theme="light"] .live-pill::before { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
-html[data-theme="light"] .live-pill::after { background: linear-gradient(90deg, transparent, rgba(18,128,92,.28), transparent); }
-html[data-theme="light"] .run .live-pill, html[data-theme="light"] .live-pill.run { color: #fff !important; background: #12805C !important; border-color: #12805C !important; box-shadow: 0 0 18px rgba(18,128,92,.35) !important; }
-html[data-theme="light"] .run .live-pill::before { background: #fff; box-shadow: 0 0 8px rgba(255,255,255,.9); }
-html[data-theme="light"] .run .live-pill::after { background: linear-gradient(90deg, transparent, rgba(255,255,255,.40), transparent); }
+
+
+
+
+
+
 @media (prefers-reduced-motion: reduce) { .live-pill::before, .live-pill::after { animation: none !important; } .live-pill::after { display: none !important; } }
 
 
@@ -686,13 +664,13 @@ html[data-theme="light"] .run .live-pill::after { background: linear-gradient(90
 .ns-clock span { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #2F54EB; }
 .ns-clock b { font-size: 17px; letter-spacing: -0.02em; } .ns-clock small { font-size: 13px; color: var(--ink2); }
 .hero.ns .bp { margin: 64px 0 0 !important; max-width: none !important; }
-html[data-theme="dark"] .ns-chart .lb.hb, html[data-theme="dark"] .ns-clock span { fill: #7C93FF; color: #7C93FF; }
-html[data-theme="dark"] .ns-chart .hubbox { fill: rgba(124,147,255,.12); stroke: #7C93FF; }
-html[data-theme="dark"] .ns-chart .cd { fill: #ECEDEF; } html[data-theme="dark"] .ns-chart .cu, html[data-theme="dark"] .ns-chart .wk { fill: #5C616B; stroke: #5C616B; }
-html[data-theme="dark"] .ns-chart .cu { stroke: none; }
-html[data-theme="dark"] .ns-chart .cg, html[data-theme="dark"] .ns-dot { fill: #00C898; background: #00C898; }
-html[data-theme="dark"] .ns-chart .wk.g, html[data-theme="dark"] .ns-chart .trigline { stroke: #00C898; }
-html[data-theme="dark"] .ns-clock { border-top-color: #2E323B; }
+
+
+ 
+
+
+
+
 @media (max-width: 900px) { .ns-grid { grid-template-columns: 1fr; gap: 36px; } .ns-clock { grid-template-columns: 1fr; } .ns-clock li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; } }
 
 /* Hero background: blue glow with a dot grid that fades out toward the board preview */
@@ -700,8 +678,8 @@ html[data-theme="dark"] .ns-clock { border-top-color: #2E323B; }
 .hero.ns::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   background: radial-gradient(rgba(47,84,235,.13) 1px, transparent 1.3px) 0 0/20px 20px;
   -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); }
-html[data-theme="dark"] .hero.ns { background: radial-gradient(70% 55% at 50% 0%, rgba(70,98,255,.07) 0%, rgba(70,98,255,.02) 45%, transparent 100%); }
-html[data-theme="dark"] .hero.ns::before { background-image: radial-gradient(rgba(150,170,255,.10) 1px, transparent 1.3px); }
+
+
 
 /* Ghost word behind the hero: the product's own line, as the wallpaper */
 .hx-ghost { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-style: normal; font-size: clamp(150px, 36vw, 330px); line-height: 1; letter-spacing: -0.02em; color: rgba(233,235,239,.04); white-space: nowrap; pointer-events: none; user-select: none; }
@@ -723,11 +701,11 @@ html[data-theme="dark"] .hero.ns::before { background-image: radial-gradient(rgb
 .lm-panel a b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink, #141412); letter-spacing: -0.01em; }
 .lm-panel a b i { font: 600 9.5px "JetBrains Mono", monospace; font-style: normal; color: #B7791F; letter-spacing: .08em; text-transform: uppercase; margin-left: 4px; vertical-align: 1px; }
 .lm-panel a small { display: block; font-size: 12px; color: var(--ink2, #5C5B55); margin-top: 2px; line-height: 1.35; }
-html[data-theme="dark"] .lm-panel { background: #15171B; border-color: #2A2D33; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
-html[data-theme="dark"] .lm-col + .lm-col { border-left-color: #2A2D33; }
-html[data-theme="dark"] .lm-h { color: #7C93FF; }
-html[data-theme="dark"] .lm-panel a:hover { background: rgba(124,147,255,.10); }
-html[data-theme="dark"] .lm-panel a b { color: #ECEDEF; } html[data-theme="dark"] .lm-panel a small { color: #9AA0AC; }
+
+
+
+
+ 
 @media (max-width: 860px) {
   .lm { display: block; width: 100%; }
   .lm-btn { padding: 10px 0; width: 100%; }
@@ -739,7 +717,7 @@ html[data-theme="dark"] .lm-panel a b { color: #ECEDEF; } html[data-theme="dark"
 .hero.ns h1 em { font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; display: block; color: #8A8984; }
 .hero.ns h1 { max-width: none; font-size: clamp(36px, 4.3vw, 64px); }
 @media (min-width: 901px) { .hero.ns h1 em { white-space: nowrap; } }
-html[data-theme="dark"] .hero.ns h1 em { color: #6F737C; }
+
 
 /* Centred hero (like the original), live count pill, floating setup chips */
 .hero.hcx { text-align: center; padding-top: 72px; }
@@ -750,14 +728,14 @@ html[data-theme="dark"] .hero.ns h1 em { color: #6F737C; }
 .hero.hcx .micro { margin-top: 14px; }
 .hx-pill { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink2); padding: 5px 14px 5px 5px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); }
 .hx-num { font: 600 13px var(--mono); color: #2F54EB; background: rgba(47,84,235,.08); border-radius: 99px; padding: 4px 10px; }
-html[data-theme="dark"] .hx-num { color: #9DB0FF; background: rgba(124,147,255,.14); }
+
 .hx-chips { position: absolute; inset: 70px 0 auto; height: 300px; pointer-events: none; }
 .hx-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
 .hx-lines path { fill: none; stroke: rgba(47,84,235,.28); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
-html[data-theme="dark"] .hx-lines path { stroke: rgba(124,147,255,.30); }
+
 .hx-chip { position: absolute; display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--mono); letter-spacing: .02em; color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; white-space: nowrap; }
 .hx-chip i { width: 7px; height: 7px; border-radius: 50%; background: #2F54EB; } .hx-chip i.g { background: #007F61; }
-html[data-theme="dark"] .hx-chip i { background: #7C93FF; } html[data-theme="dark"] .hx-chip i.g { background: #00C898; }
+ 
 .hx-chip.l1 { left: 0; top: 26px; } .hx-chip.l2 { left: -2%; top: 196px; }
 .hx-chip.r1 { right: -2%; top: 26px; } .hx-chip.r2 { right: 0; top: 196px; }
 .hx-chip.l1, .hx-chip.l2 { transform: translateX(-30%); } .hx-chip.r1, .hx-chip.r2 { transform: translateX(30%); }
@@ -767,9 +745,9 @@ html[data-theme="dark"] .hx-chip i { background: #7C93FF; } html[data-theme="dar
 .hero.hcx .eyebrow { margin-top: 0; }
 .hx-sika { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 30px; font: 500 12.5px var(--mono); color: var(--ink2); padding-top: 18px; border-top: 1px solid var(--line); }
 .hx-sika > b { color: var(--ink); font-family: var(--sans); font-weight: 700; font-size: 13px; }
-.hx-sika b.g { color: #007F61; } html[data-theme="dark"] .hx-sika b.g { color: #00C898; }
+.hx-sika b.g { color: #007F61; } 
 .hx-dot { width: 7px; height: 7px; border-radius: 50%; background: #007F61; box-shadow: 0 0 0 3px rgba(0,127,97,.15); }
-html[data-theme="dark"] .hx-dot { background: #00C898; box-shadow: 0 0 0 3px rgba(0,200,152,.18); }
+
 
 /* No italics anywhere: emphasised words keep the quieter colour, in the regular font */
 html body em, html body h1 em, html body h2 em, html body h3 em, html body section h2 em, html body .pitch h1 em, html body .g-head h2 em, html body .final h2 em, html body .mf-h span, html body .bp-h em {
@@ -778,7 +756,7 @@ html body i, html body cite, html body address { font-style: normal !important; 
 html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
 html body section h2 em, html body .final h2 em { color: var(--ink2) !important; }
 .hero .hx-2 { background: linear-gradient(90deg, #1A36C4 0%, #2F54EB 50%, #7A95FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .06em; }
-html[data-theme="dark"] .hero .hx-2 { background-image: linear-gradient(90deg, #B4C3FF 0%, #7C93FF 50%, #4B6BFF 100%); }
+
 
 /* Hero background: price shelves instead of dots, and a tape of finished setups inside the hub band */
 .hero.ns::before { display: none !important; }
@@ -797,10 +775,10 @@ html[data-theme="dark"] .hero .hx-2 { background-image: linear-gradient(90deg, #
 .hx-it .ok { color: #007F61; } .hx-it .no { color: #D1352B; } .hx-it .to { color: var(--ink2); }
 @keyframes hxTape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .hx-track { animation: none; } }
-html[data-theme="dark"] .hx-lv { border-top-color: rgba(124,147,255,.30); } html[data-theme="dark"] .hx-lv span { color: #7C93FF; }
-html[data-theme="dark"] .hx-lv.nx { border-top-color: rgba(0,200,152,.32); } html[data-theme="dark"] .hx-lv.nx span { color: #00C898; }
-html[data-theme="dark"] .hx-band::before { background: rgba(124,147,255,.06); }
-html[data-theme="dark"] .hx-it .ok { color: #00C898; } html[data-theme="dark"] .hx-it .no { color: #FF7A8A; }
+ 
+ 
+
+ 
 .hero.hcx + * {}
 .hero.hcx .bp { margin-top: 56px !important; }
 @media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
@@ -813,7 +791,7 @@ nav.top { background: rgba(10,10,10,.92); }
 @media (max-width: 640px) { .hero.ns { padding-top: 121px !important; } }
 
 /* light theme: white surfaces become a soft light gray (inputs and small chips stay white) */
-html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl-chart, html:not([data-theme="dark"]) body .card { background: #F8F9FD !important; }
+
 </style>
 </head>
 <body>
@@ -821,100 +799,12 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 <nav class="top"><div class="wrap">
   <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
   <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
-  <div class="navlinks"><a href="#how">How it works</a><a href="#record">The record</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="#faq">FAQ</a></div>
+  <div class="navlinks"><a href="#how">How it works</a><a href="#setups">Setups</a><a href="#record">The record</a><a href="#discipline">Discipline</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="#faq">FAQ</a></div>
   <div class="navend"><span id="navEnd" class="navend"><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
-<header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">wait.</div><div class="wrap">
-  <div class="hx-text"><div class="hx-lv nx" aria-hidden="true"><span>Next shelf · $186.10</span></div>
-  <div class="eyebrow">Hub-breakout playbook for swing traders</div>
-  <h1>Pick a setup.<br><span class="hx-2">Trade it for years.</span></h1>
-  <p class="lede">One playbook, the hub breakout, done the same way every time. You live your day; NextShelf watches every 4&#8209;hour close and tells you when price steps off one shelf and heads for the next.</p>
-  <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#how">See how it works</a></div>
-  <div class="micro">Free tier · No card needed · Educational, not financial advice</div>
-  </div>
-  <div class="hx-band" aria-label="Recently finished setups from the track record"><div class="hx-lv ht" aria-hidden="true"><span>Hub top · $178.01</span></div><div class="hx-lv hb" aria-hidden="true"><span>Hub bottom · $170.40</span></div><div class="hx-tape"><div class="hx-track static" id="hxTrack"><span class="hx-it">Every setup is logged with its result</span></div></div></div>
-  <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
-    <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
-    <div class="bp-in">
-      <div class="bp-head"><div><div class="bp-h">Browse <span>setups.</span></div><p class="bp-s">S&amp;P 500, Nasdaq-100 and major ETFs, checked after every 4-hour close.</p></div>
-        <span class="bp-live"><b></b>Live</span></div>
-      <div class="bp-scout"><b>Sika</b> <span id="bpLine">Checking today's setups after the last 4-hour close.</span> <span class="bp-next" id="bpNext"></span></div>
-      <div class="bp-tabs"><span class="on">Hubs <small id="bpHubs">–</small></span><span>Double tops &amp; bottoms</span><span>Gap fade &amp; rip</span></div>
-      <div class="bp-split">
-      <div class="bp-tbl">
-        <div class="bp-row bp-th"><span>Stock</span><span>Setup</span><span>Last price</span><span></span></div>
-        <div class="bp-row"><b>NFLX</b><span><span class="pill up">Broke out ↑<small>heading to next shelf</small></span></span><span>$1,182.40</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row sel"><b>ADBE</b><span><span class="pill hub">Inside a hub</span></span><span>$248.48</span><span><span class="bp-an on">Viewing</span></span></div>
-        <div class="bp-row"><b>EQT</b><span><span class="pill dn">Broke down ↓<small>heading to next shelf</small></span></span><span>$51.36</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>HON</b><span><span class="pill hub">Inside a hub</span></span><span>$223.80</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>NVDA</b><span><span class="pill hub">Inside a hub</span></span><span>$181.20</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>CAT</b><span><span class="pill up">Broke out ↑<small>heading to target</small></span></span><span>$612.35</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>PEP</b><span><span class="pill hub">Inside a hub</span></span><span>$148.92</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>AMZN</b><span><span class="pill dn">Broke down ↓<small>heading to target</small></span></span><span>$201.33</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>MA</b><span><span class="pill hub">Inside a hub</span></span><span>$571.06</span><span><span class="bp-an">Analyze</span></span></div>
-      </div>
-      <div class="sc" id="sampleCard" aria-label="Example Shelf card">
-    <div class="sc-hero">
-      <div class="sc-k">Shelf card · example</div><p class="sc-swap" id="scSwap" hidden></p>
-      <div class="sc-sym">ADBE</div>
-      <span class="sc-pill">Inside a hub · no trade yet</span>
-      <p class="sc-px"><b>$248.48</b> last 4-hour close</p>
-      <div class="sc-stats">
-        <div><small>Trigger</small><b>$254.78</b><i>4H close above</i></div>
-        <div><small>Aim</small><b>$271.27</b><i class="up">+6.5% from trigger</i></div>
-        <div><small>Wrong if</small><b>$246.07</b><i>4H close below the hub</i></div>
-      </div>
-      <div class="sc-tabs" role="tablist"><button data-t="lv" class="on">Levels</button><button data-t="gp">Game plan</button><button data-t="ox">Options</button><button data-t="tr">Track record</button></div>
-    </div>
-    <div class="sc-body">
-      <div class="sc-pane on" data-p="lv"><div class="sc-k">Level map</div>
-        <div class="sc-lm">
-          <div class="up"><span>Next shelf above<small>zone $271.27–276.19</small></span><b>$271.27<small>+9.2% from last close</small></b></div>
-          <div class="hub"><span>Hub top<small>close above = long setup</small></span><b>$254.78<small>+2.5% from last close</small></b></div>
-          <div class="now"><span>Last 4-hour close</span><b>$248.48</b></div>
-          <div class="hub"><span>Hub bottom<small>close below = short setup</small></span><b>$246.07<small>−1.0% from last close</small></b></div>
-          <div class="dn"><span>Next shelf below<small>zone $236.18–242.27</small></span><b>$242.27<small>−2.5%</small></b></div>
-        </div></div>
-      <div class="sc-pane" data-p="gp"><div class="sc-k">Game plan</div>
-        <ol class="sc-gp">
-          <li>It's been closing inside <b>$246.07–254.78</b> for 7 sessions. Inside the hub there's <b>no trade</b>.</li>
-          <li>A 4-hour <b>close above $254.78</b> starts a long setup, aiming for the shelf at <b>$271.27</b>.</li>
-          <li>A 4-hour <b>close below $246.07</b> starts a short setup, aiming for <b>$242.27</b>.</li>
-        </ol></div>
-      <div class="sc-pane" data-p="ox"><div class="sc-k">Options swing <span class="sc-edu">Educational</span></div>
-        <div class="sc-ct"><b>Nov 27 $255 calls</b><small>If a 4-hour candle closes above the hub top</small></div>
-        <div class="sc-rows">
-          <div><span>Est. cost at the breakout</span><b>≈ $13.69</b></div>
-          <div><span>If it reaches the aim</span><b>≈ $23.14 <span class="up">+69%</span></b></div>
-          <div><span>If the breakout fails</span><b>≈ $12.46 <span class="dn">−9%</span></b></div>
-          <div><span>Est. gain at the aim</span><b class="up">≈ +$945.00</b></div>
-          <div><span>Max loss</span><b>$1,369.00</b></div>
-        </div>
-        <p class="sc-note">Per contract. Sample figures for this example card.</p></div>
-      <div class="sc-pane" data-p="tr"><div class="sc-k">Track record · sample</div>
-        <div class="sc-tiles"><div><b>10</b><small>sample breakouts</small></div><div><b>40%</b><small>reached the shelf</small></div></div>
-        <div class="sc-trs"><div><span>Oct 21 · Long</span><i class="up">Reached shelf</i></div><div><span>Sep 30 · Short</span><i class="dn">Failed</i></div><div><span>Sep 9 · Long</span><i class="up">Reached shelf</i></div><div><span>Aug 18 · Long</span><i>Timed out</i></div></div></div>
-    </div>
-  </div>
-      </div>
-      <p class="bp-note">Example rows and card. Members see every stock on the board, updated after each 4-hour close, and tap Analyze for its Shelf card.</p>
-    </div>
-  </div>
-</div></header>
-<section id="why"><div class="wrap">
-  <div class="kicker">Why NextShelf</div>
-  <h2>Alerts aren't new. <span>Watching the right setup is.</span></h2>
-  <p class="sub">Your phone can already ping you. The problem is what it pings you about.</p>
-  <div class="cmp" role="table" aria-label="How NextShelf compares">
-    <div class="cmp-row head" role="row"><div></div><div>DIY price alerts</div><div>Generic scanners</div><div>NextShelf</div></div>
-    <div class="cmp-row" role="row"><div><b>Knows a close from a wick</b></div><div><span class="x">✕</span>A price line can't tell</div><div><span class="x">✕</span>Wick highs trigger noise</div><div><span class="chk">✓</span>Acts on 4-hour closes only</div></div>
-    <div class="cmp-row" role="row"><div><b>Hubs, fully ruled</b></div><div><span class="x">✕</span>You build every alert by hand</div><div><span class="x">✕</span>Patterns made for screen-watchers</div><div><span class="chk">✓</span>Hub → close → shelf, every rule spelled out</div></div>
-    <div class="cmp-row" role="row"><div><b>Warns before the close</b></div><div><span class="x">✕</span>After the move</div><div><span class="x">✕</span>After the move</div><div><span class="chk">✓</span>About 15 minutes before the candle closes (Pro)</div></div>
-    <div class="cmp-row" role="row"><div><b>Flags earnings</b></div><div><span class="x">✕</span>Your problem</div><div><span class="x">✕</span>Your problem</div><div><span class="chk">✓</span>Earnings dates shown on every card and alert</div></div>
-    <div class="cmp-row" role="row"><div><b>Shows its record</b></div><div><span class="x">✕</span>None</div><div><span class="x">✕</span>Cherry-picked</div><div><span class="chk">✓</span>Every setup logged, wins and losses</div></div>
-  </div>
-</div></section>
+<header class="hero ns hcx"><div class="wrap"><div class="eyebrow">A clearer way to trade the next move</div><h1>Will your next trade<br><span class="hx-2">also work?</span></h1><p class="lede">NextShelf finds stocks coiling in tight ranges, warns you before a breakout candle closes, and gives every setup a target: the next shelf. From the first scan to your own decision, it all happens in one place.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#how">See how it works</a></div><div class="micro">Four-hour setups · Clear invalidation · Every outcome recorded</div><div class="hero-market" id="heroMarket"><div class="hero-market-head"><div><span class="kicker">Live chart preview</span><h2>AVGO <span>· 4H</span></h2></div><div class="hero-quote"><b id="heroPrice">Loading…</b><small id="heroUpdated">Market data loading</small></div></div><div class="hero-chart" id="heroChart" role="img" aria-label="AVGO four-hour candlestick chart"><div class="chart-loading">Loading AVGO price history…</div></div><div class="hero-market-foot"><span id="heroHub">Hub levels load with chart data</span><span id="heroTarget">Target shown when available</span></div></div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
+
 
 <section id="how" class="band"><div class="wrap">
   <div class="kicker">How it works</div>
@@ -980,7 +870,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
         <path d="M200,72 l-11,1 l7,8 z" fill="#141412"/>
       </svg></div>
       <h3>It travels <span>to the shelf</span></h3><p>Earlier hubs act as shelves. The nearest one is the target; a close back inside the hub means it failed. Entry, target and exit, set before you enter.</p></div>
-  </div>
+  <div class="step"><div class="num">04</div><div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A planned trade with target and invalidation"><rect x="28" y="28" width="264" height="134" rx="12" fill="#121820" stroke="#283344"/><line x1="48" y1="68" x2="272" y2="68" stroke="#3DD68C" stroke-width="2"/><line x1="48" y1="112" x2="272" y2="112" stroke="#F87171" stroke-width="2"/><line x1="48" y1="90" x2="272" y2="90" stroke="#8EA2FF" stroke-width="2"/><text x="56" y="58" fill="#3DD68C" font-size="11">TARGET</text><text x="56" y="83" fill="#8EA2FF" font-size="11">ENTRY PLAN</text><text x="56" y="132" fill="#F87171" font-size="11">INVALIDATION</text><path d="M220 108l18 -18 14 5 18 -31" fill="none" stroke="#E9EBEF" stroke-width="2.5"/></svg></div><h3>Make <span>your decision</span></h3><p>Review the entry, next shelf and invalidation level. Set your own risk, place your order—or pass. The tool informs the decision; it never makes it for you.</p></div></div>
 
   <div class="demo-copy">
     <h3>From hub to alert, <span>on your phone.</span></h3>
@@ -1006,87 +896,12 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 </div></section>
 
 
-<section id="alerts"><div class="wrap">
-  <div class="kicker">Pro alerts</div>
-  <h2>The tap on the shoulder, <span>three ways.</span></h2>
-  <p class="sub">Telegram is free. On Pro, the same alert also arrives as a <b>text</b> — and the important ones as a <b>phone call</b> that reads it aloud. Quiet hours keep the night silent.</p>
-  <div class="al-phones">
-
-    <div class="col">
-      <div class="fl-phone" aria-hidden="true">
-        <div class="fl-notch"></div>
-        <div class="fl-time">4:01</div>
-        <div class="fl-date">NextShelf alerts</div>
-        <div class="al-list">
-          <div class="fl-note"><div class="fl-nh"><span>Telegram</span>now</div>
-            <div class="fl-nt">🚀 AMD: 4H close above hub</div>
-            <div class="fl-nb">Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div></div>
-          <div class="fl-note old"><div class="fl-nh"><span>Telegram<span class="fl-pro">PRO</span></span>15m ago</div>
-            <div class="fl-nt">⚠️ AMD: trading above hub, ~15 min before the 4H close</div>
-            <div class="fl-nb">Now $179.40. If the candle closes above $178.01, that's the breakout.</div></div>
-        </div>
-      </div>
-      <div class="al-cap">
-        <h3>Telegram <span class="al-tag">Free</span></h3>
-        <p>Every alert, the moment a 4-hour candle closes outside a hub. Nothing on quiet days — that&rsquo;s the discipline.</p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="fl-phone" aria-hidden="true">
-        <div class="fl-notch"></div>
-        <div class="fl-time">4:01</div>
-        <div class="fl-date">NextShelf alerts</div>
-        <div class="al-list">
-          <div class="fl-note"><div class="fl-nh"><span>Messages<span class="fl-pro">PRO</span></span>now</div>
-            <div class="fl-nt">NextShelf</div>
-            <div class="fl-nb">🚀 AMD: 4H close above hub. Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div></div>
-          <div class="fl-note old"><div class="fl-nh"><span>Messages<span class="fl-pro">PRO</span></span>15m ago</div>
-            <div class="fl-nt">NextShelf</div>
-            <div class="fl-nb">⚠️ AMD: trading above hub, ~15 min before the 4H close. Now $179.40. If the candle closes above $178.01, that's the breakout.</div></div>
-        </div>
-      </div>
-      <div class="al-cap">
-        <h3>Text message <span class="al-tag pro">Pro</span></h3>
-        <p>The same alert as Telegram, as a text — every alert, same words, no app to open.</p>
-      </div>
-    </div>
-
-    <div class="col">
-      <div class="fl-phone" aria-hidden="true">
-        <div class="fl-notch"></div>
-        <div class="al-call">
-          <div class="al-avatar"></div>
-          <div class="al-call-name">NextShelf</div>
-          <div class="al-call-sub">Pre-close warning · AMD</div>
-          <div class="fl-note"><div class="fl-nh"><span>Phone call<span class="fl-pro">PRO</span></span>3:45</div>
-            <div class="fl-nb" style="color:#0d1117">&ldquo;AMD is trading above its hub, about fifteen minutes before the four-hour close. If the candle closes above one seventy-eight, that&rsquo;s the breakout.&rdquo;</div></div>
-          <div class="al-call-btns"><div><span class="al-decline">✕</span><small>Decline</small></div><div><span class="al-answer"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span><small>Accept</small></div></div>
-        </div>
-      </div>
-      <div class="al-cap">
-        <h3>Phone call <span class="al-tag pro">Pro</span></h3>
-        <p>Only the ones that can&rsquo;t wait — pre-close warnings and breakouts. The voice reads the alert; details are in Telegram.</p>
-      </div>
-    </div>
-
-  </div>
-  <p class="al-note">Example alert, for illustration. Quiet hours: no texts or calls overnight — Telegram arrives silent.</p>
-</div></section>
 
 
-<section id="day"><div class="wrap">
-  <div class="kicker">Built for a day job</div>
-  <h2>Two decisions a day. <span>The rest is on autopilot.</span></h2>
-  <p class="sub">The 4-hour candles close at 1:30 PM and 4:00 PM ET. NextShelf fits around them, so you don't have to fit around the market.</p>
-  <div class="feats">
-    <div class="feat"><div class="when">Before work</div><h3>Morning <span>brief</span></h3><p>What's resting in a hub, what's at the edge, and earnings to avoid. Plus an order plan you can place before you leave.</p></div>
-    <div class="feat"><div class="when">During the day</div><h3>Alerts that <span>matter</span></h3><p>Telegram alerts only when a candle closes outside a hub. On Pro, get a text or a phone call the moment a trigger fires; the call reads the alert aloud. Quiet hours keep the night silent.</p></div>
-    <div class="feat"><div class="when">After the close</div><h3>Evening <span>recap</span></h3><p>Every breakout from the day with its target and its exit level, so tomorrow's plan is set before dinner.</p></div>
-  </div>
-</div></section>
 
-<section id="record" class="band"><div class="wrap">
+
+
+<section id="setups" class="band"><div class="wrap"><div class="kicker">Three setup families</div><h2>Different patterns. <span>One clear plan.</span></h2><p class="sub">Each setup has a defined trigger, target and point where the idea is wrong. No pattern is a promise.</p><div class="setup-grid"><article class="setup-card"><div class="setup-art"><span class="setup-chip">01 · CORE</span><svg viewBox="0 0 300 120" role="img" aria-label="Price consolidating then breaking above a hub"><rect x="18" y="40" width="170" height="48" rx="4" fill="#2563EB" opacity=".12"/><path d="M20 63 L48 56 L76 68 L104 57 L132 65 L160 58 L188 62 L218 34 L244 40 L278 16" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M18 40H188M18 88H188" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Hub breakout</h3><p>A stock coils inside a tight 4-hour range. A candle close outside the hub confirms the break; the next shelf becomes the target, or an ATR-based fallback when no shelf exists.</p><a href="/learn/what-is-a-hub">How hubs work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">02 · REVERSAL</span><svg viewBox="0 0 300 120" role="img" aria-label="Two tests of a high followed by a move below the neckline"><path d="M18 28 L55 24 L86 66 L122 26 L157 25 L194 66 L230 80 L278 104" fill="none" stroke="#F87171" stroke-width="2.5"/><path d="M55 24H157" stroke="#FBBF24" stroke-dasharray="4 4"/><path d="M86 66H194" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Double tops &amp; bottoms</h3><p>Two tests of a similar high or low create the pattern. A close through the neckline confirms the move; the setup is invalid if price reverses back through its defining level.</p><a href="/learn/double-tops-and-bottoms">How doubles work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">03 · GAP RECLAIM</span><svg viewBox="0 0 300 120" role="img" aria-label="A gap up fades and price reclaims the gap-day high"><path d="M18 20 L52 16 L86 20 L116 74 L148 88 L178 82 L210 58 L242 42 L278 24" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M116 74H278" stroke="#FBBF24" stroke-dasharray="4 4"/></svg></div><h3>Post-earnings gap fade &amp; rip</h3><p>A gap-up fades, then price closes back above the gap-day high. The reclaim is the trigger; the gap structure defines the risk and target.</p><a href="/learn/gap-fade-and-rip">How gap fades work →</a></article></div></div></section><section id="record" class="band"><div class="wrap">
   <div class="kicker">Track record</div>
   <h2>An honest <span>record.</span></h2>
   <p class="sub">Two sets of numbers, kept apart: how today's rules tested over two years, and the live log of every breakout since launch. Nothing is removed.</p>
@@ -1104,27 +919,9 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
   <p class="honest" id="recNote">These are the board's setups, not trading advice, and past setups don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/board">See every setup →</a></p>
 </div></section>
 
-<section id="pricing"><div class="wrap">
-  <div class="kicker">Early access pricing</div>
-  <h2>Free to start. <span>Founding members lock in $99/mo, for life.</span></h2>
-  <div class="plans">
-    <div class="plan">
-      <div class="nm">Free</div>
-      <div class="price">$0</div><div class="per">Free while we test, then a free plan stays</div>
-      <ul><li>Watch up to 3 tickers</li><li>Telegram alerts after each breakout</li><li>Setups: stocks inside a hub</li><li>Charts and the full track record</li><li>Options swing plans (free during the beta)</li></ul>
-      <a class="btn ghost" href="#join" data-cta>Join the waitlist</a>
-    </div>
-    <div class="plan pro">
-      <div class="nm">Pro · founding member</div>
-      <div class="price">$99<small>/mo</small></div><div class="per"><s style="opacity:.6">$199</s>, locked in for life when you join before launch</div>
-      <ul><li>Unlimited watchlist</li><li>Pre-close warnings, about 15 min before the close</li><li>All setups: live breakouts and stocks at the edge</li><li>Text &amp; phone-call alerts</li><li>Options swing plans on every setup</li><li>Backtests on any ticker</li></ul>
-      <a class="btn blue" href="#join" data-cta>Join the waitlist</a>
-    </div>
-  </div>
-  <p class="micro" style="margin-top:20px">Nothing to pay today. We'll email you before Pro billing starts, and you can stay on the free plan as long as you like.</p>
-</div></section>
 
-<section id="faq" class="band"><div class="wrap">
+
+<section id="discipline"><div class="wrap discipline-wrap"><div class="kicker">The discipline</div><h2>Most days, <span>the right move is no move.</span></h2><p class="sub">A setup is not a signal to force a trade. Wait for the close, check the plan, define the risk, and be willing to do nothing.</p><div class="discipline-grid"><div class="discipline-item"><b>Wait for confirmation</b><span>Wicks can test a level. A completed candle close is what confirms the breakout.</span></div><div class="discipline-item"><b>Know the exit first</b><span>Identify the target and invalidation before deciding whether the trade is worth taking.</span></div><div class="discipline-item"><b>Respect the risk</b><span>Size the position around the amount you can afford to lose. Passing is a valid decision.</span></div></div><div class="discipline-cta"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><span>Educational tools, not financial advice.</span></div></div></section><section id="faq" class="band"><div class="wrap">
   <div class="kicker">FAQ</div>
   <h2>Questions, <span>answered.</span></h2>
   <div class="faq">
@@ -1484,5 +1281,5 @@ document.querySelectorAll(".lm").forEach(function (m) {
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") { m.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
 });
 </script>
-</body>
+<script>(function(){const $=id=>document.getElementById(id),money=v=>Number(v).toLocaleString("en-US",{style:"currency",currency:"USD"});fetch("/api/chart/AVGO?tf=4h").then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{const cs=(d.candles||[]).filter(x=>Number.isFinite(x.close)).slice(-72);if(!cs.length)throw Error();const lo=Math.min(...cs.map(x=>x.low)),hi=Math.max(...cs.map(x=>x.high)),span=Math.max(hi-lo,.01),w=900,h=250,px=22,py=18,step=(w-2*px)/cs.length,y=v=>py+(hi-v)/span*(h-2*py);let marks="";cs.forEach((c,i)=>{const x=px+i*step+step/2,up=c.close>=c.open,col=up?"#3DD68C":"#F87171",top=Math.min(y(c.open),y(c.close)),bh=Math.max(2,Math.abs(y(c.open)-y(c.close)));marks+='<line x1="'+x+'" y1="'+y(c.high)+'" x2="'+x+'" y2="'+y(c.low)+'" stroke="'+col+'" stroke-width="1.4"/><rect x="'+(x-step*.28)+'" y="'+top+'" width="'+Math.max(2,step*.56)+'" height="'+bh+'" rx="1" fill="'+col+'"/>'});const last=cs[cs.length-1],prev=cs.length>1?cs[cs.length-2].close:last.open,change=prev?(last.close/prev-1)*100:0;$("heroPrice").textContent=money(last.close);$("heroUpdated").textContent=(change>=0?"+":"")+change.toFixed(2)+"% vs prior 4H close";$("heroUpdated").style.color=change>=0?"#3DD68C":"#F87171";$("heroChart").innerHTML='<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-label="AVGO recent four-hour candles"><path d="M'+px+" "+y(lo)+"H"+(w-px)+" M"+px+" "+y((lo+hi)/2)+"H"+(w-px)+" M"+px+" "+y(hi)+"H"+(w-px)+'" stroke="#28303d" stroke-dasharray="3 5"/>'+marks+'<line x1="'+px+'" x2="'+(w-px)+'" y1="'+y(last.close)+'" y2="'+y(last.close)+'" stroke="#8EA2FF" stroke-dasharray="5 4"/></svg>';const hub=d.status&&d.status.hub;$("heroHub").textContent=hub?"Hub zone · "+money(hub.low)+"–"+money(hub.high):"Current hub zone not available";const target=d.status&&d.status.target;$("heroTarget").textContent=target!=null?"Next target · "+money(target):"No active target"}).catch(()=>{$("heroPrice").textContent="—";$("heroUpdated").textContent="Live quote unavailable";$("heroChart").innerHTML='<div class="chart-loading">AVGO chart data is temporarily unavailable.</div>'});fetch("/api/public/summary").then(r=>r.json()).then(d=>{ $("heroUniverse").textContent=Number(d.universe||0).toLocaleString();$("heroForming").textContent=Number(d.forming||0).toLocaleString();$("heroNear").textContent=Number(d.near||0).toLocaleString();$("heroLive").textContent=Number(d.live||0).toLocaleString()}).catch(()=>{})})();</script></body>
 </html>
