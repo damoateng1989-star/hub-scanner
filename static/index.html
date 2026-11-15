@@ -977,9 +977,11 @@ body.brief-open .sf-hello { display: none; }
 /* morning brief */
 .mbrief { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid #2B2C2F; background: linear-gradient(180deg, #18191C, #141518); }
 .mbrief[hidden] { display: none; }
-.week { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--surface); }
+.week { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: var(--surface); }
 .week[hidden] { display: none; }
-.week-k { margin: 0 0 10px; font: 700 12px var(--sans); letter-spacing: .08em; color: var(--muted); }
+.week-head { display: flex; align-items: center; gap: 9px; margin: 0 0 10px; }
+.week-k { margin: 0; font: 700 12px var(--sans); letter-spacing: .08em; color: var(--muted); }
+.week-new { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font: 800 9px/1 var(--sans); letter-spacing: .09em; }
 .week-row { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
 .week-date { color: var(--muted); font: 600 12px/1.45 var(--sans); white-space: nowrap; }
 .week-copy b { display: block; color: var(--ink); font: 700 14px/1.35 var(--sans); }
@@ -5084,7 +5086,7 @@ function weekDateKey(date) {
 function renderWeek() {
   const el = $("week"); if (!el) return;
   if (!Array.isArray(WEEK) || !WEEK.length) { el.hidden = true; el.innerHTML = ""; return; }
-  el.innerHTML = '<div class="week-k">THIS WEEK</div>' + WEEK.map(item => {
+  el.innerHTML = '<div class="week-head"><div class="week-k">THIS WEEK</div><span class="week-new">NEW</span></div>' + WEEK.map(item => {
     const d = new Date(item.date + "T00:00:00Z");
     const day = d.toLocaleDateString("en-US", {weekday:"short",timeZone:"UTC"});
     const date = d.toLocaleDateString("en-US", {month:"short",day:"numeric",timeZone:"UTC"});
