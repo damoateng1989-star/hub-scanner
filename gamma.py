@@ -12,7 +12,8 @@ import logging
 import re
 import threading
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import requests
 
@@ -49,17 +50,18 @@ def _monthly(date_: date) -> bool:
 
 
 def _slim(contracts: list) -> list:
-    """Raw Cboe entries -> (expiry, is_call, strike, gamma, oi) tuples: a fraction of the memory of the raw dicts."""
+    """Raw Cboe entries -> (expiry, is_call, strike, gamma, oi, volume) tuples."""
     out = []
     for c in contracts:
         if isinstance(c, tuple):
-            out.append(c)
+            out.append(c if len(c) >= 6 else (*c, 0) if len(c) == 5 else c)
             continue
         p = _occ(c.get("option", ""))
         if not p:
             continue
         try:
-            out.append((p[0], p[1], p[2], float(c.get("gamma") or 0), float(c.get("open_interest") or 0)))
+            out.append((p[0], p[1], p[2], float(c.get("gamma") or 0),
+                        float(c.get("open_interest") or 0), float(c.get("volume") or 0)))
         except (TypeError, ValueError):
             continue
     return out
@@ -68,10 +70,10 @@ def _slim(contracts: list) -> list:
 def _compute(contracts: list, spot: float, today: date) -> dict | None:
     """Walls at this spot. Takes raw Cboe entries or the slim tuples from _slim()."""
     by_exp: dict[date, list] = {}
-    for exp, call, k, g, oi in _slim(contracts):
+    for exp, call, k, g, oi, v in _slim(contracts):
         if abs(k - spot) / spot > _BAND:
             continue
-        by_exp.setdefault(exp, []).append((call, k, g, oi))
+        by_exp.setdefault(exp, []).append((call, k, g, oi, v))
     swing = [e for e in by_exp if (e - today).days >= 7]          # no weeklies under 7 days, no 0DTE
     monthlies = [e for e in swing if _monthly(e)]
     exp = min(monthlies) if monthlies else min(swing, default=None)
@@ -79,7 +81,7 @@ def _compute(contracts: list, spot: float, today: date) -> dict | None:
         return None
     call_gex: dict[float, float] = {}
     put_gex: dict[float, float] = {}
-    for call, k, g, oi in by_exp[exp]:
+    for call, k, g, oi, v in by_exp[exp]:
         book = call_gex if call else put_gex
         book[k] = book.get(k, 0.0) + g * oi * 100
     call_gex = {k: v for k, v in call_gex.items() if v > 0}
@@ -140,6 +142,41 @@ def walls(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         return _compute(contracts, float(spot), date.today())
     except Exception as e:
         log.warning("walls compute failed for %s: %s", symbol, e)
+        return None
+
+
+def flow_proxy(symbol: str, spot: float | None, direction: int) -> dict | None:
+    """Volume-vs-OI proxy from the delayed Cboe chain, not Pulse/tape flow.
+    Returns {call_voi, put_voi, side, expiry} or None. Never raises."""
+    try:
+        if not spot or float(spot) <= 0:
+            return None
+        sym = (symbol or "").upper()
+        with _LOCK:
+            contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            return None
+        today_ny = datetime.now(ZoneInfo("America/New_York")).date()
+        expiries = sorted({x[0] for x in contracts
+                           if len(x) >= 6 and (x[0] - today_ny).days >= 1 and x[5] > 0})
+        if not expiries:
+            return None
+        exp = expiries[0]
+        near = [x for x in contracts if len(x) >= 6 and x[0] == exp
+                and abs(float(x[2]) - float(spot)) / float(spot) <= 0.10]
+        if not near or not any(x[5] > 0 for x in near):
+            return None
+        totals = {True: [0.0, 0.0], False: [0.0, 0.0]}
+        for _, call, strike, gamma_value, oi, volume in near:
+            totals[bool(call)][0] += float(volume or 0)
+            totals[bool(call)][1] += float(oi or 0)
+        call_voi = round(totals[True][0] / totals[True][1], 2) if totals[True][1] > 0 else None
+        put_voi = round(totals[False][0] / totals[False][1], 2) if totals[False][1] > 0 else None
+        side = "call" if call_voi is not None and call_voi > 2 and (put_voi is None or call_voi > put_voi) else (
+               "put" if put_voi is not None and put_voi > 2 and (call_voi is None or put_voi > call_voi) else "none")
+        return {"call_voi": call_voi, "put_voi": put_voi, "side": side, "expiry": exp.isoformat()}
+    except Exception as e:
+        log.warning("flow proxy failed for %s: %s", symbol, e)
         return None
 
 
