@@ -2754,11 +2754,11 @@ function listRow(t) {
   const st=t.status||{}, sec=wlSection(t), key=st.error?"error":(st.state||"none"), liveSetup=liveOther(st);
   const pair=liveSetup?[esc(liveSetup.name),liveSetup.state==="breakout_up"?"--up":"--down"]:(STATES[key]||[key,"--idle"]);
   const label=pair[0],color=pair[1],S=esc(t.symbol),gauge=wlGauge(st,sec,liveSetup),forming=sec!=="play";
-  return '<details class="lrow wl-'+sec+(forming?' wl-forming':'')+'" id="c-'+S+'"'+(OPEN.has(t.symbol)?" open":"")+' ontoggle="this.open ? OPEN.add(\\''+S+'\\') : OPEN.delete(\\''+S+'\\')">'+
-    '<summary><span class="s">'+S+'<small>'+money(st.last_close)+'</small></span>'+
-    '<span class="one">'+wlOneLine(st,sec)+'</span><span class="wl-gauge">'+gauge+'</span>'+
-    '<span class="badge" style="--c: var('+color+')">'+label+'</span><span class="chev">›</span></summary>'+
-    '<div class="body">'+details(t)+'</div></details>';
+  return `<details class="lrow wl-${sec}${forming?" wl-forming":""}" id="c-${S}"${OPEN.has(t.symbol)?" open":""} ontoggle="this.open ? OPEN.add('${S}') : OPEN.delete('${S}')">
+    <summary><span class="s">${S}<small>${money(st.last_close)}</small></span>
+      <span class="one">${wlOneLine(st,sec)}</span><span class="wl-gauge">${gauge}</span>
+      <span class="badge" style="--c: var(${color})">${label}</span><span class="chev">›</span></summary>
+    <div class="body">${details(t)}</div></details>`;
 }
 function wlProgress(t){const st=t.status||{},x=liveOther(st)||((st.state==="breakout_up"||st.state==="breakdown")?st:null);if(!x)return-1;const p=Number(st.last_close),e=Number(x.edge),tar=Number(x.target);if(!Number.isFinite(p)||!Number.isFinite(e)||!Number.isFinite(tar)||tar===e)return-1;return Math.max(0,Math.min(1,x.state==="breakdown"?(e-p)/(e-tar):(p-e)/(tar-e)));}
 function render() {
