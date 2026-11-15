@@ -67,6 +67,17 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
 .wordmark em { font-size: 17px; color: var(--ink2); }
 .navlinks { display: flex; gap: 26px; font-size: 12.5px; }
 .navlinks a { color: var(--ink2); text-decoration: none; white-space: nowrap; } .navlinks a:hover { color: var(--ink); }
+.navlinks a { position: relative; }
+.navlinks a.on { color: var(--ink); }
+.navlinks a.on::after { /* Bright variant: full-width gradient bar */
+  content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, #2F54EB, #8EA2FF 55%, #C7D2FE);
+}
+.navlinks a.on::before { /* Matching blurred gradient halo */
+  content: ""; position: absolute; left: -6%; right: -6%; bottom: -14px; height: 9px; border-radius: 6px;
+  background: linear-gradient(90deg, #2F54EB, #8EA2FF 55%, #C7D2FE);
+  filter: blur(12px); opacity: .7;
+}
 .navend { display: flex; align-items: center; gap: 16px; font-size: 12.5px; }
 .navend .signin { color: var(--ink2); text-decoration: none; } .navend .signin:hover { color: var(--ink); }
 .btn { display: inline-block; font: 600 15px var(--sans); padding: 12px 22px; border-radius: 10px; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: transform .15s, opacity .15s; }
@@ -1468,6 +1479,23 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
   if (!btn || !nav) return;
   btn.addEventListener("click", () => { const open = nav.classList.toggle("open"); btn.setAttribute("aria-expanded", String(open)); });
   document.querySelectorAll(".navlinks a").forEach(a => a.addEventListener("click", () => { nav.classList.remove("open"); btn.setAttribute("aria-expanded", "false"); }));
+})();
+</script>
+<script>
+// Nav glow: active landing section (Patch 101).
+(function () {
+  const links = Array.from(document.querySelectorAll(".navlinks a[href^='#']"))
+    .filter(a => ["#how", "#pricing", "#faq"].includes(a.getAttribute("href")));
+  if (!links.length) return;
+  const set = id => links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === id));
+  links.forEach(a => a.addEventListener("click", () => set(a.getAttribute("href"))));
+  const secs = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+  if ("IntersectionObserver" in window && secs.length) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => { if (en.isIntersecting) set("#" + en.target.id); });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    secs.forEach(section => io.observe(section));
+  }
 })();
 </script>
 <script>
