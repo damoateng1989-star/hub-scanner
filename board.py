@@ -661,8 +661,12 @@ def _forming(sym: str):
 
 
 def warm_charts(symbols: list[str] | None = None):
-    """After a scan: build the 4H charts for watchlist stocks so the panel opens instantly."""
+    """After a scan or startup: build 4H watchlist charts so the panel opens instantly."""
     syms = symbols if symbols is not None else [r["symbol"] for r in db.list_tickers()]
+    try:
+        scanner.prime_bars(syms[:150])
+    except Exception as e:
+        log.warning("chart-bar prime failed; using per-symbol loads: %s", e)
     n = 0
     for s in syms[:150]:
         try:
