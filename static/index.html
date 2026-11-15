@@ -4068,7 +4068,7 @@ function initLightweightMapChart() {
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
     const mapPriceLines = [];
-    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const pl=candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Solid,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
+    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const pl=candles.createPriceLine({price:+price,title,color:color,lineWidth:1,lineStyle:style||L.LineStyle.Solid,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
     const css = getComputedStyle(document.documentElement);
     const signal = name => css.getPropertyValue(name).trim();
     const hubColor = signal("--hub") || (light ? "#4f46e5" : "#7f9ec7");
