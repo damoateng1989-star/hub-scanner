@@ -658,6 +658,9 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict, with_news: bool =
             t = L["trade"]
             row.update(edge=round(t["edge"], 2), target=round(t["target"], 2), target_kind=L["target_kind"],
                        candles=L["candles"], since=L["since"], to_target_pct=round((t["target"] / last - 1) * 100, 2))
+            if t.get("shelf"):
+                row["shelf"] = dict(low=round(t["shelf"]["low"], 2), high=round(t["shelf"]["high"], 2),
+                                    level=round(t["shelf"]["level"], 2))
             try:      # Patch 85: the same possible catalyst the alert carries, for the setup card
                 if not with_news:                  # the chart view skips the news call (it can take seconds)
                     raise LookupError
