@@ -203,6 +203,10 @@ async def lifespan(_app: FastAPI):
                                           timezone="America/New_York"),
                   misfire_grace_time=120, coalesce=True, max_instances=1)
     sched.start()
+    # Patch 102: rebuild the in-memory chart cache after every restart, off the request path.
+    _chart_warm = threading.Timer(30, board.warm_charts)
+    _chart_warm.daemon = True
+    _chart_warm.start()
     log.info("Scheduler on: scans %s, pre-close %s ET (provider: %s)",
              ", ".join(SCAN_TIMES), ", ".join(PRECLOSE_TIMES) or "off", data.provider())
     telegram_bot.start_polling(handle_command)
