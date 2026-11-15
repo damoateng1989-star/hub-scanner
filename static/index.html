@@ -4008,8 +4008,8 @@ class MapLabelsPaneView {
         if (W >= MAP_LABEL_MIN_W) {
           const rows = [
             { label: d.shelfLabel, price: d.shelf, color: d.shelfColor },
-            { label: "Trigger", price: d.trig, color: "#E9C46A" },
-            { label: "Stop", price: d.stop, color: "#E5736A" },
+            { label: "Trigger", price: d.trig, color: d.triggerColor },
+            { label: "Stop", price: d.stop, color: d.stopColor },
           ].filter(r => r.price != null && Number.isFinite(+r.price))
            .map(r => ({ ...r, yy: yOf(+r.price) })).filter(r => r.yy != null);
           rows.sort((a, b) => a.yy - b.yy);
@@ -4065,9 +4065,13 @@ function initLightweightMapChart() {
     const hubColor = signal("--hub") || (light ? "#4f46e5" : "#7f9ec7");
     const upColor = signal("--up") || (light ? "#15803d" : "#39c98a");
     const downColor = signal("--down") || (light ? "#dc2626" : "#e46d70");
-    line(D.P.trig,"TRIGGER","#E9C46A");
-    line(D.P.stop,"STOP","#E5736A");
-    line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",D.P.dir === -1 ? downColor : upColor);
+    // One source of truth for each plotted level: line, axis marker and chart label.
+    const triggerColor = "#E9C46A";
+    const stopColor = "#E5736A";
+    const shelfColor = D.P.dir === -1 ? downColor : upColor;
+    line(D.P.trig,"TRIGGER",triggerColor);
+    line(D.P.stop,"STOP",stopColor);
+    line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",shelfColor);
     if(D.P.hub){
       line(D.P.hub.high,"HUB HIGH",hubColor,L.LineStyle.Dotted);
       line(D.P.hub.low,"HUB LOW",hubColor,L.LineStyle.Dotted);
@@ -4088,8 +4092,9 @@ function initLightweightMapChart() {
           hub: D.P.hub, hubColor,
           shelf: D.P.shelf,
           shelfLabel: D.P.atrTarget ? "Target" : "Next shelf",
-          shelfColor: D.P.dir === -1 ? downColor : upColor,
-          trig: D.P.trig, stop: D.P.stop,
+          shelfColor,
+          trig: D.P.trig, triggerColor,
+          stop: D.P.stop, stopColor,
           bandText: light ? "#141412" : "#FFFFFF",
         }));
         mapPriceLines.forEach(pl => pl.applyOptions({axisLabelVisible:false}));
