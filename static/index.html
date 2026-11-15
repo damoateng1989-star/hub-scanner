@@ -4277,7 +4277,7 @@ document.addEventListener("pointerdown", (e) => { if (MAP_POP && !e.target.close
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && MAP_POP) { e.stopImmediatePropagation(); e.preventDefault(); mapPopClose(); } }, true);   // Escape closes the pop-out, not the whole panel
 function mapSideHTML(P, st, chart) {
   const sym = P.sym, lines = [];
-  const titles = {earn: "Earnings", rec: `${sym}'s past breakouts`, mkt: "Market & sector", news: "Latest news", walls: "Options walls"};
+  const titles = {earn: "Earnings", rec: `${sym}'s past breakouts`, mkt: "Market & sector", news: "Latest news", walls: "Options walls", flow: "Flow at the breakout"};
   const line = (k, icon, text, detail, tone) => {
     if (detail) MAP_CTXD[k] = {title: titles[k] || k, icon, html: detail};
     lines.push(`<div class="mp-cx ${tone || ""} ${MAP_POP === k ? "open" : ""}" data-k="${k}">
@@ -4327,6 +4327,17 @@ function mapSideHTML(P, st, chart) {
     const pct = (v) => `${v >= P.px ? "+" : ""}${((v / P.px - 1) * 100).toFixed(1)}%`, w = g.call_wall || g.put_wall;
     line("walls", "🧱", `${g.call_wall ? "Call" : "Put"} wall ${money(w)} (${pct(w)})`,
       (g.call_wall ? `Call wall ${money(g.call_wall)} (${pct(g.call_wall)}). ` : "") + (g.put_wall ? `Put wall ${money(g.put_wall)} (${pct(g.put_wall)}). ` : "") + "Strikes with the most open options; price often stalls near them.");
+  }
+  // flow at the breakout (Patch 112): the fact only — no "Confirms" pill until the Lab gate passes
+  const br = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+  if (br && br.flow) {
+    const f = br.flow, exp = f.expiry ? new Date(f.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "";
+    const side = f.side === "call" ? `unusual call volume — ${f.call_voi.toFixed(1)}× open interest on the ${exp} calls`
+      : f.side === "put" ? `unusual put volume — ${f.put_voi.toFixed(1)}× open interest on the ${exp} puts`
+      : "no unusual flow";
+    const when = f.breakout_date ? new Date(f.breakout_date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}) : "the breakout day";
+    line("flow", "📊", `Flow at the breakout: ${side}.`,
+      `Measured on ${when}, from the options chain. A past fact, not a live reading.`, "");
   }
   if (!lines.length) return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div><p class="mp-scn">Checking earnings, news and the market…</p></div>`;
   return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div>${lines.join("")}</div>`;
