@@ -4044,7 +4044,8 @@ class MapLabelsPaneView {
           const yEdge = yOf(d.retest.edge);
           if (yEdge != null && yEdge >= 0 && yEdge <= H) {
             const text = d.retest.near ? "RETEST NOW" : "RETEST";
-            const green = d.shelfColor;
+            // Monochrome button, not a level: ink fill, background text. (Patch 125.)
+            const ink = document.documentElement.dataset.theme === "light" ? "#141412" : "#FFFFFF";
             const bg = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
             ctx.font = "700 11px 'JetBrains Mono',ui-monospace,monospace";
             ctx.textBaseline = "middle";
@@ -4053,15 +4054,14 @@ class MapLabelsPaneView {
             const tagY = yEdge - 12;
             MAP_RETEST_BOX = { x: tagX, y: tagY, w: tagW, h: 24 };
             ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, 24, 12);
-            if (d.retest.near) { ctx.fillStyle = green; ctx.fill(); }
-            else { ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = green; ctx.stroke(); }
-            ctx.fillStyle = d.retest.near ? bg : green;
+            ctx.fillStyle = ink; ctx.fill();
+            ctx.fillStyle = bg;
             ctx.fillText(text, tagX + 10, yEdge);
             if (d.retest.near && d.lastTime != null) {
               const xLast = chart && chart.timeScale().timeToCoordinate(d.lastTime);
               if (xLast != null && xLast >= 0 && xLast <= W) {
-                ctx.beginPath(); ctx.arc(xLast, yEdge, 7, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = green; ctx.stroke();
-                ctx.beginPath(); ctx.arc(xLast, yEdge, 3, 0, Math.PI * 2); ctx.fillStyle = green; ctx.fill();
+                ctx.beginPath(); ctx.arc(xLast, yEdge, 7, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.stroke();
+                ctx.beginPath(); ctx.arc(xLast, yEdge, 3, 0, Math.PI * 2); ctx.fillStyle = ink; ctx.fill();
               }
             }
           }
