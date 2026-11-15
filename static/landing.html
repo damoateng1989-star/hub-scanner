@@ -861,6 +861,15 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
  text-shadow:0 0 10px rgba(70,145,255,.48),0 0 24px rgba(37,99,235,.28)!important;
 }
 
+
+/* Restore oversized background WAIT and make the footer brand stamp visible */
+.hero.ns.hcx{isolation:isolate}
+.hero.ns.hcx .hx-ghost{z-index:0;top:48%;color:rgba(141,187,255,.075);font-size:clamp(150px,34vw,360px);letter-spacing:-.055em;text-shadow:0 0 70px rgba(37,99,235,.12)}
+html[data-theme="light"] .hero.ns.hcx .hx-ghost{color:rgba(37,99,235,.09);text-shadow:0 0 70px rgba(37,99,235,.10)}
+footer .ft-giant{color:rgba(141,187,255,.16);background:radial-gradient(60% 95% at 50% 100%,rgba(47,84,235,.24),rgba(47,84,235,0) 70%);text-shadow:0 0 55px rgba(37,99,235,.12)}
+html[data-theme="light"] footer .ft-giant{color:rgba(37,99,235,.18)}
+@media(max-width:640px){.hero.ns.hcx .hx-ghost{font-size:clamp(116px,31vw,190px);top:43%}.ft-giant{font-size:20vw}}
+
 </style>
 </head>
 <body>
@@ -872,7 +881,7 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
   <div class="navend"><a class="signin" href="/login">Sign in</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch theme"><span aria-hidden="true">☼</span></button><span id="navEnd" class="navend"><a class="btn sm blue" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
-<header class="hero ns hcx"><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We <span class="hx-2">watch your setup</span><br>while you go do other things.</h1><p class="lede">NextShelf is not a signal, it’s a <span class="hx-2">tap on the shoulder</span> — <strong>hey, check that setup, something is happening.</strong> One setup, the rules for it, and the record. Built for swing traders with day jobs.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market" id="heroMarket"><div class="hero-market-head"><div><span class="kicker">AVGO · 4H · live chart</span><h2>AVGO <span>· 4H</span></h2></div><div class="hero-quote"><b id="heroPrice">Loading…</b><small id="heroUpdated">Market data loading</small></div></div><div class="hero-chart" id="heroChart" role="img" aria-label="AVGO four-hour candlestick chart"><div class="chart-loading">Loading AVGO price history…</div></div><div class="hero-market-foot"><span id="heroHub">Hub levels load with chart data</span><span id="heroTarget">Target shown when available</span></div></div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
+<header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">WAIT</div><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We <span class="hx-2">watch your setup</span><br>while you go do other things.</h1><p class="lede">NextShelf is not a signal, it’s a <span class="hx-2">tap on the shoulder</span> — <strong>hey, check that setup, something is happening.</strong> One setup, the rules for it, and the record. Built for swing traders with day jobs.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market" id="heroMarket"><div class="hero-market-head"><div><span class="kicker">AVGO · 4H · live chart</span><h2>AVGO <span>· 4H</span></h2></div><div class="hero-quote"><b id="heroPrice">Loading…</b><small id="heroUpdated">Market data loading</small></div></div><div class="hero-chart" id="heroChart" role="img" aria-label="AVGO four-hour candlestick chart"><div class="chart-loading">Loading AVGO price history…</div></div><div class="hero-market-foot"><span id="heroHub">Hub levels load with chart data</span><span id="heroTarget">Target shown when available</span></div></div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
 
 
 <section id="how" class="band"><div class="wrap">
