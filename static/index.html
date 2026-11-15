@@ -4126,8 +4126,8 @@ function initLightweightMapChart() {
     const upColor = signal("--up") || (light ? "#15803d" : "#39c98a");
     const downColor = signal("--down") || (light ? "#dc2626" : "#e46d70");
     // One source of truth for each plotted level: line, axis marker and chart label.
-    const triggerColor = "#E9C46A";
-    const stopColor = "#E5736A";
+    const triggerColor = light ? "#8A6D1B" : "#E9C46A";
+    const stopColor = light ? "#B91C1C" : "#E5736A";
     const shelfColor = D.P.dir === -1 ? downColor : upColor;
     line(D.P.trig,"TRIGGER",triggerColor);
     line(D.P.stop,"STOP",stopColor);
@@ -4144,7 +4144,7 @@ function initLightweightMapChart() {
     if(callWall != null) line(callWall,"CALL WALL",callWallColor,L.LineStyle.Solid);
     if(putWall != null) line(putWall,"PUT WALL",putWallColor,L.LineStyle.Solid);
     if(D.P.obst && !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
-      line(D.P.obst.level,D.P.obst.name || "OBSTACLE","#B6A0E8",L.LineStyle.Solid);
+      line(D.P.obst.level,D.P.obst.name || "OBSTACLE",light ? "#6D28D9" : "#B6A0E8",L.LineStyle.Solid);
     // On-chart hub/level labels. If primitives are unavailable, keep today's axis labels.
     if (candles.attachPrimitive) {
       try {
