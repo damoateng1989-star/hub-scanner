@@ -172,8 +172,8 @@ def flow_proxy(symbol: str, spot: float | None, direction: int) -> dict | None:
             totals[bool(call)][1] += float(oi or 0)
         call_voi = round(totals[True][0] / totals[True][1], 2) if totals[True][1] > 0 else None
         put_voi = round(totals[False][0] / totals[False][1], 2) if totals[False][1] > 0 else None
-        side = "call" if call_voi is not None and call_voi > 2 and (put_voi is None or call_voi > put_voi) else (
-               "put" if put_voi is not None and put_voi > 2 and (call_voi is None or put_voi > call_voi) else "none")
+        side = "call" if call_voi is not None and put_voi is not None and call_voi > 2 and call_voi > put_voi else (
+               "put" if call_voi is not None and put_voi is not None and put_voi > 2 and put_voi > call_voi else "none")
         return {"call_voi": call_voi, "put_voi": put_voi, "side": side, "expiry": exp.isoformat()}
     except Exception as e:
         log.warning("flow proxy failed for %s: %s", symbol, e)
