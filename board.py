@@ -457,7 +457,7 @@ def _log_flow(r: dict, g: dict):
     """Log only the breakout-day (n=0) delayed-chain proxy; failures never affect warm-up."""
     try:
         import re as _re
-        m = _re.search(r"(\\d+)/\\d+", r.get("label") or "")
+        m = _re.search(r"(\d+)/\d+", r.get("label") or "")
         if not m or int(m.group(1)) != 0:
             return
         direction = 1 if r.get("state") == "breakout_up" else -1
