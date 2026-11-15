@@ -1086,6 +1086,7 @@ async def public_hero_chart():
     return dict(
         symbol="AVGO",
         candles=d.get("candles") or [],
+        forming=d.get("forming"),
         status=dict(
             state=st.get("state"),
             direction=st.get("direction"),
