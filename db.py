@@ -264,6 +264,14 @@ def board_row(symbol: str) -> dict | None:
     return dict(r) if r else None
 
 
+# --- flow proxy log
+def flow_for(symbol: str, direction: int, breakout_date: str) -> dict | None:
+    """The flow-proxy row Patch 111 logged for one breakout, or None (no log yet, or the breakout predates Patch 111)."""
+    r = _run("SELECT * FROM flow_log WHERE symbol=? AND direction=? AND breakout_date=?",
+             (symbol, direction, breakout_date)).fetchone()
+    return dict(r) if r else None
+
+
 # --- track record
 def upsert_signal(**f):
     cols = ", ".join(f)
