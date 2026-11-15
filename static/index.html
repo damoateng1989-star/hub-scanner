@@ -3960,7 +3960,8 @@ function mapChart(P, chart, W) {
     if (new Date(last.time * 1000).toISOString().slice(0, 10) === today)
       cs[cs.length - 1] = {...last, close: P.px, high: Math.max(last.high, P.px), low: Math.min(last.low, P.px)};
   }
-  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high].filter(v => v != null);
+  const gammaLevels = GAMMA[P.sym] && GAMMA[P.sym] !== "loading" ? [GAMMA[P.sym].call_wall, GAMMA[P.sym].put_wall] : [];
+  const lv = [P.px, P.trig, P.stop, P.shelf, P.obst && P.obst.level, P.hub && P.hub.low, P.hub && P.hub.high, ...gammaLevels].filter(v => v != null);
   const near = want > 60 ? cs : cs.slice(-24);
   let lo = Math.min(...lv, ...near.map(x => x.low)), hi = Math.max(...lv, ...near.map(x => x.high));
   const pad = (hi - lo) * .04 || hi * .01; lo -= pad; hi += pad;
@@ -4010,6 +4011,8 @@ class MapLabelsPaneView {
             { label: d.shelfLabel, price: d.shelf, color: d.shelfColor },
             { label: "Trigger", price: d.trig, color: d.triggerColor },
             { label: "Stop", price: d.stop, color: d.stopColor },
+            { label: "Call wall", price: d.callWall, color: d.callWallColor },
+            { label: "Put wall", price: d.putWall, color: d.putWallColor },
           ].filter(r => r.price != null && Number.isFinite(+r.price))
            .map(r => ({ ...r, yy: yOf(+r.price) })).filter(r => r.yy != null);
           rows.sort((a, b) => a.yy - b.yy);
@@ -4095,6 +4098,7 @@ function initLightweightMapChart() {
           shelfColor,
           trig: D.P.trig, triggerColor,
           stop: D.P.stop, stopColor,
+          callWall, callWallColor, putWall, putWallColor,
           bandText: light ? "#141412" : "#FFFFFF",
         }));
         mapPriceLines.forEach(pl => pl.applyOptions({axisLabelVisible:false}));
