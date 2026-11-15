@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import threading
+from contextlib import ExitStack
 
 import pandas as pd
 
@@ -38,6 +39,35 @@ def clean_symbol(s: str) -> str:
 _BARS: dict[tuple, tuple[float, pd.DataFrame]] = {}
 _BARS_LOCKS: dict[tuple, threading.Lock] = {}
 BARS_TTL = 90      # seconds: the chart, the Shelf card and the options plan share one download per stock
+
+
+def prime_bars(symbols: list[str]) -> None:
+    """Batch-fetch chart history into the shared cache before warm_charts builds charts."""
+    import time as _t
+
+    syms = list(dict.fromkeys(clean_symbol(s) for s in symbols))
+    if not syms:
+        return
+    keys = [(sym, SCAN_DAYS) for sym in sorted(syms)]
+    # Hold the same locks as load_4h while fetching, so a concurrent scan/chart
+    # waits for this batch rather than issuing duplicate per-symbol requests.
+    with ExitStack() as stack:
+        for key in keys:
+            stack.enter_context(_BARS_LOCKS.setdefault(key, threading.Lock()))
+        try:
+            got = data.get_bars_many(syms, SCAN_DAYS)
+        except Exception as e:
+            log.warning("batched chart-bar prime failed: %s", e)
+            return
+        now = _t.time()
+        for sym, df in got.items():
+            if df is None or df.empty:
+                continue
+            key = (clean_symbol(sym), SCAN_DAYS)
+            _BARS[key] = (now, df)
+        if len(_BARS) > 300:
+            for k in sorted(_BARS, key=lambda k: _BARS[k][0])[:100]:
+                _BARS.pop(k, None)
 
 
 def load_4h(symbol: str, days: int) -> pd.DataFrame:
