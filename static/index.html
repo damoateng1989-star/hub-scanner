@@ -4084,8 +4084,8 @@ function initLightweightMapChart() {
     const putWall = gamma && gamma !== "loading" ? gamma.put_wall : null;
     const callWallColor = light ? "#B7791F" : "#F2C14E";
     const putWallColor = light ? "#7C3AED" : "#B58CFF";
-    if(callWall != null) line(callWall,"CALL WALL",callWallColor,L.LineStyle.Dotted);
-    if(putWall != null) line(putWall,"PUT WALL",putWallColor,L.LineStyle.Dotted);
+    if(callWall != null) line(callWall,"CALL WALL",callWallColor,L.LineStyle.Solid);
+    if(putWall != null) line(putWall,"PUT WALL",putWallColor,L.LineStyle.Solid);
     if(D.P.obst && !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
       line(D.P.obst.level,D.P.obst.name || "OBSTACLE","#B6A0E8",L.LineStyle.Dotted);
     // On-chart hub/level labels. If primitives are unavailable, keep today's axis labels.
