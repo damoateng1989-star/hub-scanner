@@ -7,6 +7,8 @@ import logging
 import os
 import threading
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -451,12 +453,31 @@ def _gamma_input(r: dict) -> dict | None:
     return {"symbol": r["symbol"], "d": d, "edge": edge, "target": r["target"], "price": r.get("last_close")}
 
 
+def _log_flow(r: dict, g: dict):
+    """Log only the breakout-day (n=0) delayed-chain proxy; failures never affect warm-up."""
+    try:
+        import re as _re
+        m = _re.search(r"(\\d+)/\\d+", r.get("label") or "")
+        if not m or int(m.group(1)) != 0:
+            return
+        direction = 1 if r.get("state") == "breakout_up" else -1
+        proxy = gamma.flow_proxy(g["symbol"], g.get("price"), direction)
+        if not proxy:
+            return
+        breakout_date = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
+        db.log_flow(g["symbol"], direction, breakout_date, proxy["call_voi"], proxy["put_voi"],
+                    proxy["side"], proxy["expiry"])
+    except Exception as e:
+        log.warning("flow log failed for %s: %s", r.get("symbol"), e)
+
+
 def _warm_gamma():
     """Fetch gamma walls once a day for fresh confirmed breakouts only (a handful), never the whole universe."""
     try:
         for r in board()["live"]:
             if _fresh_break(r) and (g := _gamma_input(r)):
                 gamma.walls(g["symbol"], g["price"])
+                _log_flow(r, g)
     except Exception as e:
         log.warning("gamma warm-up failed: %s", e)
 
