@@ -853,6 +853,14 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
  font-weight:600;
 }
 
+
+/* Consistent selective blue emphasis across section and card headings */
+.heading-glow{
+ color:#8DBBFF!important;
+ -webkit-text-fill-color:#8DBBFF!important;
+ text-shadow:0 0 10px rgba(70,145,255,.48),0 0 24px rgba(37,99,235,.28)!important;
+}
+
 </style>
 </head>
 <body>
@@ -869,7 +877,7 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
 
 <section id="how" class="band"><div class="wrap">
   <div class="kicker">How it works</div>
-  <h2>Three steps. <span>One clear plan.</span></h2>
+  <h2>Three steps. <span class="heading-glow">One clear plan.</span></h2>
   <div class="steps">
     <div class="step"><div class="num">01</div>
       <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Candles closing inside a hub zone">
@@ -891,7 +899,7 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
         </g>
         <text x="160" y="172" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#5C5B55">4+ candles · closes stay inside</text>
       </svg></div>
-      <h3>A hub <span>forms</span></h3><p>4-hour closes hold inside a tight range for at least 4 four-hour candles. The stock is coiling, and there's no trade yet.</p></div>
+      <h3>A hub <span class="heading-glow">forms</span></h3><p>4-hour closes hold inside a tight range for at least 4 four-hour candles. The stock is coiling, and there's no trade yet.</p></div>
     <div class="step"><div class="num">02</div>
       <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A wick pokes above the hub but only a close counts as a breakout">
         <rect x="14" y="90" width="292" height="60" fill="#2F54EB" opacity="0.07"/>
@@ -910,7 +918,7 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
         <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#000000">wick: not a setup</text>
         <text x="238" y="186" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#141412">close: breakout</text>
       </svg></div>
-      <h3>A candle <span>closes</span> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
+      <h3>A candle <span class="heading-glow">closes</span> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
     <div class="step"><div class="num">03</div>
       <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Price breaks out of the hub and travels to the shelf target">
         <rect x="14" y="140" width="110" height="38" fill="#2F54EB" opacity="0.07"/>
@@ -930,11 +938,11 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
         <path d="M132,124 C160,108 178,92 200,72" fill="none" stroke="#141412" stroke-width="1.5" stroke-dasharray="5 4"/>
         <path d="M200,72 l-11,1 l7,8 z" fill="#141412"/>
       </svg></div>
-      <h3>It travels <span>to the shelf</span></h3><p>Earlier hubs act as shelves. The nearest one is the target; a close back inside the hub means it failed. Entry, target and exit, set before you enter.</p></div>
-  <div class="step"><div class="num">04</div><div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A planned trade with target and invalidation"><rect x="28" y="28" width="264" height="134" rx="12" fill="#121820" stroke="#283344"/><line x1="48" y1="68" x2="272" y2="68" stroke="#3DD68C" stroke-width="2"/><line x1="48" y1="112" x2="272" y2="112" stroke="#F87171" stroke-width="2"/><line x1="48" y1="90" x2="272" y2="90" stroke="#8EA2FF" stroke-width="2"/><text x="56" y="58" fill="#3DD68C" font-size="11">TARGET</text><text x="56" y="83" fill="#8EA2FF" font-size="11">ENTRY PLAN</text><text x="56" y="132" fill="#F87171" font-size="11">INVALIDATION</text><path d="M220 108l18 -18 14 5 18 -31" fill="none" stroke="#E9EBEF" stroke-width="2.5"/></svg></div><h3>Make <span>your decision</span></h3><p>Review the entry, next shelf and invalidation level. Set your own risk, place your order—or pass. The tool informs the decision; it never makes it for you.</p></div></div>
+      <h3>It travels <span class="heading-glow">to the shelf</span></h3><p>Earlier hubs act as shelves. The nearest one is the target; a close back inside the hub means it failed. Entry, target and exit, set before you enter.</p></div>
+  <div class="step"><div class="num">04</div><div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A planned trade with target and invalidation"><rect x="28" y="28" width="264" height="134" rx="12" fill="#121820" stroke="#283344"/><line x1="48" y1="68" x2="272" y2="68" stroke="#3DD68C" stroke-width="2"/><line x1="48" y1="112" x2="272" y2="112" stroke="#F87171" stroke-width="2"/><line x1="48" y1="90" x2="272" y2="90" stroke="#8EA2FF" stroke-width="2"/><text x="56" y="58" fill="#3DD68C" font-size="11">TARGET</text><text x="56" y="83" fill="#8EA2FF" font-size="11">ENTRY PLAN</text><text x="56" y="132" fill="#F87171" font-size="11">INVALIDATION</text><path d="M220 108l18 -18 14 5 18 -31" fill="none" stroke="#E9EBEF" stroke-width="2.5"/></svg></div><h3>Make <span class="heading-glow">your decision</span></h3><p>Review the entry, next shelf and invalidation level. Set your own risk, place your order—or pass. The tool informs the decision; it never makes it for you.</p></div></div>
 
   <div class="demo-copy">
-    <h3>From hub to alert, <span>on your phone.</span></h3>
+    <h3>From hub to alert, <span class="heading-glow">on your phone.</span></h3>
     <p>Hubs, start to finish: the warning before the close, the confirmation on the close, the target when it hits. On Telegram, or on Pro by text or a phone call. Most days the scanner says nothing. That's the discipline, built in. Two more setups ride alongside: double tops and bottoms, and the post-earnings gap fade &amp; rip.</p>
   </div>
 
@@ -962,9 +970,9 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
 
 
 
-<section id="setups" class="band"><div class="wrap"><div class="kicker">Three setup families</div><h2>Different patterns. <span>One clear plan.</span></h2><p class="sub">Each setup has a defined trigger, target and point where the idea is wrong. No pattern is a promise.</p><div class="setup-grid"><article class="setup-card"><div class="setup-art"><span class="setup-chip">01 · CORE</span><svg viewBox="0 0 300 120" role="img" aria-label="Price consolidating then breaking above a hub"><rect x="18" y="40" width="170" height="48" rx="4" fill="#2563EB" opacity=".12"/><path d="M20 63 L48 56 L76 68 L104 57 L132 65 L160 58 L188 62 L218 34 L244 40 L278 16" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M18 40H188M18 88H188" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Hub breakout</h3><p>A stock coils inside a tight 4-hour range. A candle close outside the hub confirms the break; the next shelf becomes the target, or an ATR-based fallback when no shelf exists.</p><a href="/learn/what-is-a-hub">How hubs work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">02 · REVERSAL</span><svg viewBox="0 0 300 120" role="img" aria-label="Two tests of a high followed by a move below the neckline"><path d="M18 28 L55 24 L86 66 L122 26 L157 25 L194 66 L230 80 L278 104" fill="none" stroke="#F87171" stroke-width="2.5"/><path d="M55 24H157" stroke="#FBBF24" stroke-dasharray="4 4"/><path d="M86 66H194" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Double tops &amp; bottoms</h3><p>Two tests of a similar high or low create the pattern. A close through the neckline confirms the move; the setup is invalid if price reverses back through its defining level.</p><a href="/learn/double-tops-and-bottoms">How doubles work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">03 · GAP RECLAIM</span><svg viewBox="0 0 300 120" role="img" aria-label="A gap up fades and price reclaims the gap-day high"><path d="M18 20 L52 16 L86 20 L116 74 L148 88 L178 82 L210 58 L242 42 L278 24" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M116 74H278" stroke="#FBBF24" stroke-dasharray="4 4"/></svg></div><h3>Post-earnings gap fade &amp; rip</h3><p>A gap-up fades, then price closes back above the gap-day high. The reclaim is the trigger; the gap structure defines the risk and target.</p><a href="/learn/gap-fade-and-rip">How gap fades work →</a></article></div></div></section><section id="record" class="band"><div class="wrap">
+<section id="setups" class="band"><div class="wrap"><div class="kicker">Three setup families</div><h2>Different patterns. <span class="heading-glow">One clear plan.</span></h2><p class="sub">Each setup has a defined trigger, target and point where the idea is wrong. No pattern is a promise.</p><div class="setup-grid"><article class="setup-card"><div class="setup-art"><span class="setup-chip">01 · CORE</span><svg viewBox="0 0 300 120" role="img" aria-label="Price consolidating then breaking above a hub"><rect x="18" y="40" width="170" height="48" rx="4" fill="#2563EB" opacity=".12"/><path d="M20 63 L48 56 L76 68 L104 57 L132 65 L160 58 L188 62 L218 34 L244 40 L278 16" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M18 40H188M18 88H188" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Hub <span class="heading-glow">breakout</span></h3><p>A stock coils inside a tight 4-hour range. A candle close outside the hub confirms the break; the next shelf becomes the target, or an ATR-based fallback when no shelf exists.</p><a href="/learn/what-is-a-hub">How hubs work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">02 · REVERSAL</span><svg viewBox="0 0 300 120" role="img" aria-label="Two tests of a high followed by a move below the neckline"><path d="M18 28 L55 24 L86 66 L122 26 L157 25 L194 66 L230 80 L278 104" fill="none" stroke="#F87171" stroke-width="2.5"/><path d="M55 24H157" stroke="#FBBF24" stroke-dasharray="4 4"/><path d="M86 66H194" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Double tops &amp; <span class="heading-glow">bottoms</span></h3><p>Two tests of a similar high or low create the pattern. A close through the neckline confirms the move; the setup is invalid if price reverses back through its defining level.</p><a href="/learn/double-tops-and-bottoms">How doubles work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">03 · GAP RECLAIM</span><svg viewBox="0 0 300 120" role="img" aria-label="A gap up fades and price reclaims the gap-day high"><path d="M18 20 L52 16 L86 20 L116 74 L148 88 L178 82 L210 58 L242 42 L278 24" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M116 74H278" stroke="#FBBF24" stroke-dasharray="4 4"/></svg></div><h3>Post-earnings <span class="heading-glow">gap fade &amp; rip</span></h3><p>A gap-up fades, then price closes back above the gap-day high. The reclaim is the trigger; the gap structure defines the risk and target.</p><a href="/learn/gap-fade-and-rip">How gap fades work →</a></article></div></div></section><section id="record" class="band"><div class="wrap">
   <div class="kicker">Track record</div>
-  <h2>An honest <span>record.</span></h2>
+  <h2>An honest <span class="heading-glow">record.</span></h2>
   <p class="sub">Two sets of numbers, kept apart: how today's rules tested over two years, and the live log of every breakout since launch. Nothing is removed.</p>
   <div id="recTest" hidden>
     <div class="rec-h"><b id="recTestH">Two-year test of today's rules</b><span id="recTestSub"></span></div>
@@ -983,9 +991,9 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
 
 
 
-<section id="discipline"><div class="wrap discipline-wrap"><div class="kicker">The discipline</div><h2>Most days, <span>the right move is no move.</span></h2><p class="sub">A setup is not a signal to force a trade. Wait for the close, check the plan, define the risk, and be willing to do nothing.</p><div class="discipline-grid"><div class="discipline-item"><b>Wait for confirmation</b><span>Wicks can test a level. A completed candle close is what confirms the breakout.</span></div><div class="discipline-item"><b>Know the exit first</b><span>Identify the target and invalidation before deciding whether the trade is worth taking.</span></div><div class="discipline-item"><b>Respect the risk</b><span>Size the position around the amount you can afford to lose. Passing is a valid decision.</span></div></div><div class="discipline-cta"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><span>Educational tools, not financial advice.</span></div></div></section><section id="faq" class="band"><div class="wrap">
+<section id="discipline"><div class="wrap discipline-wrap"><div class="kicker">The discipline</div><h2>Most days, <span class="heading-glow">the right move is no move.</span></h2><p class="sub">A setup is not a signal to force a trade. Wait for the close, check the plan, define the risk, and be willing to do nothing.</p><div class="discipline-grid"><div class="discipline-item"><b>Wait for confirmation</b><span>Wicks can test a level. A completed candle close is what confirms the breakout.</span></div><div class="discipline-item"><b>Know the exit first</b><span>Identify the target and invalidation before deciding whether the trade is worth taking.</span></div><div class="discipline-item"><b>Respect the risk</b><span>Size the position around the amount you can afford to lose. Passing is a valid decision.</span></div></div><div class="discipline-cta"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><span>Educational tools, not financial advice.</span></div></div></section><section id="faq" class="band"><div class="wrap">
   <div class="kicker">FAQ</div>
-  <h2>Questions, <span>answered.</span></h2>
+  <h2>Questions, <span class="heading-glow">answered.</span></h2>
   <div class="faq">
     <details open><summary>What is a hub?</summary><p>A stretch of at least 4 four-hour candles where every 4-hour candle closes inside a tight range, measured against the stock's own volatility (ATR). It's the stock coiling before a move, and while price is inside, there's no trade.</p></details>
     <details><summary>What is a shelf?</summary><p>An earlier hub. When price breaks out of the current hub, the nearest earlier hub in that direction is where it often heads next, so it becomes the target.</p></details>
@@ -1002,7 +1010,7 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
 
 <div class="final" id="join"><div class="wrap">
   <div class="kicker">Get started</div>
-  <h2>Stop watching the screen. <span>Start watching the setup.</span></h2>
+  <h2>Stop watching the screen. <span class="heading-glow">Start watching the setup.</span></h2>
   <p class="sub" style="margin:14px auto 0" id="joinSub">NextShelf is in a private beta. Join the waitlist and get the free 5-day Hub Breakout Course by email. You'll get in as spots open.</p>
   <form class="join" data-source="footer" novalidate>
     <input type="email" name="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
