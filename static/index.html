@@ -977,6 +977,14 @@ body.brief-open .sf-hello { display: none; }
 /* morning brief */
 .mbrief { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid #2B2C2F; background: linear-gradient(180deg, #18191C, #141518); }
 .mbrief[hidden] { display: none; }
+.week { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--surface); }
+.week[hidden] { display: none; }
+.week-k { margin: 0 0 10px; font: 700 12px var(--sans); letter-spacing: .08em; color: var(--muted); }
+.week-row { display: grid; grid-template-columns: 76px minmax(0,1fr); gap: 12px; padding: 9px 0; border-top: 1px solid var(--line); }
+.week-date { color: var(--muted); font: 600 12px/1.45 var(--sans); white-space: nowrap; }
+.week-copy b { display: block; color: var(--ink); font: 700 14px/1.35 var(--sans); }
+.week-copy small { display: block; margin-top: 2px; color: var(--muted); font: 400 12.5px/1.4 var(--sans); }
+@media (max-width: 420px) { .week { padding: 14px; } .week-row { grid-template-columns: 68px minmax(0,1fr); gap: 8px; } }
 .mb-t { font: 800 17px var(--sans); color: #fff; } .mb-t span { margin-left: 6px; font: 600 13px var(--sans); color: #9AA0AC; }
 .mb-s { margin-top: 3px; color: #A9AEB8; font-size: 14px; }
 .mb-k { margin: 14px 0 7px; font: 700 12.5px var(--sans); color: #9AA0AC; }
@@ -2219,6 +2227,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
     <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div id="phoneNudge"></div>
+  <div class="week" id="week" hidden></div>
   <div class="rule1" id="rule1"></div>
   <div class="mbrief" id="mbrief" hidden></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
@@ -5010,7 +5019,7 @@ function beforeWorkHTML(st) {
     <p class="bw-warn"><b>The trade-off:</b> a stop order fires the moment price touches it, even on a wick that closes back inside the hub. NextShelf's setup waits for the 4-hour <i>close</i>, so this version will catch some false breakouts the alert would skip. Use a day order and set it again each morning, so it never sits there after the setup changes.</p></details>`;
 }
 // ---------------------------------------------------------------- today
-let INFO = null, BOARD = null;
+let INFO = null, BOARD = null, WEEK = null;
 function etNow() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"})); }
 const fmtT = (hm) => { const [h, m] = hm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
 function marketChip() {
@@ -5068,9 +5077,53 @@ Plan (not advice):
   const card = box.closest(".setup"), all = card ? card.querySelectorAll(".todo").length : 0, dn = card ? card.querySelectorAll(".todo.done").length : 0;
   if (card && all) { card.querySelector(".prog span").style.width = Math.round(100 * dn / all) + "%"; const n = card.querySelector(".prog + .note"); if (n) n.textContent = `${dn} of ${all} done`; }
 }
+function weekDateKey(date) {
+  return new Intl.DateTimeFormat("en-CA", {timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(date);
+}
+function renderWeek() {
+  const el = $("week"); if (!el) return;
+  if (!Array.isArray(WEEK) || !WEEK.length) { el.hidden = true; el.innerHTML = ""; return; }
+  el.innerHTML = '<div class="week-k">THIS WEEK</div>' + WEEK.map(item => {
+    const d = new Date(item.date + "T00:00:00Z");
+    const day = d.toLocaleDateString("en-US", {weekday:"short",timeZone:"UTC"});
+    const date = d.toLocaleDateString("en-US", {month:"short",day:"numeric",timeZone:"UTC"});
+    return '<div class="week-row"><div class="week-date">' + day + '<br>' + date + '</div><div class="week-copy"><b>' + esc(item.title) + '</b>' + (item.sub ? '<small>' + esc(item.sub) + '</small>' : '') + '</div></div>';
+  }).join("");
+  el.hidden = false;
+}
+async function loadWeek() {
+  const el = $("week"); if (el) { el.hidden = true; el.innerHTML = ""; }
+  WEEK = null;
+  try {
+    const response = await fetch("/week_events.json");
+    if (!response.ok) throw new Error("Weekly events unavailable");
+    const config = await response.json();
+    if (!config || !Array.isArray(config.notable) || !Array.isArray(config.events)) throw new Error("Invalid weekly events");
+    const symbols = [...new Set([...TICKERS.map(t => t.symbol), ...config.notable].map(x => String(x || "").toUpperCase()).filter(x => /^[A-Z.]{1,10}$/.test(x)))];
+    const earnings = await api("/api/earnings?symbols=" + encodeURIComponent(symbols.join(",")));
+    if (!earnings || typeof earnings !== "object") throw new Error("Earnings unavailable");
+    const today = weekDateKey(new Date()), start = Date.parse(today + "T00:00:00Z");
+    const inWindow = date => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return false;
+      const diff = (Date.parse(date + "T00:00:00Z") - start) / 86400000;
+      return Number.isFinite(diff) && diff >= 0 && diff <= 7;
+    };
+    const rows = [];
+    Object.entries(earnings).forEach(([symbol, item]) => {
+      if (item && inWindow(item.date)) rows.push({date:item.date,title:symbol + " reports",sub:item.when || ""});
+    });
+    config.events.forEach(event => {
+      if (event && inWindow(event.date) && event.title) rows.push({date:event.date,title:event.title,sub:event.sub || ""});
+    });
+    rows.sort((a,b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+    WEEK = rows;
+  } catch (_) { WEEK = null; }
+  renderWeek();
+}
 async function loadToday() {
   renderToday();
   const mb = $("mbrief"); if (mb && !mb.innerHTML.trim()) { mb.hidden = false; mb.innerHTML = '<p class="mb-quiet">Loading the board…</p>'; }
+  loadWeek();
   try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
   renderToday(); renderStrip();
   loadBrief();
@@ -5082,6 +5135,7 @@ function renderToday() {
   const now = etNow();
   $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, <em>${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.</em><small class="hello-sub">${greet}${name}</small>`;
   $("mkt").innerHTML = marketChip();
+  renderWeek();
   renderRule();
   renderKpis();
   renderPhoneNudge();
