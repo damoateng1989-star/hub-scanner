@@ -4022,7 +4022,7 @@ class MapLabelsPaneView {
           ctx.textBaseline = "middle";
           rows.forEach(r => {
             const text = r.label + " $" + (+r.price).toFixed(2);
-            ctx.font = r.primary ? "800 14px Inter,system-ui,sans-serif" : "700 12px Inter,system-ui,sans-serif";
+            ctx.font = r.primary ? "800 10px Inter,system-ui,sans-serif" : "700 12px Inter,system-ui,sans-serif";
             ctx.lineJoin = "round";
             ctx.strokeStyle = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
             ctx.lineWidth = r.primary ? 3.5 : 2.5;
