@@ -3868,7 +3868,7 @@ function mapPlan(sym, st) {
   const k = st.state, h = st.hub, L = LIVE[sym], isLive = !!(LIVE_OPEN && L && L.price != null);
   const px = isLive ? L.price : st.last_close;
   const P = {sym, px, isLive, chg: isLive ? L.change_pct : null, hub: null, trig: null, stop: null, shelf: null, shelfZone: null, obst: null,
-             dir: 1, steps: "none", phase: 0, watch: false, status: "", sub: "", tone: "wait", setupName: "Hub breakout"};
+             dir: 1, steps: "none", phase: 0, watch: false, status: "", sub: "", tone: "wait", setupName: "Hub breakout", retest: null};
   // opened from a double top / bottom card: show that pattern, not the hub
   const fx = BRIEF_FOCUS && BRIEF_FOCUS.startsWith("double") && (st.setups || []).find(x => x.kind === BRIEF_FOCUS);
   if (fx) { mapDoublePlan(P, fx); P.shelfZone = fx.shelf || null; return mapObstacle(P, sym, st); }
@@ -3880,7 +3880,8 @@ function mapPlan(sym, st) {
   if (hubLive) {
     const d = k === "breakout_up" ? 1 : -1, rt = st.retest;
     Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, shelfZone: d === 1 ? st.shelf_up : st.shelf_down, atrTarget: st.target_kind === "atr", stop: d === 1 ? h.high : h.low,
-      steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2});
+      steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2,
+       retest: d === 1 && rt && rt.candles_left > 0 ? {edge: rt.edge, near: !!rt.near} : null});
     if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
       P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (${rt.candles_left} candle${rt.candles_left === 1 ? "" : "s"} left).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
     else { P.status = "Broke down · watch only"; P.sub = "Short breakdowns lost money in the two-year test, so there's no entry plan."; P.tone = "bad"; }
@@ -3980,17 +3981,17 @@ class MapLabelsPrimitive {
   constructor(data) { this._d = data; this._views = []; }
   attached({ chart, series }) { this._chart = chart; this._series = series; }
   detached() { this._chart = null; this._series = null; this._views = []; }
-  updateAllViews() { this._views = [new MapLabelsPaneView(this._series, this._d)]; }
+  updateAllViews() { this._views = [new MapLabelsPaneView(this._series, this._d, this._chart)]; }
   paneViews() { return this._views; }
 }
 class MapLabelsPaneView {
-  constructor(series, d) { this._s = series; this._d = d; }
+  constructor(series, d, chart) { this._s = series; this._d = d; this._chart = chart; }
   update() {}
   renderer() {
     const s = this._s, d = this._d;
     return { draw(target) {
       target.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, horizontalPixelRatio }) => {
-        const W = bitmapSize.width / horizontalPixelRatio;
+        const W = bitmapSize.width / horizontalPixelRatio, H = bitmapSize.height / horizontalPixelRatio;
         const yOf = p => { const v = s.priceToCoordinate(p); return v == null ? null : v; };
         ctx.save();
         if (d.hub) {
@@ -4014,6 +4015,31 @@ class MapLabelsPaneView {
             if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(0, yHi, W, yLo - yHi, 6); ctx.fill(); }
             else ctx.fillRect(0, yHi, W, yLo - yHi);
             ctx.globalAlpha = 1;
+          }
+        }
+        if (d.retest && d.retest.edge != null && W >= MAP_LABEL_MIN_W) {
+          const yEdge = yOf(d.retest.edge);
+          if (yEdge != null && yEdge >= 0 && yEdge <= H) {
+            const text = d.retest.near ? "RETEST NOW" : "RETEST";
+            const green = d.shelfColor;
+            const bg = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
+            ctx.font = "700 11px 'JetBrains Mono',ui-monospace,monospace";
+            ctx.textBaseline = "middle";
+            const tagW = ctx.measureText(text).width + 20;
+            const tagX = (W - 178) - 12 - tagW;
+            const tagY = yEdge - 12;
+            ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, 24, 12);
+            if (d.retest.near) { ctx.fillStyle = green; ctx.fill(); }
+            else { ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = green; ctx.stroke(); }
+            ctx.fillStyle = d.retest.near ? bg : green;
+            ctx.fillText(text, tagX + 10, yEdge);
+            if (d.retest.near && d.lastTime != null) {
+              const xLast = this._chart && this._chart.timeScale().timeToCoordinate(d.lastTime);
+              if (xLast != null && xLast >= 0 && xLast <= W) {
+                ctx.beginPath(); ctx.arc(xLast, yEdge, 7, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = green; ctx.stroke();
+                ctx.beginPath(); ctx.arc(xLast, yEdge, 3, 0, Math.PI * 2); ctx.fillStyle = green; ctx.fill();
+              }
+            }
           }
         }
         if (W >= MAP_LABEL_MIN_W) {
@@ -4117,6 +4143,8 @@ function initLightweightMapChart() {
           shelfLabel: D.P.atrTarget ? "Target" : "Next shelf",
           shelfColor,
           shelfZone: D.P.shelfZone || null,
+          retest: D.P.retest || null,
+          lastTime: D.cs && D.cs.length ? +D.cs[D.cs.length - 1].time : null,
           trig: D.P.trig, triggerColor,
           stop: D.P.stop, stopColor,
           callWall, callWallColor, putWall, putWallColor,
