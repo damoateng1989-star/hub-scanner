@@ -4008,9 +4008,9 @@ class MapLabelsPaneView {
         }
         if (W >= MAP_LABEL_MIN_W) {
           const rows = [
-            { label: d.shelfLabel, price: d.shelf, color: d.shelfColor },
-            { label: "Trigger", price: d.trig, color: d.triggerColor },
-            { label: "Stop", price: d.stop, color: d.stopColor },
+            { label: d.shelfLabel, price: d.shelf, color: d.shelfColor, primary: true },
+            { label: "Trigger", price: d.trig, color: d.triggerColor, primary: true },
+            { label: "Stop", price: d.stop, color: d.stopColor, primary: true },
             { label: "Call wall", price: d.callWall, color: d.callWallColor },
             { label: "Put wall", price: d.putWall, color: d.putWallColor },
           ].filter(r => r.price != null && Number.isFinite(+r.price))
@@ -4019,11 +4019,17 @@ class MapLabelsPaneView {
           for (let i = 1; i < rows.length; i++)
             if (rows[i].yy - rows[i - 1].yy < MAP_LABEL_GAP) rows[i].yy = rows[i - 1].yy + MAP_LABEL_GAP;
           const x0 = W - 178;
-          ctx.font = "700 12px Inter,system-ui,sans-serif"; ctx.textBaseline = "middle";
+          ctx.textBaseline = "middle";
           rows.forEach(r => {
+            const text = r.label + " $" + (+r.price).toFixed(2);
+            ctx.font = r.primary ? "800 14px Inter,system-ui,sans-serif" : "700 12px Inter,system-ui,sans-serif";
+            ctx.lineJoin = "round";
+            ctx.strokeStyle = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
+            ctx.lineWidth = r.primary ? 3.5 : 2.5;
+            ctx.strokeText(text, x0 + 14, r.yy);
             ctx.fillStyle = r.color;
-            ctx.beginPath(); ctx.arc(x0 + 4, r.yy, 3.5, 0, Math.PI * 2); ctx.fill();
-            ctx.fillText(r.label + " $" + (+r.price).toFixed(2), x0 + 14, r.yy);
+            ctx.beginPath(); ctx.arc(x0 + 4, r.yy, r.primary ? 4 : 3.5, 0, Math.PI * 2); ctx.fill();
+            ctx.fillText(text, x0 + 14, r.yy);
           });
         }
         ctx.restore();
