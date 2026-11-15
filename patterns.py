@@ -12,6 +12,7 @@ import pandas as pd
 
 import engine
 import news
+import db
 
 KINDS = {
     "hub":        "Hub",
@@ -670,6 +671,15 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict, with_news: bool =
                                            time=cat["time"], tag_label=cat["tag_label"])
             except Exception:
                 pass      # news never breaks the board
+            try:      # Patch 112: the flow fact Patch 111 logged on the breakout day, for the card and the alert.
+                d = 1 if L["state"] == "breakout_up" else -1
+                bdate = pd.Timestamp(L["since"]).date().isoformat()   # New York date of the breakout candle
+                f = db.flow_for(sym, d, bdate)
+                if f:
+                    row["flow"] = dict(call_voi=round(f["call_voi"], 2), put_voi=round(f["put_voi"], 2),
+                                       side=f["side"], expiry=f["expiry"], breakout_date=f["breakout_date"])
+            except Exception:
+                pass      # flow never breaks the board
             if k.startswith("double"):               # the far side of the pattern (the two lows / highs): the A-setup stop
                 row["far"] = round(t["edge"] - t["direction"] * (t["hub"]["high"] - t["hub"]["low"]), 2)
             if k.startswith("double") and t["outcome"] == "pending":
