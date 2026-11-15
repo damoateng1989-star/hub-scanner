@@ -63,6 +63,12 @@ with _lock:
         id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, symbol TEXT, price REAL, direction INTEGER,
         label TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP, fired_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS flow_log (
+        symbol TEXT, direction INTEGER, breakout_date TEXT,
+        call_voi REAL, put_voi REAL, side TEXT, expiry TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (symbol, direction, breakout_date)
+    );
     CREATE TABLE IF NOT EXISTS signals (
         id TEXT PRIMARY KEY, symbol TEXT, direction INTEGER,
         hub_low REAL, hub_high REAL, hub_sessions INTEGER,
@@ -265,11 +271,23 @@ def board_row(symbol: str) -> dict | None:
 
 
 # --- flow proxy log
+def log_flow(symbol: str, direction: int, breakout_date: str, call_voi: float | None,
+             put_voi: float | None, side: str, expiry: str):
+    """First write wins: preserve the breakout day's delayed-chain snapshot; never overwrite it later."""
+    _run("""INSERT OR IGNORE INTO flow_log
+            (symbol, direction, breakout_date, call_voi, put_voi, side, expiry)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
+         (symbol, direction, breakout_date, call_voi, put_voi, side, expiry))
+
+
 def flow_for(symbol: str, direction: int, breakout_date: str) -> dict | None:
-    """The flow-proxy row Patch 111 logged for one breakout, or None (no log yet, or the breakout predates Patch 111)."""
-    r = _run("SELECT * FROM flow_log WHERE symbol=? AND direction=? AND breakout_date=?",
-             (symbol, direction, breakout_date)).fetchone()
-    return dict(r) if r else None
+    """The flow-proxy row logged for one breakout, or None if no log exists."""
+    try:
+        r = _run("SELECT * FROM flow_log WHERE symbol=? AND direction=? AND breakout_date=?",
+                 (symbol, direction, breakout_date)).fetchone()
+        return dict(r) if r else None
+    except sqlite3.OperationalError:
+        return None
 
 
 # --- track record
