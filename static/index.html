@@ -4058,7 +4058,8 @@ function initLightweightMapChart() {
     if (volPane) volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
-    const mapPriceLines = [];\n    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const pl=candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Dashed,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
+    const mapPriceLines = [];
+    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const pl=candles.createPriceLine({price:+price,title,lineColor:color,lineWidth:1,lineStyle:style||L.LineStyle.Dashed,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
     const css = getComputedStyle(document.documentElement);
     const signal = name => css.getPropertyValue(name).trim();
     const hubColor = signal("--hub") || (light ? "#4f46e5" : "#7f9ec7");
@@ -4095,21 +4096,8 @@ function initLightweightMapChart() {
       } catch (e) { console.warn("NextShelf map labels unavailable", e); }
     }
     chart.timeScale().fitContent();
-    // Expand the initial price scale to include every actionable level as well as candles.
-    // Price lines do not affect Lightweight Charts' candle auto-fit range.
-    const ps = chart.priceScale("right");
-    const vr = ps && ps.getVisibleRange ? ps.getVisibleRange() : null;
-    const lv = [D.P.trig, D.P.stop, D.P.shelf,
-                D.P.hub && D.P.hub.high, D.P.hub && D.P.hub.low,
-                callWall, putWall, D.P.obst && D.P.obst.level]
-      .filter(v => v != null && Number.isFinite(+v)).map(Number);
-    if (vr && lv.length) {
-      const lo = Math.min(vr.from, ...lv), hi = Math.max(vr.to, ...lv);
-      if (lo < vr.from || hi > vr.to) {
-        const pad = (hi - lo) * .04 || Math.abs(hi) * .01 || 1;
-        if (ps.setVisibleRange) ps.setVisibleRange({ from: lo - pad, to: hi + pad });
-      }
-    }
+    // Keep the chart's supported candle autoscale behavior. Price lines and on-chart
+    // labels remain available without relying on non-public price-scale range APIs.
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
       const bar=param.seriesData&&param.seriesData.get(candles);
