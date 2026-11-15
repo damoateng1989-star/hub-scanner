@@ -1,0 +1,13 @@
+{
+  "_note": "Market events only — never personal deadlines (Porkbun stays out). The code ignores keys starting with _.",
+  "notable": [
+    "DELL"
+  ],
+  "events": [
+    {
+      "date": "2026-11-20",
+      "title": "SNDK splits 8-for-1",
+      "sub": "trades split-adjusted, ~$166"
+    }
+  ]
+}
