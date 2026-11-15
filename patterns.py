@@ -676,7 +676,8 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict, with_news: bool =
                 bdate = pd.Timestamp(L["since"]).date().isoformat()   # New York date of the breakout candle
                 f = db.flow_for(sym, d, bdate)
                 if f:
-                    row["flow"] = dict(call_voi=round(f["call_voi"], 2), put_voi=round(f["put_voi"], 2),
+                    row["flow"] = dict(call_voi=round(f["call_voi"], 2) if f["call_voi"] is not None else None,
+                                       put_voi=round(f["put_voi"], 2) if f["put_voi"] is not None else None,
                                        side=f["side"], expiry=f["expiry"], breakout_date=f["breakout_date"])
             except Exception:
                 pass      # flow never breaks the board
