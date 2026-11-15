@@ -4107,7 +4107,7 @@ function initLightweightMapChart() {
     const colors = candleColors(), up = colors[0] || "#22C55E", down = colors[1] || "#EF4444";
     const chart = L.createChart(host, {
       width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 390,
-      layout: {background:{type:"solid",color:bg}, textColor:light?"#5b6472":"#9AA0AC", fontFamily:'"JetBrains Mono",ui-monospace,monospace', fontSize:11, attributionLogo:false},
+      layout: {background:{type:"solid",color:bg}, textColor:light?"#5b6472":"#9AA0AC", fontFamily:'"JetBrains Mono",ui-monospace,monospace', fontSize:11},
       grid:{vertLines:{color:grid},horzLines:{color:grid}},
       rightPriceScale:{borderColor:grid,scaleMargins:{top:.08,bottom:.08}},
       timeScale:{borderColor:grid,timeVisible:!D.daily,secondsVisible:false,rightOffset:4,barSpacing:Math.max(4,Math.min(12,host.clientWidth/(D.cs.length+10))),fixLeftEdge:false},
