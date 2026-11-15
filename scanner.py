@@ -692,6 +692,14 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                       "target": pend["target"], "price": close2})
                     if (gl := gamma.line(g)):
                         msg += "\n" + gl
+                    try:      # Patch 112: the flow fact Patch 111 logged on the breakout day
+                        bdate = c4.index[i0].tz_convert("America/New_York").date().isoformat()
+                        fl = db.flow_for(sym, d, bdate)
+                        if fl and fl["side"] in ("call", "put"):
+                            voi = fl["call_voi"] if fl["side"] == "call" else fl["put_voi"]
+                            msg += f"\nFlow: {fl['side']} volume {voi:.1f}× OI at the breakout"
+                    except Exception:
+                        pass      # flow never breaks an alert
                     reached2 = (close2 - pend["target"]) * d >= 0
                     speech = None
                     extra = None
@@ -728,6 +736,14 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                       "target": dbl["target"], "price": close2})
                     if (gl := gamma.line(g)):
                         msg += "\n" + gl
+                    try:      # Patch 112: the flow fact Patch 111 logged on the breakout day
+                        bdate = c4.index[i0].tz_convert("America/New_York").date().isoformat()
+                        fl = db.flow_for(sym, d, bdate)
+                        if fl and fl["side"] in ("call", "put"):
+                            voi = fl["call_voi"] if fl["side"] == "call" else fl["put_voi"]
+                            msg += f"\nFlow: {fl['side']} volume {voi:.1f}× OI at the breakout"
+                    except Exception:
+                        pass      # flow never breaks an alert
                     reached2 = (close2 - dbl["target"]) * d >= 0
                     speech = None
                     extra = None
