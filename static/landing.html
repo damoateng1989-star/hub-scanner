@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta name="theme-color" content="#0A0A0A">
-<title>NextShelf: Pick a setup, trade it for years · Hub-breakout alerts</title>
-<meta name="description" content="Built for swing traders with day jobs. NextShelf sweeps 400 stocks after every 4-hour close, from a 543-stock universe, for tight ranges, warns you before a breakout closes, and targets the next shelf.">
+<title>NextShelf — Will your next trade also work?</title>
+<meta name="description" content="NextShelf scans stocks for tight ranges, warns before breakout candles close, and maps the next shelf target. Find, review and plan setups in one place.">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1257,7 +1257,7 @@ nav.top { background: rgba(10,10,10,.92); }
 // Nav glow: active landing section (Patch 101).
 (function () {
   const links = Array.from(document.querySelectorAll(".navlinks a[href^='#']"))
-     .filter(a => ["#how", "#record", "#faq"].includes(a.getAttribute("href")));
+     .filter(a => ["#how", "#setups", "#record", "#discipline", "#faq"].includes(a.getAttribute("href")));
   if (!links.length) return;
   const set = id => links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === id));
   links.forEach(a => a.addEventListener("click", () => set(a.getAttribute("href"))));
