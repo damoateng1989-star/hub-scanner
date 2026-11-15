@@ -4060,7 +4060,7 @@ function initLightweightMapChart() {
       handleScroll:{mouseWheel:true,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
       handleScale:{axisPressedMouseMove:true,mouseWheel:true,pinch:true},
     });
-    const candles = chart.addSeries(L.CandlestickSeries,{upColor:up,downColor:down,borderVisible:false,wickUpColor:up,wickDownColor:down,priceLineVisible:true,lastValueVisible:true});
+    const candles = chart.addSeries(L.CandlestickSeries,{upColor:up,downColor:down,borderVisible:false,wickUpColor:up,wickDownColor:down,priceLineVisible:false,lastValueVisible:true});
     candles.setData(D.cs.filter(x=>Number.isFinite(+x.time)&&Number.isFinite(+x.open)&&Number.isFinite(+x.high)&&Number.isFinite(+x.low)&&Number.isFinite(+x.close)).map(x=>({time:+x.time,open:+x.open,high:+x.high,low:+x.low,close:+x.close})));
     const vol = chart.addSeries(L.HistogramSeries,{priceFormat:{type:"volume"},priceScaleId:"",lastValueVisible:false,priceLineVisible:false},1);
     const volPane = chart.panes()[1];
