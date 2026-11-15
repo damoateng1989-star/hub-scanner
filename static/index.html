@@ -5101,8 +5101,13 @@ async function loadWeek() {
     const config = await response.json();
     if (!config || !Array.isArray(config.notable) || !Array.isArray(config.events)) throw new Error("Invalid weekly events");
     const symbols = [...new Set([...TICKERS.map(t => t.symbol), ...config.notable].map(x => String(x || "").toUpperCase()).filter(x => /^[A-Z.]{1,10}$/.test(x)))];
-    const earnings = await api("/api/earnings?symbols=" + encodeURIComponent(symbols.join(",")));
-    if (!earnings || typeof earnings !== "object") throw new Error("Earnings unavailable");
+    let earnings = {};
+    try {
+      const result = await api("/api/earnings?symbols=" + encodeURIComponent(symbols.join(",")));
+      if (result && typeof result === "object") earnings = result;
+    } catch (_) {
+      // Keep manually maintained market events visible if the earnings feed is unavailable.
+    }
     const today = weekDateKey(new Date()), start = Date.parse(today + "T00:00:00Z");
     const inWindow = date => {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))) return false;
