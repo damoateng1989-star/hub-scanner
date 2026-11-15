@@ -2266,8 +2266,10 @@ html[data-theme="light"] .sg-b { color: #fff; }
   <div class="err" id="err"></div>
   <div class="chips" id="chips" style="margin:6px 0 14px">
     <button class="chip on" data-f="all">All</button>
-    <button class="chip" data-f="hub">Inside a hub</button>
-    <button class="chip" data-f="live">Breaking out</button>
+    <button class="chip" data-f="edge">At the edge</button>
+    <button class="chip" data-f="play">In play</button>
+    <button class="chip" data-f="look">Needs a look</button>
+    <button class="chip" data-f="rest">Resting</button>
   </div>
   <div id="list"><div class="loading"><span class="spin"></span>Loading…</div></div>
   <div class="stats" hidden><b id="sWatch"></b><b id="sHub"></b><b id="sLive"></b><b id="sAlerts"></b></div>
@@ -2702,35 +2704,15 @@ function details(t) {
     </div>
     <div class="bt" id="bt-${S}" hidden></div>`;
 }
-function listRow(t) {
-  const st = t.status || {};
-  const key = st.error ? "error" : (st.state || "none");
-  const liveSetup = liveOther(st);
-  const [label, color] = liveSetup
-    ? [esc(liveSetup.name), liveSetup.state === "breakout_up" ? "--up" : "--down"]
-    : (STATES[key] || [key, "--idle"]);
-  const S = esc(t.symbol);
-  return `<details class="lrow" id="c-${S}"${OPEN.has(t.symbol) ? " open" : ""} ontoggle="this.open ? OPEN.add('${S}') : OPEN.delete('${S}')">
-    <summary><span class="s">${S}<small>${money(st.last_close)}</small></span>
-      <span class="one">${oneLine(st, liveSetup ? "setup" : key)}</span>
-      <span class="badge" style="--c: var(${color})">${label}</span><span class="chev">›</span></summary>
-    <div class="body">${details(t)}</div></details>`;
-}
-
-function render() {
-  const st = (t) => t.status?.error ? "error" : t.status?.state;
-  $("sWatch").textContent = TICKERS.length;
-  $("sHub").textContent = TICKERS.filter(t => st(t) === "forming").length;
-  $("sLive").textContent = TICKERS.filter(t => ["breakout_up", "breakdown"].includes(st(t))).length;
-  const pr = (t) => PRIORITY[st(t)] ?? 4;
-  const shown = [...TICKERS].sort((a, b) => pr(a) - pr(b) || a.symbol.localeCompare(b.symbol)).filter(t => FILTER === "all" || (FILTER === "hub" ? st(t) === "forming" : ["breakout_up", "breakdown"].includes(st(t))));
-  $("list").innerHTML = shown.length ? `<div class="lrows">${shown.map(listRow).join("")}</div>` :
-    `<div class="empty">${ME && ME.guest
-      ? `Add a ticker above, or <a href="#discover">browse setups</a> and tap <b>+ Add to watchlist</b>. You'll create a free account to save them.`
-      : TICKERS.length ? "Nothing matches this filter right now." :
-        `Your list is empty. Type a ticker above (for example <b>NVDA</b>), or <a href="#discover">browse setups</a> for ideas.`}</div>`;
-  if (CUR === "today") renderToday();
-}
+// Patch 98: watchlist urgency and mobile hub bar
+function wlDist(st){const h=st&&st.hub,p=Number(st&&st.last_close);if(!h||h.low==null||h.high==null||!Number.isFinite(p)||p<=0)return null;return Math.min(Math.abs(h.high-p),Math.abs(p-h.low))/p*100;}
+const WL_EDGE_PCT=1;
+function wlSection(t){const st=t.status||{};if(liveOther(st)||st.state==="breakout_up"||st.state==="breakdown")return"play";if(st.state==="forming"&&st.hub){const p=Number(st.last_close);if(Number.isFinite(p)&&(p<st.hub.low||p>st.hub.high))return"look";const d=wlDist(st);if(d!=null&&d<=WL_EDGE_PCT)return"edge";}return"rest";}
+function wlOneLine(st,sec){const h=st&&st.hub,p=Number(st&&st.last_close),live=liveOther(st);if(sec==="play"){const x=live||st,e=Number(x.edge),tar=Number(x.target),up=x.state!=="breakdown";let base=oneLine(st,live?"setup":st.state);if(Number.isFinite(e)&&Number.isFinite(tar)&&Number.isFinite(p)&&tar!==e){const raw=up?(p-e)/(tar-e):(e-p)/(e-tar);base+=" — "+Math.round(Math.max(0,Math.min(1,raw))*100)+"% there.";}return base;}if(!h||!Number.isFinite(p))return oneLine(st,st.state||"none");if(p<h.low)return"Closed below the lower trigger — the hub may be stale.";if(p>h.high)return"Closed above the upper trigger — the hub may be stale.";const top=(h.high-p)/p*100,bottom=(p-h.low)/p*100;if(Math.min(top,bottom)<=WL_EDGE_PCT)return top<=bottom?"One close above "+money(h.high)+" triggers the long.":"One close below "+money(h.low)+" triggers the short.";return"Inside the hub — "+top.toFixed(1)+"% to the top, "+bottom.toFixed(1)+"% to the bottom.";}
+function wlGauge(st,sec,live){if(sec==="play"){const x=live||st;if(x.edge!=null&&x.target!=null)return boardGauge({hub:{low:x.edge,high:x.target},last_close:st.last_close},"live",x.state==="breakdown"?"down":"up");}if(!st.hub)return"";const p=Number(st.last_close),dir=p<st.hub.low?"down":p>st.hub.high?"up":null;return boardGauge({hub:st.hub,last_close:st.last_close},dir?"live":"forming",dir||undefined);}
+function listRow(t){const st=t.status||{},sec=wlSection(t),key=st.error?"error":(st.state||"none"),liveSetup=liveOther(st);const pair=liveSetup?[esc(liveSetup.name),liveSetup.state==="breakout_up"?"--up":"--down"]:(STATES[key]||[key,"--idle"]);const S=esc(t.symbol),forming=sec!=="play";return '<details class="lrow wl-'+sec+(forming?' wl-forming':'')+'" id="c-'+S+'"'+(OPEN.has(t.symbol)?' open':'')+' ontoggle="if(this.open){OPEN.add(\''+S+'\')}else{OPEN.delete(\''+S+'\')}"><summary><span class="s">'+S+'<small>'+money(st.last_close)+'</small></span><span class="one">'+wlOneLine(st,sec)+'</span><span class="wl-gauge">'+wlGauge(st,sec,liveSetup)+'</span><span class="badge" style="--c: var('+pair[1]+')">'+pair[0]+'</span><span class="chev">›</span></summary><div class="body">'+details(t)+'</div></details>';}
+function wlProgress(t){const st=t.status||{},x=liveOther(st)||((st.state==="breakout_up"||st.state==="breakdown")?st:null);if(!x)return-1;const p=Number(st.last_close),e=Number(x.edge),tar=Number(x.target);if(!Number.isFinite(p)||!Number.isFinite(e)||!Number.isFinite(tar)||tar===e)return-1;const raw=x.state==="breakdown"?(e-p)/(e-tar):(p-e)/(tar-e);return Math.max(0,Math.min(1,raw));}
+function render(){const st=t=>t.status?.error?"error":t.status?.state;$("sWatch").textContent=TICKERS.length;$("sHub").textContent=TICKERS.filter(t=>st(t)==="forming").length;$("sLive").textContent=TICKERS.filter(t=>["breakout_up","breakdown"].includes(st(t))).length;const order={edge:0,play:1,look:2,rest:3},titles={edge:"At the edge · within 1% of a trigger",play:"In play · broke out, working toward the shelf",look:"Needs a look · price moved past a level",rest:"Resting · inside the hub, nothing near"};let shown=[...TICKERS].filter(t=>FILTER==="all"||wlSection(t)===FILTER);shown.sort((a,b)=>{const sa=wlSection(a),sb=wlSection(b);if(FILTER==="all"&&order[sa]!==order[sb])return order[sa]-order[sb];if(sa==="edge"||sa==="rest"){const da=wlDist(a.status),db=wlDist(b.status);if(da!=null&&db!=null&&da!==db)return da-db;}if(sa==="play"){const pa=wlProgress(a),pb=wlProgress(b);if(pa!==pb)return pb-pa;}return a.symbol.localeCompare(b.symbol);});if(!shown.length){$("list").innerHTML='<div class="empty">'+(ME&&ME.guest?'Add a ticker above, or <a href="#discover">browse setups</a> and tap <b>+ Add to watchlist</b>. You\'ll create a free account to save them.':TICKERS.length?'Nothing matches this filter right now.':'Your list is empty. Type a ticker above (for example <b>NVDA</b>), or <a href="#discover">browse setups</a> for ideas.')+'</div>';}else if(FILTER==="all"){$("list").innerHTML=Object.keys(order).map(sec=>{const rows=shown.filter(t=>wlSection(t)===sec);return rows.length?'<div class="wl-section"><div class="wl-section-head">'+titles[sec]+'</div><div class="lrows">'+rows.map(listRow).join("")+'</div></div>':"";}).join("");}else{$("list").innerHTML='<div class="lrows">'+shown.map(listRow).join("")+'</div>';}if(CUR==="today")renderToday();}
 
 let TICKERS_ERR = null;
 async function loadTickers() {
@@ -6625,6 +6607,9 @@ html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117;
 .tk-tabs button { background: none; border: 0; color: var(--tk-mut); font: 600 13px var(--sans, system-ui); padding: 7px; border-radius: 8px; cursor: pointer; }
 .tk-tabs button.on { background: color-mix(in srgb, var(--tk-ink) 10%, transparent); color: var(--tk-ink); }
 .tk-lock { border: 1px dashed var(--tk-line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; font-size: 13px; color: var(--tk-mut); } .tk-lock b { color: var(--tk-ink); } .tk-lock p { margin: 0; }
+
+/* Patch 98 */
+.wl-section{margin:18px 0}.wl-section-head{font-size:13px;font-weight:700;color:var(--muted);margin:0 0 8px}.wl-gauge{display:none}@media(max-width:760px){.lrows{padding-bottom:64px}.lrow .wl-gauge{display:block;grid-column:1/-1;margin-top:8px}.lrow.wl-forming .badge{display:none}.lrow .one{grid-column:2/-1}}
 </style>
 </body>
 </html>
