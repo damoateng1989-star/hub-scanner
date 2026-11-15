@@ -4107,7 +4107,7 @@ function initLightweightMapChart() {
     const colors = candleColors(), up = colors[0] || "#22C55E", down = colors[1] || "#EF4444";
     const chart = L.createChart(host, {
       width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 390,
-      layout: {background:{type:"solid",color:bg}, textColor:light?"#5b6472":"#9AA0AC", fontFamily:'"JetBrains Mono",ui-monospace,monospace', fontSize:11},
+      layout: {background:{type:"solid",color:bg}, textColor:light?"#5b6472":"#9AA0AC", fontFamily:'"JetBrains Mono",ui-monospace,monospace', fontSize:11, attributionLogo:false},
       grid:{vertLines:{color:grid},horzLines:{color:grid}},
       rightPriceScale:{borderColor:grid,scaleMargins:{top:.08,bottom:.08}},
       timeScale:{borderColor:grid,timeVisible:!D.daily,secondsVisible:false,rightOffset:4,barSpacing:Math.max(4,Math.min(12,host.clientWidth/(D.cs.length+10))),fixLeftEdge:false},
@@ -4138,7 +4138,7 @@ function initLightweightMapChart() {
     const stopColor = light ? "#B91C1C" : "#E5736A";
     const shelfColor = D.P.dir === -1 ? downColor : upColor;
     line(D.P.trig,"TRIGGER",triggerColor);
-    line(D.P.stop,"STOP",stopColor);
+    line(D.P.stop,"STOP",stopColor,L.LineStyle.Dashed);
     line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",shelfColor);
     if(D.P.hub){
       line(D.P.hub.high,"HUB HIGH",hubColor,L.LineStyle.Solid);
@@ -4153,6 +4153,20 @@ function initLightweightMapChart() {
     if(putWall != null) line(putWall,"PUT WALL",putWallColor,L.LineStyle.Solid);
     if(D.P.obst && !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
       line(D.P.obst.level,D.P.obst.name || "OBSTACLE",light ? "#6D28D9" : "#B6A0E8",L.LineStyle.Solid);
+    // Stretch the price scale to the plotted levels (only expands, +4% pad) so the
+    // next shelf / walls are on screen, not just the candles. Uses the supported
+    // autoscaleInfoProvider (LWC v5), not a price-scale range API.
+    candles.applyOptions({ autoscaleInfoProvider: (original) => {
+      if (!original || !original.priceRange) return original;
+      let lo = original.priceRange.minValue, hi = original.priceRange.maxValue;
+      [D.P.trig, D.P.stop, D.P.shelf,
+       D.P.hub && D.P.hub.high, D.P.hub && D.P.hub.low,
+       callWall, putWall, D.P.obst && D.P.obst.level]
+        .filter(v => v != null && Number.isFinite(+v))
+        .forEach(v => { lo = Math.min(lo, +v); hi = Math.max(hi, +v); });
+      const pad = (hi - lo) * 0.04;
+      return { ...original, priceRange: { minValue: lo - pad, maxValue: hi + pad } };
+    }});
     // On-chart hub/level labels. If primitives are unavailable, keep today's axis labels.
     if (candles.attachPrimitive) {
       try {
@@ -4169,11 +4183,16 @@ function initLightweightMapChart() {
           callWall, callWallColor, putWall, putWallColor,
           bandText: light ? "#141412" : "#FFFFFF",
         }));
-        mapPriceLines.forEach(pl => pl.applyOptions({axisLabelVisible:false}));
+        // Only hide the axis tags when the on-chart cluster will draw (wide charts).
+        // On a phone the cluster is hidden (W < 560), so the axis tags are the only labels.
+        if ((host.clientWidth || 600) >= MAP_LABEL_MIN_W) {
+          mapPriceLines.forEach(pl => pl.applyOptions({axisLabelVisible:false}));
+        }
       } catch (e) { console.warn("NextShelf map labels unavailable", e); }
     }
     chart.timeScale().fitContent();
-    // Keep Lightweight Charts native candle autoscaling; avoid unsupported price-scale range APIs.
+    // Price range includes the plotted levels via autoscaleInfoProvider (above);
+    // time still fits content. Native candle autoscaling otherwise.
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
       const bar=param.seriesData&&param.seriesData.get(candles);
