@@ -857,6 +857,18 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
 .hero.ns.hcx .lede,.hero.ns.hcx .lede .hx-2,.hero.ns.hcx .lede strong{color:var(--ink2)!important;background:none!important;-webkit-text-fill-color:var(--ink2)!important;text-shadow:none!important;filter:none!important}
 .hero.ns.hcx .lede strong{color:var(--ink)!important;font-weight:700}
 
+/* Gradient glow for the hero callout in both themes */
+.hero.ns.hcx .lede strong.lede-glow{
+ font-weight:800!important;
+ background:linear-gradient(90deg,#60A5FA 0%,#A78BFA 48%,#38BDF8 100%)!important;
+ -webkit-background-clip:text!important;
+ background-clip:text!important;
+ -webkit-text-fill-color:transparent!important;
+ color:transparent!important;
+ text-shadow:0 0 10px rgba(96,165,250,.48),0 0 24px rgba(139,92,246,.34),0 0 38px rgba(56,189,248,.24)!important;
+ filter:drop-shadow(0 0 8px rgba(59,130,246,.34))!important;
+}
+
 
 /* Selective hero emphasis: blue glow only on the key phrases */
 .hero.ns.hcx h1 .hx-2{
