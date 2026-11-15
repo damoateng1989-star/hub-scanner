@@ -995,6 +995,12 @@ body.brief-open .sf-hello { display: none; }
 .week-copy b { display: block; color: var(--ink); font: 700 14px/1.35 var(--sans); }
 .week-copy small { display: block; margin-top: 2px; color: var(--muted); font: 400 12.5px/1.4 var(--sans); }
 @media (max-width: 420px) { .week { padding: 14px; } .week-row { grid-template-columns: 68px minmax(0,1fr); gap: 8px; } }
+.retest { margin: 0 0 18px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--accent); box-shadow: inset 3px 0 0 var(--accent); background: var(--surface); }
+.retest[hidden] { display: none; }
+.retest-sub { margin: 12px 0 2px; font: 700 12px var(--sans); letter-spacing: .06em; color: var(--muted); }
+.retest-group:first-of-type .retest-sub { margin-top: 0; }
+.retest-foot { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+@media (max-width: 420px) { .retest { padding: 14px; } }
 .mb-t { font: 800 17px var(--sans); color: #fff; } .mb-t span { margin-left: 6px; font: 600 13px var(--sans); color: #9AA0AC; }
 .mb-s { margin-top: 3px; color: #A9AEB8; font-size: 14px; }
 .mb-k { margin: 14px 0 7px; font: 700 12.5px var(--sans); color: #9AA0AC; }
@@ -2238,6 +2244,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div id="phoneNudge"></div>
   <div class="week" id="week" hidden></div>
+  <div class="retest" id="retest" hidden></div>
   <div class="rule1" id="rule1"></div>
   <div class="mbrief" id="mbrief" hidden></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
@@ -5161,6 +5168,42 @@ function renderWeek() {
   }).join("");
   el.hidden = false;
 }
+function renderRetest() {
+  const el = $("retest"); if (!el) return;
+  if (!BOARD) { el.hidden = true; el.innerHTML = ""; return; }
+  const rows = [];
+  for (const r of (BOARD.live || [])) {
+    if (r.retest && r.retest.candles_left > 0)
+      rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge,
+                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near});
+  }
+  for (const r of (BOARD.setups || [])) {
+    if (r.retest && r.retest.candles_left > 0)
+      rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge,
+                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near});
+  }
+  const now = rows.filter(x => x.near).sort((a, b) => a.left - b.left);
+  const wait = rows.filter(x => !x.near).sort((a, b) => a.left - b.left);
+  if (!now.length && !wait.length) { el.hidden = true; el.innerHTML = ""; return; }
+  const row = (x, kind) => {
+    const up = x.state !== "breakdown";
+    const txt = kind === "now"
+      ? `${esc(x.label)} · at the edge ${money(x.edge)} · target ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
+      : `${esc(x.label)} · broke out, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
+    return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
+      <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span></span><span class="go">›</span></a>`;
+  };
+  const group = (title, list, kind) => list.length
+    ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
+  const footer = (ME && !ME.a_all)
+    ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>`
+    : "";
+  el.innerHTML = `<div class="week-head"><div class="week-k">RETESTING NOW</div></div>`
+    + group("At the edge", now, "now")
+    + group("Waiting for the retest", wait, "wait")
+    + footer;
+  el.hidden = false;
+}
 async function loadWeek() {
   const el = $("week"); if (el) { el.hidden = true; el.innerHTML = ""; }
   WEEK = null;
@@ -5211,6 +5254,7 @@ function renderToday() {
   $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, <em>${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.</em><small class="hello-sub">${greet}${name}</small>`;
   $("mkt").innerHTML = marketChip();
   renderWeek();
+  renderRetest();
   renderRule();
   renderKpis();
   renderPhoneNudge();
