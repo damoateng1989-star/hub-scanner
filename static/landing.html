@@ -4,27 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/InstrumentSerifItalic.woff2" as="font" type="font/woff2" crossorigin>
-<script>
-/* light/dark: "system" (default) follows the device; choice saved per browser */
-(function () {
-  var pick = "system"; try { pick = localStorage.getItem("ns_theme") || "system"; } catch (e) {}
-  var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
-  function apply(p) {
-    var t = p === "system" ? (mq && mq.matches ? "light" : "dark") : p;
-    document.documentElement.dataset.theme = t; document.documentElement.dataset.themePick = p;
-    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#F6F6F3" : "#0E0F12";
-    document.querySelectorAll("[data-theme-btn]").forEach(function (b) { b.setAttribute("aria-label", "Theme: " + p + " (switch)"); b.title = t === "light" ? "Switch to dark" : "Switch to light"; b.dataset.mode = t; });
-    document.querySelectorAll("[data-theme-opt]").forEach(function (b) { b.classList.toggle("on", b.dataset.themeOpt === p); });
-  }
-  window.nsSetTheme = function (p) { try { localStorage.setItem("ns_theme", p); } catch (e) {} pick = p; apply(p); };
-  window.nsToggleTheme = function () { nsSetTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"); };
-  if (mq && mq.addEventListener) mq.addEventListener("change", function () { if (pick === "system") apply("system"); });
-  apply(pick);
-  document.addEventListener("DOMContentLoaded", function () { apply(pick); });
-})();
-</script>
-<meta name="theme-color" content="#F6F6F3">
+<meta name="theme-color" content="#0A0A0A">
 <title>NextShelf: Pick a setup, trade it for years · Hub-breakout alerts</title>
 <meta name="description" content="Built for swing traders with day jobs. NextShelf sweeps 400 stocks after every 4-hour close, from a 543-stock universe, for tight ranges, warns you before a breakout closes, and targets the next shelf.">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -39,28 +19,25 @@
 .nav-toggle { display: none; }
 @media (max-width: 640px) { .bp-tabs { flex-wrap: wrap; overflow: visible; white-space: normal; } .bp-tabs span { margin-bottom: 6px; } }
 @font-face { font-family: "Inter"; src: url("/fonts/Inter.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
-@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerif.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
-@font-face { font-family: "Instrument Serif"; src: url("/fonts/InstrumentSerifItalic.woff2") format("woff2"); font-weight: 400; font-style: italic; font-display: swap; }
 @font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
 :root {
-  --paper: #F6F6F3; --card: #F8F9FD; --sunk: #EFEEE9;
-  --ink: #141412; --ink2: #5C5B55; --ink3: #9A998F;
-  --line: #E4E3DC; --blue: #2F54EB; --blue-ink: #FFFFFF;
-  --up: #12805C; --down: #D1352B; --warn: #B7791F;
-  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --paper: #0A0A0A; --card: #101214; --sunk: #121418;
+  --ink: #E9EBEF; --ink2: #9AA0AC; --ink3: #6B7280;
+  --line: #1E2024; --blue: #2563EB; --blue-ink: #FFFFFF;
+  --up: #3DD68C; --down: #F87171; --warn: #FBBF24;
   --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  color-scheme: light;
+  color-scheme: dark;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; scroll-padding-top: 72px; }
 body { background: var(--paper); color: var(--ink); font: 14px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
 a { color: inherit; }
-em { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: -0.01em; }
+em { font-style: normal; font-family: var(--sans); font-weight: inherit; }
 .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
 
 /* nav */
-nav.top { position: sticky; top: 0; z-index: 20; background: rgba(246,246,243,.88); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+nav.top { position: sticky; top: 0; z-index: 20; background: rgba(10,10,10,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
 nav.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
 .wordmark { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -0.02em; font-size: 16px; text-decoration: none; color: var(--ink); }
 .wordmark img { width: 26px; height: 26px; border-radius: 7px; }
@@ -69,7 +46,7 @@ nav.top .wrap { display: flex; align-items: center; justify-content: space-betwe
 .navlinks a { color: var(--ink2); text-decoration: none; white-space: nowrap; } .navlinks a:hover { color: var(--ink); }
 .navlinks a { position: relative; }
 .navlinks a.on { color: var(--ink); }
-.navlinks a.on::after { /* Bright variant: full-width gradient bar */
+ .navlinks a.on::after { /* Bright variant: full-width gradient bar */
   content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 3px; border-radius: 3px;
   background: linear-gradient(90deg, #2F54EB, #8EA2FF 55%, #C7D2FE);
 }
@@ -127,7 +104,7 @@ h2 { font-size: clamp(22.5px, 3.2vw, 30.5px); letter-spacing: -0.03em; line-heig
 .step .num { font: 500 12px var(--mono); color: var(--blue); letter-spacing: .1em; }
 .step h3 { font-size: 16px; letter-spacing: -0.02em; margin: 10px 0 8px; font-weight: 650; }
 .step p { font-size: 12px; color: var(--ink2); }
-.illus { margin: 12px 0 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 14px 10px 6px; }
+.illus { margin: 12px 0 20px; border: 1px solid #1E2024; border-radius: 16px; background: #101214; padding: 14px 10px 6px; }
 .illus svg { display: block; }
 
 /* demo stage */
@@ -727,8 +704,7 @@ html[data-theme="dark"] .hero.ns { background: radial-gradient(70% 55% at 50% 0%
 html[data-theme="dark"] .hero.ns::before { background-image: radial-gradient(rgba(150,170,255,.10) 1px, transparent 1.3px); }
 
 /* Ghost word behind the hero: the product's own line, as the wallpaper */
-.hx-ghost { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); font-family: "Instrument Serif", Georgia, serif; font-style: italic; font-size: clamp(150px, 36vw, 330px); line-height: 1; letter-spacing: -0.02em; color: rgba(20,20,18,.05); white-space: nowrap; pointer-events: none; user-select: none; }
-html[data-theme="dark"] .hx-ghost { color: rgba(233,235,239,.05); }
+.hx-ghost { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-style: normal; font-size: clamp(150px, 36vw, 330px); line-height: 1; letter-spacing: -0.02em; color: rgba(233,235,239,.04); white-space: nowrap; pointer-events: none; user-select: none; }
 
 /* Learn menu: course + one entry per setup */
 .lm { position: relative; display: inline-flex; }
@@ -830,12 +806,10 @@ html[data-theme="dark"] .hx-it .ok { color: #00C898; } html[data-theme="dark"] .
 @media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
 
 /* Hero: light blue wash from the top, fading into the page colour (option A) */
-.hero.ns { background: linear-gradient(180deg, #E6ECFF 0px, #F1F4FD 300px, rgba(246,246,243,0) 640px) !important; }
-html[data-theme="dark"] .hero.ns { background: linear-gradient(180deg, rgba(90,115,255,.16) 0px, rgba(90,115,255,.06) 300px, rgba(90,115,255,0) 640px) !important; }
+.hero.ns { background: linear-gradient(180deg, rgba(90,115,255,.16) 0px, rgba(90,115,255,.06) 300px, rgba(90,115,255,0) 640px) !important; }
 /* the wash continues behind the nav, so there is no hard edge under it */
 .hero.ns { margin-top: -65px; padding-top: 137px !important; }
-nav.top { background: rgba(246,246,243,.6); }
-html[data-theme="dark"] nav.top { background: rgba(14,15,18,.6); }
+nav.top { background: rgba(10,10,10,.92); }
 @media (max-width: 640px) { .hero.ns { padding-top: 121px !important; } }
 
 /* light theme: white surfaces become a soft light gray (inputs and small chips stay white) */
@@ -845,10 +819,10 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 <body>
 
 <nav class="top"><div class="wrap">
-  <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf <em>beta</em></a>
+  <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
   <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
-  <div class="navlinks"><a href="#how">How it works</a><a href="#pricing">Pricing</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="#faq">FAQ</a></div>
-  <div class="navend"><span id="themeSlot"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button></span><span id="navEnd" class="navend"><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></span></div>
+  <div class="navlinks"><a href="#how">How it works</a><a href="#record">The record</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="#faq">FAQ</a></div>
+  <div class="navend"><span id="navEnd" class="navend"><a class="btn sm solid" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
 <header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">wait.</div><div class="wrap">
@@ -863,22 +837,22 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
   <div class="bp" id="liveStrip" aria-label="Preview of Browse setups">
     <div class="bp-bar"><i></i><i></i><i></i><span>NextShelf · Browse setups</span></div>
     <div class="bp-in">
-      <div class="bp-head"><div><div class="bp-h">Browse <em>setups.</em></div><p class="bp-s">S&amp;P 500, Nasdaq-100 and major ETFs, checked after every 4-hour close.</p></div>
+      <div class="bp-head"><div><div class="bp-h">Browse <span>setups.</span></div><p class="bp-s">S&amp;P 500, Nasdaq-100 and major ETFs, checked after every 4-hour close.</p></div>
         <span class="bp-live"><b></b>Live</span></div>
       <div class="bp-scout"><b>Sika</b> <span id="bpLine">Checking today's setups after the last 4-hour close.</span> <span class="bp-next" id="bpNext"></span></div>
       <div class="bp-tabs"><span class="on">Hubs <small id="bpHubs">–</small></span><span>Double tops &amp; bottoms</span><span>Gap fade &amp; rip</span></div>
       <div class="bp-split">
       <div class="bp-tbl">
         <div class="bp-row bp-th"><span>Stock</span><span>Setup</span><span>Last price</span><span></span></div>
-        <div class="bp-row"><b>NFLX</b><span><em class="pill up">Broke out ↑<small>heading to next shelf</small></em></span><span>$1,182.40</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row sel"><b>ADBE</b><span><em class="pill hub">Inside a hub</em></span><span>$248.48</span><span><span class="bp-an on">Viewing</span></span></div>
-        <div class="bp-row"><b>EQT</b><span><em class="pill dn">Broke down ↓<small>heading to next shelf</small></em></span><span>$51.36</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>HON</b><span><em class="pill hub">Inside a hub</em></span><span>$223.80</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>NVDA</b><span><em class="pill hub">Inside a hub</em></span><span>$181.20</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>CAT</b><span><em class="pill up">Broke out ↑<small>heading to target</small></em></span><span>$612.35</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>PEP</b><span><em class="pill hub">Inside a hub</em></span><span>$148.92</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>AMZN</b><span><em class="pill dn">Broke down ↓<small>heading to target</small></em></span><span>$201.33</span><span><span class="bp-an">Analyze</span></span></div>
-        <div class="bp-row"><b>MA</b><span><em class="pill hub">Inside a hub</em></span><span>$571.06</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>NFLX</b><span><span class="pill up">Broke out ↑<small>heading to next shelf</small></span></span><span>$1,182.40</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row sel"><b>ADBE</b><span><span class="pill hub">Inside a hub</span></span><span>$248.48</span><span><span class="bp-an on">Viewing</span></span></div>
+        <div class="bp-row"><b>EQT</b><span><span class="pill dn">Broke down ↓<small>heading to next shelf</small></span></span><span>$51.36</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>HON</b><span><span class="pill hub">Inside a hub</span></span><span>$223.80</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>NVDA</b><span><span class="pill hub">Inside a hub</span></span><span>$181.20</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>CAT</b><span><span class="pill up">Broke out ↑<small>heading to target</small></span></span><span>$612.35</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>PEP</b><span><span class="pill hub">Inside a hub</span></span><span>$148.92</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>AMZN</b><span><span class="pill dn">Broke down ↓<small>heading to target</small></span></span><span>$201.33</span><span><span class="bp-an">Analyze</span></span></div>
+        <div class="bp-row"><b>MA</b><span><span class="pill hub">Inside a hub</span></span><span>$571.06</span><span><span class="bp-an">Analyze</span></span></div>
       </div>
       <div class="sc" id="sampleCard" aria-label="Example Shelf card">
     <div class="sc-hero">
@@ -912,8 +886,8 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
         <div class="sc-ct"><b>Nov 27 $255 calls</b><small>If a 4-hour candle closes above the hub top</small></div>
         <div class="sc-rows">
           <div><span>Est. cost at the breakout</span><b>≈ $13.69</b></div>
-          <div><span>If it reaches the aim</span><b>≈ $23.14 <em class="up">+69%</em></b></div>
-          <div><span>If the breakout fails</span><b>≈ $12.46 <em class="dn">−9%</em></b></div>
+          <div><span>If it reaches the aim</span><b>≈ $23.14 <span class="up">+69%</span></b></div>
+          <div><span>If the breakout fails</span><b>≈ $12.46 <span class="dn">−9%</span></b></div>
           <div><span>Est. gain at the aim</span><b class="up">≈ +$945.00</b></div>
           <div><span>Max loss</span><b>$1,369.00</b></div>
         </div>
@@ -930,7 +904,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 </div></header>
 <section id="why"><div class="wrap">
   <div class="kicker">Why NextShelf</div>
-  <h2>Alerts aren't new. <em>Watching the right setup is.</em></h2>
+  <h2>Alerts aren't new. <span>Watching the right setup is.</span></h2>
   <p class="sub">Your phone can already ping you. The problem is what it pings you about.</p>
   <div class="cmp" role="table" aria-label="How NextShelf compares">
     <div class="cmp-row head" role="row"><div></div><div>DIY price alerts</div><div>Generic scanners</div><div>NextShelf</div></div>
@@ -944,7 +918,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 
 <section id="how" class="band"><div class="wrap">
   <div class="kicker">How it works</div>
-  <h2>Three steps. <em>One clear plan.</em></h2>
+  <h2>Three steps. <span>One clear plan.</span></h2>
   <div class="steps">
     <div class="step"><div class="num">01</div>
       <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Candles closing inside a hub zone">
@@ -966,7 +940,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
         </g>
         <text x="160" y="172" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#5C5B55">4+ candles · closes stay inside</text>
       </svg></div>
-      <h3>A hub <em>forms</em></h3><p>4-hour closes hold inside a tight range for at least 4 four-hour candles. The stock is coiling, and there's no trade yet.</p></div>
+      <h3>A hub <span>forms</span></h3><p>4-hour closes hold inside a tight range for at least 4 four-hour candles. The stock is coiling, and there's no trade yet.</p></div>
     <div class="step"><div class="num">02</div>
       <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A wick pokes above the hub but only a close counts as a breakout">
         <rect x="14" y="90" width="292" height="60" fill="#2F54EB" opacity="0.07"/>
@@ -985,7 +959,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
         <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#9A998F">wick: not a setup</text>
         <text x="238" y="186" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#141412">close: breakout</text>
       </svg></div>
-      <h3>A candle <em>closes</em> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
+      <h3>A candle <span>closes</span> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
     <div class="step"><div class="num">03</div>
       <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Price breaks out of the hub and travels to the shelf target">
         <rect x="14" y="140" width="110" height="38" fill="#2F54EB" opacity="0.07"/>
@@ -1005,11 +979,11 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
         <path d="M132,124 C160,108 178,92 200,72" fill="none" stroke="#141412" stroke-width="1.5" stroke-dasharray="5 4"/>
         <path d="M200,72 l-11,1 l7,8 z" fill="#141412"/>
       </svg></div>
-      <h3>It travels <em>to the shelf</em></h3><p>Earlier hubs act as shelves. The nearest one is the target; a close back inside the hub means it failed. Entry, target and exit, set before you enter.</p></div>
+      <h3>It travels <span>to the shelf</span></h3><p>Earlier hubs act as shelves. The nearest one is the target; a close back inside the hub means it failed. Entry, target and exit, set before you enter.</p></div>
   </div>
 
   <div class="demo-copy">
-    <h3>From hub to alert, <em>on your phone.</em></h3>
+    <h3>From hub to alert, <span>on your phone.</span></h3>
     <p>Hubs, start to finish: the warning before the close, the confirmation on the close, the target when it hits. On Telegram, or on Pro by text or a phone call. Most days the scanner says nothing. That's the discipline, built in. Two more setups ride alongside: double tops and bottoms, and the post-earnings gap fade &amp; rip.</p>
   </div>
 
@@ -1034,7 +1008,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 
 <section id="alerts"><div class="wrap">
   <div class="kicker">Pro alerts</div>
-  <h2>The tap on the shoulder, <em>three ways.</em></h2>
+  <h2>The tap on the shoulder, <span>three ways.</span></h2>
   <p class="sub">Telegram is free. On Pro, the same alert also arrives as a <b>text</b> — and the important ones as a <b>phone call</b> that reads it aloud. Quiet hours keep the night silent.</p>
   <div class="al-phones">
 
@@ -1047,7 +1021,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
           <div class="fl-note"><div class="fl-nh"><span>Telegram</span>now</div>
             <div class="fl-nt">🚀 AMD: 4H close above hub</div>
             <div class="fl-nb">Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div></div>
-          <div class="fl-note old"><div class="fl-nh"><span>Telegram<em class="fl-pro">PRO</em></span>15m ago</div>
+          <div class="fl-note old"><div class="fl-nh"><span>Telegram<span class="fl-pro">PRO</span></span>15m ago</div>
             <div class="fl-nt">⚠️ AMD: trading above hub, ~15 min before the 4H close</div>
             <div class="fl-nb">Now $179.40. If the candle closes above $178.01, that's the breakout.</div></div>
         </div>
@@ -1064,10 +1038,10 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
         <div class="fl-time">4:01</div>
         <div class="fl-date">NextShelf alerts</div>
         <div class="al-list">
-          <div class="fl-note"><div class="fl-nh"><span>Messages<em class="fl-pro">PRO</em></span>now</div>
+          <div class="fl-note"><div class="fl-nh"><span>Messages<span class="fl-pro">PRO</span></span>now</div>
             <div class="fl-nt">NextShelf</div>
             <div class="fl-nb">🚀 AMD: 4H close above hub. Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01.</div></div>
-          <div class="fl-note old"><div class="fl-nh"><span>Messages<em class="fl-pro">PRO</em></span>15m ago</div>
+          <div class="fl-note old"><div class="fl-nh"><span>Messages<span class="fl-pro">PRO</span></span>15m ago</div>
             <div class="fl-nt">NextShelf</div>
             <div class="fl-nb">⚠️ AMD: trading above hub, ~15 min before the 4H close. Now $179.40. If the candle closes above $178.01, that's the breakout.</div></div>
         </div>
@@ -1085,7 +1059,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
           <div class="al-avatar"></div>
           <div class="al-call-name">NextShelf</div>
           <div class="al-call-sub">Pre-close warning · AMD</div>
-          <div class="fl-note"><div class="fl-nh"><span>Phone call<em class="fl-pro">PRO</em></span>3:45</div>
+          <div class="fl-note"><div class="fl-nh"><span>Phone call<span class="fl-pro">PRO</span></span>3:45</div>
             <div class="fl-nb" style="color:#0d1117">&ldquo;AMD is trading above its hub, about fifteen minutes before the four-hour close. If the candle closes above one seventy-eight, that&rsquo;s the breakout.&rdquo;</div></div>
           <div class="al-call-btns"><div><span class="al-decline">✕</span><small>Decline</small></div><div><span class="al-answer"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></span><small>Accept</small></div></div>
         </div>
@@ -1103,18 +1077,18 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 
 <section id="day"><div class="wrap">
   <div class="kicker">Built for a day job</div>
-  <h2>Two decisions a day. <em>The rest is on autopilot.</em></h2>
+  <h2>Two decisions a day. <span>The rest is on autopilot.</span></h2>
   <p class="sub">The 4-hour candles close at 1:30 PM and 4:00 PM ET. NextShelf fits around them, so you don't have to fit around the market.</p>
   <div class="feats">
-    <div class="feat"><div class="when">Before work</div><h3>Morning <em>brief</em></h3><p>What's resting in a hub, what's at the edge, and earnings to avoid. Plus an order plan you can place before you leave.</p></div>
-    <div class="feat"><div class="when">During the day</div><h3>Alerts that <em>matter</em></h3><p>Telegram alerts only when a candle closes outside a hub. On Pro, get a text or a phone call the moment a trigger fires; the call reads the alert aloud. Quiet hours keep the night silent.</p></div>
-    <div class="feat"><div class="when">After the close</div><h3>Evening <em>recap</em></h3><p>Every breakout from the day with its target and its exit level, so tomorrow's plan is set before dinner.</p></div>
+    <div class="feat"><div class="when">Before work</div><h3>Morning <span>brief</span></h3><p>What's resting in a hub, what's at the edge, and earnings to avoid. Plus an order plan you can place before you leave.</p></div>
+    <div class="feat"><div class="when">During the day</div><h3>Alerts that <span>matter</span></h3><p>Telegram alerts only when a candle closes outside a hub. On Pro, get a text or a phone call the moment a trigger fires; the call reads the alert aloud. Quiet hours keep the night silent.</p></div>
+    <div class="feat"><div class="when">After the close</div><h3>Evening <span>recap</span></h3><p>Every breakout from the day with its target and its exit level, so tomorrow's plan is set before dinner.</p></div>
   </div>
 </div></section>
 
 <section id="record" class="band"><div class="wrap">
   <div class="kicker">Track record</div>
-  <h2>An honest <em>record.</em></h2>
+  <h2>An honest <span>record.</span></h2>
   <p class="sub">Two sets of numbers, kept apart: how today's rules tested over two years, and the live log of every breakout since launch. Nothing is removed.</p>
   <div id="recTest" hidden>
     <div class="rec-h"><b id="recTestH">Two-year test of today's rules</b><span id="recTestSub"></span></div>
@@ -1132,7 +1106,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 
 <section id="pricing"><div class="wrap">
   <div class="kicker">Early access pricing</div>
-  <h2>Free to start. <em>Founding members lock in $99/mo, for life.</em></h2>
+  <h2>Free to start. <span>Founding members lock in $99/mo, for life.</span></h2>
   <div class="plans">
     <div class="plan">
       <div class="nm">Free</div>
@@ -1152,7 +1126,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 
 <section id="faq" class="band"><div class="wrap">
   <div class="kicker">FAQ</div>
-  <h2>Questions, <em>answered.</em></h2>
+  <h2>Questions, <span>answered.</span></h2>
   <div class="faq">
     <details open><summary>What is a hub?</summary><p>A stretch of at least 4 four-hour candles where every 4-hour candle closes inside a tight range, measured against the stock's own volatility (ATR). It's the stock coiling before a move, and while price is inside, there's no trade.</p></details>
     <details><summary>What is a shelf?</summary><p>An earlier hub. When price breaks out of the current hub, the nearest earlier hub in that direction is where it often heads next, so it becomes the target.</p></details>
@@ -1169,7 +1143,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 
 <div class="final" id="join"><div class="wrap">
   <div class="kicker">Get started</div>
-  <h2>Stop watching the screen. <em>Start watching the setup.</em></h2>
+  <h2>Stop watching the screen. <span>Start watching the setup.</span></h2>
   <p class="sub" style="margin:14px auto 0" id="joinSub">NextShelf is in a private beta. Join the waitlist and get the free 5-day Hub Breakout Course by email. You'll get in as spots open.</p>
   <form class="join" data-source="footer" novalidate>
     <input type="email" name="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
@@ -1370,7 +1344,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
     document.getElementById("flPhoneTime").textContent = STEPS[n - 1].ph;
     [...list.children].forEach((li, i) => { li.classList.remove("on"); void li.offsetWidth; li.classList.toggle("on", i === n - 1); });
     stack.innerHTML = NOTES.slice(Math.max(0, n - 3), n).map((x, i, a) => `<div class="fl-note${i < a.length - 1 ? " old" : ""}">
-      <div class="fl-nh"><span>${x.h}${x.pro ? '<em class="fl-pro">PRO</em>' : ""}</span>now</div>
+      <div class="fl-nh"><span>${x.h}${x.pro ? '<span class="fl-pro">PRO</span>' : ""}</span>now</div>
       <div class="fl-nt">${esc(x.t)}</div><div class="fl-nb">${esc(x.b)}</div></div>`).join("");
   }
   function tick() { clearTimeout(timer); if (!playing) return; timer = setTimeout(() => { show(cur % 5 + 1); tick(); }, cur === 5 ? DUR + 1200 : DUR); }
@@ -1485,7 +1459,7 @@ html:not([data-theme="dark"]) body .flow, html:not([data-theme="dark"]) body .fl
 // Nav glow: active landing section (Patch 101).
 (function () {
   const links = Array.from(document.querySelectorAll(".navlinks a[href^='#']"))
-    .filter(a => ["#how", "#pricing", "#faq"].includes(a.getAttribute("href")));
+     .filter(a => ["#how", "#record", "#faq"].includes(a.getAttribute("href")));
   if (!links.length) return;
   const set = id => links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === id));
   links.forEach(a => a.addEventListener("click", () => set(a.getAttribute("href"))));
