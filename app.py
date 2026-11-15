@@ -1077,6 +1077,22 @@ def public_summary():
                 win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), since=tr.get("since"), next=_next_sweep(), times=sorted(BOARD_TIMES))
 
 
+@app.get("/api/public/hero-chart")
+async def public_hero_chart():
+    """Small public chart payload for the AVGO landing-page preview; no account or watchlist data."""
+    d = await run_in_threadpool(lambda: board.chart("AVGO", tf="4h", lab_mode=False, fresh=False))
+    st = d.get("status") or {}
+    hub = st.get("hub") or {}
+    return dict(
+        symbol="AVGO",
+        candles=d.get("candles") or [],
+        status=dict(
+            hub=dict(low=hub.get("low"), high=hub.get("high")) if hub else None,
+            target=st.get("target"),
+        ),
+    )
+
+
 @app.get("/api/record")
 def record_data(pattern: str = "hub", u: dict = User):
     if pattern != board.RULES and pattern not in patterns.KINDS:
