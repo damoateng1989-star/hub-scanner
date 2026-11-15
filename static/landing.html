@@ -437,7 +437,7 @@ footer .wrap > nav[aria-label="Social"] { grid-area: social; justify-content: fl
 .flow { margin-top: 30px; padding: 18px; border-radius: 26px; border: 1px solid var(--fl-line); background: var(--fl-bg);
   box-shadow: 0 30px 80px var(--fl-shadow); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3);
   --fl-bg: rgba(14,20,29,.72); --fl-line: rgba(255,255,255,.08); --fl-shadow: rgba(0,0,0,.35); --fl-ink: #eef2f7; --fl-mut: #8a9aae; --fl-card: #0b1119;
-  --fl-grid: rgba(255,255,255,.05); --fl-up: #3DD68C; --fl-down: #FF6B5E; --fl-hub: #7C93FF; --fl-candle-up: #e8eef5; --fl-candle-dn: #5b6b7f; }
+  --fl-grid: rgba(255,255,255,.05); --fl-up: #3DD68C; --fl-down: #FF6B5E; --fl-hub: #7C93FF; --fl-candle-up: #FFFFFF; --fl-candle-dn: #000000; }
 
 .fl-stage { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: stretch; }
 .fl-chart { position: relative; padding: 14px 14px 6px; border-radius: 18px; background: var(--fl-card); border: 1px solid var(--fl-line); min-width: 0; }
@@ -831,6 +831,13 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
  .navend .signin{font-size:12px}
 }
 
+
+/* Landing hero heading: neutral text, no blue/green glow */
+.hero.ns.hcx .eyebrow{color:var(--ink2)!important;text-shadow:none!important}
+.hero.ns.hcx h1,.hero.ns.hcx h1 .hx-2{color:var(--ink)!important;background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:var(--ink)!important;text-shadow:none!important;filter:none!important}
+.hero.ns.hcx .lede,.hero.ns.hcx .lede .hx-2,.hero.ns.hcx .lede strong{color:var(--ink2)!important;background:none!important;-webkit-text-fill-color:var(--ink2)!important;text-shadow:none!important;filter:none!important}
+.hero.ns.hcx .lede strong{color:var(--ink)!important;font-weight:700}
+
 </style>
 </head>
 <body>
@@ -856,16 +863,16 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
         <line x1="14" y1="132" x2="306" y2="132" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
         <text x="20" y="54" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#2F54EB">HUB</text>
         <g stroke-width="2">
-          <line x1="30" y1="88" x2="30" y2="118" stroke="#12805C"/><rect x="23" y="95" width="14" height="15" fill="#12805C"/>
-          <line x1="58" y1="90" x2="58" y2="115" stroke="#D1352B"/><rect x="51" y="95" width="14" height="13" fill="#D1352B"/>
-          <line x1="86" y1="95" x2="86" y2="112" stroke="#12805C"/><rect x="79" y="100" width="14" height="8" fill="#12805C"/>
-          <line x1="114" y1="96" x2="114" y2="120" stroke="#D1352B"/><rect x="107" y="100" width="14" height="12" fill="#D1352B"/>
-          <line x1="142" y1="98" x2="142" y2="116" stroke="#12805C"/><rect x="135" y="104" width="14" height="8" fill="#12805C"/>
-          <line x1="170" y1="100" x2="170" y2="122" stroke="#D1352B"/><rect x="163" y="104" width="14" height="12" fill="#D1352B"/>
-          <line x1="198" y1="100" x2="198" y2="120" stroke="#12805C"/><rect x="191" y="106" width="14" height="10" fill="#12805C"/>
-          <line x1="226" y1="102" x2="226" y2="124" stroke="#D1352B"/><rect x="219" y="106" width="14" height="12" fill="#D1352B"/>
-          <line x1="254" y1="102" x2="254" y2="122" stroke="#12805C"/><rect x="247" y="108" width="14" height="10" fill="#12805C"/>
-          <line x1="282" y1="104" x2="282" y2="118" stroke="#D1352B"/><rect x="275" y="108" width="14" height="6" fill="#D1352B"/>
+          <line x1="30" y1="88" x2="30" y2="118" stroke="#FFFFFF"/><rect x="23" y="95" width="14" height="15" fill="#FFFFFF"/>
+          <line x1="58" y1="90" x2="58" y2="115" stroke="#FFFFFF"/><rect x="51" y="95" width="14" height="13" fill="#000000"/>
+          <line x1="86" y1="95" x2="86" y2="112" stroke="#FFFFFF"/><rect x="79" y="100" width="14" height="8" fill="#FFFFFF"/>
+          <line x1="114" y1="96" x2="114" y2="120" stroke="#FFFFFF"/><rect x="107" y="100" width="14" height="12" fill="#000000"/>
+          <line x1="142" y1="98" x2="142" y2="116" stroke="#FFFFFF"/><rect x="135" y="104" width="14" height="8" fill="#FFFFFF"/>
+          <line x1="170" y1="100" x2="170" y2="122" stroke="#FFFFFF"/><rect x="163" y="104" width="14" height="12" fill="#000000"/>
+          <line x1="198" y1="100" x2="198" y2="120" stroke="#FFFFFF"/><rect x="191" y="106" width="14" height="10" fill="#FFFFFF"/>
+          <line x1="226" y1="102" x2="226" y2="124" stroke="#FFFFFF"/><rect x="219" y="106" width="14" height="12" fill="#000000"/>
+          <line x1="254" y1="102" x2="254" y2="122" stroke="#FFFFFF"/><rect x="247" y="108" width="14" height="10" fill="#FFFFFF"/>
+          <line x1="282" y1="104" x2="282" y2="118" stroke="#FFFFFF"/><rect x="275" y="108" width="14" height="6" fill="#000000"/>
         </g>
         <text x="160" y="172" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#5C5B55">4+ candles · closes stay inside</text>
       </svg></div>
@@ -877,15 +884,15 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
         <line x1="14" y1="150" x2="306" y2="150" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
         <text x="20" y="82" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#2F54EB">HUB</text>
         <g stroke-width="2">
-          <line x1="36" y1="110" x2="36" y2="130" stroke="#12805C"/><rect x="29" y="115" width="14" height="10" fill="#12805C"/>
-          <line x1="70" y1="112" x2="70" y2="132" stroke="#D1352B"/><rect x="63" y="115" width="14" height="13" fill="#D1352B"/>
-          <line x1="104" y1="116" x2="104" y2="132" stroke="#12805C"/><rect x="97" y="120" width="14" height="8" fill="#12805C"/>
-          <line x1="138" y1="118" x2="138" y2="134" stroke="#D1352B"/><rect x="131" y="120" width="14" height="10" fill="#D1352B"/>
-          <line x1="176" y1="66" x2="176" y2="136" stroke="#9A998F"/><rect x="169" y="118" width="14" height="12" fill="#9A998F" opacity="0.4"/>
-          <line x1="238" y1="66" x2="238" y2="102" stroke="#12805C"/><rect x="231" y="72" width="14" height="24" fill="#12805C"/>
+          <line x1="36" y1="110" x2="36" y2="130" stroke="#FFFFFF"/><rect x="29" y="115" width="14" height="10" fill="#FFFFFF"/>
+          <line x1="70" y1="112" x2="70" y2="132" stroke="#FFFFFF"/><rect x="63" y="115" width="14" height="13" fill="#000000"/>
+          <line x1="104" y1="116" x2="104" y2="132" stroke="#FFFFFF"/><rect x="97" y="120" width="14" height="8" fill="#FFFFFF"/>
+          <line x1="138" y1="118" x2="138" y2="134" stroke="#FFFFFF"/><rect x="131" y="120" width="14" height="10" fill="#000000"/>
+          <line x1="176" y1="66" x2="176" y2="136" stroke="#FFFFFF"/><rect x="169" y="118" width="14" height="12" fill="#000000" opacity="0.4"/>
+          <line x1="238" y1="66" x2="238" y2="102" stroke="#FFFFFF"/><rect x="231" y="72" width="14" height="24" fill="#FFFFFF"/>
         </g>
         <circle cx="238" cy="84" r="30" fill="none" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="4 3"/>
-        <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#9A998F">wick: not a setup</text>
+        <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#000000">wick: not a setup</text>
         <text x="238" y="186" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#141412">close: breakout</text>
       </svg></div>
       <h3>A candle <span>closes</span> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
@@ -894,16 +901,16 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
         <rect x="14" y="140" width="110" height="38" fill="#2F54EB" opacity="0.07"/>
         <line x1="14" y1="140" x2="124" y2="140" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
         <text x="18" y="132" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#2F54EB">HUB</text>
-        <rect x="196" y="34" width="110" height="34" fill="#12805C" opacity="0.08"/>
-        <line x1="196" y1="34" x2="306" y2="34" stroke="#12805C" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
-        <line x1="196" y1="68" x2="306" y2="68" stroke="#12805C" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
-        <text x="200" y="26" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#12805C">SHELF · TARGET</text>
+        <rect x="196" y="34" width="110" height="34" fill="#FFFFFF" opacity="0.08"/>
+        <line x1="196" y1="34" x2="306" y2="34" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+        <line x1="196" y1="68" x2="306" y2="68" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+        <text x="200" y="26" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#FFFFFF">SHELF · TARGET</text>
         <g stroke-width="2">
-          <line x1="60" y1="146" x2="60" y2="172" stroke="#D1352B"/><rect x="53" y="150" width="14" height="12" fill="#D1352B"/>
-          <line x1="88" y1="140" x2="88" y2="166" stroke="#12805C"/><rect x="81" y="146" width="14" height="12" fill="#12805C"/>
-          <line x1="118" y1="118" x2="118" y2="152" stroke="#12805C"/><rect x="111" y="124" width="14" height="22" fill="#12805C"/>
-          <line x1="158" y1="100" x2="158" y2="128" stroke="#12805C"/><rect x="151" y="106" width="14" height="16" fill="#12805C"/>
-          <line x1="188" y1="76" x2="188" y2="104" stroke="#12805C"/><rect x="181" y="82" width="14" height="16" fill="#12805C"/>
+          <line x1="60" y1="146" x2="60" y2="172" stroke="#FFFFFF"/><rect x="53" y="150" width="14" height="12" fill="#000000"/>
+          <line x1="88" y1="140" x2="88" y2="166" stroke="#FFFFFF"/><rect x="81" y="146" width="14" height="12" fill="#FFFFFF"/>
+          <line x1="118" y1="118" x2="118" y2="152" stroke="#FFFFFF"/><rect x="111" y="124" width="14" height="22" fill="#FFFFFF"/>
+          <line x1="158" y1="100" x2="158" y2="128" stroke="#FFFFFF"/><rect x="151" y="106" width="14" height="16" fill="#FFFFFF"/>
+          <line x1="188" y1="76" x2="188" y2="104" stroke="#FFFFFF"/><rect x="181" y="82" width="14" height="16" fill="#FFFFFF"/>
         </g>
         <path d="M132,124 C160,108 178,92 200,72" fill="none" stroke="#141412" stroke-width="1.5" stroke-dasharray="5 4"/>
         <path d="M200,72 l-11,1 l7,8 z" fill="#141412"/>
@@ -1132,7 +1139,7 @@ html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
   // ---- draw the chart once; layers fade in by step
   const X0 = 40, DX = 21, Y = (p) => 282 - (p - 176) * 19.5;          // price → y
   const C = (i, o, c, h, l, cls, extra) => { const x = X0 + i * DX, up = c >= o, top = Y(Math.max(o, c)), bot = Y(Math.min(o, c));
-    return `<g class="${cls}" ${extra || ""}><line x1="${x}" x2="${x}" y1="${Y(h)}" y2="${Y(l)}" stroke="var(${up ? "--fl-candle-up" : "--fl-candle-dn"})" stroke-width="1.4"/>
+    return `<g class="${cls}" ${extra || ""}><line x1="${x}" x2="${x}" y1="${Y(h)}" y2="${Y(l)}" stroke="#FFFFFF" stroke-width="1.4"/>
       <rect x="${x - 6}" y="${top}" width="12" height="${Math.max(2, bot - top)}" rx="1.5" fill="${up ? "var(--fl-candle-up)" : "var(--fl-candle-dn)"}"/></g>`; };
   const pre = [[187.2,186.0,187.8,185.4],[186.0,186.4,187.0,185.2],[186.4,184.9,186.8,184.4],[184.9,183.1,185.3,182.6],[183.1,181.6,183.6,181.0],[181.6,179.6,182.0,179.1],[179.6,178.2,180.0,177.6]];
   const hub = [[178.2,177.4,178.6,176.9],[177.4,177.9,178.3,176.8],[177.9,177.1,178.4,176.7],[177.1,177.8,178.2,176.9],[177.8,177.2,178.3,176.8],[177.2,177.7,178.1,176.9],[177.7,177.3,178.2,176.8],[177.3,177.9,178.3,177.0]];
