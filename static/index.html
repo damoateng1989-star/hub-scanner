@@ -3988,7 +3988,7 @@ class MapLabelsPaneView {
   constructor(series, d, chart) { this._s = series; this._d = d; this._chart = chart; }
   update() {}
   renderer() {
-    const s = this._s, d = this._d;
+    const s = this._s, d = this._d, chart = this._chart;
     return { draw(target) {
       target.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, horizontalPixelRatio }) => {
         const W = bitmapSize.width / horizontalPixelRatio, H = bitmapSize.height / horizontalPixelRatio;
@@ -4034,7 +4034,7 @@ class MapLabelsPaneView {
             ctx.fillStyle = d.retest.near ? bg : green;
             ctx.fillText(text, tagX + 10, yEdge);
             if (d.retest.near && d.lastTime != null) {
-              const xLast = this._chart && this._chart.timeScale().timeToCoordinate(d.lastTime);
+              const xLast = chart && chart.timeScale().timeToCoordinate(d.lastTime);
               if (xLast != null && xLast >= 0 && xLast <= W) {
                 ctx.beginPath(); ctx.arc(xLast, yEdge, 7, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = green; ctx.stroke();
                 ctx.beginPath(); ctx.arc(xLast, yEdge, 3, 0, Math.PI * 2); ctx.fillStyle = green; ctx.fill();
