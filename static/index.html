@@ -3996,6 +3996,8 @@ let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_
 // On-chart map labels: the hub band + the Next shelf / Trigger / Stop cluster.
 const MAP_LABEL_GAP = 20;
 const MAP_LABEL_MIN_W = 560;
+// RETEST tag hit-box in chart-container coordinates; refreshed on every primitive draw.
+let MAP_RETEST_BOX = null;
 class MapLabelsPrimitive {
   constructor(data) { this._d = data; this._views = []; }
   attached({ chart, series }) { this._chart = chart; this._series = series; }
@@ -4036,7 +4038,9 @@ class MapLabelsPaneView {
             ctx.globalAlpha = 1;
           }
         }
-        if (d.retest && d.retest.edge != null && W >= MAP_LABEL_MIN_W) {
+        // The RETEST tag is also shown on phones; the label cluster remains desktop-only.
+        MAP_RETEST_BOX = null;
+        if (d.retest && d.retest.edge != null) {
           const yEdge = yOf(d.retest.edge);
           if (yEdge != null && yEdge >= 0 && yEdge <= H) {
             const text = d.retest.near ? "RETEST NOW" : "RETEST";
@@ -4045,8 +4049,9 @@ class MapLabelsPaneView {
             ctx.font = "700 11px 'JetBrains Mono',ui-monospace,monospace";
             ctx.textBaseline = "middle";
             const tagW = ctx.measureText(text).width + 20;
-            const tagX = (W - 178) - 12 - tagW;
+            const tagX = Math.max(4, (W - 178) - 12 - tagW);
             const tagY = yEdge - 12;
+            MAP_RETEST_BOX = { x: tagX, y: tagY, w: tagW, h: 24 };
             ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, 24, 12);
             if (d.retest.near) { ctx.fillStyle = green; ctx.fill(); }
             else { ctx.fillStyle = bg; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = green; ctx.stroke(); }
@@ -4196,6 +4201,19 @@ function initLightweightMapChart() {
     // time still fits content. Native candle autoscaling otherwise.
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
+      // Hovering/tapping the RETEST pill explains why the setup waits before entry.
+      if (param.point && MAP_RETEST_BOX && D.P.retest && D.P.retest.edge != null) {
+        const b = MAP_RETEST_BOX;
+        if (param.point.x >= b.x && param.point.x <= b.x + b.w && param.point.y >= b.y && param.point.y <= b.y + b.h) {
+          const edge = D.P.retest.edge;
+          tip.innerHTML = '<b>Why wait for the retest?</b><div>Price broke above ' + money(edge) + '. A retest entry waits for it to come back and hold the edge — instead of chasing the breakout, you enter at the level, with a tighter stop, so a wrong trade costs less. If a 4H candle closes back below ' + money(edge) + ', the setup is dead — and you never entered.</div>';
+          tip.classList.add("on");
+          tip.style.left = Math.max(4, Math.min(param.point.x + 12, cw.clientWidth - 250)) + "px";
+          tip.style.top = Math.max(4, Math.min(param.point.y + 10, host.clientHeight - 140)) + "px";
+          if (xh) { xh.style.left = param.point.x + "px"; xh.style.top = "0"; xh.style.height = host.clientHeight + "px"; xh.classList.add("on"); }
+          return;
+        }
+      }
       const bar=param.seriesData&&param.seriesData.get(candles);
       if(!bar||!param.point){tip.classList.remove("on");if(xh)xh.classList.remove("on");return;}
       const date=typeof param.time==="number"?new Date(param.time*1000):null;
@@ -4421,7 +4439,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, or the volume strip by the prices for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
