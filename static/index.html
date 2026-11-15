@@ -4156,7 +4156,8 @@ function initLightweightMapChart() {
     // Stretch the price scale to the plotted levels (only expands, +4% pad) so the
     // next shelf / walls are on screen, not just the candles. Uses the supported
     // autoscaleInfoProvider (LWC v5), not a price-scale range API.
-    candles.applyOptions({ autoscaleInfoProvider: (original) => {
+    candles.applyOptions({ autoscaleInfoProvider: (baseImplementation) => {
+      const original = baseImplementation();
       if (!original || !original.priceRange) return original;
       let lo = original.priceRange.minValue, hi = original.priceRange.maxValue;
       [D.P.trig, D.P.stop, D.P.shelf,
@@ -4165,7 +4166,7 @@ function initLightweightMapChart() {
         .filter(v => v != null && Number.isFinite(+v))
         .forEach(v => { lo = Math.min(lo, +v); hi = Math.max(hi, +v); });
       const pad = (hi - lo) * 0.04;
-      return { ...original, priceRange: { minValue: lo - pad, maxValue: hi + pad } };
+      return { ...original, priceRange: { ...original.priceRange, minValue: lo - pad, maxValue: hi + pad } };
     }});
     // On-chart hub/level labels. If primitives are unavailable, keep today's axis labels.
     if (candles.attachPrimitive) {
