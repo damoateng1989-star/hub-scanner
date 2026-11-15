@@ -4091,7 +4091,7 @@ function initLightweightMapChart() {
     // One source of truth for each plotted level: line, axis marker and chart label.
     const triggerColor = "#E9C46A";
     const stopColor = "#E5736A";
-    const shelfColor = upColor; // Next shelf / target is green in both the chart label and its price line.
+    const shelfColor = D.P.dir === -1 ? downColor : upColor;
     line(D.P.trig,"TRIGGER",triggerColor);
     line(D.P.stop,"STOP",stopColor);
     line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",shelfColor);
