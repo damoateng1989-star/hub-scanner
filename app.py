@@ -1087,8 +1087,12 @@ async def public_hero_chart():
         symbol="AVGO",
         candles=d.get("candles") or [],
         status=dict(
+            state=st.get("state"),
+            direction=st.get("direction"),
             hub=dict(low=hub.get("low"), high=hub.get("high")) if hub else None,
             target=st.get("target"),
+            shelf_up=st.get("shelf_up"),
+            shelf_down=st.get("shelf_down"),
         ),
     )
 
