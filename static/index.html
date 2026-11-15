@@ -3557,8 +3557,8 @@ function vizSummary(st) {
 let VIZ_ST = null;
 function vizDomain(st) {
   const h = st.hub, lo = [], hi = [];
-  if (st.shelf_down) lo.push(st.shelf_down.level);
-  if (st.shelf_up) hi.push(st.shelf_up.level);
+  if (st.shelf_down) { lo.push(st.shelf_down.level); lo.push(st.shelf_down.low); }
+  if (st.shelf_up) { hi.push(st.shelf_up.level); hi.push(st.shelf_up.high); }
   if (h) { lo.push(h.low); hi.push(h.high); }
   const w = GAMMA[BRIEF_SYM];
   if (w && w !== "loading") { if (w.call_wall) hi.push(w.call_wall); if (w.put_wall) lo.push(w.put_wall); }
@@ -3867,11 +3867,11 @@ function mapDoublePlan(P, x) {
 function mapPlan(sym, st) {
   const k = st.state, h = st.hub, L = LIVE[sym], isLive = !!(LIVE_OPEN && L && L.price != null);
   const px = isLive ? L.price : st.last_close;
-  const P = {sym, px, isLive, chg: isLive ? L.change_pct : null, hub: null, trig: null, stop: null, shelf: null, obst: null,
+  const P = {sym, px, isLive, chg: isLive ? L.change_pct : null, hub: null, trig: null, stop: null, shelf: null, shelfZone: null, obst: null,
              dir: 1, steps: "none", phase: 0, watch: false, status: "", sub: "", tone: "wait", setupName: "Hub breakout"};
   // opened from a double top / bottom card: show that pattern, not the hub
   const fx = BRIEF_FOCUS && BRIEF_FOCUS.startsWith("double") && (st.setups || []).find(x => x.kind === BRIEF_FOCUS);
-  if (fx) { mapDoublePlan(P, fx); return mapObstacle(P, sym, st); }
+  if (fx) { mapDoublePlan(P, fx); P.shelfZone = fx.shelf || null; return mapObstacle(P, sym, st); }
   const hubLive = (k === "breakout_up" || k === "breakdown") && h;
   const MEASURED = (x) => x.kind === "gapfade" || x.kind === "double_top" || x.kind === "double_bottom";
   const other = !hubLive && (st.setups || []).find(x => MEASURED(x) && (x.state === "breakout_up" || x.state === "breakdown"));
@@ -3879,16 +3879,17 @@ function mapPlan(sym, st) {
   const pend = !hubLive && !other && !forming && (st.setups || []).find(x => x.kind === "gapfade" || x.kind === "double_bottom");
   if (hubLive) {
     const d = k === "breakout_up" ? 1 : -1, rt = st.retest;
-    Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, atrTarget: st.target_kind === "atr", stop: d === 1 ? h.high : h.low,
+    Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, shelfZone: d === 1 ? st.shelf_up : st.shelf_down, atrTarget: st.target_kind === "atr", stop: d === 1 ? h.high : h.low,
       steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2});
     if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
       P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (${rt.candles_left} candle${rt.candles_left === 1 ? "" : "s"} left).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
     else { P.status = "Broke down · watch only"; P.sub = "Short breakdowns lost money in the two-year test, so there's no entry plan."; P.tone = "bad"; }
   } else if (other && other.kind.startsWith("double")) {
     mapDoublePlan(P, other);
+    P.shelfZone = other.shelf || null;
   } else if (other) {
     const d = other.state === "breakout_up" ? 1 : -1, kd = other.kind.startsWith("double") ? other.kind : other.kind === "gapfade" ? "gapfade" : "hub";
-    Object.assign(P, {dir: d, trig: other.edge, shelf: other.target, stop: other.stop ?? other.edge, steps: kd === "hub" ? (d === 1 ? "hub" : "hub_short") : kd,
+    Object.assign(P, {dir: d, trig: other.edge, shelf: other.target, shelfZone: other.shelf || null, stop: other.stop ?? other.edge, steps: kd === "hub" ? (d === 1 ? "hub" : "hub_short") : kd,
       watch: d === -1 || other.kind === "double_top", setupName: other.name,
       phase: kd === "gapfade" ? 1 : other.retest && other.retest.near ? 2 : 1});
     P.status = P.watch ? `${other.name}: broke down · watch only` : `${other.name}: ${other.kind === "gapfade" ? "triggered" : "broke out"}`;
@@ -3896,7 +3897,7 @@ function mapPlan(sym, st) {
     P.tone = P.watch ? "bad" : "go";
   } else if (forming) {
     const tu = st.trigger_up || h.high;
-    Object.assign(P, {hub: h, trig: tu, shelf: st.shelf_up ? st.shelf_up.level : st.target_up ?? null, atrTarget: !st.shelf_up && st.target_up != null,
+    Object.assign(P, {hub: h, trig: tu, shelf: st.shelf_up ? st.shelf_up.level : st.target_up ?? null, shelfZone: st.shelf_up || null, atrTarget: !st.shelf_up && st.target_up != null,
       stop: Math.round((h.high + h.low) / 2 * 100) / 100, steps: "hub"});
     P.status = "Waiting for confirmation";
     P.sub = px > tu ? `Above ${money(tu)} now, but it hasn't closed there yet. The next check is ${nextCloseText()}.`
@@ -4006,6 +4007,15 @@ class MapLabelsPaneView {
             }
           }
         }
+        if (d.shelfZone) {
+          const yHi = yOf(d.shelfZone.high), yLo = yOf(d.shelfZone.low);
+          if (yHi != null && yLo != null && yLo > yHi) {
+            ctx.globalAlpha = .32; ctx.fillStyle = d.shelfColor;
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(0, yHi, W, yLo - yHi, 6); ctx.fill(); }
+            else ctx.fillRect(0, yHi, W, yLo - yHi);
+            ctx.globalAlpha = 1;
+          }
+        }
         if (W >= MAP_LABEL_MIN_W) {
           const rows = [
             { label: d.shelfLabel, price: d.shelf, color: d.shelfColor, primary: true },
@@ -4106,6 +4116,7 @@ function initLightweightMapChart() {
           shelf: D.P.shelf,
           shelfLabel: D.P.atrTarget ? "Target" : "Next shelf",
           shelfColor,
+          shelfZone: D.P.shelfZone || null,
           trig: D.P.trig, triggerColor,
           stop: D.P.stop, stopColor,
           callWall, callWallColor, putWall, putWallColor,
