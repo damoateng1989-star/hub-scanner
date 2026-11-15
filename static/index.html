@@ -4377,6 +4377,16 @@ function paintMap() {
     P.atrTarget ? `no shelf above: 1 ATR past the hub top${P.trig != null && P.shelf <= P.trig ? " (below the trigger: no room yet)" : ""}` : P.shelf != null ? pctTo(P.shelf) || "above" : "none in range", "flag"));
   const jr = steps.map(([t, ic], i) => `<div class="mp-j ${i < P.phase ? "done" : i === P.phase ? "now" : ""}"><span class="mp-jd">${mapIc(ic, 14)}</span><small>${t}${i === P.phase ? "<em>Now</em>" : ""}</small></div>`).join("");
   const qs = [["why", "Why is this interesting?"], ["next", "What needs to happen next?"], ["stop", "What could stop it?"], ["new", "Explain it like I'm new"]];
+  // flow at the breakout (Patch 115): the fact only — no "Confirms" pill until the Lab gate passes
+  const br = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+  const flowHTML = (br && br.flow) ? (() => {
+    const f = br.flow, exp = f.expiry ? new Date(f.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "";
+    const side = f.side === "call" ? `unusual call volume — ${f.call_voi.toFixed(1)}× open interest on the ${exp} calls`
+      : f.side === "put" ? `unusual put volume — ${f.put_voi.toFixed(1)}× open interest on the ${exp} puts`
+      : "no unusual flow";
+    const when = f.breakout_date ? new Date(f.breakout_date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}) : "the breakout day";
+    return `<div class="mp-flow">📊 <b>Flow at the breakout: ${side}.</b><small>Measured on ${when}, from the options chain. A past fact, not a live reading.</small></div>`;
+  })() : "";
   el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
       <h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
       <span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : "Market closed"}</span>
@@ -4385,7 +4395,7 @@ function paintMap() {
       <div class="mp-main">
         <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">⚡ Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, or the volume strip by the prices for details." : "Tap a candle or a line for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
-        <div class="mp-card mp-status"><div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
+        <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
         <div id="mapGrade">${gradeHTML(st)}</div>
         <div id="mpBodySlot"></div>
@@ -6536,6 +6546,9 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
 .mp-main { display: grid; gap: 12px; min-width: 0; }
 .mp-card { background: var(--mp-card); border: 1px solid var(--mp-line); border-radius: 18px; padding: 16px; }
+.mp-flow { grid-column: 1 / -1; background: rgba(34,163,92,.07); border: 1px solid #1E7A3C; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.55; color: var(--mp-ink, #E9EBEF); margin-bottom: 12px; }
+.mp-flow b { color: #3DD68C; }
+.mp-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .mp-ct { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; } .mp-ct b { font-size: 16px; } .mp-ct span { font-size: 12.5px; color: var(--mp-mut); }
 .mp-chartcard { padding: 14px 10px 8px 14px; }
 .mp-protitle { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px 10px 0; border-bottom:1px solid var(--mp-line); margin-bottom:10px; }
