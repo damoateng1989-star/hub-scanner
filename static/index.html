@@ -5742,7 +5742,7 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Prices at the aim and on a failure are simulated with Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"]];   // Patch 82: the measured setups only
+const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"], ["gex", "GEX shelves"]];   // Patch 82: the measured setups only; Patch 135: GEX is watch-only, beta
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
@@ -5805,6 +5805,7 @@ function pickSetupTab(k) { SETUP_TAB = k; document.querySelectorAll(".setup-tabs
   $("hubBoard").hidden = k !== "hub"; $("setupBoard").hidden = k === "hub"; if (k !== "hub") { renderSetupBoard(); labelTable($("setupBoard")); }
   const on = document.querySelector(".setup-tabs button.on"); if (on) on.scrollIntoView({block: "nearest", inline: "center"}); }
 function renderSetupBoard() {
+  if (SETUP_TAB === "gex") { renderGexBoard(); return; }
   const b = BOARD_DATA, rows = (b.setups || []).filter(x => x.style === SETUP_TAB);
   const name = SETUP_TABS.find(t => t[0] === SETUP_TAB)[1];
   const lock = b.locked && b.setups_locked ? `<div class="board-lock"><div><strong>${b.setups_locked} more setups are breaking out or testing a level right now</strong><p>Live breakouts on every setup are part of Pro.</p></div><a class="upsell" href="#account">View Pro access →</a></div>` : "";
@@ -5829,6 +5830,34 @@ function renderSetupBoard() {
   $("setupBoard").innerHTML = lock + betaNote + `<p class="setup-about">${about}</p>` + (rows.length ? gridHTML
     : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" || SETUP_TAB === "flush" ? "daily" : "4-hour"} close.</div>`)
     + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup works on daily closes with a fixed 2× risk target, not the hub rules." : SETUP_TAB === "flush" ? "This setup is in beta. It works on daily closes: the trigger is a daily close back above the level, and it's wrong on a daily close back below it." : SETUP_TAB === "fakeout" ? "This setup is in beta. It acts on a 4-hour close and aims for the next shelf, but the stop is the fake-out low (or high), not the hub edge." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
+}
+
+ // GEX board (Patch 135, watch-only): one mini card per watchlist ticker — price, nearest
+// walls, and a one-word state. Built from the watchlist (TICKERS) and /api/gamma per ticker.
+// No Lab record behind it, no alerts. A failed fetch for one ticker skips that card.
+async function renderGexBoard() {
+  const host = $("setupBoard");
+  host.innerHTML = `<div class="beta-note"><b>Watch-only.</b> Gamma shelves are levels, not a setup — there is no Lab record behind them yet, and no alert fires on them. The Lab measures the wall trigger next; only a passing trigger earns an alert.</div><p class="setup-about">A call wall is a ceiling shelf, a put wall is a floor shelf. This board shows where each stock on your watchlist sits against its gamma walls.</p><div class="empty">Loading gamma walls…</div>`;
+  const syms = (typeof TICKERS !== "undefined" ? TICKERS : []).map(t => t.symbol).filter(Boolean);
+  if (!syms.length) { host.innerHTML = `<div class="beta-note"><b>Watch-only.</b> Gamma shelves are levels, not a setup — there is no Lab record behind them yet, and no alert fires on them.</div><div class="empty">Your watchlist is empty. Add a ticker and its gamma walls will show here.</div>`; return; }
+  const results = await Promise.all(syms.map(async sym => {
+    try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); return { sym, j }; }
+    catch (_) { return { sym, j: null }; }
+  }));
+  const cards = results.map(({ sym, j }) => {
+    const w = j && j.walls, s = j && j.shelves;
+    if (!w && !s) return "";
+    const spot = s ? s.spot : null;
+    const cw = w ? w.call_wall : null, pw = w ? w.put_wall : null;
+    if (spot == null || cw == null || pw == null) return "";
+    const near = Math.min(Math.abs(spot - cw), Math.abs(spot - pw)) / spot;
+    const at = near <= 0.01;
+    const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    return `<a class="gex-mini" href="/t/${esc(sym)}"><span class="gex-mini-top"><b>${esc(sym)}</b><i class="${at ? "at" : ""}">${at ? "AT THE WALL" : "BETWEEN WALLS"}</i></span><span class="gex-mini-px">${money(spot)}</span><span class="gex-mini-wall">Call wall <b class="cw">${money(cw)}</b> &middot; put wall <b class="pw">${money(pw)}</b></span></a>`;
+  }).filter(Boolean).join("");
+  host.innerHTML = `<div class="beta-note"><b>Watch-only.</b> Gamma shelves are levels, not a setup — there is no Lab record behind them yet, and no alert fires on them. The Lab measures the wall trigger next; only a passing trigger earns an alert.</div><p class="setup-about">A call wall is a ceiling shelf, a put wall is a floor shelf. This board shows where each stock on your watchlist sits against its gamma walls.</p>`
+    + (cards ? `<div class="sc-grid">${cards}</div>` : `<div class="empty">No gamma walls available for your watchlist right now. Sika checks again after the next 4-hour close.</div>`)
+    + `<div class="note" style="margin-top:10px">Walls come from the nearest monthly expiry (7+ days out) on the Cboe delayed chain — the same expiry the Shelf card uses. No Lab record, no alerts.</div>`;
 }
 // ---- setup cards: the pattern drawn with its levels and a dot where price is now (same card as the hub board)
 function setupSketch(x) {
@@ -6633,6 +6662,17 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 
 /* setup cards (double tops & bottoms, gap fade): the hub card, with the pattern drawn */
 .sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+
+.gex-mini { display: block; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface); padding: 12px 13px; text-decoration: none; color: var(--ink); }
+.gex-mini-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.gex-mini-top b { font-size: 15px; font-weight: 800; }
+.gex-mini-top i { font-style: normal; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--muted); }
+.gex-mini-top i.at { background: #3B82F6; border-color: #3B82F6; color: #fff; }
+.gex-mini-px { display: block; font-family: var(--mono); font-size: 15px; margin-top: 6px; }
+.gex-mini-wall { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.6; }
+.gex-mini-wall b { font-weight: 700; }
+.gex-mini-wall .cw { color: #93C5FD; }
+.gex-mini-wall .pw { color: var(--down); }
 .sc-group { margin: 18px 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #A9AEB8; }
 .sc-group small { color: #7C8494; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .sc { border: 1px solid var(--line, #26272B); border-radius: 18px; padding: 18px 18px 16px; background: #15161A; min-width: 0; }
