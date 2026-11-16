@@ -1179,9 +1179,9 @@ async def gex_board(symbol: str, at: str | None = None, u: dict = User):
     """Watch-only all-expiry GEX board. at=HHMM selects a recorded watchlist snapshot."""
     import re
     sym = symbol.strip().upper()
-    if not re.fullmatch(r"[A-Z][A-Z0-9.\\-]{0,9}", sym):
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
         raise HTTPException(400, "Unknown symbol")
-    if at is not None and not re.fullmatch(r"\\d{4}", at):
+    if at is not None and not re.fullmatch(r"\d{4}", at):
         raise HTTPException(400, "at must be HHMM")
     spot = None
     if at is None:
