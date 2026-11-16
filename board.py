@@ -518,6 +518,7 @@ def board() -> dict:
     for r in db.board_rows():
         st = json.loads(r["status"] or "{}")
         st["symbol"] = r["symbol"]
+        st["updated_at"] = r["updated_at"]
         rows.append(st)
     watch = {r["symbol"] for r in db.list_tickers()}
     for r in rows:
@@ -537,6 +538,8 @@ def board() -> dict:
     forming.sort(key=lambda r: -(r.get("hub") or {}).get("sessions", 0))
     recent = [r for r in rows if r.get("state") in ("follow-through", "snap-back", "stalled")]
     updated = max((r["updated_at"] for r in db.board_rows()), default=None)
+    for r in rows:      # A row skipped by the latest sweep keeps its old values: mark it stale instead of serving it as current.
+        r["stale"] = not r.get("updated_at") or (bool(updated) and r["updated_at"] < updated)
     setups = []      # every non-hub setup on the board, one row each
     for r in rows:
         for st in r.get("setups") or []:
