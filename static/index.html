@@ -4538,6 +4538,7 @@ function mapReplayBar() {
   const R = MAP_RP, n = R.n || 1, k = Math.min(R.k, n - 1), ev = R.ev || [], cs = R.cs || [];
   let last = null; for (let i = k; i >= 0 && !last; i--) if (ev[i] && ev[i].length) last = {i, e: ev[i][ev[i].length - 1]};
   const c = cs[k], when = c ? new Date(c.time * 1000).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"}) + (MAP_TF === "1d" ? "" : new Date(c.time * 1000).getUTCHours() < 13 ? " 9:30 AM" : " 1:30 PM") : "";
+  const done = !R.play && k >= n - 1;
   return `<div class="mp-rp">
     <div class="mp-rp-say ${last && last.i === k ? "fresh" : ""}">${last ? last.e.txt : "Watching the candles. Nothing set up yet."}</div>
     <div class="mp-rp-ctl"><button onclick="mapReplayStep(-1)" aria-label="Back">⏮</button>
@@ -4545,7 +4546,7 @@ function mapReplayBar() {
       <button onclick="mapReplayStep(1)" aria-label="Forward">⏭</button>
       <input type="range" min="0" max="${n - 1}" value="${k}" oninput="mapReplaySeek(this.value)" aria-label="Replay position">
       <span class="mp-rp-t">${when}</span><button onclick="mapReplaySpeed()" class="sp">${R.fast ? "2×" : "1×"}</button>
-      <button onclick="mapReplayStop()" aria-label="Close replay">✕</button></div></div>`;
+      ${done ? `<button class="mp-rp-done" onclick="mapReplayStop()">✓ Done</button>` : `<button onclick="mapReplayStop()" aria-label="Close replay">✕</button>`}</div></div>`;
 }
 // redraw just the chart and the caption (the slider being dragged must survive)
 function mapReplayRedraw() {
@@ -6729,6 +6730,7 @@ html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="l
 @media (max-width: 559px) { .mp-rp-t { display: none; } }
 .mp-rp-ctl button { background: none; border: 1px solid var(--mp-line); color: var(--mp-ink); border-radius: 8px; min-width: 32px; height: 30px; cursor: pointer; font-size: 12px; }
 .mp-rp-ctl button.pp { background: var(--mp-hub); border-color: var(--mp-hub); color: #fff; }
+.mp-rp-ctl button.mp-rp-done { background: var(--mp-hub); border-color: var(--mp-hub); color: #fff; font-weight: 700; padding: 0 14px; }
 .mp-rp-ctl input[type=range] { flex: 1; min-width: 60px; accent-color: var(--mp-hub); }
 .mp-rp-t { font: 600 11.5px var(--mono, ui-monospace, monospace); color: var(--mp-mut); white-space: nowrap; }
 .mp-svg .mp-hdl rect { fill: var(--mp-ink); opacity: .05; } .mp-svg .mp-hdl circle { stroke-width: 2; fill: var(--mp-card); }
