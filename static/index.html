@@ -4053,7 +4053,7 @@ class MapLabelsPaneView {
         if (d.retest && d.retest.edge != null) {
           const yEdge = yOf(d.retest.edge);
           if (yEdge != null && yEdge >= 0 && yEdge <= H) {
-            const text = d.retest.near ? "RETEST NOW" : "RETEST";
+            const text = d.retest.near ? "RETESTING NOW" : "RETEST";
             // Monochrome button, not a level: ink fill, background text. (Patch 125.)
             const ink = document.documentElement.dataset.theme === "light" ? "#141412" : "#FFFFFF";
             const bg = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
