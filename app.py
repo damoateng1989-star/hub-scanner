@@ -129,6 +129,22 @@ def handle_command(cmd: str, args: list[str], u: dict) -> str:
     return "Unknown command. /help for the list."
 
 
+def _snapshot_gex_watchlist():
+    """Five-minute, watchlist-only GEX capture. 09:35 through the 16:00 close = 78 slots."""
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _ZoneInfo
+    now = _dt.now(_ZoneInfo("America/New_York"))
+    minute = now.hour * 60 + now.minute
+    if now.weekday() >= 5 or minute < 9 * 60 + 35 or minute > 16 * 60:
+        return
+    symbols = [r["symbol"] for r in db.list_tickers()]
+    if not symbols:
+        return
+    spots = data.latest_prices(symbols)
+    result = gamma.snapshot_watchlist(symbols, spots)
+    log.info("GEX snapshots: %s saved, %s skipped", result.get("saved", 0), result.get("skipped", 0))
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     try:      # a Lab test cut off by a restart is marked stopped, not resumed (it used to resume itself and OOM-loop)
@@ -199,6 +215,10 @@ async def lifespan(_app: FastAPI):
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
     if BOARD_TIMES and not db.board_rows():      # first start: fill the board shortly after the site is up
         threading.Timer(20, board.scan_board).start()
+    # Patch 139: compact Cboe GEX snapshots for the shared watchlist only (78 slots/day).
+    sched.add_job(_snapshot_gex_watchlist, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5",
+                                                      timezone="America/New_York"),
+                  misfire_grace_time=120, coalesce=True, max_instances=1, id="gex_watchlist_snapshots", replace_existing=True)
     sched.add_job(paper.sync, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5",
                                           timezone="America/New_York"),
                   misfire_grace_time=120, coalesce=True, max_instances=1)
@@ -1151,6 +1171,46 @@ async def gamma_walls(symbol: str, u: dict = User):
     s = await run_in_threadpool(gamma.shelves, sym, spot) if spot else None
     g = await run_in_threadpool(gamma.grid, sym, spot) if spot else None
     return dict(symbol=sym, walls=w, shelves=s, grid=g)
+
+
+
+@app.get("/api/gex/board/{symbol}")
+async def gex_board(symbol: str, at: str | None = None, u: dict = User):
+    """Watch-only all-expiry GEX board. at=HHMM selects a recorded watchlist snapshot."""
+    import re
+    sym = symbol.strip().upper()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\\-]{0,9}", sym):
+        raise HTTPException(400, "Unknown symbol")
+    if at is not None and not re.fullmatch(r"\\d{4}", at):
+        raise HTTPException(400, "at must be HHMM")
+    spot = None
+    if at is None:
+        try:
+            spot = await run_in_threadpool(data.latest_price, sym)
+        except Exception:
+            spot = None
+        if not spot:
+            row = next((r for r in db.board_rows() if r["symbol"] == sym), None)
+            if row:
+                try:
+                    spot = json.loads(row["status"] or "{}").get("last_close")
+                except Exception:
+                    spot = None
+    result = await run_in_threadpool(gamma.board, sym, spot, at)
+    if at is not None and result is None:
+        raise HTTPException(404, "No GEX snapshot for that time")
+    return result
+
+
+@app.get("/api/gex/tickers")
+def gex_tickers(u: dict = User):
+    """Watchlist first, followed by the configured universe for on-demand board lookup."""
+    watched = db.user_symbols(u["id"])
+    watch_set = set(watched)
+    ordered = list(watched) + [s for s in universe.board_universe() if s not in watch_set]
+    return [dict(symbol=s, name=s, on_watchlist=s in watch_set,
+                 has_snapshots=bool(s in watch_set and gamma.has_snapshots(s)))
+            for s in ordered]
 
 
 @app.get("/api/grade/{symbol}")
