@@ -202,7 +202,8 @@ def _alpaca_snapshots(symbols: list[str], feed: str | None = None) -> dict[str, 
             if not px:
                 continue
             out[sym] = dict(price=round(float(px), 2), time=t.get("t"),
-                            change_pct=round((float(px) / float(prev) - 1) * 100, 2) if prev else None)
+                            change_pct=round((float(px) / float(prev) - 1) * 100, 2) if prev else None,
+                            latestTrade=t, prevDailyBar=snap.get("prevDailyBar") or {})
     return out
 
 
