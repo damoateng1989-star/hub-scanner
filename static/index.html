@@ -855,6 +855,47 @@ body.brief-open .sf-hello { display: none; }
 .setup-tabs small { padding: 1px 7px; border-radius: 99px; background: #222326; color: #C3C7CF; font: 700 12px var(--sans); }
 .setup-tabs i { font-style: normal; font: 700 10px var(--sans); color: #F2C14E; text-transform: uppercase; letter-spacing: .04em; }
 .setup-about { margin: 0 0 12px; color: #A9AEB8; font-size: 14.5px; }
+
+.gxb { border:1px solid #303136; background:#101114; color:#F1F1EF; border-radius:12px; padding:14px; min-width:0; }
+.gxb-top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.gxb-title { font:700 16px var(--sans); letter-spacing:-.02em; }
+.gxb-meta { color:#92949B; font:11px var(--mono); margin-top:3px; }
+.gxb-picker { display:grid; grid-template-columns:minmax(180px,1fr) auto; gap:8px; align-items:center; }
+.gxb-search { width:100%; min-width:0; background:#08090B; color:#F5F5F4; border:1px solid #383A40; border-radius:7px; padding:10px 12px; font:13px var(--mono); outline:none; }
+.gxb-search:focus { border-color:#F4F4F0; box-shadow:0 0 0 2px rgba(255,255,255,.09); }
+.gxb-chips { display:flex; gap:6px; overflow-x:auto; padding:9px 0 2px; scrollbar-width:thin; }
+.gxb-chip { flex:none; padding:5px 9px !important; border-radius:5px !important; background:#17181C !important; color:#C7C8CC !important; border:1px solid #35363C !important; font:600 11px var(--mono) !important; }
+.gxb-chip.on { background:#F3F3EF !important; color:#08090B !important; border-color:#F3F3EF !important; }
+.gxb-results { display:flex; flex-wrap:wrap; gap:5px; padding:7px 0 2px; }
+.gxb-results button { padding:5px 8px !important; background:#18191D !important; border:1px solid #34363B !important; color:#EEE !important; border-radius:4px !important; font:11px var(--mono) !important; }
+.gxb-toolbar { display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; margin:15px 0 9px; }
+.gxb-toolbar b { font:700 16px var(--mono); }
+.gxb-toolbar span { color:#92949B; font:11px var(--mono); }
+.gxb-replay { border:1px solid #303136; background:#0A0B0D; border-radius:8px; padding:10px 12px; margin:10px 0 12px; }
+.gxb-replay-top { display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; font:11px var(--mono); color:#BFC0C4; }
+.gxb-replay-top strong { color:#F3F3F0; }
+.gxb-replay input[type=range] { width:100%; accent-color:#F3F3F0; margin:10px 0 2px; }
+.gxb-play { padding:5px 10px !important; border-radius:5px !important; background:#F3F3F0 !important; color:#08090B !important; border:1px solid #F3F3F0 !important; font:700 11px var(--mono) !important; }
+.gxb-grid-wrap { overflow:auto; border:1px solid #292A2E; border-radius:8px; }
+.gxb-table { width:100%; min-width:680px; border-collapse:separate; border-spacing:0; font:11px var(--mono); }
+.gxb-table th { position:sticky; top:0; z-index:1; background:#15161A; color:#8D9098; text-align:right; padding:9px 7px; border-bottom:1px solid #33353A; white-space:nowrap; }
+.gxb-table th:first-child,.gxb-table td:first-child { text-align:left; position:sticky; left:0; z-index:2; background:#111216; }
+.gxb-table td { text-align:right; padding:7px; border-bottom:1px solid #25262B; white-space:nowrap; color:#F1F1EF; }
+.gxb-table tr:last-child td { border-bottom:0; }
+.gxb-table tr.gxb-price td:first-child { box-shadow:inset 3px 0 #FFF; }
+.gxb-table tr.gxb-price td { border-top:1px solid #FFF; border-bottom:1px solid #FFF; }
+.gxb-strike { font-weight:800; font-size:12px; }
+.gxb-price-tag { display:inline-block; margin-left:5px; padding:1px 4px; border:1px solid #FFF; color:#FFF; font:700 8px var(--mono); letter-spacing:.05em; }
+.gxb-tags { display:flex; flex-wrap:wrap; gap:3px; margin-top:4px; max-width:140px; }
+.gxb-tag { padding:1px 4px; border:1px solid #74767D; color:#D8D9DC; border-radius:2px; font:700 8px var(--mono); letter-spacing:.02em; }
+.gxb-total { min-width:100px; }
+.gxb-total strong { display:block; font-size:12px; }
+.gxb-total small,.gxb-exp small { display:block; color:#D4D5D8; font-size:9px; margin-bottom:2px; }
+.gxb-exp { min-width:76px; }
+.gxb-exp strong { display:block; font-size:10px; }
+.gxb-note { margin-top:10px; color:#999BA2; font-size:12px; line-height:1.5; }
+@media(max-width:620px) { .gxb { padding:10px; border-radius:8px; } .gxb-picker { grid-template-columns:1fr; } .gxb-table { min-width:620px; } .gxb-toolbar { align-items:flex-start; } }
+
 .rec-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; overflow: visible; }
 .rec-tabs button { flex: none; text-align: left; padding: 10px 14px !important; border-radius: 12px !important; border: 1px solid #313235 !important; background: #141518 !important; cursor: pointer; }
 .rec-tabs button.on { border-color: rgba(255,255,255,.28) !important; background: rgba(255,255,255,.07) !important; }
@@ -5742,7 +5783,7 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Prices at the aim and on a failure are simulated with Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"], ["gex", "GEX shelves"]];   // Patch 82: the measured setups only; Patch 135: GEX is watch-only, beta
+const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"], ["gex", "GEX shelves"], ["gexboard", "GEX board"]];   // Patch 82: the measured setups only; Patch 135: GEX is watch-only, beta
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',
@@ -5753,6 +5794,7 @@ const SETUP_ICON = {
   flush: '<path d="M3 6h7" stroke-dasharray="2 2"/><path d="M3 6l4 2 3 9 3-2 3-6 3-3 2-1"/><path d="M14 6h7" stroke-dasharray="2 2" opacity=".6"/>',
   fakeout: '<rect x="3" y="7" width="12" height="6" rx="1.5" opacity=".6"/><path d="M5 10l3 1 3 7 3-6 3-6 4-2"/><path d="M18 3h3v3"/>',
   gapfade: '<path d="M3 17h4"/><path d="M8 7v10" opacity=".5"/><path d="M8 9l3 6 3-2 3-7 3 1"/><path d="M8 7h12" stroke-dasharray="2 2"/>',
+  gexboard: '<path d="M3 4h18v16H3z"/><path d="M3 10h18M9 4v16M15 4v16"/><path d="M5 7h2M11 13h2M17 7h2"/>',
 };
 const setupIcon = (k) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${SETUP_ICON[k]}</svg>`;
 function styleCard() {
@@ -5806,6 +5848,7 @@ function pickSetupTab(k) { SETUP_TAB = k; document.querySelectorAll(".setup-tabs
   const on = document.querySelector(".setup-tabs button.on"); if (on) on.scrollIntoView({block: "nearest", inline: "center"}); }
 function renderSetupBoard() {
   if (SETUP_TAB === "gex") { renderGexBoard(); return; }
+  if (SETUP_TAB === "gexboard") { renderGexBoardGrid(); return; }
   const b = BOARD_DATA, rows = (b.setups || []).filter(x => x.style === SETUP_TAB);
   const name = SETUP_TABS.find(t => t[0] === SETUP_TAB)[1];
   const lock = b.locked && b.setups_locked ? `<div class="board-lock"><div><strong>${b.setups_locked} more setups are breaking out or testing a level right now</strong><p>Live breakouts on every setup are part of Pro.</p></div><a class="upsell" href="#account">View Pro access →</a></div>` : "";
