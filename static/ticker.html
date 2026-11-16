@@ -202,6 +202,24 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 .gex-shelf .gex-right small { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; margin-top: 2px; }
 .gex-tag { font-style: normal; font-family: var(--mono); font-size: 9px; font-weight: 700; background: #3B82F6; color: #fff; border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; }
 .gex-sika { margin-top: 10px; font-size: 13px; line-height: 1.55; color: var(--ink); }
+  .chart-heat-split { display: grid; grid-template-columns: 1.15fr 1fr; gap: 14px; align-items: start; }
+  @media (max-width: 860px) { .chart-heat-split { grid-template-columns: 1fr; } }
+  #gexHeatmap { background: #0A0A0A; color: #FFFFFF; border-color: #262626; min-width: 0; overflow-x: auto; }
+  .gex-map-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid #262626; }
+  .gex-map-head .t { font-size: 13px; font-weight: 800; letter-spacing: .08em; }
+  .gex-map-head .s { font-family: var(--mono); font-size: 11px; color: #A3A3A3; text-align: right; }
+  table.gex-map { width: 100%; border-collapse: separate; border-spacing: 2px; padding: 10px; font-family: var(--mono); font-size: 11px; }
+  table.gex-map th, table.gex-map td { padding: 7px 6px; text-align: right; border-radius: 4px; white-space: nowrap; }
+  table.gex-map th { text-align: left; color: #FFFFFF; font-weight: 700; background: transparent; }
+  table.gex-map thead th { text-align: right; color: #A3A3A3; font-size: 10px; letter-spacing: .08em; }
+  table.gex-map thead th:first-child { text-align: left; }
+  table.gex-map tr.spotrow th { color: #FFFFFF; }
+  table.gex-map tr.spotrow td { outline: 2px solid #FFFFFF; outline-offset: -1px; }
+  .gex-map .pricetag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; background: #FFFFFF; color: #000000; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: 1px; }
+  .gex-map-legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid #262626; font-family: var(--mono); font-size: 11px; color: #A3A3A3; }
+  .gex-map-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .gex-map-legend .sw.w { background: #FFFFFF; }
+  .gex-map-legend .sw.r { background: #DC2626; }
 .seg{display:inline-flex;background:var(--sunk,#1A1C22);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer}
 .seg button.on{background:#fff;color:#111;font-weight:600}
@@ -448,6 +466,7 @@ function render(d) {
         </span></span>
     </header>
     <p class="sum">${summary(st)}</p>
+    <div class="chart-heat-split">
     <div class="card"><div id="chart"></div>
       <div class="legend">
         <span style="--c:var(--hub)"><i></i>Hubs</span>
@@ -462,6 +481,8 @@ function render(d) {
         ${d.setups && d.setups.lines.some(l => l.kind.startsWith("double")) ? `<span style="--c:#FF6FAE"><i></i>Double top / bottom (peak & neckline)</span>` : ""}
         ${d.setups && d.setups.levels.length ? `<span style="--c:#C3C7CF"><i class="dash"></i>Support / resistance (3+ touches)</span>` : ""}
       </div>
+    </div>
+    <div class="card" id="gexHeatmap"></div>
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
@@ -676,6 +697,7 @@ async function loadGexShelves() {
     const r = await fetch(`/api/gamma/${encodeURIComponent(SYM)}`);
     j = await r.json();
   } catch (_) { return; }
+  renderGexHeatmap(j);
   const sh = j && j.shelves;
   if (!sh || !sh.shelves || !sh.shelves.length) return;
   const spot = sh.spot, rows = sh.shelves;
@@ -694,6 +716,34 @@ async function loadGexShelves() {
     ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
     : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
   host.innerHTML = `<h2>GEX <em>shelves</em></h2><p class="scope">Swing expiry (monthly when available, 7+ days out) &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only, no Lab record yet</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
+}
+
+// GEX heat map (Patch 137, watch-only): net gamma by strike and near-term expiry.
+// White = positive gamma, red = negative gamma; stronger cells are brighter.
+function renderGexHeatmap(j) {
+  const host = document.getElementById("gexHeatmap");
+  if (!host) return;
+  const g = j && j.grid;
+  if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) { host.remove(); return; }
+  const spot = g.spot;
+  const maxV = Math.max(...g.rows.flatMap(r => r.gex.map(v => Math.abs(v))), 1);
+  const nearStrike = g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike;
+  const fmt = v => Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toLocaleString("en-US", {maximumFractionDigits: 0}) : Math.round(Math.abs(v));
+  const cell = v => {
+    const a = Math.min(0.10 + 0.90 * Math.abs(v) / maxV, 1).toFixed(2);
+    if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
+    if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"}">−${fmt(v)}</td>`;
+    return `<td style="color:#6B7280">0</td>`;
+  };
+  const head = g.expiries.map(e => {
+    const d = new Date(e + "T12:00:00");
+    return `<th>${d.toLocaleDateString("en-US", {month:"short", day:"numeric"}).toUpperCase()}</th>`;
+  }).join("");
+  const rowsHtml = g.rows.map(r => {
+    const at = r.strike === nearStrike;
+    return `<tr${at ? ' class="spotrow"' : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}</th>${r.gex.map(cell).join("")}</tr>`;
+  }).join("");
+  host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">K = $1,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])}</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span>Brighter = more gamma</span></div>`;
 }
 load();
 </script>
