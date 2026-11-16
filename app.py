@@ -1149,7 +1149,8 @@ async def gamma_walls(symbol: str, u: dict = User):
             spot = None
     w = await run_in_threadpool(gamma.walls, sym, spot) if spot else None
     s = await run_in_threadpool(gamma.shelves, sym, spot) if spot else None
-    return dict(symbol=sym, walls=w, shelves=s)
+    g = await run_in_threadpool(gamma.grid, sym, spot) if spot else None
+    return dict(symbol=sym, walls=w, shelves=s, grid=g)
 
 
 @app.get("/api/grade/{symbol}")
