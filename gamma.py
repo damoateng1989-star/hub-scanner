@@ -291,9 +291,32 @@ def _board_grid(contracts: list, spot: float) -> dict | None:
                          "total": round(total, 1), "total_gross": round(total_gross, 1)})
     if not rows:
         return None
-    rows.sort(key=lambda r: r["total_gross"], reverse=True)
-    rows = rows[:_GRID_MAX_ROWS]
-    rows.sort(key=lambda r: -r["strike"])
+    # Label the full strike curve before the 25-row display cap, so FLIP/TB use
+    # true adjacent strikes rather than adjacent rows in the ranked display.
+    ordered = sorted(rows, key=lambda r: float(r["strike"]))
+    flips = []
+    for i, row in enumerate(ordered):
+        row["labels"] = []
+        if i:
+            prior = float(ordered[i - 1]["total"])
+            here = float(row["total"])
+            if (prior < 0 <= here) or (prior > 0 >= here):
+                row["labels"].append("FLIP")
+                flips.append(row)
+        if 0 < i < len(ordered) - 1:
+            a = abs(float(ordered[i - 1]["total"]))
+            b = abs(float(row["total"]))
+            c = abs(float(ordered[i + 1]["total"]))
+            if b > a and b > c:
+                row["labels"].append("TB")
+    if flips:
+        min(flips, key=lambda r: abs(float(r["strike"]) - float(spot)))["labels"].append("GF")
+    ranked = sorted(rows, key=lambda r: r["total_gross"], reverse=True)
+    selected = ranked[:_GRID_MAX_ROWS]
+    gf = next((r for r in rows if "GF" in r["labels"]), None)
+    if gf and gf not in selected:
+        selected[-1] = gf
+    rows = sorted(selected, key=lambda r: -r["strike"])
     return {"expiries": [e.isoformat() for e in exps],
             "spot": round(float(spot), 4), "rows": rows}
 
@@ -345,14 +368,8 @@ def _decorate_board(payload: dict, previous: dict | None, walls_: dict | None) -
                       for i, v in enumerate(row.get("gex", []))]
         row["total_mom"] = _momentum(float(row.get("total", 0)),
                                       float(old.get("total", 0)) if old else None)
-        row["labels"] = []
-    ordered = sorted(rows, key=lambda r: float(r["strike"]))
-    flips = []
-    for i in range(1, len(ordered)):
-        a, b = float(ordered[i - 1].get("total", 0)), float(ordered[i].get("total", 0))
-        if (a < 0 <= b) or (a > 0 >= b):
-            ordered[i]["labels"].append("FLIP")
-            flips.append(ordered[i])
+        row.setdefault("labels", [])
+    flips = [r for r in rows if "FLIP" in r.get("labels", [])]
     positive = [r for r in rows if float(r.get("total", 0)) > 0]
     negative = [r for r in rows if float(r.get("total", 0)) < 0]
     if positive:
@@ -366,12 +383,6 @@ def _decorate_board(payload: dict, previous: dict | None, walls_: dict | None) -
                 hit = next((r for r in rows if abs(float(r["strike"]) - float(wall)) < 0.001), None)
                 if hit and "CEILING" not in hit["labels"]:
                     hit["labels"].append("Wall")
-    if flips:
-        min(flips, key=lambda r: abs(float(r["strike"]) - float(payload.get("spot") or 0)))["labels"].append("GF")
-    for i in range(1, len(ordered) - 1):
-        a, b, c = (abs(float(ordered[j].get("total", 0))) for j in (i - 1, i, i + 1))
-        if b > a and b > c:
-            ordered[i]["labels"].append("TB")
     weakening = sorted((r for r in positive if r.get("total_mom") is not None and r["total_mom"] < 0),
                        key=lambda r: float(r["total"]), reverse=True)[:_BOARD_RV_TOP]
     for row in weakening:
