@@ -712,8 +712,10 @@ async function loadGexShelves() {
     const below = rows.filter(r => r.strike < near.strike).sort((a, b) => b.strike - a.strike)[0];
     const shelf = r => {
       const at = r.strike === near.strike;
-      const lab = r.side === "call" ? "Call wall" : "Put wall";
-      return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${r.side === "call" ? "ceiling shelf" : "floor shelf"}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtK(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
+      const both = r.side === "both";
+      const lab = both ? "Both walls" : (r.side === "call" ? "Call wall" : "Put wall");
+      const desc = both ? "Call and put gamma cancel here — the biggest two-sided wall." : (r.side === "call" ? "ceiling shelf" : "floor shelf");
+      return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${desc}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtK(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
     };
     const line = above && below
       ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
@@ -737,11 +739,14 @@ function renderGexHeatmap(j, message) {
     return;
   }
   const spot = g.spot;
-  const maxV = Math.max(...g.rows.flatMap(r => r.gex.map(v => Math.abs(v))), 1);
+  const maxV = Math.max(...g.rows.flatMap(r => (r.gross || r.gex).map(v => Math.abs(v))), 1);
   const nearStrike = g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike;
   const fmt = v => Math.abs(v) >= 1000 ? (Math.abs(v) / 1000).toLocaleString("en-US", {maximumFractionDigits: 0}) : Math.round(Math.abs(v));
-  const cell = v => {
-    const a = Math.min(0.10 + 0.90 * Math.abs(v) / maxV, 1).toFixed(2);
+  const cell = (v, gv) => {
+    const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
+    const a = Math.min(0.10 + 0.90 * mag / maxV, 1).toFixed(2);
+    // Balanced cell: large gross, near-zero net — a pin. White (stabilise).
+    if (Math.abs(v) < 0.25 * Math.abs(gv || 0) && Math.abs(gv || 0) > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
     if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
     if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"}">−${fmt(v)}</td>`;
     return `<td style="color:#6B7280">0</td>`;
@@ -752,7 +757,7 @@ function renderGexHeatmap(j, message) {
   }).join("");
   const rowsHtml = g.rows.map(r => {
     const at = r.strike === nearStrike;
-    return `<tr${at ? ' class="spotrow"' : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}</th>${r.gex.map(cell).join("")}</tr>`;
+    return `<tr${at ? ' class="spotrow"' : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}</tr>`;
   }).join("");
   host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">K = $1,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])}</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span>Brighter = more gamma</span></div>`;
 }
