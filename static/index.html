@@ -4002,7 +4002,7 @@ function mapChart(P, chart, W) {
 }
 
 
-let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null;
+let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null, MAP_LWC_COUNT = 0;
 // On-chart map labels: the hub band + the Next shelf / Trigger / Stop cluster.
 const MAP_LABEL_GAP = 20;
 const MAP_LABEL_MIN_W = 560;
@@ -4110,6 +4110,11 @@ class MapLabelsPaneView {
 function initLightweightMapChart() {
   const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
   if (MAP_LWC_RO) { MAP_LWC_RO.disconnect(); MAP_LWC_RO = null; }
+  // Keep the user's view: save the visible range before the rebuild, restore it after.
+  // Read it live from the old chart so panning/zooming done since the last build is honoured.
+  let prevRange = null;
+  if (MAP_LWC_CHART) { try { prevRange = MAP_LWC_CHART.timeScale().getVisibleLogicalRange(); } catch (e) {} }
+  const prevCount = MAP_LWC_COUNT;
   if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
   document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove());
   if (!host || !D || !L || !D.cs || !D.cs.length) {
@@ -4206,7 +4211,21 @@ function initLightweightMapChart() {
         }
       } catch (e) { console.warn("NextShelf map labels unavailable", e); }
     }
-    chart.timeScale().fitContent();
+    // Restore the user's view instead of re-fitting everything: a price update must not
+    // throw away their zoom/pan. Only fit content on the first build (no saved range).
+    const n = D.cs.length;
+    MAP_LWC_COUNT = n;
+    if (prevRange && Number.isFinite(prevRange.from) && Number.isFinite(prevRange.to)) {
+      const added = n - prevCount;   // new bars since the last build (usually 0 or 1)
+      let from = prevRange.from, to = prevRange.to;
+      if (added > 0 && prevRange.to >= prevCount - 1) {
+        // the user was looking at the latest bars: shift the range right so the latest bars stay in view
+        from += added; to += added;
+      }
+      chart.timeScale().setVisibleLogicalRange({from, to});
+    } else {
+      chart.timeScale().fitContent();
+    }
     // Price range includes the plotted levels via autoscaleInfoProvider (above);
     // time still fits content. Native candle autoscaling otherwise.
     chart.subscribeCrosshairMove(param=>{
