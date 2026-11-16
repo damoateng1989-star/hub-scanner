@@ -5902,6 +5902,1311 @@ async function renderGexBoard() {
     + (cards ? `<div class="sc-grid">${cards}</div>` : `<div class="empty">No gamma walls available for your watchlist right now. Check again after the next 4-hour close.</div>`)
     + `<div class="note" style="margin-top:10px">Walls come from the selected swing expiry (monthly when available, 7+ days out) on the Cboe delayed chain — the same expiry the ticker page uses. No Lab record, no alerts.</div>`;
 }
+
+let GEX_BOARD_TICKERS = [];
+let GEX_BOARD_SYMBOL = "";
+let GEX_BOARD_DATA = null;
+let GEX_BOARD_INDEX = 0;
+let GEX_BOARD_TIMER = null;
+function gxbStop() { if (GEX_BOARD_TIMER) clearInterval(GEX_BOARD_TIMER); GEX_BOARD_TIMER = null; }
+function gxbFmt(v) {
+  if (v == null || !Number.isFinite(Number(v))) return "—";
+  const n = Number(v), a = Math.abs(n), p = n < 0 ? "−" : "";
+  if (a >= 1e9) return p + (a / 1e9).toFixed(2) + "B";
+  if (a >= 1e6) return p + (a / 1e6).toFixed(1) + "M";
+  if (a >= 1e3) return p + (a / 1e3).toFixed(1) + "K";
+  return p + a.toFixed(0);
+}
+function gxbMom(v) { return v == null ? "" : (v > 0 ? "+" : "") + Number(v).toFixed(1) + "%"; }
+function gxbTime(t) { return t ? fmtET(t.slice(0,2)+":"+t.slice(2)) + " ET" : "—"; }
+async function renderGexBoardGrid() {
+  gxbStop();
+  const host = $("setupBoard");
+  host.innerHTML = '<div class="empty">Loading the GEX board and ticker universe…</div>';
+  try {
+    GEX_BOARD_TICKERS = await api("/api/gex/tickers");
+    const first = GEX_BOARD_TICKERS.find(x => x.on_watchlist) || GEX_BOARD_TICKERS[0];
+    if (!first) { host.innerHTML = '<div class="empty">No tickers are available in the configured universe.</div>'; return; }
+    GEX_BOARD_SYMBOL = first.symbol;
+    await loadGexBoard(GEX_BOARD_SYMBOL);
+  } catch (e) {
+    host.innerHTML = '<div class="empty">The GEX board could not load. Please sign in and try again.</div>';
+  }
+}
+function gxbPickerHTML() {
+  const watched = GEX_BOARD_TICKERS.filter(t => t.on_watchlist);
+  return '<div class="gxb"><div class="gxb-top"><div><div class="gxb-title">GEX BOARD <span style="color:#85878E;font-size:10px">· WATCH ONLY</span></div><div class="gxb-meta">ALL EXPIRIES · CBOE DELAYED CHAIN · NO SIGNALS</div></div><div class="gxb-meta">'+GEX_BOARD_TICKERS.length+' TICKERS IN UNIVERSE</div></div>'
+    + '<div class="gxb-picker"><input id="gxbSearch" class="gxb-search" type="search" autocomplete="off" placeholder="Search any ticker in the universe…" oninput="filterGexBoardTickers(this.value)"><span class="gxb-meta">SELECT TICKER</span></div>'
+    + '<div class="gxb-chips">'+watched.map(t=>'<button class="gxb-chip '+(t.symbol===GEX_BOARD_SYMBOL?'on':'')+'" onclick="selectGexBoardTicker(\''+esc(t.symbol)+'\')">'+esc(t.symbol)+'</button>').join("")+'</div>'
+    + '<div id="gxbResults" class="gxb-results" hidden></div></div>';
+}
+function filterGexBoardTickers(q) {
+  const box = $("gxbResults"); if (!box) return;
+  const v = (q || "").trim().toUpperCase();
+  if (!v) { box.hidden = true; box.innerHTML = ""; return; }
+  const hits = GEX_BOARD_TICKERS.filter(t => t.symbol.includes(v) || (t.name || "").toUpperCase().includes(v)).slice(0,18);
+  box.innerHTML = hits.map(t=>'<button onclick="selectGexBoardTicker(\''+esc(t.symbol)+'\')">'+esc(t.symbol)+(t.on_watchlist?' · WATCHLIST':'')+'</button>').join("")
+    || '<span class="gxb-meta">No ticker found in this universe.</span>';
+  box.hidden = false;
+}
+async function selectGexBoardTicker(sym) {
+  gxbStop(); GEX_BOARD_SYMBOL = sym; GEX_BOARD_INDEX = 0;
+  await loadGexBoard(sym);
+}
+async function loadGexBoard(sym, at) {
+  const host = $("setupBoard");
+  const ticker = GEX_BOARD_TICKERS.find(t => t.symbol === sym);
+  host.innerHTML = '<div class="empty">Loading '+esc(sym)+' GEX…</div>';
+  try {
+    const path = '/api/gex/board/'+encodeURIComponent(sym)+(at ? '?at='+encodeURIComponent(at) : '');
+    GEX_BOARD_DATA = await api(path);
+    if (!GEX_BOARD_DATA) throw new Error("No chain data");
+    if (at && GEX_BOARD_DATA.replay) GEX_BOARD_INDEX = GEX_BOARD_DATA.replay.indexOf(at);
+    else GEX_BOARD_INDEX = Math.max(0,(GEX_BOARD_DATA.replay || []).length-1);
+    paintGexBoard(ticker);
+  } catch (e) {
+    host.innerHTML = gxbPickerHTML()+'<div class="empty">No GEX chain is available for '+esc(sym)+' right now. Try again later.</div>';
+  }
+}
+function paintGexBoard(ticker) {
+  const host = $("setupBoard"), d = GEX_BOARD_DATA, replay = d.replay || [], rows = d.rows || [];
+  const watched = !!(ticker && ticker.on_watchlist), hasReplay = replay.length > 0;
+  const nearest = rows.reduce((best,r)=>!best || Math.abs(Number(r.strike)-Number(d.spot))<Math.abs(Number(best.strike)-Number(d.spot))?r:best,null);
+  const maxGross = Math.max(1,...rows.map(r=>Number(r.total_gross)||0));
+  const expiryHeads = (d.expiries || []).map(e=>'<th>'+new Date(e+"T12:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})+'</th>').join("");
+  const body = rows.map(r=>{
+    const isPrice = nearest && r.strike === nearest.strike;
+    const tags = (r.labels || []).map(l=>'<span class="gxb-tag">'+esc(l)+'</span>').join("");
+    const intensity = .12 + .58 * Math.sqrt(Math.max(0,Number(r.total_gross)||0)/maxGross);
+    const totalBg = Number(r.total)>=0 ? 'rgba(255,255,255,'+intensity.toFixed(2)+')' : 'rgba(242,48,48,'+intensity.toFixed(2)+')';
+    const totalMom = r.total_mom == null ? "" : '<small>'+gxbMom(r.total_mom)+'</small>';
+    const totalCell = '<td class="gxb-total" style="background:'+totalBg+'"><strong>'+gxbFmt(r.total)+'</strong>'+totalMom+'</td>';
+    const expCells = (d.expiries || []).map((e,i)=>{
+      const val = Number((r.gex || [])[i] || 0), gr = Number((r.gross || [])[i] || 0);
+      const a = .08 + .52*Math.sqrt(Math.max(0,gr)/maxGross);
+      const bg = val >= 0 ? 'rgba(255,255,255,'+a.toFixed(2)+')' : 'rgba(242,48,48,'+a.toFixed(2)+')';
+      const mom = (r.mom || [])[i];
+      return '<td class="gxb-exp" style="background:'+bg+'"><small>'+gxbMom(mom)+'</small><strong>'+gxbFmt(val)+'</strong></td>';
+    }).join("");
+    return '<tr class="'+(isPrice?'gxb-price':'')+'"><td><span class="gxb-strike">'+Number(r.strike).toFixed(2)+'</span>'+(isPrice?'<span class="gxb-price-tag">PRICE</span>':'')+(tags?'<div class="gxb-tags">'+tags+'</div>':'')+'</td>'+totalCell+expCells+'</tr>';
+  }).join("");
+  const replayHTML = hasReplay
+    ? '<div class="gxb-replay"><div class="gxb-replay-top"><span><strong>REPLAY · COMPLETE</strong> · '+replay.length+'/78 RECORDED</span><span id="gxbTime">'+gxbTime(replay[Math.max(0,GEX_BOARD_INDEX)])+'</span><button class="gxb-play" id="gxbPlay" onclick="toggleGexReplay()">'+(GEX_BOARD_TIMER?'PAUSE':'PLAY')+'</button></div><input type="range" min="0" max="'+Math.max(0,replay.length-1)+'" step="1" value="'+Math.max(0,GEX_BOARD_INDEX)+'" oninput="seekGexReplay(this.value)"></div>'
+    : '<div class="gxb-note">Add this ticker to your watchlist for momentum and replay. The current grid is still available for every ticker.</div>';
+  const rowsHTML = rows.length ? '<div class="gxb-grid-wrap"><table class="gxb-table"><thead><tr><th>STRIKE / LABELS</th><th>TOTAL NET</th>'+expiryHeads+'</tr></thead><tbody>'+body+'</tbody></table></div>'
+    : '<div class="empty">No strikes with usable gamma data in the ±10% spot band.</div>';
+  host.innerHTML = gxbPickerHTML()
+    + '<div class="gxb-toolbar"><div><b>'+symSafe(GEX_BOARD_SYMBOL)+'</b> <span>SPOT 
+function setupSketch(x) {
+  const P = Number(x.last_close), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
+  const up = live ? x.state === "breakout_up" : x.trigger === "up";            // the direction the trade goes
+  let neck, far, tgt = null;                                                   // neck = the trigger line; far = the other side of the pattern
+  if (gap) { neck = live ? x.edge : x.upper; far = live ? x.stop : x.lower; }
+  else if (live) { neck = x.edge; far = x.far; }
+  else { neck = x.neck; far = x.peak; }
+  neck = Number(neck); far = Number(far);
+  if (live) tgt = Number(x.target);
+  if (![P, neck, far].every(Number.isFinite) || neck === far) return "";
+  const w = Math.abs(neck - far), base = gap ? far - 0.45 * w : null;
+  const vals = [P, neck, far].concat(tgt != null && Number.isFinite(tgt) ? [tgt] : [], base != null ? [base] : []);
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = (hi - lo) * 0.14; lo -= pad; hi += pad;
+  const W = 320, H = 104, y = v => +(8 + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * (H - 16)).toFixed(1);
+  const pts = gap
+    ? [[8, y(base)], [50, y(base)], [57, y(neck - 0.25 * w)], [74, y(neck)], [122, y(far)]]          // flat, gap up, spike to the high, fade
+    : [[8, y(neck)], [48, y(far)], [88, y(neck)], [128, y(far)]];                                   // the M (or W): two tests of the same level
+  const px = live ? 188 : 164, dot = [px, y(P)];
+  const lines = [
+    { v: neck, c: "trig", t: (gap ? "gap-day high " : "neckline ") + money(neck) + (live ? "" : " · trigger") },
+    { v: far, c: gap || live ? "stop" : "lv", t: (gap ? (live ? "stop " : "fade low ") : (far > neck ? "tops " : "lows ")) + money(far) },
+  ].concat(tgt != null && Number.isFinite(tgt) ? [{ v: tgt, c: "tgt", t: "target " + money(tgt) }] : []).sort((a, b) => y(a.v) - y(b.v));
+  let lastY = -99; const rightYs = [];
+  const lv = lines.map(L => { const yy = y(L.v), line = `<line class="sk-l ${L.c}" x1="4" x2="${W - 4}" y1="${yy}" y2="${yy}"/>`;
+    if (L.c === "trig") {       // the trigger label sits on the left, on the side away from the pattern, so nothing on the right can cover it
+      const ty = far > neck ? yy + 11 : Math.max(9, yy - 4);
+      return line + `<text class="sk-t trig" x="4" y="${ty.toFixed(1)}" text-anchor="start">${esc(L.t)}</text>`;
+    }
+    const crowded = lines.some(M => M !== L && y(M.v) < yy && yy - y(M.v) < 15);   // another line just above: label goes under its own line
+    let ty = yy - 4; if (crowded || ty - lastY < 12 || ty < 10) ty = yy + 11; lastY = ty; rightYs.push(ty);
+    return line + `<text class="sk-t ${L.c}" x="${W - 6}" y="${ty.toFixed(1)}" text-anchor="end">${esc(L.t)}</text>`; }).join("");
+  const dcls = live ? (up ? "up" : "down") : "";
+  // the price, written next to the dot; nudged up or down if a level label on the right is at the same height
+  let py = dot[1] + 3.5; const hit = rightYs.find(t => Math.abs(t - py) < 11);
+  if (hit != null) py = hit >= py ? hit - 12 : hit + 12;
+  py = Math.max(9, Math.min(H - 3, py));
+  const pl = `<text class="sk-now ${dcls}" x="${dot[0] + 12}" y="${py.toFixed(1)}">${money(P)}</text>`;
+  return `<svg class="sk" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(x.name)}: price ${money(P)}, ${esc(lines.map(L => L.t).join(", "))}">${lv}
+    <polyline class="sk-p" points="${pts.map(p => p.join(",")).join(" ")}"/><line class="sk-p now" x1="${pts[pts.length - 1][0]}" y1="${pts[pts.length - 1][1]}" x2="${dot[0]}" y2="${dot[1]}"/>
+    <circle class="sk-halo ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="8"/><circle class="sk-dot ${dcls}" cx="${dot[0]}" cy="${dot[1]}" r="4"/>${pl}</svg>`;
+}
+function setupCard(x) {
+  const [w, c] = setupWord(x), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
+  const up = live ? x.state === "breakout_up" : x.trigger === "up", P = Number(x.last_close);
+  const pct = (a, b) => Math.abs((a / b - 1) * 100).toFixed(1) + "%";
+  const trig = gap ? (live ? x.edge : x.upper) : (live ? x.edge : x.neck), lineName = gap ? "gap-day high" : "neckline";
+  let pos, meta;
+  if (live) {
+    const reached = (P - x.target) * (up ? 1 : -1) >= 0;
+    pos = reached ? "At the target" : pct(x.target, P) + " to the target";
+    meta = (gap ? `<b>Plan:</b> out on a daily close below <b>${money(x.stop)}</b> · target <b>${money(x.target)}</b> (2× the risk) · day ${x.candles + 1} of 10` : `Target <b>${money(x.target)}</b>`) + (gap ? "" : `${x.far != null ? ` · wrong past ${money(x.far)}` : ""} · ${x.candles}/10 candles`)
+      + (x.retest && x.retest.candles_left > 0 ? `<br>Wait for the retest: a 4H close back near <b>${money(x.retest.edge)}</b> that holds (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left)${x.retest.near ? ". Price is back at it now" : ""}.` : "");
+  } else {
+    const d = Math.abs((trig / P - 1) * 100);
+    const dd = Math.abs(trig - P).toFixed(2);
+    pos = d < 0.15 ? "At the " + lineName
+      : `<b>$${dd} ${up ? "below" : "above"} the trigger</b><br>${d.toFixed(1)}% ${up ? "below" : "above"} the ${lineName}`;
+    meta = gap ? `Trigger: a daily close above <b>${money(trig)}</b> · gapped +${x.gap_pct}% · ${x.days_left} day${x.days_left === 1 ? "" : "s"} left<br><b>Plan if it triggers:</b> enter at that close, out on a daily close below <b>${money(x.lower)}</b>, target 2× that risk, 10 days at most.`
+      : (x.kind === "double_top" ? `Watch only: double tops lost money in the two-year test, so there's no entry plan on the short side.`
+        : x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> on a 4:00 PM retest close, if the entry isn't past halfway to the target. Stop sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
+  }
+  return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
+      <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
+    ${x.flow && (x.state === "breakout_up" || x.state === "breakdown") ? `<div class="sc-flow">📊 <b>Flow at the breakout: ${x.flow.side === "call" ? "unusual call volume" : x.flow.side === "put" ? "unusual put volume" : "no unusual flow"}</b>${x.flow.side === "none" ? "." : ` — ${x.flow.side === "call" ? Number(x.flow.call_voi).toFixed(1) : Number(x.flow.put_voi).toFixed(1)}× open interest on the ${new Date(x.flow.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})} ${x.flow.side === "call" ? "calls" : "puts"}.`}<small>Measured on ${new Date(x.flow.breakout_date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"})}, from the options chain. A past fact, not a live reading.</small></div>` : ""}
+    <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
+    <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${x.kind === "double_top" ? ' <span class="beta-tag">beta</span>' : ""}${live ? strengthChip(x.strength, up) : ""}</div>
+    ${gap && x.next_pct != null && x.next_pct < 0 ? `<div class="sc-faded">▼ Faded the next day: −${Math.abs(x.next_pct).toFixed(1)}%</div>` : ""}
+    ${gap ? `<div class="sc-last" data-earn="${esc(x.symbol)}"></div>` : ""}
+    ${setupSketch(x)}
+    <div class="msc-meta">${meta}</div>
+    ${x.catalyst ? `<div class="sc-news">📰 Possible catalyst (${esc(x.catalyst.tag_label)}): ${x.catalyst.url ? `<a href="${esc(x.catalyst.url)}" target="_blank" rel="noopener">${esc(x.catalyst.headline)}</a>` : `<b>${esc(x.catalyst.headline)}</b>`} · ${esc(x.catalyst.source)}, ${when(x.catalyst.time)}</div>` : ""}
+    <div class="board-actions"><a class="btnx sm" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}', '${esc(x.kind)}')">Analyze</a><button class="btnx sm" type="button" onclick="event.stopPropagation();toggleScout(true)">Ask Sika</button><span class="sc-trade"><span class="trade-label">Trade:</span>${brokerLinks(x.symbol, x.exchange, true)}</span></div></div>`;
+}
+let RECORD_PAT = "rules";
+
+
+// ---------------------------------------------------------------- morning brief (Today card + settings)
+function eveningNow() { const n = etNow(), m = n.getHours() * 60 + n.getMinutes(), wd = n.getDay(); return wd >= 1 && wd <= 5 && m >= 16 * 60 + 30; }
+async function loadRecapCard() {
+  let d; try { d = await api("/api/recap"); } catch (e) { return false; }
+  const el = $("mbrief"); if (!el) return false;
+  const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
+  const neu = d.pro && d.new.length ? `<div class="mb-k">Broke out today, confirmed on the close</div><div class="mb-row">${d.new.map(c =>
+      chip(c.symbol, `${c.up ? "↑" : "↓"} target ${money(c.target)} · wrong past ${money(c.edge)}`, c.up ? "#3DD68C" : "#FF6B5E")).join("")}</div>`
+    : !d.pro ? `<div class="mb-lock">🔒 <b>${d.new_count}</b> stock${d.new_count === 1 ? "" : "s"} broke out today. <a href="${ME && !ME.guest ? "#account" : "/login#signup"}">Pro shows each one with its target and exit level →</a></div>`
+    : `<p class="mb-quiet">No new breakouts today. No trade is a fine trade.</p>`;
+  const watch = d.pro && d.near.length ? `<div class="mb-k">Watch tomorrow</div><div class="mb-row">${d.near.map(c =>
+      chip(c.symbol, `at the ${c.side === "up" ? "top ↑" : "bottom ↓"}`, "#F2C14E")).join("")}</div>` : "";
+  const stale = d.fresh ? "" : `<p class="mb-quiet" style="margin-top:8px">⚠️ The after-the-close sweep hasn't finished yet, so this uses the earlier one.</p>`;
+  const deliver = !ME || ME.guest ? `<a href="/login#signup">Sign up free</a> to get this after every close.`
+    : ME.recap === false ? `<a href="#account">Turn on the evening recap</a> to get this after the close.`
+    : `Arrives at ${fmtET(ME.recap_time || "16:45")} ET on weekdays. Tomorrow's 4-hour closes: 1:30 PM and 4:00 PM.`;
+  el.innerHTML = `<div class="mb-h"><div><div class="mb-t">🌙 Evening recap <span>${esc(d.date)}${d.swept_at ? " · sweep " + esc(d.swept_at) : ""}</span></div>
+      <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.new_count}</b> new breakout${d.new_count === 1 ? "" : "s"} · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
+    ${stale}<div class="mb-cols"><div class="mb-col">${neu.replace('<p class="mb-quiet">', '<div class="mb-k">Today</div><p class="mb-quiet">')}</div>${watch ? `<div class="mb-col">${watch}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
+  el.hidden = false;
+  return true;
+}
+async function loadBrief() {
+  if (eveningNow() && await loadRecapCard()) return;
+  let d; try { d = await api("/api/brief"); } catch (e) { const el = $("mbrief"); if (el) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">Couldn\'t load the brief. <a href="#" onclick="loadBrief();return false">Tap to retry</a>.</p>'; } return; }
+  const el = $("mbrief"); if (!el) return;
+  const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
+  let main;
+  if (d.pro && d.closest.length) main = `<div class="mb-k">Closest to a breakout today</div><div class="mb-row">${d.closest.map(c =>
+      chip(c.symbol, c.dist < 0.05 ? `right at the ${c.side === "up" ? "top ↑" : "bottom ↓"}` : `${c.dist}% to ${c.side === "up" ? "breakout ↑" : "breakdown ↓"}`, c.side === "up" ? "#3DD68C" : "#FF6B5E")).join("")}</div>`;
+  else if (!d.pro) main = `<div class="mb-lock">🔒 <b>${d.near_count}</b> stocks are at the edge of a hub today. <a href="${ME && !ME.guest ? "#account" : "/login#signup"}">Pro shows the 5 closest to breaking out →</a></div>`
+      + (d.resting.length ? `<div class="mb-k">Resting in a hub</div><div class="mb-row">${d.resting.map(c => chip(c.symbol, `${c.sessions} sessions`, "#7C93FF")).join("")}</div>` : "");
+  else main = `<p class="mb-quiet">Nothing is pressing a hub edge right now.</p>`;
+  const play = d.pro && d.in_play.length ? `<div class="mb-k">Breakouts still in play${d.live_count > d.in_play.length ? ` <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${d.in_play.length} closest to target of ${d.live_count}</span>` : ""}</div><div class="mb-row">${d.in_play.map(c =>
+      chip(c.symbol, `${c.up ? "↑" : "↓"} aiming ${money(c.target)}`, c.up ? "#3DD68C" : "#FF6B5E")).join("")}</div>` : "";
+  const t12 = (ME && ME.brief_time || "08:45").replace(/^0/, "");
+  const ways = [ME && ME.telegram && ME.telegram.linked && "on Telegram", ME && ME.email_on && "by email"].filter(Boolean);
+  const deliver = !ME || ME.guest ? `<a href="/login#signup">Sign up free</a> to get this every weekday before the open.`
+    : !ME.brief ? `<a href="#account">Turn on the morning brief</a> to get this before the open.`
+    : ways.length ? `Arrives ${ways.join(" and ")} at ${t12} AM ET on weekdays.` : `<a href="#account">Connect Telegram</a> to get this at ${t12} AM ET every weekday.`;
+  el.innerHTML = `<div class="mb-h"><div><div class="mb-t">☀️ Morning brief <span>${esc(d.date)}</span></div>
+      <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
+    <div class="mb-cols"><div class="mb-col">${main.replace('<p class="mb-quiet">', '<div class="mb-k">Closest to a breakout today</div><p class="mb-quiet">')}</div>${d.pro ? `<div class="mb-col">${play || '<div class="mb-k">Breakouts still in play</div><p class="mb-quiet">None right now. The next 4-hour closes are 1:30 PM and 4:00 PM ET.</p>'}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
+  el.hidden = false;
+}
+function briefCard() {
+  if (!ME || ME.guest) return "";
+  setTimeout(paintPush, 0);        // fills in the "Alerts on this device" card once it's on the page
+  const tg = ME.telegram && ME.telegram.linked;
+  const where = [tg && "Telegram", ME.email_on && "email"].filter(Boolean).join(" and ");
+  return `<div class="acct"><h3>Morning brief</h3><p>Every weekday at ${esc((ME.brief_time || "08:45").replace(/^0/, ""))} AM ET: the stocks closest to a breakout, breakouts still in play, and your watchlist.${where ? ` Sent by ${where}.` : " Connect Telegram below to receive it."}</p>
+    <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.brief ? "checked" : ""} onchange="setBriefOn(this.checked)"> Send me the morning brief</label>
+      <button class="btnx sm" onclick="testBrief(this)">Send one now</button></div></div>
+  <div class="acct"><h3>Chart style</h3><p>How candles look on the setup map and the full chart (saved on this device).</p>
+    <div id="candlePick">${candlePickHTML()}</div></div>
+  <div class="acct"><h3>Every A setup</h3><p>Get an alert whenever an A setup confirms on <b>any</b> of the stocks NextShelf scans, not just your watchlist: about 8 a week across hub and double-bottom retests and gap fades. One message per scan (after the 1:30 PM and 4:00 PM closes) with each stock's entry, stop and target. Stocks on your watchlist still alert on their own, so they're left out.</p>
+    <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.a_all ? "checked" : ""} onchange="setEveryA(this.checked)"> Alert me on every A setup</label></div></div>
+  <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
+    <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
+      <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>
+  <div class="acct" id="pushCard"><h3>Alerts on this device</h3><p class="note">Checking…</p></div>
+  ${closesCard()}
+  ${quietCard()}`;
+}
+// ---------------------------------------------------------------- push notifications (iPhone home-screen app, Android, desktop)
+const b64ToBytes = (b) => { const p = "=".repeat((4 - b.length % 4) % 4), raw = atob((b + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, c => c.charCodeAt(0)); };
+async function pushState() {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window))
+    return isIOS() && !isStandalone() ? "ios-install" : "unsupported";
+  if (Notification.permission === "denied") return "denied";
+  const reg = await navigator.serviceWorker.ready;
+  return (await reg.pushManager.getSubscription()) ? "on" : "off";
+}
+async function paintPush() {
+  const el = $("pushCard"); if (!el) return;
+  let st; try { st = await pushState(); } catch (e) { st = "unsupported"; }
+  const body = {
+    "ios-install": `<p>Get breakout alerts as iPhone notifications. First add NextShelf to your Home Screen: in Safari tap <b>Share</b> → <b>Add to Home Screen</b>, open NextShelf from the new icon, then come back to Account and turn alerts on here.</p>`,
+    unsupported: `<p>This browser can't show notifications. On an iPhone, add NextShelf to your Home Screen from Safari and open it from the icon.</p>`,
+    denied: `<p>Notifications are blocked for NextShelf on this device. ${isIOS() ? "Turn them on in iPhone <b>Settings → Notifications → NextShelf</b>" : "Allow them in your browser's site settings"}, then come back here.</p>`,
+    off: `<p>Get the same breakout alerts you get on Telegram as notifications on this ${isIOS() ? "iPhone" : "device"}. During your quiet hours they arrive without a sound.</p>
+      <div class="row"><button class="btnx sm" onclick="pushOn(this)">Turn on alerts on this device</button></div>`,
+    on: `<p>✓ Alerts are on for this ${isIOS() ? "iPhone" : "device"}. Breakouts on your watchlist arrive here as notifications.</p>
+      <div class="row"><button class="btnx sm" onclick="pushTest(this)">Send a test</button><button class="btnx sm ghost" onclick="pushOff(this)">Turn off</button></div>`,
+  }[st];
+  el.innerHTML = `<h3>Alerts on this device</h3>${body}`;
+}
+async function pushOn(btn) {
+  btn.disabled = true; btn.textContent = "Turning on…";
+  try {
+    const perm = await Notification.requestPermission();         // must come straight from the tap (iPhone requires it)
+    if (perm !== "granted") { await paintPush(); return; }
+    const { key } = await api("/api/push/key");
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(key) });
+    const j = sub.toJSON();
+    await api("/api/push/subscribe", { method: "POST", body: JSON.stringify({ endpoint: j.endpoint, keys: j.keys, device: isIOS() ? "iPhone" : navigator.userAgent.slice(0, 100) }) });
+    toast("Alerts are on for this device");
+    api("/api/push/test", { method: "POST" }).catch(() => {});
+  } catch (e) { toast(friendly(e)); }
+  paintPush();
+}
+async function pushOff(btn) {
+  btn.disabled = true;
+  try {
+    const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription();
+    if (sub) { await api("/api/push/unsubscribe", { method: "POST", body: JSON.stringify({ endpoint: sub.endpoint }) }).catch(() => {}); await sub.unsubscribe(); }
+    toast("Alerts are off for this device");
+  } catch (e) { toast(friendly(e)); }
+  paintPush();
+}
+async function pushTest(btn) {
+  btn.disabled = true;
+  try { await api("/api/push/test", { method: "POST" }); toast("Test sent. It should arrive in a few seconds."); }
+  catch (e) { toast(friendly(e)); }
+  btn.disabled = false;
+}
+function closesCard() {
+  const mid = ME.closes === "midday";
+  return `<div class="acct" id="closesCard"><h3>Which closes to alert on</h3><p>The 1:30 PM close is confirmed while the market is open, so you can enter the same afternoon (you get an early read at about 1:31 PM, confirmed at 1:47). The 4:00 PM close is confirmed after the market shuts, so the earliest entry is the next morning.</p>
+    <div class="seg" role="radiogroup" style="margin-top:10px;display:inline-flex"><button class="${mid ? "" : "on"}" onclick="saveCloses('both')">Both closes</button><button class="${mid ? "on" : ""}" onclick="saveCloses('midday')">Only the 1:30 PM close</button></div>
+    ${mid ? `<p class="note" style="margin-top:8px">4:00 PM breakouts still show up in the evening recap and on the board, just without an alert.</p>` : ""}</div>`;
+}
+async function saveCloses(v) {
+  try { await api("/api/me/closes", {method: "POST", body: JSON.stringify({closes: v})}); ME.closes = v;
+    $("closesCard").outerHTML = closesCard(); toast(v === "midday" ? "Alerts only for the 1:30 PM close" : "Alerts for both closes"); }
+  catch (e) { toast(friendly(e)); }
+}
+function quietCard() {
+  const [a, b] = (ME.quiet || "09:30-16:00").split("-"), on = !!ME.quiet;
+  const opts = (sel) => Array.from({length: 48}, (_, i) => { const t = String(Math.floor(i / 2)).padStart(2, "0") + ":" + (i % 2 ? "30" : "00");
+    return `<option value="${t}"${t === sel ? " selected" : ""}>${fmtET(t)}</option>`; }).join("");
+  return `<div class="acct" id="quietCard"><h3>Quiet hours</h3><p>In a meeting or asleep? During quiet hours NextShelf won't phone you, and Telegram alerts arrive without a sound. You still get every alert, and the evening recap sums up the day.</p>
+    <div class="row quiet-row"><label class="brief-sw"><input type="checkbox" id="qOn" ${on ? "checked" : ""} onchange="saveQuiet()"> Quiet from</label>
+      <select id="qStart" onchange="saveQuiet()" aria-label="Quiet hours start">${opts(a)}</select><span>to</span>
+      <select id="qEnd" onchange="saveQuiet()" aria-label="Quiet hours end">${opts(b)}</select><span class="note" style="margin:0">ET</span></div>
+    <div class="row" style="margin-top:8px;gap:6px"><button class="chip" onclick="quietPreset('09:30','16:00')">Work hours</button><button class="chip" onclick="quietPreset('22:00','07:00')">Overnight</button></div></div>`;
+}
+function quietPreset(a, b) { $("qStart").value = a; $("qEnd").value = b; $("qOn").checked = true; saveQuiet(); }
+async function saveQuiet() {
+  const on = $("qOn").checked, start = $("qStart").value, end = $("qEnd").value;
+  try { const r = await api("/api/me/quiet", {method: "POST", body: JSON.stringify({on, start, end})}); ME.quiet = r.quiet;
+    toast(on ? `Quiet hours: ${fmtET(start)} to ${fmtET(end)} ET` : "Quiet hours are off"); }
+  catch (e) { toast(friendly(e)); }
+}
+function fmtET(t) { const [h, m] = t.split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; }
+function candlePickHTML() {
+  const p = candlePref(), t = p.type || "candles", [U, D] = candleColors();
+  const types = [["candles", "Candles"], ["hollow", "Hollow"], ["bars", "Bars"], ["line", "Line"]];
+  const demo = [[10, 6, 12, 5], [6, 9, 10, 4], [9, 13, 14, 8], [13, 11, 15, 10], [11, 15, 16, 10], [15, 14, 17, 12]];
+  const yy = (v) => 44 - v * 2.4, svg = `<svg class="cp-demo" width="132" height="46" viewBox="0 0 132 46">${
+    t === "line" ? `<polyline points="${demo.map((d, i) => `${12 + i * 21},${yy(d[1])}`).join(" ")}" fill="none" stroke="${U}" stroke-width="2"/>`
+    : demo.map((d, i) => candleSVG({open: d[0], close: d[1], high: d[2], low: d[3]}, 12 + i * 21, 10, yy, "")).join("")}</svg>`;
+  return `<div class="cp-row"><div class="theme-seg">${types.map(([k, l]) => `<button class="${t === k ? "on" : ""}" onclick="setCandle({type:'${k}'})">${l}</button>`).join("")}</div>${svg}</div>
+    <div class="cp-row">${CANDLE_PRESETS.map(([l, u, d, mono]) => { const on = mono ? p.mono : !p.mono && p.up === u && p.down === d;
+      return `<button class="cp-sw ${on ? "on" : ""}" title="${l}" onclick='setCandle(${JSON.stringify(mono ? {mono: true, up: null, down: null} : {mono: false, up: u, down: d})})'><i style="background:${mono ? "#F3F4F6" : u}"></i><i style="background:${mono ? "#6B7280" : d}"></i></button>`; }).join("")}
+      <label class="cp-custom">Up <input type="color" value="${U}" onchange="setCandle({mono:false, up:this.value})"></label>
+      <label class="cp-custom">Down <input type="color" value="${D}" onchange="setCandle({mono:false, down:this.value})"></label>
+      <button class="mp-reset" onclick="localStorage.removeItem('ns-candles');setCandle({})">Default</button></div>`;
+}
+function setCandle(ch) {
+  const p = Object.assign(candlePref(), ch);
+  try { localStorage.setItem("ns-candles", JSON.stringify(p)); } catch (e) {}
+  if ($("candlePick")) $("candlePick").innerHTML = candlePickHTML();
+  if (BRIEF_SYM) paintMap();
+}
+async function setEveryA(on) {
+  try { await api("/api/me/every_a", {method: "POST", body: JSON.stringify({on})}); ME.a_all = on; toast(on ? "You'll get every A setup" : "Every-A-setup alerts are off"); }
+  catch (e) { toast(friendly(e)); }
+}
+async function setRecapOn(on) {
+  try { await api("/api/me/recap", {method: "POST", body: JSON.stringify({on})}); ME.recap = on; toast(on ? "Evening recap is on" : "Evening recap is off"); }
+  catch (e) { toast(friendly(e)); }
+}
+async function testRecap(btn) {
+  btn.disabled = true;
+  try { await api("/api/recap/test", {method: "POST"}); toast("Evening recap sent"); } catch (e) { toast(friendly(e)); }
+  btn.disabled = false;
+}
+async function setBriefOn(on) {
+  try { await api("/api/me/brief", {method: "POST", body: JSON.stringify({on})}); ME.brief = on; toast(on ? "Morning brief is on" : "Morning brief is off"); }
+  catch (e) { toast(friendly(e)); }
+}
+async function testBrief(btn) {
+  btn.disabled = true; btn.textContent = "Sending…";
+  try { const r = await api("/api/brief/test", {method: "POST"}); toast("Sent" + (r.telegram ? " to Telegram" : "") + (r.email ? (r.telegram ? " and" : "") + " by email" : "")); }
+  catch (e) { toast(friendly(e)); }
+  btn.disabled = false; btn.textContent = "Send one now";
+}
+
+// ---------------------------------------------------------------- Rule #1 (discipline banner on Today)
+function renderRule() {
+  const el = $("rule1"); if (!el) return;
+  const st = TICKERS.map(t => t.status && t.status.state);
+  const live = st.filter(x => x === "breakout_up" || x === "breakdown").length, hub = st.filter(x => x === "forming").length;
+  const msg = live ? `<b>${live}</b> on your watchlist ${live === 1 ? "has" : "have"} broken out. That's the trade coming to you. Stick to the plan: target the shelf, exit on a close back inside.`
+    : hub ? `<b>${hub}</b> ${hub === 1 ? "is" : "are"} resting in a hub. No trade inside the hub. Wait for a 4-hour close outside it.`
+    : `Nothing on your watchlist is setting up. That's a good day to do nothing.`;
+  el.innerHTML = `<div class="r1-mark" aria-hidden="true"><svg width="40" height="40" viewBox="0 0 40 40"><rect x="4" y="18" width="20" height="10" rx="3" fill="rgba(124,147,255,.22)" stroke="rgba(124,147,255,.7)"/><path d="M6 25 9 22 12 25 15 21.5 18 24.5 21 22 24 23 30 14 36 10" fill="none" stroke="#3DD68C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M27 10H38" stroke="#3DD68C" stroke-dasharray="2 2"/></svg></div>
+    <div><div class="r1-k">Rule #1</div><div class="r1-t">Don't force trades. Let the trade come to you.</div><div class="r1-s">${msg}</div></div>`;
+}
+
+// ---------------------------------------------------------------- live prices (for watching; breakouts still need a 4-hour CLOSE)
+let LIVE = {}, LIVE_OPEN = false, LIVE_T = null, LIVE_AT = null;
+function liveSymbols() { return [...new Set([...TICKERS.map(t => t.symbol), BRIEF_SYM].filter(Boolean))]; }
+async function pollLive() {
+  clearTimeout(LIVE_T);
+  const syms = liveSymbols();
+  if (syms.length && document.visibilityState !== "hidden") {
+    try {
+      const r = await api("/api/live?symbols=" + encodeURIComponent(syms.join(",")), {timeout: 15000});
+      LIVE = {...LIVE, ...r.prices}; LIVE_OPEN = r.market_open; LIVE_AT = r.as_of;
+      paintLive();
+      liveCandleTick();
+    } catch (e) {}
+  }
+  LIVE_T = setTimeout(pollLive, LIVE_OPEN ? 30000 : 300000);    // every 30s while the market is open
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pollLive(); });
+// the next 4-hour close, in words: "today's 1:30 PM close", "tomorrow's 1:30 PM close", "Monday's 1:30 PM close"
+// when the next 4-hour close is: [day word, time], e.g. ["today", "4:00 PM"], ["tomorrow", "1:30 PM"], ["Monday", "1:30 PM"]
+// Live candle: move the forming candle in place as the price ticks (no chart rebuild).
+// The forming candle is the last bar in MAP_LWC_DATA.cs (mapFormingCandle appends it);
+// its time must match BRIEF_CHART.forming.time, the server's own forming-candle time,
+// so a new 4H block (or a closed market) never gets a live update meant for the old one.
+function liveCandleTick() {
+  if (!LIVE_OPEN || !BRIEF_SYM || !MAP_LWC_CANDLE || !MAP_LWC_DATA || !MAP_LWC_DATA.cs.length) return;
+  const L = LIVE[BRIEF_SYM];
+  if (!L || L.price == null) return;
+  const px = +L.price;
+  if (!Number.isFinite(px)) return;
+  const cs = MAP_LWC_DATA.cs, last = cs[cs.length - 1];
+  const fc = BRIEF_CHART && BRIEF_CHART.forming;
+  if (!fc || !last || last.time !== fc.time) return;   // new block / no forming candle: mapFormingPoll owns the rollover
+  const upd = {time: last.time, open: last.open, high: Math.max(last.high, px), low: Math.min(last.low, px), close: px};
+  cs[cs.length - 1] = {...last, ...upd};   // keep the in-memory bars in sync, so a repaint doesn't snap the candle back
+  MAP_LWC_CANDLE.update(upd);
+}
+
+function nextCloseWhen(now) {
+  const ny = new Date((now || new Date()).toLocaleString("en-US", {timeZone: "America/New_York"}));
+  const m = ny.getHours() * 60 + ny.getMinutes(), wd = ny.getDay();
+  if (wd >= 1 && wd <= 5 && m < 13 * 60 + 30) return ["today", "1:30 PM"];
+  if (wd >= 1 && wd <= 5 && m < 16 * 60) return ["today", "4:00 PM"];
+  if (wd >= 1 && wd <= 4) return ["tomorrow", "1:30 PM"];
+  return ["Monday", "1:30 PM"];                        // Friday after the close, or the weekend (holidays aren't known here)
+}
+function nextCloseText(now) { const [d, t] = nextCloseWhen(now); return `${d === "Monday" ? "Monday" : d}'s ${t} close`; }   // "tomorrow's 1:30 PM close"
+function liveVsHub(st, px) {
+  // where the live price sits against the hub, BEFORE the candle closes
+  const h = st && st.hub;
+  if (!h || !px || !["forming", "watching"].includes(st.state)) return null;
+  const nc = nextCloseText();
+  const tu = st.trigger_up != null ? Number(st.trigger_up) : h.high, td = st.trigger_down != null ? Number(st.trigger_down) : h.low;
+  if (px >= tu) return ["up", `Above the ${money(tu)} trigger. It counts if ${nc} holds there`];
+  if (px > h.high) return ["up", `Above the hub top, but below the ${money(tu)} trigger. Nothing counts until ${nc}`];
+  if (px <= td) return ["down", `Below the ${money(td)} trigger. It counts if ${nc} holds there`];
+  if (px < h.low) return ["down", `Below the hub bottom, but above the ${money(td)} trigger. Nothing counts until ${nc}`];
+  const w = h.high - h.low, pos = w > 0 ? (px - h.low) / w : .5;
+  return ["in", `Price is inside the hub · ${pos >= .5 ? (((h.high / px) - 1) * 100).toFixed(2) + "% to the top" : (((px / h.low) - 1) * 100).toFixed(2) + "% to the bottom"}`];
+}
+function liveChip(sym) {
+  const L = LIVE[sym]; if (!L) return "";
+  const ch = L.change_pct, col = ch == null ? "#9AA0AC" : ch >= 0 ? "#3DD68C" : "#FF6B5E";
+  return `<span class="live" title="${LIVE_OPEN ? "Live price (IEX), refreshes every 30s" : "Latest trade. The market is closed"}"><i class="${LIVE_OPEN ? "on" : ""}"></i>${money(L.price)}${ch == null ? "" : ` <em style="color:${col}">${ch >= 0 ? "+" : ""}${ch}%</em>`}</span>`;
+}
+function paintLive() {
+  // watchlist rows
+  TICKERS.forEach(t => {
+    const row = document.getElementById("c-" + t.symbol); if (!row) return;
+    const slot = row.querySelector(".s small"); if (!slot) return;
+    const L = LIVE[t.symbol];
+    if (L) { slot.innerHTML = liveChip(t.symbol); slot.title = "Last 4-hour close " + money(t.status && t.status.last_close); }
+    const v = L && liveVsHub(t.status, L.price);
+    let tag = row.querySelector(".lvh");
+    if (v && v[0] !== "in" && LIVE_OPEN) {
+      if (!tag) { tag = document.createElement("span"); tag.className = "lvh"; row.querySelector(".one").appendChild(tag); }
+      tag.className = "lvh " + v[0]; tag.textContent = v[1];
+    } else if (tag) tag.remove();
+  });
+  paintBriefLive();
+  renderStrip();
+}
+function paintBriefLive() {
+  if (!BRIEF_SYM || !LIVE[BRIEF_SYM] || !$("bfLive")) return;
+  paintMap(); paintNowCell(); if (typeof paintVizScale === "function") paintVizScale();
+  const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(BRIEF_SYM);
+  if (!LIVE_OPEN) {       // market closed: the last closing price, not a premarket or after-hours print
+    const v = liveVsHub(st, st.last_close);
+    $("bfLive").innerHTML = `<span class="bf-pl">Last closing price</span><span class="live">${money(st.last_close)}</span>` + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
+    return;
+  }
+  const v = liveVsHub(st, LIVE[BRIEF_SYM].price);
+  $("bfLive").innerHTML = `<span class="bf-pl">Live</span>` + liveChip(BRIEF_SYM) + (v ? `<span class="lvh ${v[0]}">${v[1]}</span>` : "");
+}
+
+// ---------------------------------------------------------------- install as an app (PWA)
+let INSTALL_EVT = null;
+const isStandalone = () => matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+addEventListener("beforeinstallprompt", (e) => { e.preventDefault(); INSTALL_EVT = e; paintInstall(); });
+addEventListener("appinstalled", () => { INSTALL_EVT = null; toast("NextShelf is installed. Open it from your home screen."); paintInstall(); });
+function installCard() {
+  if (isStandalone()) return `<div class="acct"><h3>NextShelf app</h3><p>✓ You're using the installed app.</p></div>`;
+  return `<div class="acct"><h3>Get the app</h3><p>Install NextShelf on your phone or computer: its own icon, full screen, no browser bars, opens straight to Today.</p>
+    <button class="primary install-btn" onclick="installApp()">⬇ Install NextShelf</button></div>`;
+}
+async function installApp() {
+  if (INSTALL_EVT) { INSTALL_EVT.prompt(); const r = await INSTALL_EVT.userChoice.catch(() => null); INSTALL_EVT = null; if (r && r.outcome === "accepted") return; paintInstall(); return; }
+  showSheet(isIOS() ? `<div class="inst"><h3>Add to your Home Screen</h3>
+      <ol><li>Tap the <b>Share</b> button <span class="kbd">⬆︎</span> at the bottom of Safari.</li><li>Scroll and tap <b>Add to Home Screen</b> <span class="kbd">＋</span>.</li><li>Tap <b>Add</b>. NextShelf now opens like an app.</li></ol>
+      <p class="note">Use Safari. Other iPhone browsers may not show this option.</p></div>`
+    : `<div class="inst"><h3>Install NextShelf</h3><ol><li>In Chrome or Edge, click the <b>install icon</b> <span class="kbd">⊕</span> at the right of the address bar,</li>
+      <li>or open the browser menu <span class="kbd">⋮</span> and choose <b>Install NextShelf</b> (on Android: <b>Add to Home screen</b>).</li></ol>
+      <p class="note">On a Mac in Safari: File → Add to Dock.</p></div>`);
+}
+function paintInstall() {
+  const b = $("installBanner"); if (!b) return;
+  let off = false; try { off = !!localStorage.getItem("ns_install_off"); } catch (e) {}
+  b.hidden = isStandalone() || off || !(INSTALL_EVT || (isIOS() && innerWidth < 900));
+}
+function hideInstall() { try { localStorage.setItem("ns_install_off", "1"); } catch (e) {} paintInstall(); }
+// ---------------------------------------------------------------- Scout floating robot
+const ROBOT_SVG = `<svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="7" x2="32" y2="14" stroke="#4a5a70" stroke-width="1.5" stroke-linecap="round"/><circle class="ag-ant" cx="32" cy="5.5" r="3" fill="#7C93FF"/>
+  <rect x="11" y="15" width="42" height="34" rx="15" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="17" y="23" width="30" height="14" rx="7" fill="#0B0C0F"/>
+  <g class="ag-eyes"><circle cx="25.5" cy="29.5" r="3.6" fill="#7C93FF"/><circle cx="38.5" cy="29.5" r="3.6" fill="#7C93FF"/></g>
+  <rect x="19.5" y="25" width="3" height="10" rx="1.5" fill="#ffffff" opacity="0.3"/>
+  <path d="M27 43 Q32 47 37 43" stroke="#565A61" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`;
+$("sfBot").innerHTML = ROBOT_SVG;
+if ($("agAva")) $("agAva").innerHTML = ROBOT_SVG;
+if ($("spAva")) $("spAva").innerHTML = ROBOT_SVG;
+let SCOUT_SC = {running: false}, MY_SCAN = null, MY_SCANNING = false;
+function toggleScout(force) {
+  const pop = $("scoutPop"), open = force ?? pop.hidden;
+  pop.hidden = !open; $("scoutFab").setAttribute("aria-expanded", String(open)); $("sfHello").hidden = true;
+  if (open) { renderScout(); pollAgent(); }
+}
+document.addEventListener("click", (e) => {
+  const pop = $("scoutPop");
+  if (!pop.hidden && document.contains(e.target) && !pop.contains(e.target) && !$("scoutFab").contains(e.target)) toggleScout(false);
+});
+function scoutRow(sym, kind, color) {
+  return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
+}
+function renderScout() {
+  const sc = SCOUT_SC, pop = $("scoutPop");
+  pop.classList.toggle("run", !!sc.running); pop.classList.toggle("mine", MY_SCANNING);
+  $("scoutFab").classList.toggle("run", !!sc.running || MY_SCANNING);
+  $("spState").textContent = MY_SCANNING || sc.running ? "Scanning" : "Live";
+  if (sc.running) $("spBar").style.width = Math.max(3, sc.total ? Math.round(sc.done / sc.total * 100) : 3) + "%";
+  const guest = !ME || ME.guest, admin = ME && ME.is_admin, n = TICKERS.length;
+  let line;
+  if (MY_SCANNING) line = `Checking the latest 4-hour candles for your <b>${n}</b> ticker${n === 1 ? "" : "s"}…`;
+  else if (sc.running) line = sc.current === "loading prices" || !sc.done
+      ? `Sweeping the market: downloading the latest prices for <b>${sc.total}</b> stocks…`
+      : `Sweeping the market: checking <b>${esc(sc.current || "")}</b> · ${sc.done} of ${sc.total} done, ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} found so far.`;
+  else if (MY_SCAN) {
+    const hits = MY_SCAN.results.filter(r => ["breakout_up", "breakdown", "forming"].includes(r.state));
+    line = `Checked your <b>${MY_SCAN.results.length}</b> ticker${MY_SCAN.results.length === 1 ? "" : "s"} just now. ` + (hits.length ? `<b>${hits.length}</b> worth watching:` : "Nothing is setting up yet. Let the trade come to you.");
+  } else line = guest ? "I sweep 400 stocks after each 4-hour close, from a 543-stock universe. Sign in and I'll scan your own watchlist on demand."
+    : `I sweep the market after every 4-hour close${sc.next ? ` (next: <b>${agDay(sc.next)}</b>)` : ""}. Want me to check your watchlist right now?`;
+  $("spLine").innerHTML = line;
+  $("spActs").innerHTML = guest ? `<a class="sp-go" href="/login#signup">Sign up free to scan</a><a class="sp-alt" href="#discover" onclick="toggleScout(false)">See the market board</a>`
+    : (n ? `<button class="sp-go" onclick="scoutScanMine()" ${MY_SCANNING ? "disabled" : ""}>🔍 ${MY_SCANNING ? "Scanning…" : "Scan my watchlist now"}</button>`
+         : `<a class="sp-go" href="#list" onclick="toggleScout(false)">＋ Add stocks to your Watchlist</a><p class="sp-hint">Your watchlist is empty. Add a few stocks (like NVDA or AAPL) and I can scan them for you anytime.</p>`)
+      + (admin ? `<button class="sp-alt" onclick="scoutSweep()" ${sc.running ? "disabled" : ""}>${sc.running ? "Sweep running…" : "Sweep the whole market"}</button>` : "")
+      + `<a class="sp-alt" href="#discover" onclick="toggleScout(false)">Open the market board</a>`;
+  const col = { breakout_up: ["Breaking out ↑", "#3DD68C"], breakdown: ["Breaking down ↓", "#FF6B5E"], forming: ["Resting in a hub", "#7C93FF"] };
+  if (sc.running && (sc.found || []).length) $("spRes").innerHTML = sc.found.slice().reverse().map(f => scoutRow(f.symbol, (f.setup ? f.setup + " " : "") + f.kind, FIND_C[f.kind] || "#9AA0AC")).join("");
+  else if (MY_SCAN && !MY_SCANNING) $("spRes").innerHTML = MY_SCAN.results.map(r => r.error ? `<div class="sp-row" style="cursor:default">${esc(r.symbol)}<span style="--c:#9AA0AC">couldn't check</span></div>`
+      : scoutRow(r.symbol, (col[r.state] || [STATE_WORD[r.state] || "No setup"])[0], (col[r.state] || [0, "#646B78"])[1])).join("");
+  else $("spRes").innerHTML = "";
+  const badge = MY_SCAN ? MY_SCAN.results.filter(r => r.state === "breakout_up" || r.state === "breakdown").length : 0;
+  $("sfBadge").hidden = !badge || !pop.hidden || !ME || ME.guest; $("sfBadge").textContent = badge;
+}
+
+// Sika never pops up on her own: the button is the only way in (calm by default)
+async function scoutScanMine() {
+  MY_SCANNING = true; renderScout();
+  try { MY_SCAN = await api("/api/scan/mine", {method: "POST"}); await loadTickers(); }
+  catch (e) { toast(friendly(e)); }
+  MY_SCANNING = false; renderScout();
+}
+async function scoutSweep() {
+  try { await api("/api/board/scan", {method: "POST"}); toast("Sika is sweeping the market"); } catch (e) { toast(friendly(e)); }
+  pollAgent();
+}
+
+// ---------------------------------------------------------------- Scout: the scanning agent on Discover
+let AGENT_T = null, AGENT_WAS_RUNNING = false, AGENT_NEXT = null;
+const FIND_C = { breakout: "#3DD68C", breakdown: "#FF6B5E", "at edge": "#F2C14E", "in hub": "#7C93FF" };
+function agTime(iso) { return iso ? new Date(iso).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) : ""; }
+function closeOf(hm) {          // "16:17" -> "4:00 PM": the 4-hour candle a check reads
+  const [h, m] = hm.split(":").map(Number), t = h * 60 + m;
+  return t >= 960 ? "4:00 PM" : t >= 810 ? "1:30 PM" : null;
+}
+function etHM(iso) { const d = new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/New_York"})); return d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function agDay(iso) {
+  if (!iso) return ""; const d = new Date(iso), t = new Date();
+  const same = d.toDateString() === t.toDateString();
+  return (same ? "today " : d.toLocaleDateString([], {weekday: "short"}) + " ") + agTime(iso);
+}
+function findChip(sym, kind, setup) {
+  return `<button class="ag-find" style="--c:${FIND_C[kind] || "#9AA0AC"}" onclick="openBrief('${esc(sym)}')"><i></i>${esc(sym)} <small>${setup ? esc(setup.toLowerCase()) + " " : ""}${kind}</small></button>`;
+}
+function boardFinds() {
+  if (!BOARD) return "";
+  const out = [];
+  (BOARD.live || []).forEach(r => out.push(findChip(r.symbol, r.state === "breakdown" ? "breakdown" : "breakout")));
+  (BOARD.near || []).forEach(r => out.push(findChip(r.symbol, "at edge")));
+  const locked = (BOARD.live_count || 0) + (BOARD.near_count || 0);
+  if (!out.length && locked) out.push(`<a class="ag-find lock" href="${ME && ME.guest ? "/login" : "#account"}" style="--c:#F2C14E"><i></i>🔒 ${locked} setup${locked > 1 ? "s" : ""} found · ${ME && ME.guest ? "sign in" : "Pro"} to see them</a>`);
+  const max = innerWidth < 760 ? 6 : 12;
+  return out.slice(0, max).join("") + (out.length > max ? `<a class="ag-find more" href="#discover" onclick="pickSetupTab('hub')" style="--c:#646B78">+${out.length - max} more</a>` : "");
+}
+function renderAgent(sc) {
+  const el = $("agent"); if (!el) return;
+  el.classList.toggle("run", !!sc.running);
+  $("agState").textContent = sc.running ? "Sweeping" : "Live";
+  const bs = $("bScan"); if (bs) { bs.disabled = !!sc.running; }
+  if (sc.running) {
+    const pct = sc.total ? Math.round(sc.done / sc.total * 100) : 2;
+    $("agBar").style.width = Math.max(2, pct) + "%";
+    $("agLine").innerHTML = sc.current === "loading prices" || !sc.done
+      ? `<span class="cur">Pulling 4-hour candles for ${sc.total || ""} stocks</span>`
+      : `<span class="cur">Checking <b>${esc(sc.current || "")}</b></span> · ${sc.done}/${sc.total} · ${sc.found_count} setup${sc.found_count === 1 ? "" : "s"} so far`;
+    $("agFinds").innerHTML = (sc.found || []).map(f => findChip(f.symbol, f.kind, f.setup)).join("");
+  } else {
+    const live = BOARD ? (BOARD.live || []).length || BOARD.live_count || 0 : 0;
+    const near = BOARD ? (BOARD.near || []).length || BOARD.near_count || 0 : 0;
+    const last = sc.finished || (BOARD && BOARD.updated ? BOARD.updated + "Z" : null);
+    const total = BOARD && BOARD.universe;
+    $("agLine").innerHTML = !BOARD || !total ? `Waiting for the first sweep of the market.`
+      : `Swept <b>${total}</b> stocks${last ? " " + agDay(last) : ""}: <b style="color:#3DD68C">${live}</b> breakout${live === 1 ? "" : "s"}, <b style="color:#F2C14E">${near}</b> at the edge.`
+        + (sc.next ? (() => { const c = closeOf(etHM(sc.next)); return ` Next board sweep ${agDay(sc.next)}${c ? `, showing the ${c} candle` : ""}.`; })() : "");
+    $("agFinds").innerHTML = boardFinds();
+  }
+}
+async function pollAgent() {
+  clearTimeout(AGENT_T);
+  let sc;
+  try { sc = await api("/api/scanner"); } catch (e) { sc = {running: false}; }
+  if (AGENT_WAS_RUNNING && !sc.running) { AGENT_WAS_RUNNING = false; if (CUR === "discover") await loadBoard(); }
+  AGENT_WAS_RUNNING = !!sc.running; AGENT_NEXT = sc.next || AGENT_NEXT;
+  SCOUT_SC = sc; renderAgent(sc); renderScout();
+  AGENT_T = setTimeout(pollAgent, sc.running ? 2500 : 60000);
+}
+
+// ---------------------------------------------------------------- track record
+let RANK_DIR = -1, RANK_MIN = 2, RANK_DATA = [];
+function winRankHTML(rows) {
+  RANK_DATA = rows;
+  const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const list = rows.filter(x => x.n >= RANK_MIN)
+    .sort((a, b) => RANK_DIR * (a.win_rate - b.win_rate) || RANK_DIR * (a.avg_ret - b.avg_ret) || b.n - a.n).slice(0, 15);
+  return `<div class="rank" id="winRank"><div class="rank-h"><div class="eyebrow" style="margin:0">Win rate by stock</div>
+    <div class="rank-ctl"><div class="seg"><button class="${RANK_DIR === -1 ? "on" : ""}" onclick="setRank(-1)">Highest</button><button class="${RANK_DIR === 1 ? "on" : ""}" onclick="setRank(1)">Lowest</button></div>
+      <label class="note" style="margin:0">min <select onchange="RANK_MIN=+this.value;setRank(RANK_DIR)">${[1, 2, 3, 5].map(n => `<option value="${n}"${n === RANK_MIN ? " selected" : ""}>${n}</option>`).join("")}</select> setups</label></div></div>
+    ${list.length && RANK_DIR === -1 && list[0].win_rate === 0 ? `<p class="note" style="margin:8px 0 0">No stock with ${RANK_MIN}+ completed setups has reached the shelf yet. The highest win rate in this table is 0%.</p>` : ""}
+    ${list.length ? `<div class="tbl" style="margin-top:8px"><table><tr><th>#</th><th>Stock</th><th>Win rate</th><th>Wins</th><th>Avg per setup</th></tr>
+      ${list.map((x, i) => `<tr><td>${i + 1}</td><td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')"><b>${esc(x.symbol)}</b></a></td>
+        <td><span class="rank-bar" style="--w:${x.win_rate}%;--c:var(${x.win_rate >= 50 ? "--up" : "--down"})"><i></i>${x.win_rate}%</span></td><td>${x.wins} of ${x.n}</td>
+        <td style="color:var(${x.avg_ret > 0 ? "--up" : "--down"})">${sign(x.avg_ret)}</td></tr>`).join("")}</table></div>`
+      : `<div class="empty" style="margin-top:8px">No stock has ${RANK_MIN}+ completed setups for this pattern yet.</div>`}
+    <p class="note" style="margin-top:6px">Small samples swing a lot: a stock with 2 setups can show 100% or 0% by luck.</p></div>`;
+}
+function setRank(dir) { RANK_DIR = dir; const el = $("winRank"); if (el) el.outerHTML = winRankHTML(RANK_DATA); }
+async function loadRecord() {
+  let r;
+  if (ME && ME.guest) { $("record").innerHTML = joinBox("Members only", "Every breakout the board finds is logged with its result. Create a free account to see the full track record."); return; }
+  if (!$("record").querySelector("table, .stats")) $("record").innerHTML = loadingHTML("Loading results…");
+  try { r = await api("/api/record?pattern=" + RECORD_PAT); } catch (e) { $("record").innerHTML = failedHTML("results", e, "loadRecord()"); return; }
+  const st = r.stats, sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const RU = RECORD_PAT === "rules";
+  const res = { "follow-through": [RU ? "hit target" : "hit shelf", "--ft"], "snap-back": [RU ? "stopped" : "failed", "--snap"], stalled: ["timed out", "--stall"], pending: ["open", "--idle"] };
+  // today's rules for everyone; the earlier breakout-close log is archived (admins can still open it)
+  const pt = r.patterns || {}, tabs = [["rules", "Today's rules"]].concat(ME && ME.is_admin ? [["hub", "Archive: hubs"], ["double_top", "Archive: double tops"], ["double_bottom", "Archive: double bottoms"], ["gapfade", "Archive: gap fade"]] : []);
+  const T = r.tested, mo = (t) => t ? new Date(t).toLocaleDateString(undefined, {month: "short", year: "numeric"}) : "";
+  const testedBox = T && T.rows && T.rows.length ? `<div class="rec-test"><div class="eyebrow" style="margin:0 0 4px">${esc(T.period || "Two-year")} test of today's rules</div>
+      <p class="note" style="margin:0 0 12px">The setups NextShelf alerts on now, replayed on ${T.symbols} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}. A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
+      <div class="stats" style="margin:0;grid-template-columns:repeat(${T.rows.length},1fr)">${T.rows.map(x => `<div><b style="color:var(${x.avg >= 0 ? "--up" : "--down"})">${x.avg > 0 ? "+" : ""}${Number(x.avg).toFixed(2)}%</b><span>${esc(x.label)}<br>${x.n} trades · ${Math.round(x.win)}% won · profit factor ${x.pf ?? "–"}</span></div>`).join("")}</div></div>
+      <div class="eyebrow" style="margin:26px 0 10px">${RU ? "Live record of today's rules" : "Archive: the earlier breakout-close log"}</div>` : "";
+  $("record").innerHTML = testedBox + `
+    ${tabs.length > 1 ? `<div class="rec-tabs">${tabs.map(([k, l]) => { const x = k === "rules" ? (RU ? st : {}) : pt[k] || {};
+      const tiny = x.closed && x.closed < 5;
+      const sub = !x.closed ? "no results yet"
+        : tiny ? `${x.closed} done · <span class="beta-tag">beta</span>`
+        : `${x.win_rate ?? "–"}% winners · ${x.closed} done`;
+      return `<button class="${RECORD_PAT === k ? "on" : ""}${tiny ? " tiny" : ""}" onclick="RECORD_PAT='${k}';loadRecord()"><b>${l}</b><small>${sub}</small></button>`; }).join("")}</div>` : ""}
+    ${RU ? `<p class="lede" style="font-size:15px;margin-bottom:16px">Every trade today's rules take since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b>, logged automatically with its result: A retests on hubs and double bottoms, and post-earnings gap fades, longs only. The entry is the retest close (the reclaim close for a gap fade), with the plan's stop and target. Nothing is removed. The earlier breakout-close log is archived.</p>` : `<p class="lede" style="font-size:15px;margin-bottom:16px">Every breakout NextShelf detects since <b>${new Date(r.since).toLocaleDateString(undefined, {month: "long", day: "numeric", year: "numeric"})}</b> is logged here automatically with its result. Nothing is removed or cherry-picked. Returns assume entry at the breakout close and exit at the shelf, on a failed breakout, or at the time limit.${RECORD_PAT === "hub" ? " That's the earlier rule. NextShelf now waits for the retest before an entry, which is what the test above measures." : ""}</p>`}
+    ${RU && st.closed < 5 ? `<div class="note"><b>${st.closed ? "Too few to judge yet." : "Just started."}</b> ${st.closed ? `${st.closed} trade${st.closed === 1 ? " has" : "s have"} closed so far, so the numbers below are a count, not a record.` : "No trade has closed yet. Until it has 50 or more, the two-year test above is the better guide."}</div>
+    <div class="note">${st.closed} completed · ${st.win_rate == null ? "–" : st.win_rate + "%"} winners · avg ${sign(st.avg_ret)} · ${st.open} open now</div>`
+    : st.closed && st.closed < 5 ? `<div class="note"><b>Too few to judge yet.</b> This pattern has ${st.closed} completed setup${st.closed === 1 ? "" : "s"}, so the numbers below are a count, not a record. Hubs are NextShelf's tested setup.</div>
+    <div class="note">${st.closed} completed · ${st.win_rate == null ? "–" : st.win_rate + "%"} winners · avg ${sign(st.avg_ret)} · ${st.open} open now</div>`
+    : `<div class="stats" style="margin-top:0">
+      <div><b>${st.closed}</b><span>${RU ? "Completed trades" : "Completed setups"}</span></div>
+      <div><b>${st.win_rate == null ? "–" : st.win_rate + "%"}</b><span>Winners</span></div>
+      <div><b style="color:var(${(st.avg_ret ?? 0) > 0 ? "--up" : "--down"})">${sign(st.avg_ret)}</b><span>${RU ? "Avg per trade" : "Avg per setup"}</span></div>
+      <div><b>${st.open}</b><span>Open now</span></div>
+    </div>
+    ${st.closed ? `<div class="note">${RU ? "Hit target" : "Hit shelf"} ${st.by_outcome["follow-through"]} · ${RU ? "stopped" : "failed"} ${st.by_outcome["snap-back"]} · timed out ${st.by_outcome.stalled} · avg win ${sign(st.avg_win)} · avg loss ${sign(st.avg_loss)}${st.chases ? ` · ${st.chases} skipped (already at target on the breakout candle)` : ""}${st.against_trend ? ` · ${st.against_trend} against the tape` : ""}</div>` : ""}
+    ${RU ? "" : volSplit(st.by_volume) + gradeSplit(st.by_grade)}`}
+    ${winRankHTML(r.by_symbol || [])}
+    ${r.signals.length ? `<div class="eyebrow" style="margin:18px 0 8px">Every setup</div><div class="tbl" style="margin-top:0"><table>
+      <tr><th>${RU ? "Entry day" : "Breakout"}</th><th>Stock</th><th>${RU ? "Setup" : ""}</th><th>Entry</th>${RU ? "<th>Stop</th>" : ""}<th>Target</th><th>Result</th><th>Return</th></tr>
+      ${r.signals.map(x => { const [w, c] = x.chase ? ["skipped", "--faint"] : res[x.outcome] || [x.outcome, "--idle"];
+        return `<tr><td>${new Date((RU && x.entry_time) || x.breakout_time).toLocaleDateString(undefined, {month: "short", day: "numeric"})}</td>
+        <td><a class="symlink" href="/t/${encodeURIComponent(x.symbol)}"><b>${esc(x.symbol)}</b></a></td>
+        ${RU ? `<td class="rec-setup">${esc(x.setup || "")}${x.grade ? ` <b class="rec-g">${esc(x.grade)}</b>` : ""}</td>` : `<td style="color:var(${x.direction === 1 ? "--up" : "--down"})">${x.direction === 1 ? "▲" : "▼"}</td>`}
+        <td>${money(x.entry)}</td>${RU ? `<td>${x.stop == null ? "–" : money(x.stop)}</td>` : ""}<td>${money(x.target)}</td>
+        <td style="color:var(${c})">${w}</td>
+        <td style="color:var(${x.ret_pct == null ? "--muted" : x.ret_pct > 0 ? "--up" : "--down"})">${sign(x.ret_pct)}</td></tr>`; }).join("")}
+    </table></div>` : `<div class="empty" style="margin-top:14px">${RU ? "No trades yet. The first one appears after the next A retest, or gap fade, on the board." : "No setups yet. The first ones appear after the next breakout on the board."}</div>`}
+    <p class="note rec-end" style="text-align:center;margin-top:28px">End of record</p>`;
+}
+
+// the 20-second lesson lives in Learn now; it no longer plays on Today
+function boot() {
+  loadMe().then(async () => { await loadInfo(); showTab(); loadTickers(); loadAlerts(); finishPendingAdd(); openShelfFromUrl(); })
+    .catch(e => {
+      const main = document.querySelector("main");
+      const box = document.createElement("div");
+      box.innerHTML = failedHTML("NextShelf", e, "location.reload()");
+      main.prepend(box.firstElementChild);
+      document.querySelectorAll(".loading").forEach(l => l.remove());
+    });
+}
+function netbar() {
+  let b = $("netbar");
+  if (navigator.onLine) { if (b) b.remove(); return; }
+  if (!b) { b = document.createElement("div"); b.id = "netbar"; b.setAttribute("role", "status"); document.body.appendChild(b); }
+  b.textContent = "You're offline. Data will refresh when you reconnect.";
+}
+window.addEventListener("offline", netbar);
+window.addEventListener("online", () => { netbar(); loadTickers(); loadAlerts(); showTab(); });
+boot(); setTimeout(pollAgent, 1500); setTimeout(paintInstall, 1200); setTimeout(pollLive, 2500);
+setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
+</script>
+
+
+
+
+
+
+
+
+
+<script>
+// ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
+(function () {
+  const LAND = false;
+  const swap = (t) => {
+    const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join the waitlist" : "Join the waitlist") + arrow;
+    if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
+    return null;
+  };
+  function fix(root) {
+    (root.querySelectorAll ? root : document).querySelectorAll('a[href="/login#signup"]').forEach(a => {
+      if (a.dataset.wl) return; a.dataset.wl = 1;
+      if (LAND) a.href = "#join";
+      const n = [...a.childNodes].find(x => x.nodeType === 3 && x.textContent.trim());
+      const t = n ? swap(n.textContent) : null; if (t) n.textContent = t + (n.textContent.endsWith(" ") ? " " : "");
+    });
+  }
+  Promise.all([fetch("/auth/config").then(r => r.json()), fetch("/api/me").then(r => r.json()).catch(() => null)]).then(([c, me]) => {
+    if (c.signups_open !== false || (me && !me.guest)) return;
+    window.NS_WAITLIST = true; document.documentElement.classList.add("waitlist");
+    fix(document);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => x.nodeType === 1 && fix(x.parentNode || x)))).observe(document.body, {childList: true, subtree: true});
+  }).catch(() => {});
+})();
+</script>
+<script>
+// ---------------------------------------------------------------- earnings soon: tag next to tickers, warning in the Shelf card
+const EARN = {}, EARN_ASKED = new Set(); let EARN_Q = new Set(), EARN_T = null;
+function earnAsk(sym) {
+  if (!sym || EARN_ASKED.has(sym)) return; EARN_ASKED.add(sym); EARN_Q.add(sym);
+  clearTimeout(EARN_T); EARN_T = setTimeout(async () => {
+    const list = [...EARN_Q]; EARN_Q = new Set();
+    for (let i = 0; i < list.length; i += 150) {
+      try { Object.assign(EARN, await api("/api/earnings?symbols=" + encodeURIComponent(list.slice(i, i + 150).join(",")))); } catch (e) {}
+    }
+    earnPaint(document);
+    if (BRIEF_SYM && list.includes(BRIEF_SYM)) mapSidePaint();
+  }, 200);
+}
+function earnShort(e) { const d = new Date(e.date + "T12:00:00"); return e.days === 0 ? "📅 Earnings today" : e.days === 1 ? "📅 Earnings tomorrow" : "📅 Earnings " + d.toLocaleDateString(undefined, {month: "short", day: "numeric"}).replace(/ /g, "\u00a0"); }
+function earnPaint(root) {
+  root.querySelectorAll("[data-earn]").forEach(el => {
+    const e = EARN[el.dataset.earn]; const old = el.querySelector(":scope > .earn-tag, :scope > .bf-earn"); if (old) old.remove();
+    if (el.classList.contains("sc-last")) {      // gap fade cards: the report the gap came from
+      const L = e && e.last, w = L && ({bmo: "before the open", amc: "after the close"})[L.when];
+      el.textContent = L ? `📅 Last earnings ${new Date(L.date + "T12:00:00").toLocaleDateString(undefined, {month: "short", day: "numeric"})}${w ? ", " + w : ""} · ${L.days_ago === 0 ? "today" : L.days_ago === 1 ? "yesterday" : L.days_ago + " days ago"}` : "";
+      return;
+    }
+    if (!e || e.days == null || e.days > 14) return;
+    if (el.id === "bfHead") {
+      if ($("bfWallTop")) $("bfWallTop").innerHTML = "";      // one warning on top: earnings wins over the options wall
+      el.insertAdjacentHTML("beforeend", `<p class="bf-earn"><i>📅</i><span><b>Earnings ${esc(e.label)}.</b> Price can gap past the hub.</span></p>`);
+    } else {
+      const t = document.createElement("span"); t.className = "earn-tag board-state earn"; t.textContent = earnShort(e);
+      t.title = "Earnings " + e.label; el.appendChild(t);
+    }
+  });
+}
+function earnScan(root) {
+  root.querySelectorAll(".sc-last:not([data-earn-done])").forEach(el => {
+    const sym = el.dataset.earn; el.dataset.earnDone = "1";
+    if (sym in EARN) earnPaint(el.parentNode || el); else earnAsk(sym);
+  });
+  root.querySelectorAll(".board-symbol:not([data-earn]), .lrow > summary .s:not([data-earn]), #bfHead").forEach(el => {
+    let sym = "";
+    if (el.id === "bfHead") { sym = (el.querySelector("h3") || {}).textContent || ""; if (el.dataset.earn === sym.trim() && el.querySelector(".bf-earn")) return; }
+    else sym = (el.querySelector("a") || el).firstChild?.textContent || "";
+    sym = sym.trim().toUpperCase(); if (!/^[A-Z][A-Z.\-]{0,9}$/.test(sym)) return;
+    el.dataset.earn = sym;
+    if (sym in EARN) earnPaint(el.parentNode || el); else earnAsk(sym);
+  });
+}
+new MutationObserver(ms => { if (ms.some(m => m.addedNodes.length)) earnScan(document); }).observe(document.body, {childList: true, subtree: true});
+earnScan(document);
+</script>
+<style>
+/* Patch 77: shelf card as one visualize sheet */
+#brief .bf-hero { background: transparent !important; border: 0 !important; margin: 16px 16px 0 !important; padding: 18px 16px 0 !important; }
+#brief .bf-kick { font: 600 17px var(--sans) !important; letter-spacing: 0 !important; text-transform: none !important; text-align: center; color: #fff !important; }
+#brief .vz-sum { margin-top: 12px; font-size: 15.5px; line-height: 1.5; color: #E6E8EB; }
+#brief .bf-stats { margin-top: 16px; }
+.vz-scale { position: relative; margin: 26px 44px 0 4px; }
+.vz-track { position: relative; height: 6px; background: #2B2C2F; border-radius: 999px; }
+.vz-hub { position: absolute; top: 0; bottom: 0; background: #2F6BFF; border-radius: 999px; opacity: .85; }
+.vz-dot { position: absolute; top: 50%; width: 4px; height: 16px; margin: -8px 0 0 -2px; background: #fff; border-radius: 2px; }
+.vz-tick { position: absolute; top: -4px; bottom: -4px; width: 2px; margin-left: -1px; border-radius: 1px; }
+.vz-tick.up { background: #3DD68C; } .vz-tick.dn { background: #FF6B5E; } .vz-tick.wall { background: #F2C14E; }
+.vz-labels { position: relative; height: 22px; margin-top: 8px; }
+.vz-lbl { position: absolute; transform: translateX(-50%); font-size: 12.5px; color: #9AA0AC; white-space: nowrap; }
+.vz-lbl.hub { color: #C3C7CF; }
+.vz-lbl.wall { left: auto !important; right: 0; transform: none; color: #C3C7CF; }
+html body #brief .bf-earn { color: #fde9c8 !important; background: rgba(242,193,78,.13) !important; border: 1px solid rgba(242,193,78,.35) !important; }
+html body #brief .bf-earn b { color: #F2C14E !important; }
+.vz-row { border-bottom: 1px solid #212225; }
+.vz-row summary { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 15px 2px; cursor: pointer; list-style: none; }
+.vz-row summary::-webkit-details-marker { display: none; }
+.vz-row summary::after { content: "⌄"; color: #646B78; font-size: 14px; }
+.vz-row[open] summary::after { content: "⌃"; }
+.vz-row .vz-t { font-size: 15.5px; font-weight: 600; }
+.vz-row .vz-p { font-size: 13.5px; color: #9AA0AC; text-align: right; }
+.vz-row .vz-b { padding: 2px 2px 16px; }
+html[data-theme="light"] .vz-track { background: #E5E7EB; }
+html[data-theme="light"] .vz-lbl, html[data-theme="light"] .vz-row .vz-p { color: #6b7280; }
+html[data-theme="light"] .vz-row { border-bottom-color: rgba(15,23,42,.07); }
+html[data-theme="light"] #brief .bf-kick { color: #0d1117 !important; }
+html[data-theme="light"] #brief .vz-sum { color: #111827; }
+html[data-theme="light"] #brief .bf-earn { color: #78350f !important; background: #fffbeb !important; border-color: #fcd34d !important; }
+html[data-theme="light"] #brief .bf-earn b { color: #92400e !important; }
+
+/* Shelf card: the top in a bordered panel; the rows in a second bordered panel with dividers */
+#brief .bf-hero { background: #15171C !important; border: 1px solid #292A2D !important; border-radius: 20px !important; margin: 16px 16px 12px !important; padding: 20px 20px 18px !important; }
+#brief .vz-card { border: 1px solid #292A2D; border-radius: 20px; background: #15171C; padding: 0 18px; }
+#brief .vz-card .vz-row { border-bottom: 1px solid #26282D; }
+#brief .vz-card .vz-row:last-of-type, #brief .vz-card .vz-row:not([hidden]):last-child { border-bottom: 0; }
+#brief .vz-row summary { align-items: center !important; padding: 16px 0 !important; }
+#brief .vz-row summary::after { content: "" !important; flex: 0 0 auto; width: 7px; height: 7px; margin: -3px 2px 0 4px; border-right: 1.5px solid #8A909B; border-bottom: 1.5px solid #8A909B; transform: rotate(45deg); transition: transform .15s; }
+#brief .vz-row[open] summary::after { transform: rotate(-135deg); margin-top: 3px; }
+#brief .vz-row .vz-t { flex: 0 0 auto; }
+#brief .vz-row .vz-p { flex: 1 1 auto; min-width: 0; margin-left: auto; }
+#brief .vz-row[open] { padding-bottom: 4px; }
+#brief .vz-row[open] > summary { border-bottom: 1px dashed #26282D; margin-bottom: 14px; }
+#brief .bf-legal { margin: 14px 4px 0; text-align: center; }
+@media (max-width: 899px) { #brief .bf-hero { margin: 12px 12px 10px !important; padding: 18px 16px 16px !important; } #brief .vz-card { padding: 0 14px; border-radius: 18px; } }
+html[data-theme="light"] #brief .bf-hero, html[data-theme="light"] #brief .vz-card { background: #F8F9FD !important; border-color: #E5E7EB !important; }
+html[data-theme="light"] #brief .vz-card .vz-row, html[data-theme="light"] #brief .vz-row[open] > summary { border-color: #EEF0F3; }
+html[data-theme="light"] #brief .vz-row summary::after { border-color: #9CA3AF; }
+/* status label reads as a pill, so its padding doesn't look like a stray indent */
+#brief .bf-head .bf-tag.rest { background: #23252B !important; border: 1px solid #30333A !important; color: #D5D8DE !important; border-radius: 6px !important; padding: 4px 10px !important; }
+html[data-theme="light"] #brief .bf-head .bf-tag.rest { background: #F1F2F4 !important; border-color: #E3E5E9 !important; color: #374151 !important; }
+/* Shelf card top panel: centred */
+#brief .bf-hero .bf-top { position: relative; justify-content: center !important; }
+#brief .bf-hero .bf-head { text-align: center !important; width: 100%; padding: 0 40px; box-sizing: border-box; }
+#brief .bf-hero .bf-x { position: absolute !important; top: 0; right: 0; }
+#brief .bf-hero .bf-head h3 { text-align: center !important; }
+#brief .bf-hero .bf-head .bf-tag { margin-left: auto !important; margin-right: auto !important; }
+#brief .bf-hero .vz-sum, #brief .bf-hero .bf-prev, #brief .bf-hero .bf-earn { text-align: center !important; justify-content: center !important; margin-left: auto; margin-right: auto; }
+#brief .bf-hero .bf-live { justify-content: center !important; flex-wrap: wrap; }
+#brief .bf-hero .bf-stats { text-align: center !important; margin-left: -40px; margin-right: -40px; }
+#brief .bf-hero .bf-stats > div { display: flex; flex-direction: column; align-items: center; }
+#brief .bf-hero .sg { margin-left: -40px; margin-right: -40px; text-align: left; }
+#brief .bf-hero .vz-scale { margin-left: -40px !important; margin-right: -40px !important; }
+#brief .bf-hero .vz-key { justify-content: center; }
+#brief .bf-hero #bfWallTop { margin: 0 -40px; text-align: left; }
+@media (max-width: 899px) { #brief .bf-hero .bf-head { padding: 0 36px; } #brief .bf-hero .bf-stats, #brief .bf-hero .sg, #brief .bf-hero .vz-scale, #brief .bf-hero #bfWallTop { margin-left: -36px !important; margin-right: -36px !important; } }
+/* Shelf card stands out: lifted panels, a brand-blue edge on the top panel, a darker backdrop */
+body.brief-open .bf-scrim { background: rgba(3,6,10,.72) !important; backdrop-filter: blur(4px) !important; }
+#brief .bf-hero { background: linear-gradient(180deg, #1C2030 0%, #171A22 55%) !important; border: 1px solid #343A4A !important;
+  box-shadow: inset 0 3px 0 0 #4B6BFF, 0 18px 40px rgba(0,0,0,.45) !important; }
+#brief .vz-card { background: #181A20 !important; border-color: #30333B !important; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+#brief .bf-hero .bf-head h3 { letter-spacing: -0.03em; }
+html[data-theme="light"] body.brief-open .bf-scrim { background: rgba(15,23,42,.38) !important; }
+html[data-theme="light"] #brief .bf-hero { background: linear-gradient(180deg, #EEF2FF 0%, #FFFFFF 55%) !important; border-color: #D9DEEA !important;
+  box-shadow: inset 0 3px 0 0 #2F54EB, 0 14px 34px rgba(15,23,42,.12) !important; }
+html[data-theme="light"] #brief .vz-card { background: #F8F9FD !important; border-color: #E2E5EB !important; box-shadow: 0 10px 26px rgba(15,23,42,.08); }
+/* call wall and put wall look different: gold C above the bar, violet P below it */
+#brief .vz-tick.wall.put { border-left-color: #B58CFF !important; }
+#brief .vz-key .k-wall.put { border-left-color: #B58CFF; }
+#brief .vz-tick.wall b { position: absolute; left: -4px; font: 700 9.5px var(--sans); line-height: 1; }
+#brief .vz-tick.wall.call b { top: -13px; color: #F2C14E; } #brief .vz-tick.wall.put b { bottom: -13px; color: #B58CFF; }
+html[data-theme="light"] #brief .vz-tick.wall.put, html[data-theme="light"] #brief .vz-key .k-wall.put { border-left-color: #7C3AED !important; }
+html[data-theme="light"] #brief .vz-tick.wall.call b { color: #B7791F; } html[data-theme="light"] #brief .vz-tick.wall.put b { color: #7C3AED; }
+
+/* app footer: brand + links on top, the fine print + socials below, each row lined up */
+main footer, body footer { display: grid !important; grid-template-columns: 1fr auto; align-items: center; gap: 12px 24px; }
+footer > .foot-brand { grid-column: 1; grid-row: 1; }
+footer > span:nth-child(2) { grid-column: 1; grid-row: 2; }
+footer > .app-legal { margin-top: 0 !important; align-items: center; justify-content: flex-end; }
+footer > .app-legal:nth-child(3) { grid-column: 2; grid-row: 1; }
+footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
+@media (max-width: 760px) {
+  main footer, body footer { grid-template-columns: 1fr; padding-bottom: 80px; }
+  footer > .foot-brand, footer > span:nth-child(2), footer > .app-legal:nth-child(3), footer > .app-legal:nth-child(4) { grid-column: 1; grid-row: auto; justify-content: flex-start; }
+}
+
+/* setup cards (double tops & bottoms, gap fade): the hub card, with the pattern drawn */
+.sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+
+.gex-mini { display: block; border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface); padding: 12px 13px; text-decoration: none; color: var(--ink); }
+.gex-mini-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.gex-mini-top b { font-size: 15px; font-weight: 800; }
+.gex-mini-top i { font-style: normal; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--muted); }
+.gex-mini-top i.at { background: #3B82F6; border-color: #3B82F6; color: #fff; }
+.gex-mini-px { display: block; font-family: var(--mono); font-size: 15px; margin-top: 6px; }
+.gex-mini-wall { display: block; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 3px; line-height: 1.6; }
+.gex-mini-wall b { font-weight: 700; }
+.gex-mini-wall .cw { color: #93C5FD; }
+.gex-mini-wall .pw { color: var(--down); }
+.sc-group { margin: 18px 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #A9AEB8; }
+.sc-group small { color: #7C8494; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.sc { border: 1px solid var(--line, #26272B); border-radius: 18px; padding: 18px 18px 16px; background: #15161A; min-width: 0; }
+.sc-flow { margin-top: 14px; background: rgba(34,163,92,.07); border: 1px solid #1E7A3C; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.55; color: var(--mp-ink, #E9EBEF); }
+.sc-flow b { color: #3DD68C; }
+.sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
+.sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }
+.sc .board-symbol a { font-size: 24px !important; font-weight: 800 !important; letter-spacing: -.01em; }
+.sc .board-symbol small { font-size: 11px !important; margin: 0 !important; display: inline !important; }
+.sc .board-symbol .earn-tag { flex-basis: 100%; width: max-content; }
+.sc-st { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex: 0 0 auto; }
+.sc-mid { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 14px; }
+.sc-px { font: 800 26px var(--sans); letter-spacing: -.02em; font-variant-numeric: tabular-nums; color: #F3F3F0; }
+.sc-pos { font-size: 14px; color: #A9AEB8; text-align: right; line-height: 1.4; }
+.sc-pos b { color: var(--ink, #F3F3F0); font-weight: 650; }
+.sc .board-actions { gap: 8px !important; align-items: center; }
+.sc .board-actions button.btnx { font-size: 10px !important; padding: 6px 8px !important; line-height: inherit; }
+.sc .board-actions a.btnx { background: #F3F3F0 !important; color: #141412 !important; border-color: #F3F3F0 !important; font-weight: 700 !important; }
+html[data-theme="light"] .sc .board-actions a.btnx { background: #141412 !important; color: #fff !important; border-color: #141412 !important; }
+.sc .trade-label { font-size: 12px; color: #8A8F99; margin-left: 4px; }
+.sc .sc-trade { display: inline-flex; align-items: center; gap: 12px; white-space: nowrap; flex: 0 0 auto; min-height: 30px; }   /* stays together: one row if it fits, else its own tidy line */
+.sc .board-actions { row-gap: 8px !important; }
+.sc a.broker.named { display: inline-flex; align-items: center; gap: 5px; margin: 0 !important; padding: 0 !important; border: 0 !important; background: none !important; box-shadow: none !important; line-height: 1.2; border-radius: 0; text-decoration: none; min-height: 0 !important; height: auto !important; width: auto !important; }
+.sc a.broker.named:hover .broker-name { text-decoration: underline; }
+.sc a.broker.named + a.broker.named::before { content: "·"; color: #6B7079; margin-right: 7px; }
+.sc .broker-name { font-size: 12.5px; font-weight: 650; color: #DADDE3; }
+html[data-theme="light"] .sc-pos b { color: #141412; } html[data-theme="light"] .sc .broker-name { color: #141412; }
+@media (max-width: 760px) { .sc-grid { padding-bottom: 120px; } }   /* the last card clears the Sika button */
+.sc-kind { margin-top: 2px; font-size: 12.5px; color: #8A8F99; }
+.sc-faded { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: #FF6B5E; } html[data-theme="light"] .sc-faded { color: #dc2626; }
+.sc-last { margin-top: 6px; font-size: 12.5px; color: #B48CFF; } .sc-last:empty { display: none; }
+html[data-theme="light"] .sc-last { color: #7c3aed; }
+.sc-kind b { color: #C9CDD6; font-weight: 650; } html[data-theme="light"] .sc-kind b { color: #33373D; }
+.sc-kind .str-chip { margin: 0 0 0 8px; }
+.sc .sk { display: block; width: 100%; height: auto; margin: 10px 0 2px; }
+.sk-l { stroke: #3A3D45; stroke-width: 1; stroke-dasharray: 4 4; }
+.sk-l.trig { stroke: #7C93FF; } .sk-l.tgt { stroke: #3DD68C; } .sk-l.stop { stroke: #FF6B5E; opacity: .8; }
+.sk-t { font: 600 10px var(--sans); fill: #8A8F99; font-variant-numeric: tabular-nums; }
+.sk-t.trig { fill: #9DAEFF; } .sk-t.tgt { fill: #3DD68C; } .sk-t.stop { fill: #FF8A7F; }
+.sk-now { font: 700 11px var(--sans); fill: #F3F3F0; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: #15161A; stroke-width: 3px; }
+.sk-now.up { fill: #3DD68C; } .sk-now.down { fill: #FF8A7F; }
+html[data-theme="light"] .sk-now { fill: #141412; stroke: #fff; } html[data-theme="light"] .sk-now.up { fill: #12805C; } html[data-theme="light"] .sk-now.down { fill: #C81E1E; }
+.sk-p { fill: none; stroke: #C9CDD6; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.sk-p.now { stroke-dasharray: 3 4; opacity: .75; }
+.sk-dot { fill: #F3F3F0; } .sk-dot.up { fill: #3DD68C; } .sk-dot.down { fill: #FF6B5E; }
+.sk-halo { fill: rgba(243,243,240,.16); } .sk-halo.up { fill: rgba(61,214,140,.2); } .sk-halo.down { fill: rgba(255,107,94,.2); }
+.sc .msc-meta { margin-top: 8px; line-height: 1.5; }
+.sc-news { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line, #26272B); font-size: 12.5px; color: #8A8F99; line-height: 1.5; }
+.sc-news a, .sc-news b { color: #F3F3F0; text-decoration: none; font-weight: 600; } .sc-news a:hover { text-decoration: underline; }
+html[data-theme="light"] .sc-news { color: #5B6672; } html[data-theme="light"] .sc-news a, html[data-theme="light"] .sc-news b { color: #141412; }
+.sc .board-actions { justify-content: flex-start; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line, #26272B); flex-wrap: wrap; }
+html[data-theme="light"] .sc { background: #F8F9FD; border-color: #E4E4DF; }
+html[data-theme="light"] .sc-px { color: #141412; } html[data-theme="light"] .sc-pos { color: #5B6672; }
+html[data-theme="light"] .sk-l { stroke: #CFD3DA; } html[data-theme="light"] .sk-l.trig { stroke: #2F54EB; } html[data-theme="light"] .sk-l.tgt { stroke: #12805C; } html[data-theme="light"] .sk-l.stop { stroke: #C81E1E; }
+html[data-theme="light"] .sk-t { fill: #6B7280; } html[data-theme="light"] .sk-t.trig { fill: #2F54EB; } html[data-theme="light"] .sk-t.tgt { fill: #12805C; } html[data-theme="light"] .sk-t.stop { fill: #C81E1E; }
+html[data-theme="light"] .sk-p { stroke: #141412; } html[data-theme="light"] .sk-dot { fill: #141412; } html[data-theme="light"] .sk-dot.up { fill: #12805C; } html[data-theme="light"] .sk-dot.down { fill: #C81E1E; }
+html[data-theme="light"] .sk-halo { fill: rgba(20,20,18,.12); }
+@media (max-width: 480px) { .sc-grid { grid-template-columns: 1fr; } }
+
+/* light theme: white surfaces become a soft light gray (inputs and small chips stay white) */
+html[data-theme="light"] body .panel, html[data-theme="light"] body .tbl, html[data-theme="light"] body .side, html[data-theme="light"] body #side, html[data-theme="light"] body .acct, html[data-theme="light"] body .agent, html[data-theme="light"] body .board-frame, html[data-theme="light"] body .mbrief, html[data-theme="light"] body .kpi, html[data-theme="light"] body .empty, html[data-theme="light"] body .stats, html[data-theme="light"] body .sc, html[data-theme="light"] body .bf-card, html[data-theme="light"] body .bf-hero { background: #F8F9FD !important; }
+
+/* ---------------- setup map (stock panel). body.map-v2 = on; Account → Stock panel → Classic turns it off */
+body.map-v2 #brief .bf-hero { display: none !important; }
+body:not(.map-v2) #bfMap { display: none; }
+@media (min-width: 1100px) { body.map-v2 .brief { width: min(1240px, 100vw) !important; } }
+#bfMap { --mp-card: #15171C; --mp-line: #292A2D; --mp-ink: #F3F4F6; --mp-mut: #9AA0AC; --mp-hub: #5B7BFF; --mp-trig: #F2C14E; --mp-obst: #FF6B5E; --mp-shelf: #3DD68C; --mp-stop: #9AA0AC;
+  padding: 14px 16px 4px; color: var(--mp-ink); }
+html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-ink: #0d1117; --mp-mut: #5b6472; --mp-hub: #4f46e5; --mp-trig: #b7791f; --mp-obst: #dc2626; --mp-shelf: #15803d; --mp-stop: #6b7280; }
+.mp-head { display: flex; align-items: center; gap: 12px; padding: 4px 2px 12px; flex-wrap: wrap; }
+.mp-head h3 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
+.mp-head .mp-px { font: 600 20px/1 var(--mono, ui-monospace, monospace); } .mp-head .mp-px em { font-style: normal; font-size: 15px; margin-left: 8px; }
+.mp-px em.u { color: var(--mp-shelf); } .mp-px em.d { color: var(--mp-obst); }
+.mp-upd { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--mp-mut); border: 1px solid var(--mp-line); border-radius: 999px; padding: 5px 10px; }
+.mp-upd i { width: 7px; height: 7px; border-radius: 50%; background: var(--mp-mut); } .mp-upd i.on { background: var(--mp-shelf); box-shadow: 0 0 8px var(--mp-shelf); }
+.mp-back { background: none; border: 0; color: var(--mp-ink); font-size: 22px; cursor: pointer; padding: 0 4px; }
+.mp-head .bf-x { position: static !important; }
+.mp-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+.mp-main { display: grid; gap: 12px; min-width: 0; }
+.mp-card { background: var(--mp-card); border: 1px solid var(--mp-line); border-radius: 18px; padding: 16px; }
+.mp-flow { grid-column: 1 / -1; background: rgba(34,163,92,.07); border: 1px solid #1E7A3C; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.55; color: var(--mp-ink, #E9EBEF); margin-bottom: 12px; }
+.mp-flow b { color: #3DD68C; }
+.mp-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
+.mp-ct { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; } .mp-ct b { font-size: 16px; } .mp-ct span { font-size: 12.5px; color: var(--mp-mut); }
+.mp-chartcard { padding: 14px 10px 8px 14px; }
+.mp-protitle { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px 10px 0; border-bottom:1px solid var(--mp-line); margin-bottom:10px; }
+.mp-protitle > div { display:grid; gap:2px; } .mp-protitle b { font-size:15px; } .mp-protitle small { font-size:11.5px; color:var(--mp-mut); font-family:var(--mono, ui-monospace, monospace); }
+.mp-prostatus { font:700 10px var(--mono, ui-monospace, monospace); letter-spacing:.08em; color:var(--mp-shelf); }
+.mp-svg .mp-vol-sep { stroke:var(--mp-line); stroke-width:1; }
+.mp-svg .mp-vol { opacity:.58; } .mp-svg .mp-vol.up { fill:#3DD68C; } .mp-svg .mp-vol.dn { fill:#FF6B5E; }
+.mp-svg .mp-vol-lab { fill:var(--mp-mut); font:700 9px var(--sans, system-ui); letter-spacing:.08em; }
+html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="light"] .mp-svg .mp-vol.dn { fill:#dc2626; }
+@media (max-width:559px) { .mp-protitle small { font-size:10.5px; } }
+.mp-cw { width: 100%; overflow: hidden; position: relative; touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+.mp-lwc { width:100%; height:430px; min-height:330px; position:relative; touch-action:pan-x pan-y; }
+@media(max-width:559px){.mp-lwc{height:390px;min-height:350px;}}
+.mp-lwc-foot { display:flex; justify-content:flex-end; padding:5px 8px 0; font-size:10px; color:var(--mp-mut); }
+.mp-lwc-foot a { color:inherit; text-decoration:none; } .mp-lwc-foot a:hover{text-decoration:underline;}
+.mp-ctop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mp-rng { display: inline-flex; border: 1px solid var(--mp-line); border-radius: 9px; padding: 2px; gap: 2px; }
+.mp-rng button { background: none; border: 0; color: var(--mp-mut); font: 600 12px var(--sans, system-ui); padding: 4px 9px; border-radius: 7px; cursor: pointer; }
+.mp-rng button.on { background: color-mix(in srgb, var(--mp-hub) 18%, transparent); color: var(--mp-hub); }
+.mp-xh { position: absolute; width: 0; border-left: 1px dashed var(--mp-mut); pointer-events: none; opacity: 0; }
+.mp-xh.on { opacity: .7; }
+.mp-tip { position: absolute; z-index: 3; pointer-events: none; opacity: 0; transition: opacity .1s; max-width: 250px; min-width: 170px;
+  background: var(--mp-card); border: 1px solid var(--mp-line); border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.45; color: var(--mp-ink); box-shadow: 0 8px 24px rgba(0,0,0,.28); }
+.mp-tip.on { opacity: 1; } .mp-tip > b { display: block; margin-bottom: 4px; font-size: 12.5px; } .mp-tip div { color: var(--mp-mut); }
+.mp-ohlc { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; margin-bottom: 4px; color: var(--mp-mut); }
+.mp-ohlc b { color: var(--mp-ink); font-family: var(--mono, ui-monospace, monospace); font-weight: 600; } .mp-ohlc b.u { color: var(--mp-shelf); } .mp-ohlc b.d { color: var(--mp-obst); }
+#mpBodySlot:empty { display: none; } #mpBodySlot #bfBody { padding: 0 !important; margin: 0 !important; } #mpBodySlot .vz-card { margin: 0 !important; width: auto; }
+.mp-hint { font-size: 11.5px; color: var(--mp-mut); padding: 4px 4px 0; }
+.mp-ctop > div:last-child, .mp-ctop .mp-rng { margin-left: 0; } .mp-ctop b { margin-right: auto; }
+.mp-tf button { min-width: 34px; }
+.cp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.cp-demo { border: 1px solid var(--line, #292A2D); border-radius: 8px; background: var(--mp-card, transparent); --mp-card: var(--surface, #15171C); }
+.cp-sw { display: inline-flex; gap: 0; border: 2px solid transparent; border-radius: 9px; padding: 3px; background: none; cursor: pointer; }
+.cp-sw.on { border-color: #5B7BFF; } .cp-sw i { width: 16px; height: 22px; display: block; } .cp-sw i:first-child { border-radius: 5px 0 0 5px; } .cp-sw i:last-child { border-radius: 0 5px 5px 0; }
+.cp-custom { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted, #9AA0AC); }
+.cp-custom input[type=color] { width: 34px !important; min-width: 0 !important; height: 26px !important; border: 0 !important; padding: 0 !important; background: none !important; cursor: pointer; flex: none !important; }
+.mp-planbtn { background: none; border: 1px solid var(--mp-line); color: var(--mp-ink); font: 600 12px var(--sans, system-ui); padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap; box-shadow: 0 0 12px rgba(47,84,235,.22); }
+.mp-planbtn.on { background: var(--mp-hub); border-color: var(--mp-hub); color: #fff; }
+.mp-cw.planning { touch-action: none; cursor: ns-resize; }
+.mp-cw.replay { cursor: default; }
+.mp-svg .mp-rp-now { stroke: var(--mp-hub); stroke-width: 1; stroke-dasharray: 3 3; opacity: .7; }
+.mp-svg .mp-mk { font: 700 10.5px var(--sans, system-ui); paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; }
+.mp-svg .mk-hub { fill: var(--mp-hub); } .mp-svg .mk-up { fill: var(--mp-shelf); } .mp-svg .mk-down { fill: var(--mp-obst); } .mp-svg .mk-rt { fill: var(--mp-trig); }
+.mp-rp { display: grid; gap: 8px; margin-top: 8px; min-width: 0; }
+.mp-chartcard { min-width: 0; overflow: hidden; }
+.mp-rp-say { font-size: 13.5px; line-height: 1.5; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--mp-ink) 5%, transparent); min-height: 42px; }
+.mp-rp-say.fresh { background: color-mix(in srgb, var(--mp-hub) 14%, transparent); }
+.mp-rp-ctl { display: flex; align-items: center; gap: 6px; min-width: 0; }
+@media (max-width: 559px) { .mp-rp-t { display: none; } }
+.mp-rp-ctl button { background: none; border: 1px solid var(--mp-line); color: var(--mp-ink); border-radius: 8px; min-width: 32px; height: 30px; cursor: pointer; font-size: 12px; }
+.mp-rp-ctl button.pp { background: var(--mp-hub); border-color: var(--mp-hub); color: #fff; }
+.mp-rp-ctl button.mp-rp-done { background: var(--mp-hub); border-color: var(--mp-hub); color: #fff; font-weight: 700; padding: 0 14px; }
+.mp-rp-ctl input[type=range] { flex: 1; min-width: 60px; accent-color: var(--mp-hub); }
+.mp-rp-t { font: 600 11.5px var(--mono, ui-monospace, monospace); color: var(--mp-mut); white-space: nowrap; }
+.mp-svg .mp-hdl rect { fill: var(--mp-ink); opacity: .05; } .mp-svg .mp-hdl circle { stroke-width: 2; fill: var(--mp-card); }
+.mp-svg .mp-hdl path { stroke-width: 1.4; stroke-linecap: round; }
+.mp-svg .h-stop circle, .mp-svg .h-stop path { stroke: var(--mp-stop); } .mp-svg .h-target circle, .mp-svg .h-target path { stroke: var(--mp-shelf); }
+.mp-calc { margin-top: 10px; border-top: 1px solid var(--mp-line); padding-top: 12px; display: grid; gap: 10px; }
+.mp-calc-in { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+.mp-calc-in label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--mp-mut); }
+.mp-calc-in label span { display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--mp-line); border-radius: 8px; padding: 4px 8px; color: var(--mp-ink); }
+.mp-calc-in input { width: 74px; background: none; border: 0; color: var(--mp-ink); font: 600 13px var(--mono, ui-monospace, monospace); outline: none; }
+.mp-calc-in #mpRisk { width: 42px; }
+.mp-reset { margin-left: auto; background: none; border: 0; color: var(--mp-hub); font: 600 12.5px var(--sans, system-ui); cursor: pointer; padding: 4px 0; }
+.mp-ks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.mp-k { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--mp-ink) 4%, transparent); }
+.mp-k small { font-size: 11px; color: var(--mp-mut); } .mp-k b { font: 700 16px var(--mono, ui-monospace, monospace); } .mp-k i { font-style: normal; font-size: 11px; color: var(--mp-mut); }
+.mp-k.k-stop b { color: var(--mp-ink); } .mp-k.k-tgt b, .mp-k.k-good b { color: var(--mp-shelf); } .mp-k.k-thin b { color: var(--mp-trig); }
+.mp-size { font-size: 13.5px; line-height: 1.5; } .mp-size b.u { color: var(--mp-shelf); } .mp-size b.d { color: var(--mp-obst); }
+@media (max-width: 899px) { .mp-ks { grid-template-columns: repeat(2, 1fr); } .mp-reset { margin-left: 0; } .mp-ctop { flex-wrap: wrap; } } .mp-svg { display: block; overflow: visible; }
+.mp-grid line.mp-grid, .mp-svg .mp-grid { stroke: var(--mp-line); stroke-width: 1; }
+.mp-svg .mp-ax { fill: var(--mp-mut); font: 11px var(--mono, ui-monospace, monospace); }
+.mp-svg .mp-fut { fill: var(--mp-ink); opacity: .025; }
+.mp-svg .mp-futdiv { stroke: var(--mp-line); stroke-width: 1; }
+.mp-svg .mp-plan { fill: var(--mp-mut); font: 600 9px var(--sans, system-ui); letter-spacing: .14em; }
+.mp-svg .mp-hub { fill: var(--mp-hub); fill-opacity: .1; stroke: var(--mp-hub); stroke-width: 1.5; stroke-opacity: .85; }
+.mp-svg .mp-hubt { fill: var(--mp-hub); font: 700 12px var(--sans, system-ui); letter-spacing: .04em; paint-order: stroke; stroke: var(--mp-card); stroke-width: 4px; stroke-linejoin: round; }
+.mp-svg .mp-tk { stroke: var(--mp-line); } .mp-svg .mp-axt { font-size: 10px; opacity: .7; }
+.mp-svg .mp-vp { fill: var(--mp-hub); shape-rendering: crispEdges; } .mp-svg .mp-vp.poc { fill: var(--mp-trig); }
+.mp-svg .mp-shelfband.w { fill: var(--mp-mut); }
+.mp-svg .mp-dblzone { fill: var(--mp-hub); fill-opacity: .06; }
+.mp-svg .mp-neck { stroke: var(--mp-trig); stroke-width: 1.4; stroke-dasharray: 5 4; opacity: .8; }
+.mp-svg .mp-wm { fill: none; stroke-width: 2; stroke-linejoin: round; opacity: .55; } .mp-svg .mp-wm.w { stroke: var(--mp-shelf); } .mp-svg .mp-wm.m { stroke: var(--mp-obst); }
+.mp-svg .mp-pk { stroke: var(--mp-card); stroke-width: 2; } .mp-svg .mp-pk.w { fill: var(--mp-shelf); } .mp-svg .mp-pk.m { fill: var(--mp-obst); }
+.mp-svg .mp-pkt { font: 700 11px var(--sans, system-ui); paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; } .mp-svg .mp-pkt.w { fill: var(--mp-shelf); } .mp-svg .mp-pkt.m { fill: var(--mp-obst); }
+.mp-svg .mp-shelfband { fill: var(--mp-shelf); opacity: .13; } .mp-svg .mp-obstband { fill: var(--mp-obst); opacity: .12; }
+.mp-svg .mp-cf { opacity: .45; } .mp-svg .mp-cf rect { stroke-dasharray: 2 2; fill-opacity: .35; stroke-width: 1.2; }
+.mp-svg .mp-cu, .mp-svg .mp-cuf { stroke: #3DD68C; fill: #3DD68C; } .mp-svg .mp-cd, .mp-svg .mp-cdf { stroke: #FF6B5E; fill: #FF6B5E; }
+html[data-theme="light"] .mp-svg .mp-cu, html[data-theme="light"] .mp-svg .mp-cuf { stroke: #16a34a; fill: #16a34a; }
+html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cdf { stroke: #dc2626; fill: #dc2626; }
+.mp-svg [class^="mp-l-"] { stroke-width: 1.6; stroke-dasharray: 7 5; }
+.mp-svg .mp-l-trig { stroke: var(--mp-trig); } .mp-svg .mp-l-obst { stroke: var(--mp-obst); } .mp-svg .mp-l-shelf { stroke: var(--mp-shelf); } .mp-svg .mp-l-stop { stroke: var(--mp-stop); stroke-dasharray: 3 4; }
+.mp-svg .mp-path { fill: none; stroke: var(--mp-shelf); stroke-width: 2.4; stroke-dasharray: 6 5; } .mp-svg .mp-path.w { stroke: var(--mp-mut); }
+.mp-svg .mp-arrow { fill: var(--mp-shelf); } .mp-svg .mp-arrow.w { fill: var(--mp-mut); }
+.mp-svg .mp-trigdot { fill: var(--mp-card); stroke: var(--mp-trig); stroke-width: 2.5; }
+.mp-svg .mp-tgtdot { fill: var(--mp-shelf); } .mp-svg .mp-tgtdot.w { fill: var(--mp-mut); }
+.mp-svg .mp-now { fill: var(--mp-hub); stroke: var(--mp-card); stroke-width: 2; } .mp-svg .mp-now-halo { fill: var(--mp-hub); opacity: .22; }
+.mp-svg .mp-tag { font: 600 12px var(--sans, system-ui); paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; stroke-linejoin: round; } .mp-svg .mp-tag tspan { font-family: var(--mono, ui-monospace, monospace); }
+.mp-svg .mp-lead { stroke-width: 1; } .mp-svg .mp-lead.t-trig { stroke: var(--mp-trig); } .mp-svg .mp-lead.t-obst { stroke: var(--mp-obst); }
+.mp-svg .mp-lead.t-shelf { stroke: var(--mp-shelf); } .mp-svg .mp-lead.t-stop, .mp-svg .mp-lead.t-mut { stroke: var(--mp-stop); }
+.mp-svg .mp-tag.t-trig { fill: var(--mp-trig); }
+.mp-svg .mp-tag.t-obst { fill: var(--mp-obst); }
+.mp-svg .mp-tag.t-shelf { fill: var(--mp-shelf); }
+.mp-svg .mp-tag.t-stop, .mp-svg .mp-tag.t-mut { fill: var(--mp-stop); }
+.mp-status { display: grid; grid-template-columns: minmax(170px, 1.1fr) 3fr; gap: 14px; align-items: center; }
+.mp-st { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; border-left: 3px solid var(--mp-trig); }
+.mp-st.t-go { border-left-color: var(--mp-shelf); } .mp-st.t-bad { border-left-color: var(--mp-obst); }
+.mp-st b { font-size: 15px; } .mp-st span { font-size: 12.5px; color: var(--mp-mut); line-height: 1.4; }
+.mp-cells { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 0; }
+.mp-c { display: flex; flex-direction: column; gap: 3px; padding: 2px 12px; border-left: 1px solid var(--mp-line); }
+.mp-c small { font-size: 11.5px; color: var(--mp-mut); } .mp-c b { display: inline-flex; align-items: center; gap: 5px; font: 700 17px var(--mono, ui-monospace, monospace); white-space: nowrap; }
+.mp-c i { font-style: normal; font-size: 11.5px; color: var(--mp-mut); }
+#bfMap .mp-c.c-now b { color: var(--mp-hub) !important; } #bfMap .mp-c.c-trig b { color: var(--mp-trig) !important; } #bfMap .mp-c.c-obst b { color: var(--mp-obst) !important; } #bfMap .mp-c.c-shelf b { color: var(--mp-shelf) !important; } #bfMap .mp-c.c-stop b { color: var(--mp-ink) !important; }
+.mp-jt { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--mp-mut); margin-bottom: 12px; font-weight: 600; }
+.mp-js { display: grid; grid-template-columns: repeat(var(--n), 1fr); position: relative; }
+.mp-js::before { content: ""; position: absolute; left: calc(50% / var(--n)); right: calc(50% / var(--n)); top: 15px; height: 2px; background: var(--mp-line); }
+.mp-j { display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative; text-align: center; }
+.mp-jd { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--mp-card); border: 2px solid var(--mp-line); color: var(--mp-mut); position: relative; }
+.mp-j.done .mp-jd { border-color: var(--mp-hub); background: var(--mp-hub); color: #fff; }
+.mp-j.now .mp-jd { border-color: var(--mp-hub); color: var(--mp-hub); box-shadow: 0 0 0 5px color-mix(in srgb, var(--mp-hub) 22%, transparent); }
+.mp-j small { font-size: 12px; color: var(--mp-mut); line-height: 1.3; } .mp-j.now small { color: var(--mp-ink); font-weight: 600; }
+.mp-j small em { display: block; font-style: normal; color: var(--mp-hub); font-size: 11px; }
+#mapGrade .sg { margin: 0; }
+.mp-sika { display: flex; flex-direction: column; gap: 12px; }
+.mp-right { display: grid; gap: 12px; align-content: start; min-width: 0; }
+#mpSide { display: grid; gap: 12px; }
+.mp-sc { padding: 14px 16px; display: grid; gap: 8px; }
+.mp-sct { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mp-mut); font-weight: 600; }
+.mp-row { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; font-size: 13px; }
+.mp-row span { color: var(--mp-mut); } .mp-row b { font-weight: 600; text-align: right; }
+.mp-row.warn b { color: var(--mp-trig); } .mp-row.good b { color: var(--mp-shelf); } .mp-row.bad b { color: var(--mp-obst); }
+.mp-scn { margin: 0; font-size: 12px; line-height: 1.45; color: var(--mp-mut); } .mp-scn.warn { color: var(--mp-trig); } .mp-scn b { color: var(--mp-ink); }
+.mp-rcs { display: flex; flex-wrap: wrap; gap: 5px; }
+.mp-rc { font: 600 11.5px var(--mono, ui-monospace, monospace); padding: 4px 6px; border-radius: 7px; border: 1px solid var(--mp-line); cursor: default; }
+.mp-rc.ok { color: var(--mp-shelf); border-color: color-mix(in srgb, var(--mp-shelf) 40%, transparent); }
+.mp-rc.no { color: var(--mp-obst); border-color: color-mix(in srgb, var(--mp-obst) 40%, transparent); } .mp-rc.to { color: var(--mp-mut); }
+.mp-nw { display: grid; gap: 2px; text-decoration: none; color: var(--mp-ink); padding: 6px 0; border-top: 1px solid var(--mp-line); }
+.mp-nw:first-of-type { border-top: 0; } .mp-nw b { font-size: 13px; font-weight: 600; line-height: 1.35; } .mp-nw small { font-size: 11.5px; color: var(--mp-mut); }
+.mp-nw i { font-style: normal; font-size: 10.5px; color: var(--mp-trig); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+.mp-nw:hover b { text-decoration: underline; }
+.mp-sh { display: flex; align-items: center; gap: 10px; } .mp-sh b { font-size: 17px; }
+.mp-sh small { margin-left: auto; font-size: 11.5px; color: var(--mp-shelf); border: 1px solid color-mix(in srgb, var(--mp-shelf) 50%, transparent); border-radius: 999px; padding: 3px 9px; }
+.mp-ava { width: 34px !important; height: 34px !important; display: inline-grid; place-items: center; }
+.mp-ava svg { width: 100%; height: 100%; }
+.mp-say { margin: 0; font-size: 14px; line-height: 1.55; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--mp-ink) 5%, transparent); }
+.mp-qs { display: grid; gap: 8px; }
+.mp-qs button { display: flex; justify-content: space-between; align-items: center; text-align: left; font: 500 13.5px var(--sans, system-ui); color: var(--mp-ink);
+  background: transparent; border: 1px solid var(--mp-line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.mp-qs button:hover { border-color: var(--mp-hub); } .mp-qs button.on { border-color: var(--mp-hub); color: var(--mp-hub); background: color-mix(in srgb, var(--mp-hub) 9%, transparent); }
+.mp-qs button span { color: var(--mp-mut); font-size: 17px; }
+.mp-fine { margin: 0; font-size: 11.5px; color: var(--mp-mut); }
+@media (max-width: 1099px) {
+  .mp-grid { grid-template-columns: 1fr; } .mp-sika { position: static; }
+}
+@media (max-width: 899px) {
+  #bfMap { padding: 10px 10px 2px; padding-top: max(10px, env(safe-area-inset-top)); }
+  .mp-head h3 { font-size: 24px; } .mp-head .mp-px { font-size: 17px; }
+  .mp-upd { margin-left: auto; padding: 4px 8px; } .mp-head .bf-x { order: 9; margin-left: 0; }
+  .mp-card { padding: 13px; border-radius: 16px; } .mp-chartcard { padding: 12px 6px 6px 10px; }
+  .mp-status { grid-template-columns: 1fr; }
+  .mp-cells { grid-template-columns: repeat(2, 1fr); row-gap: 12px; }
+  .mp-c:nth-child(odd) { border-left: 0; padding-left: 0; }
+  .mp-j small { font-size: 11px; }
+}
+
+/* ---- polish: hairlines, fewer colours, depth (dark + light) */
+#bfMap { --mp-card: #121418; --mp-line: rgba(255,255,255,.08); --mp-grid: rgba(255,255,255,.045); --mp-trig: #E9C46A; --mp-obst: #E5736A; --mp-shelf: #3DD68C; }
+html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.09); --mp-grid: rgba(13,17,23,.055); }
+#bfMap .mp-card { background: linear-gradient(180deg, color-mix(in srgb, var(--mp-ink) 3.5%, var(--mp-card)) 0%, var(--mp-card) 55%);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--mp-ink) 7%, transparent), 0 1px 2px rgba(0,0,0,.18); }
+#bfMap .mp-chartcard { position: relative; isolation: isolate; }
+#bfMap .mp-chartcard::before { content: ""; position: absolute; inset: 0; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(color-mix(in srgb, var(--mp-ink) 7%, transparent) 1px, transparent 1.2px) 0 0 / 18px 18px;
+  -webkit-mask-image: radial-gradient(120% 90% at 85% 0%, #000 0%, transparent 70%); mask-image: radial-gradient(120% 90% at 85% 0%, #000 0%, transparent 70%); }
+#bfMap .mp-chartcard::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; z-index: -1; pointer-events: none;
+  background: radial-gradient(60% 50% at 90% 0%, color-mix(in srgb, var(--mp-hub) 10%, transparent), transparent 70%); }
+.mp-svg .mp-grid { stroke: var(--mp-grid) !important; }
+.mp-svg line, .mp-svg .mp-hub, .mp-svg .mp-fut, .mp-svg .mp-shelfband, .mp-svg .mp-obstband { shape-rendering: crispEdges; }
+.mp-svg .mp-ax { fill: var(--mp-ink); opacity: .78; font-size: 10.5px; paint-order: stroke; stroke: var(--mp-card); stroke-width: 3px; stroke-linejoin: round; }
+.mp-svg [class^="mp-l-"] { stroke-width: 1; }
+.mp-svg .mp-hub { stroke-width: 1; fill-opacity: .08; }
+.mp-head h3 { letter-spacing: -.035em; font-weight: 700; }
+.mp-ct b { font-size: 15px; letter-spacing: -.015em; font-weight: 650; }
+.mp-c small, .mp-k small { text-transform: uppercase; letter-spacing: .08em; font-size: 10px; font-weight: 600; }
+.mp-c b, .mp-k b { letter-spacing: -.01em; }
+.mp-st b { letter-spacing: -.01em; }
+.mp-c { border-left-color: var(--mp-line); }
+.mp-qs button, .mp-rng, .mp-planbtn, .mp-rp-ctl button { border-color: var(--mp-line); }
+
+/* ---- market map (Setups page) */
+#mktmap { margin: 0 0 18px; }
+.hm-card { background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); border-radius: 18px; padding: 16px; }
+.hm-top b { font-size: 16px; letter-spacing: -.015em; display: block; } .hm-top small { color: var(--muted, #9AA0AC); font-size: 12.5px; }
+.hm-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 12px; font-size: 12px; color: var(--muted, #9AA0AC); }
+.hm-lg { display: inline-flex; align-items: center; gap: 6px; } .hm-lg b { color: var(--ink, #F3F4F6); font-weight: 600; }
+.hm-lg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.hm-box { position: relative; width: 100%; overflow: hidden; border-radius: 10px; }
+.hm-sec { position: absolute; box-sizing: border-box; padding: 1px; }
+.hm-sh { position: absolute; left: 3px; top: 1px; right: 3px; height: 14px; font: 600 10px var(--sans, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #9AA0AC); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-t { position: absolute; box-sizing: border-box; border: 1px solid var(--bg, #0E0F12); border-radius: 3px; padding: 0; margin: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; transition: filter .12s; }
+.hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
+.hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
+.hm-up { background: #1f9d63; } .hm-down { background: #c2453b; } .hm-edge { background: #c8961f; } .hm-edgedn { background: #8a6a24; }
+.hm-rest { background: #34407a; } .hm-none { background: #24262c; } .hm-none span { color: rgba(255,255,255,.45); }
+.hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
+html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-none { background: #e6e8ee; } html[data-theme="light"] .hm-none span { color: #8a909c; }
+html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
+.hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.hm-tip.on { opacity: 1; }
+
+/* compact Context card; the old duplicate rows below the map are hidden in the map view */
+body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: none !important; }
+.mp-cx { border-top: 1px solid var(--mp-line); } .mp-cx:first-of-type { border-top: 0; }
+.mp-cx > button { width: 100%; display: flex; align-items: center; gap: 10px; background: none; border: 0; padding: 9px 0; color: var(--mp-ink); font: 500 13px var(--sans, system-ui); text-align: left; cursor: pointer; }
+.mp-cx > button { white-space: normal !important; min-width: 0; }
+.mp-cxt { min-width: 0; overflow-wrap: anywhere; }
+.mp-right, .mp-right .mp-card, .mp-say { min-width: 0; overflow-wrap: anywhere; }
+.mp-cxi { width: 20px; text-align: center; flex: none; font-size: 14px; } .mp-cxt { flex: 1; line-height: 1.35; } .mp-cxt small { color: var(--mp-mut); font-size: 11.5px; }
+.mp-cxc { color: var(--mp-mut); font-size: 16px; transition: transform .15s; } .mp-cx.open .mp-cxc { transform: rotate(90deg); }
+.mp-cx.warn .mp-cxt, .mp-cx.warn .mp-cxt b { color: var(--mp-trig); } .mp-cx.hot .mp-cxt b { color: var(--mp-trig); } .mp-cx.dim .mp-cxt { color: var(--mp-mut); }
+.mp-cxd { padding: 0 0 10px 30px; font-size: 12px; line-height: 1.5; color: var(--mp-mut); display: grid; gap: 6px; }
+.mp-cxd .mp-nw { border-top: 0; padding: 2px 0; }
+
+/* ---- trade ticket */
+.mp-tradebtn { background: #000 !important; border-color: #000 !important; color: #fff !important; }
+.tk-back { position: fixed; inset: 0; z-index: 1000; background: rgba(5,7,10,.55); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; }
+.tkt { --tk-card: #15171C; --tk-line: rgba(255,255,255,.09); --tk-ink: #F3F4F6; --tk-mut: #9AA0AC; --tk-up: #3DD68C; --tk-dn: #FF6B5E; --tk-w: #E9C46A;
+  width: min(460px, 100%); max-height: calc(100vh - 32px); overflow: auto; background: var(--tk-card); color: var(--tk-ink); border: 1px solid var(--tk-line); border-radius: 18px; padding: 18px; display: grid; gap: 12px; box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+html[data-theme="light"] .tkt { --tk-card: #F8F9FD; --tk-line: rgba(13,17,23,.1); --tk-ink: #0d1117; --tk-mut: #5b6472; --tk-up: #15803d; --tk-dn: #dc2626; --tk-w: #b7791f; }
+.tk-h { display: flex; align-items: baseline; gap: 10px; } .tk-h b { font-size: 18px; letter-spacing: -.02em; } .tk-h span { color: var(--tk-mut); font-size: 13px; }
+.tk-x { margin-left: auto; background: none; border: 0; color: var(--tk-mut); font-size: 16px; cursor: pointer; }
+.tk-st { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; border-left: 3px solid var(--tk-w); background: color-mix(in srgb, var(--tk-ink) 5%, transparent); font-size: 12.5px; line-height: 1.45; }
+.tk-st b { font-size: 13.5px; } .tk-st span { color: var(--tk-mut); } .tk-st.t-ready { border-left-color: var(--tk-up); } .tk-st.t-now { border-left-color: var(--tk-up); background: color-mix(in srgb, var(--tk-up) 10%, transparent); }
+.tk-order { border: 1px solid var(--tk-line); border-radius: 12px; padding: 4px 12px; font-family: var(--mono, ui-monospace, monospace); }
+.tk-r { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--tk-line); font-size: 13px; }
+.tk-r:first-child { border-top: 0; color: var(--tk-mut); font-family: var(--sans, system-ui); font-size: 12px; }
+.tk-r span { color: var(--tk-mut); font-family: var(--sans, system-ui); } .tk-r b { font-weight: 700; text-align: right; } .tk-r > span i { font-style: normal; font-size: 10.5px; margin-left: 5px; padding: 1px 6px; border-radius: 6px; border: 1px solid var(--tk-line); color: var(--tk-mut); text-transform: uppercase; letter-spacing: .04em; } .tk-r b span.d { font-family: inherit; } .tk-r b i { font-style: normal; font-weight: 500; color: var(--tk-mut); font-size: 11.5px; margin-left: 6px; }
+.tk-r.big b { font-size: 15px; } .tk-r.sum { font-size: 12.5px; } .tkt .tk-r .u { color: var(--tk-up) !important; } .tkt .tk-r .d { color: var(--tk-dn) !important; } .tkt .tk-r .w { color: var(--tk-w) !important; }
+.tk-acct { font-size: 12.5px; color: var(--tk-mut); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.tk-acct label { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--tk-line); border-radius: 7px; padding: 2px 6px; color: var(--tk-ink); }
+.tk-acct input { width: 64px; background: none; border: 0; color: var(--tk-ink); font: 600 12.5px var(--mono, ui-monospace, monospace); outline: none; padding: 0; }
+.tk-acct label:nth-of-type(2) input { width: 36px; }
+.tk-warn { margin: 0; color: var(--tk-dn); font-size: 12.5px; }
+.tk-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+.tk-copy { flex: 1 1 100%; background: var(--tk-up); color: #06281A; border: 0; border-radius: 10px; padding: 11px; font: 700 14px var(--sans, system-ui); cursor: pointer; }
+.tk-brk { flex: 1; text-align: center; border: 1px solid var(--tk-line); border-radius: 10px; padding: 9px; color: var(--tk-ink); text-decoration: none; font: 600 13px var(--sans, system-ui); }
+.tk-brk:hover { border-color: var(--tk-mut); }
+.tk-tip, .tk-fine { margin: 0; font-size: 12px; line-height: 1.5; color: var(--tk-mut); } .tk-tip b { color: var(--tk-ink); font-weight: 600; } .tk-fine { font-size: 11px; }
+.tk-alh { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--tk-mut); font-weight: 600; }
+.tk-als { display: flex; flex-wrap: wrap; gap: 6px; }
+.tk-al { border: 1px solid var(--tk-line); background: none; color: var(--tk-ink); border-radius: 9px; padding: 7px 10px; font: 600 12px var(--sans, system-ui); cursor: pointer; }
+.tk-al.on { border-color: var(--tk-up); color: var(--tk-up); background: color-mix(in srgb, var(--tk-up) 10%, transparent); }
+@media (max-width: 559px) { .tk-back { place-items: end center; padding: 0; } .tkt { border-radius: 18px 18px 0 0; max-height: 92vh; } }
+
+/* Context pop-out */
+#mpPop { position: fixed; inset: 0; z-index: 900; pointer-events: none; }
+#mpPop .pop-card { position: fixed; width: 340px; max-height: 70vh; overflow: auto; pointer-events: auto; background: #15171C; color: #F3F4F6; border: 1px solid rgba(255,255,255,.1);
+  border-radius: 14px; padding: 14px 16px; box-shadow: 0 18px 50px rgba(0,0,0,.45); display: grid; gap: 10px; animation: popIn .14s ease-out; }
+#mpPop .pop-card { --mp-shelf: #3DD68C; --mp-obst: #FF6B5E; --mp-trig: #E9C46A; --mp-mut: #9AA0AC; --mp-ink: #F3F4F6; --mp-line: rgba(255,255,255,.12); --mp-hub: #5B7BFF; }
+html[data-theme="light"] #mpPop .pop-card { --mp-shelf: #15803d; --mp-obst: #dc2626; --mp-trig: #b7791f; --mp-mut: #5b6472; --mp-ink: #0d1117; --mp-line: rgba(13,17,23,.12); --mp-hub: #4f46e5; }
+html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117; border-color: rgba(13,17,23,.1); box-shadow: 0 18px 50px rgba(15,23,42,.18); }
+@keyframes popIn { from { opacity: 0; transform: translateY(4px) scale(.98); } }
+.pop-h { display: flex; align-items: center; gap: 8px; } .pop-h b { font-size: 14.5px; letter-spacing: -.01em; }
+.pop-h button { margin-left: auto; background: none; border: 0; color: #9AA0AC; font-size: 14px; cursor: pointer; }
+.pop-b { font-size: 13px; line-height: 1.55; color: #9AA0AC; display: grid; gap: 8px; } html[data-theme="light"] .pop-b { color: #5b6472; }
+.pop-b .mp-rcs { margin-bottom: 2px; } .pop-b .mp-nw { color: inherit; border-top: 1px solid rgba(127,127,127,.18); padding: 8px 0 2px; } .pop-b .mp-nw:first-child { border-top: 0; padding-top: 0; }
+.pop-b .mp-nw b { color: #F3F4F6; font-size: 13.5px; } html[data-theme="light"] .pop-b .mp-nw b { color: #0d1117; }
+#mpPop.center { pointer-events: auto; background: rgba(5,7,10,.35); }
+#mpPop.sheet { pointer-events: auto; background: rgba(5,7,10,.45); }
+#mpPop.sheet .pop-card { left: 0; right: 0; bottom: 0; top: auto; width: auto; max-height: 75vh; border-radius: 18px 18px 0 0; padding: 16px 18px calc(18px + env(safe-area-inset-bottom)); animation: sheetIn .18s ease-out; }
+@keyframes sheetIn { from { transform: translateY(30px); opacity: .4; } }
+.mp-cx.open > button { background: color-mix(in srgb, var(--mp-hub) 8%, transparent); border-radius: 8px; }
+
+.ox-sim { font-style: normal; font-size: 9.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 5px; margin-left: 4px; border-radius: 5px; border: 1px solid rgba(127,127,127,.35); opacity: .85; vertical-align: 1px; }
+.tk-legs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0 2px; } .tk-legs button { background: none; border: 1px solid var(--tk-line); border-radius: 10px; padding: 7px 8px; color: var(--tk-mut); font: 600 12.5px var(--sans, system-ui); cursor: pointer; text-align: left; } .tk-legs button small { display: block; font-weight: 500; font-size: 11px; margin-top: 1px; } .tk-legs button.on { color: var(--tk-ink); border-color: color-mix(in srgb, var(--tk-ink) 45%, transparent); background: color-mix(in srgb, var(--tk-ink) 7%, transparent); }
+.tk-alt { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .tk-alt button { background: none; border: 1px solid currentColor; color: inherit; border-radius: 8px; padding: 5px 10px; font: 600 12px var(--sans, system-ui); cursor: pointer; }
+.tk-tabs { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--tk-line); border-radius: 10px; padding: 3px; gap: 3px; }
+.tk-tabs button { background: none; border: 0; color: var(--tk-mut); font: 600 13px var(--sans, system-ui); padding: 7px; border-radius: 8px; cursor: pointer; }
+.tk-tabs button.on { background: color-mix(in srgb, var(--tk-ink) 10%, transparent); color: var(--tk-ink); }
+.tk-lock { border: 1px dashed var(--tk-line); border-radius: 12px; padding: 14px; display: grid; gap: 8px; font-size: 13px; color: var(--tk-mut); } .tk-lock b { color: var(--tk-ink); } .tk-lock p { margin: 0; }
+
+/* Patch 98 */
+.wl-section{margin:18px 0}.wl-section-head{font-size:13px;font-weight:700;color:var(--muted);margin:0 0 8px}.wl-gauge{display:none}@media(max-width:760px){.lrows{padding-bottom:64px}.lrow .wl-gauge{display:block;grid-column:1/-1;margin-top:8px}.lrow.wl-forming .badge{display:none}.lrow .one{grid-column:2/-1}}
+</style>
+</body>
+</html>
++Number(d.spot||0).toFixed(2)+' · '+(d.at || 'LIVE')+'</span></div><span>'+ (watched?'WATCHLIST · MOMENTUM ENABLED':'ON-DEMAND · CURRENT GRID')+'</span></div>'
+    + replayHTML + rowsHTML
+    + (!watched ? '' : '<div class="gxb-note">Momentum compares each strike and expiry with the prior recorded five-minute snapshot. Missing snapshots are skipped; a blank percentage means no prior reading.</div>')
+    + '<div class="gxb-note">White = positive net GEX · red = negative net GEX · brighter cells = greater gross gamma. Labels are NextShelf display definitions, not tested trade signals. Cboe data is delayed.</div>';
+}
+function symSafe(s) { return String(s || "").replace(/[^A-Z0-9.\-]/g,""); }
+async function seekGexReplay(value) {
+  gxbStop();
+  const times = GEX_BOARD_DATA && GEX_BOARD_DATA.replay || [], idx = Math.max(0,Math.min(times.length-1,Number(value)||0));
+  if (!times.length) return;
+  GEX_BOARD_INDEX = idx;
+  await loadGexBoard(GEX_BOARD_SYMBOL, times[idx]);
+}
+function toggleGexReplay() {
+  if (GEX_BOARD_TIMER) { gxbStop(); const b=$("gxbPlay"); if(b)b.textContent="PLAY"; return; }
+  const times = GEX_BOARD_DATA && GEX_BOARD_DATA.replay || [];
+  if (times.length < 2) return;
+  const b=$("gxbPlay"); if(b)b.textContent="PAUSE";
+  GEX_BOARD_TIMER = setInterval(async ()=>{
+    const current = GEX_BOARD_DATA && GEX_BOARD_DATA.replay || times;
+    const next = (GEX_BOARD_INDEX + 1) % current.length;
+    GEX_BOARD_INDEX = next;
+    await loadGexBoard(GEX_BOARD_SYMBOL, current[next]);
+    const btn=$("gxbPlay"); if(btn && GEX_BOARD_TIMER)btn.textContent="PAUSE";
+  },1000);
+}
+
 // ---- setup cards: the pattern drawn with its levels and a dot where price is now (same card as the hub board)
 function setupSketch(x) {
   const P = Number(x.last_close), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
