@@ -683,8 +683,8 @@ async function loadGexShelves() {
   const fmtK = v => (Math.abs(v) >= 1000 ? (v / 1000).toLocaleString("en-US", {maximumFractionDigits: 1}) + "K" : Math.round(v));
   const pct = v => { const d = (v - spot) / spot * 100; return (d >= 0 ? "+" : "") + d.toFixed(1) + "%"; };
   const near = rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a);
-  const above = rows.filter(r => r.strike > spot).sort((a, b) => a.strike - b.strike)[0];
-  const below = rows.filter(r => r.strike < spot).sort((a, b) => b.strike - a.strike)[0];
+  const above = rows.filter(r => r.strike > near.strike).sort((a, b) => a.strike - b.strike)[0];
+  const below = rows.filter(r => r.strike < near.strike).sort((a, b) => b.strike - a.strike)[0];
   const shelf = r => {
     const at = r.strike === near.strike;
     const lab = r.side === "call" ? "Call wall" : "Put wall";
