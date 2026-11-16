@@ -2245,6 +2245,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
     <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div id="phoneNudge"></div>
+  <div id="premarket" hidden></div>
   <div class="week" id="week" hidden></div>
   <div class="retest" id="retest" hidden></div>
   <div class="rule1" id="rule1"></div>
@@ -5120,6 +5121,7 @@ function marketChip() {
   }
   return `<span class="mkt${open ? " open" : ""}" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
 }
+let PREMARKET = null;
 let BOARD_ERR = null;
 function renderPhoneNudge() {
   const el = $("phoneNudge"); if (!el) return;
@@ -5244,13 +5246,34 @@ async function loadWeek() {
   } catch (_) { WEEK = null; }
   renderWeek();
 }
+async function loadPremarket() {
+  try { PREMARKET = await api("/api/premarket"); } catch (e) { PREMARKET = null; }
+  renderPremarket();
+}
 async function loadToday() {
   renderToday();
   const mb = $("mbrief"); if (mb && !mb.innerHTML.trim()) { mb.hidden = false; mb.innerHTML = '<p class="mb-quiet">Loading the board…</p>'; }
   loadWeek();
+  loadPremarket();
   try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
   renderToday(); renderStrip();
   loadBrief();
+}
+function renderPremarket() {
+  const el = $("premarket"); if (!el) return;
+  const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
+  const pre = wd >= 1 && wd <= 5 && mins < 570;
+  const g = (PREMARKET && PREMARKET.gainers) || [], l = (PREMARKET && PREMARKET.losers) || [];
+  if (!pre || PREMARKET && PREMARKET.locked || (!g.length && !l.length)) { el.hidden = true; el.innerHTML = ""; return; }
+  const row = (x, up) => `<a class="arow" href="/t/${esc(x.symbol)}" style="--c:var(${up ? "--up" : "--down"})"><i></i>
+    <span class="t"><span class="tk">${esc(x.symbol)}</span><span>${up ? "+" : ""}${x.change_pct.toFixed(2)}% · premarket</span></span>
+    <span class="go">${money(x.price)}</span></a>`;
+  const group = (title, rows, up) => rows.length
+    ? `<div class="week-head"><div class="week-k">${title}</div></div><div class="lrows">${rows.map(x => row(x, up)).join("")}</div>` : "";
+  el.innerHTML = `<div class="week-head"><div class="week-k">PREMARKET MOVERS</div>`
+    + (PREMARKET.as_of ? `<span class="mb-quiet">as of ${esc(PREMARKET.as_of)}</span>` : "") + `</div>`
+    + group("Top gainers", g, true) + group("Top losers", l, false);
+  el.hidden = false;
 }
 function renderToday() {
   const h = etNow().getHours();
@@ -5259,6 +5282,7 @@ function renderToday() {
   const now = etNow();
   $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, <em>${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.</em><small class="hello-sub">${greet}${name}</small>`;
   $("mkt").innerHTML = marketChip();
+  renderPremarket();
   renderWeek();
   renderRetest();
   renderRule();
