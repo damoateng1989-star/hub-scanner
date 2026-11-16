@@ -5856,8 +5856,8 @@ async function renderGexBoard() {
     return `<a class="gex-mini" href="/t/${esc(sym)}"><span class="gex-mini-top"><b>${esc(sym)}</b><i class="${at ? "at" : ""}">${at ? "AT THE WALL" : "BETWEEN WALLS"}</i></span><span class="gex-mini-px">${money(spot)}</span><span class="gex-mini-wall">Call wall <b class="cw">${money(cw)}</b> &middot; put wall <b class="pw">${money(pw)}</b></span></a>`;
   }).filter(Boolean).join("");
   host.innerHTML = `<div class="beta-note"><b>Watch-only.</b> Gamma shelves are levels, not a setup — there is no Lab record behind them yet, and no alert fires on them. The Lab measures the wall trigger next; only a passing trigger earns an alert.</div><p class="setup-about">A call wall is a ceiling shelf, a put wall is a floor shelf. This board shows where each stock on your watchlist sits against its gamma walls.</p>`
-    + (cards ? `<div class="sc-grid">${cards}</div>` : `<div class="empty">No gamma walls available for your watchlist right now. Sika checks again after the next 4-hour close.</div>`)
-    + `<div class="note" style="margin-top:10px">Walls come from the nearest monthly expiry (7+ days out) on the Cboe delayed chain — the same expiry the Shelf card uses. No Lab record, no alerts.</div>`;
+    + (cards ? `<div class="sc-grid">${cards}</div>` : `<div class="empty">No gamma walls available for your watchlist right now. Check again after the next 4-hour close.</div>`)
+    + `<div class="note" style="margin-top:10px">Walls come from the selected swing expiry (monthly when available, 7+ days out) on the Cboe delayed chain — the same expiry the ticker page uses. No Lab record, no alerts.</div>`;
 }
 // ---- setup cards: the pattern drawn with its levels and a dot where price is now (same card as the hub board)
 function setupSketch(x) {
