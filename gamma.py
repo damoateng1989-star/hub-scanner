@@ -145,6 +145,50 @@ def walls(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         return None
 
 
+def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> dict | None:
+    """Top GEX shelves near spot, on the same expiry walls uses (nearest monthly >=7d).
+    Returns {'expiry', 'spot', 'shelves': [{'strike', 'gex', 'side'}...]} sorted by strike desc,
+    or None. side is 'call' when net GEX is positive, 'put' when negative.
+    Top n positive and top n negative nodes by absolute net GEX, so the ladder has
+    both a ceiling and a floor. Never raises; fail-open."""
+    try:
+        sym = (symbol or "").upper()
+        if not spot or float(spot) <= 0:
+            return None
+        spot = float(spot)
+        if fetch:
+            contracts = _fetch_contracts(sym)
+        else:
+            with _LOCK:
+                contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            return None
+        today = date.today()
+        by_exp: dict[date, list] = {}
+        for exp, call, k, g, oi, v in _slim(contracts):
+            if abs(k - spot) / spot > _BAND:
+                continue
+            by_exp.setdefault(exp, []).append((call, k, g, oi, v))
+        swing = [e for e in by_exp if (e - today).days >= 7]
+        monthlies = [e for e in swing if _monthly(e)]
+        exp = min(monthlies) if monthlies else min(swing, default=None)
+        if not exp:
+            return None
+        net: dict[float, float] = {}
+        for call, k, g, oi, v in by_exp[exp]:
+            net[k] = net.get(k, 0.0) + (g * oi * 100 if call else -(g * oi * 100))
+        pos = sorted(((k, v) for k, v in net.items() if v > 0), key=lambda kv: -kv[1])[:n]
+        neg = sorted(((k, v) for k, v in net.items() if v < 0), key=lambda kv: kv[1])[:n]
+        rows = [{"strike": k, "gex": round(v, 1), "side": "call" if v > 0 else "put"}
+                for k, v in sorted(pos + neg, key=lambda kv: -kv[0])]
+        if not rows:
+            return None
+        return {"expiry": exp.isoformat(), "spot": spot, "shelves": rows}
+    except Exception as e:
+        log.warning("shelves compute failed for %s: %s", symbol, e)
+        return None
+
+
 def flow_proxy(symbol: str, spot: float | None, direction: int) -> dict | None:
     """Volume-vs-OI proxy from the delayed Cboe chain, not Pulse/tape flow.
     Returns {call_voi, put_voi, side, expiry} or None. Never raises."""
