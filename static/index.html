@@ -5776,7 +5776,12 @@ function renderSetupBoard() {
     : SETUP_TAB === "gapfade"
     ? `<div class="beta-note ok"><b>Out of beta.</b> Over the two-year test this setup made +2.76% per trade across 341 trades, with about 6 in 10 winning. <b class="warn">The last 6 months were slightly negative (−0.26%)</b>, so size small. Every alert comes with a plan, and you manage the trade. Past results, not a promise.</div>`
     : `<div class="beta-note"><b>Beta.</b> New setup, too few results to judge yet. Its track record builds on the <a href="#results">Results</a> page.</div>`;
-  $("setupBoard").innerHTML = lock + betaNote + `<p class="setup-about">${about}</p>` + (rows.length ? `<div class="sc-grid">${rows.map(setupCard).join("")}</div>`
+  const gridHTML = !rows.length ? "" : SETUP_TAB === "double" ? (() => {
+    const bots = rows.filter(x => x.kind === "double_bottom"), tops = rows.filter(x => x.kind === "double_top");
+    const grp = (label, list) => list.length ? `<h3 class="sc-group">${label} <small>${list.length}</small></h3><div class="sc-grid">${list.map(setupCard).join("")}</div>` : "";
+    return grp("Double bottoms · long setups", bots) + grp("Double tops · short setups", tops);
+  })() : `<div class="sc-grid">${rows.map(setupCard).join("")}</div>`;
+  $("setupBoard").innerHTML = lock + betaNote + `<p class="setup-about">${about}</p>` + (rows.length ? gridHTML
     : `<div class="empty">No ${name.toLowerCase()} on the board right now. Sika checks again after the next ${SETUP_TAB === "gapfade" || SETUP_TAB === "flush" ? "daily" : "4-hour"} close.</div>`)
     + `<div class="note" style="margin-top:10px">${SETUP_TAB === "gapfade" ? "This setup works on daily closes with a fixed 2× risk target, not the hub rules." : SETUP_TAB === "flush" ? "This setup is in beta. It works on daily closes: the trigger is a daily close back above the level, and it's wrong on a daily close back below it." : SETUP_TAB === "fakeout" ? "This setup is in beta. It acts on a 4-hour close and aims for the next shelf, but the stop is the fake-out low (or high), not the hub edge." : `${name} are in beta: same rules as hubs (act on a 4-hour close, target the next shelf).`} Check the Results page for how they've actually done.</div>`;
 }
@@ -6564,6 +6569,8 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 
 /* setup cards (double tops & bottoms, gap fade): the hub card, with the pattern drawn */
 .sc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
+.sc-group { margin: 18px 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #A9AEB8; }
+.sc-group small { color: #7C8494; font-weight: 500; letter-spacing: 0; text-transform: none; }
 .sc { border: 1px solid var(--line, #26272B); border-radius: 18px; padding: 18px 18px 16px; background: #15161A; min-width: 0; }
 .sc-flow { margin-top: 14px; background: rgba(34,163,92,.07); border: 1px solid #1E7A3C; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.55; color: var(--mp-ink, #E9EBEF); }
 .sc-flow b { color: #3DD68C; }
