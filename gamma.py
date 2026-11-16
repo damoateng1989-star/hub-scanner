@@ -394,7 +394,7 @@ def snapshot_symbol(symbol: str, spot: float | None) -> bool:
     """Force-refresh one watchlist chain and persist its compact all-expiry grid. Fail-open."""
     sym = (symbol or "").upper()
     try:
-        if not re.fullmatch(r"[A-Z][A-Z0-9.\\-]{0,9}", sym) or not spot or float(spot) <= 0:
+        if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym) or not spot or float(spot) <= 0:
             return False
         contracts = _fetch_contracts(sym, force=True)
         if not contracts:
@@ -445,12 +445,12 @@ def board(symbol: str, spot: float | None, at: str | None = None) -> dict | None
     """All-expiry GEX board. at=HHMM replays a saved watchlist snapshot. Fail-open."""
     try:
         sym = (symbol or "").upper()
-        if not re.fullmatch(r"[A-Z][A-Z0-9.\\-]{0,9}", sym):
+        if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
             return None
         day = datetime.now(_NY).date().isoformat()
         times = _snapshot_times(sym, day)
         if at is not None:
-            if not re.fullmatch(r"\\d{4}", at):
+            if not re.fullmatch(r"\d{4}", at):
                 return None
             current = _read_snapshot(sym, at, day)
             if not current:
