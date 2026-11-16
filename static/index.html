@@ -6101,6 +6101,7 @@ async function pollLive() {
       const r = await api("/api/live?symbols=" + encodeURIComponent(syms.join(",")), {timeout: 15000});
       LIVE = {...LIVE, ...r.prices}; LIVE_OPEN = r.market_open; LIVE_AT = r.as_of;
       paintLive();
+      liveCandleTick();
     } catch (e) {}
   }
   LIVE_T = setTimeout(pollLive, LIVE_OPEN ? 30000 : 300000);    // every 30s while the market is open
@@ -6108,6 +6109,24 @@ async function pollLive() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pollLive(); });
 // the next 4-hour close, in words: "today's 1:30 PM close", "tomorrow's 1:30 PM close", "Monday's 1:30 PM close"
 // when the next 4-hour close is: [day word, time], e.g. ["today", "4:00 PM"], ["tomorrow", "1:30 PM"], ["Monday", "1:30 PM"]
+// Live candle: move the forming candle in place as the price ticks (no chart rebuild).
+// The forming candle is the last bar in MAP_LWC_DATA.cs (mapFormingCandle appends it);
+// its time must match BRIEF_CHART.forming.time, the server's own forming-candle time,
+// so a new 4H block (or a closed market) never gets a live update meant for the old one.
+function liveCandleTick() {
+  if (!LIVE_OPEN || !BRIEF_SYM || !MAP_LWC_CANDLE || !MAP_LWC_DATA || !MAP_LWC_DATA.cs.length) return;
+  const L = LIVE[BRIEF_SYM];
+  if (!L || L.price == null) return;
+  const px = +L.price;
+  if (!Number.isFinite(px)) return;
+  const cs = MAP_LWC_DATA.cs, last = cs[cs.length - 1];
+  const fc = BRIEF_CHART && BRIEF_CHART.forming;
+  if (!fc || !last || last.time !== fc.time) return;   // new block / no forming candle: mapFormingPoll owns the rollover
+  const upd = {time: last.time, open: last.open, high: Math.max(last.high, px), low: Math.min(last.low, px), close: px};
+  cs[cs.length - 1] = {...last, ...upd};   // keep the in-memory bars in sync, so a repaint doesn't snap the candle back
+  MAP_LWC_CANDLE.update(upd);
+}
+
 function nextCloseWhen(now) {
   const ny = new Date((now || new Date()).toLocaleString("en-US", {timeZone: "America/New_York"}));
   const m = ny.getHours() * 60 + ny.getMinutes(), wd = ny.getDay();
