@@ -202,9 +202,11 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 .gex-shelf .gex-right small { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; margin-top: 2px; }
 .gex-tag { font-style: normal; font-family: var(--mono); font-size: 9px; font-weight: 700; background: #3B82F6; color: #fff; border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; }
 .gex-sika { margin-top: 10px; font-size: 13px; line-height: 1.55; color: var(--ink); }
-  .chart-heat-split { display: grid; grid-template-columns: minmax(300px, .9fr) minmax(0, 1.35fr); gap: 14px; align-items: start; }
-  @media (max-width: 860px) { .chart-heat-split { grid-template-columns: 1fr; } }
-  #gexHeatmap { background: #0A0A0A; color: #FFFFFF; border-color: #262626; min-width: 0; overflow-x: auto; }
+  .gex-shelf-card { margin-top: 16px; min-width: 0; }
+  .gex-shelf-layout { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(0, 1.15fr); gap: 16px; align-items: start; margin-top: 12px; }
+  .gex-shelf-layout > * { min-width: 0; }
+  #gexHeatmap { background: #0A0A0A; color: #FFFFFF; border: 1px solid #262626; border-radius: 10px; min-width: 0; overflow-x: auto; }
+  @media (max-width: 860px) { .gex-shelf-layout { grid-template-columns: 1fr; } }
   .gex-map-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid #262626; }
   .gex-map-head .t { font-size: 13px; font-weight: 800; letter-spacing: .08em; }
   .gex-map-head .s { font-family: var(--mono); font-size: 11px; color: #A3A3A3; text-align: right; }
@@ -466,8 +468,6 @@ function render(d) {
         </span></span>
     </header>
     <p class="sum">${summary(st)}</p>
-    <div class="chart-heat-split">
-    <div class="card" id="gexHeatmap"></div>
     <div class="card"><div id="chart"></div>
       <div class="legend">
         <span style="--c:var(--hub)"><i></i>Hubs</span>
@@ -483,10 +483,9 @@ function render(d) {
         ${d.setups && d.setups.levels.length ? `<span style="--c:#C3C7CF"><i class="dash"></i>Support / resistance (3+ touches)</span>` : ""}
       </div>
     </div>
-    </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
-    <div id="gexShelves"></div>
+    <div id="gexShelves" class="card gex-shelf-card"></div>
     <h2>Past <em>results</em></h2>
     <p class="scope">This ticker only · 4H breakouts</p>
     ${s.n ? `<div class="kv hero">
@@ -692,33 +691,39 @@ function render(d) {
 async function loadGexShelves() {
   const host = document.getElementById("gexShelves");
   if (!host) return;
-  let j = null;
+  let j = null, error = "";
   try {
     const r = await fetch(`/api/gamma/${encodeURIComponent(SYM)}`);
+    if (!r.ok) throw new Error(`Gamma request failed (${r.status})`);
     j = await r.json();
-  } catch (_) {
-    renderGexHeatmap(null, "Gamma data could not be loaded. Check the connection and refresh.");
-    return;
+  } catch (e) {
+    error = "Gamma data could not be loaded. Check the connection and refresh.";
   }
-  renderGexHeatmap(j);
   const sh = j && j.shelves;
-  if (!sh || !sh.shelves || !sh.shelves.length) return;
-  const spot = sh.spot, rows = sh.shelves;
-  const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  const fmtK = v => (Math.abs(v) >= 1000 ? (v / 1000).toLocaleString("en-US", {maximumFractionDigits: 1}) + "K" : Math.round(v));
-  const pct = v => { const d = (v - spot) / spot * 100; return (d >= 0 ? "+" : "") + d.toFixed(1) + "%"; };
-  const near = rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a);
-  const above = rows.filter(r => r.strike > near.strike).sort((a, b) => a.strike - b.strike)[0];
-  const below = rows.filter(r => r.strike < near.strike).sort((a, b) => b.strike - a.strike)[0];
-  const shelf = r => {
-    const at = r.strike === near.strike;
-    const lab = r.side === "call" ? "Call wall" : "Put wall";
-    return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${r.side === "call" ? "ceiling shelf" : "floor shelf"}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtK(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
-  };
-  const line = above && below
-    ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
-    : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
-  host.innerHTML = `<h2>GEX <em>shelves</em></h2><p class="scope">Swing expiry (monthly when available, 7+ days out) &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only, no Lab record yet</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
+  const shelves = sh && Array.isArray(sh.shelves) ? sh.shelves : [];
+  let shelfHtml = `<p class="scope">Watch-only gamma levels · no Lab record or alert</p>`;
+  if (shelves.length) {
+    const spot = sh.spot, rows = shelves;
+    const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const fmtK = v => (Math.abs(v) >= 1000 ? (v / 1000).toLocaleString("en-US", {maximumFractionDigits: 1}) + "K" : Math.round(v));
+    const pct = v => { const d = (v - spot) / spot * 100; return (d >= 0 ? "+" : "") + d.toFixed(1) + "%"; };
+    const near = rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a);
+    const above = rows.filter(r => r.strike > near.strike).sort((a, b) => a.strike - b.strike)[0];
+    const below = rows.filter(r => r.strike < near.strike).sort((a, b) => b.strike - a.strike)[0];
+    const shelf = r => {
+      const at = r.strike === near.strike;
+      const lab = r.side === "call" ? "Call wall" : "Put wall";
+      return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${r.side === "call" ? "ceiling shelf" : "floor shelf"}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtK(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
+    };
+    const line = above && below
+      ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
+      : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
+    shelfHtml = `<p class="scope">Swing expiry (monthly when available, 7+ days out) &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
+  } else {
+    shelfHtml += `<p class="scope">Gamma shelf levels are unavailable for this ticker right now.</p>`;
+  }
+  host.innerHTML = `<h2>GEX <em>shelves</em> + heat map</h2><div class="gex-shelf-layout"><section>${shelfHtml}</section><div id="gexHeatmap"></div></div>`;
+  renderGexHeatmap(j, error);
 }
 
 // GEX heat map (Patch 137, watch-only): net gamma by strike and near-term expiry.
