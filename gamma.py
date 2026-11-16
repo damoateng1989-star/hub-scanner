@@ -311,11 +311,29 @@ def _board_grid(contracts: list, spot: float) -> dict | None:
                 row["labels"].append("TB")
     if flips:
         min(flips, key=lambda r: abs(float(r["strike"]) - float(spot)))["labels"].append("GF")
+    positive = [r for r in rows if float(r["total"]) > 0]
+    negative = [r for r in rows if float(r["total"]) < 0]
+    if positive:
+        max(positive, key=lambda r: r["total"])["labels"].append("CEILING")
+    if negative:
+        min(negative, key=lambda r: r["total"])["labels"].append("OS")
+    wall_data = _compute(contracts, float(spot), datetime.now(_NY).date())
+    if wall_data:
+        for wall_key in ("call_wall", "put_wall"):
+            wall = wall_data.get(wall_key)
+            hit = next((r for r in rows if wall is not None and abs(float(r["strike"]) - float(wall)) < 0.001), None)
+            if hit and "CEILING" not in hit["labels"]:
+                hit["labels"].append("Wall")
     ranked = sorted(rows, key=lambda r: r["total_gross"], reverse=True)
     selected = ranked[:_GRID_MAX_ROWS]
-    gf = next((r for r in rows if "GF" in r["labels"]), None)
-    if gf and gf not in selected:
-        selected[-1] = gf
+    # Keep the defining levels visible even when they are not among the 25
+    # largest gross strikes; fill by replacing the weakest non-mandatory row.
+    mandatory = [r for r in rows if any(tag in r["labels"] for tag in ("GF", "CEILING", "OS", "Wall"))]
+    for required in mandatory:
+        if required not in selected:
+            replace_at = next((i for i in range(len(selected) - 1, -1, -1)
+                               if selected[i] not in mandatory), len(selected) - 1)
+            selected[replace_at] = required
     rows = sorted(selected, key=lambda r: -r["strike"])
     return {"expiries": [e.isoformat() for e in exps],
             "spot": round(float(spot), 4), "rows": rows}
@@ -369,20 +387,7 @@ def _decorate_board(payload: dict, previous: dict | None, walls_: dict | None) -
         row["total_mom"] = _momentum(float(row.get("total", 0)),
                                       float(old.get("total", 0)) if old else None)
         row.setdefault("labels", [])
-    flips = [r for r in rows if "FLIP" in r.get("labels", [])]
     positive = [r for r in rows if float(r.get("total", 0)) > 0]
-    negative = [r for r in rows if float(r.get("total", 0)) < 0]
-    if positive:
-        max(positive, key=lambda r: r["total"])["labels"].append("CEILING")
-    if negative:
-        min(negative, key=lambda r: r["total"])["labels"].append("OS")
-    if walls_:
-        for key in ("call_wall", "put_wall"):
-            wall = walls_.get(key)
-            if wall is not None:
-                hit = next((r for r in rows if abs(float(r["strike"]) - float(wall)) < 0.001), None)
-                if hit and "CEILING" not in hit["labels"]:
-                    hit["labels"].append("Wall")
     weakening = sorted((r for r in positive if r.get("total_mom") is not None and r["total_mom"] < 0),
                        key=lambda r: float(r["total"]), reverse=True)[:_BOARD_RV_TOP]
     for row in weakening:
