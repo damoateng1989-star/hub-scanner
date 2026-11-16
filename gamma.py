@@ -8,9 +8,13 @@ it doesn't change which strike is biggest, and the ranking is all the filter nee
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import re
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 import time
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -28,6 +32,10 @@ _BAND = 0.20                                      # strikes within ±20% of spot
                                                   # >=7 DTE monthly is negligible), so the band edge can
                                                   # no longer decide the wall
 _RETRY = 3600
+_NY = ZoneInfo("America/New_York")
+_GEX_DIR = Path(os.getenv("DATA_DIR", "data")) / "gex"
+_GEX_DIR.mkdir(parents=True, exist_ok=True)
+_BOARD_RV_TOP = 3
 
 
 def _occ(option: str):
@@ -97,15 +105,15 @@ def _compute(contracts: list, spot: float, today: date) -> dict | None:
     return {"call_wall": cw, "put_wall": pw, "flip": flip, "expiry": exp.isoformat()}
 
 
-def _fetch_contracts(symbol: str) -> list:
+def _fetch_contracts(symbol: str, force: bool = False) -> list:
     """Chain for (symbol, today), fetched once a day and kept slim. [] on failure (fail-open). Never raises."""
     sym = (symbol or "").upper()
     today = date.today().isoformat()
     key = (sym, today)
     with _LOCK:
-        if key in _CHAIN_CACHE:
+        if not force and key in _CHAIN_CACHE:
             return _CHAIN_CACHE[key]
-    if time.time() - _FAILED.get(sym, 0) < _RETRY:
+    if not force and time.time() - _FAILED.get(sym, 0) < _RETRY:
         return []
     try:
         r = requests.get(_URL.format(sym), headers={"User-Agent": "NextShelf/1.0"}, timeout=20)
@@ -252,6 +260,217 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         return {"expiries": [e.isoformat() for e in exps], "spot": spot, "rows": rows}
     except Exception as e:
         log.warning("grid compute failed for %s: %s", symbol, e)
+        return None
+
+
+# ---------------------------------------------------------------- GEX board (Patch 139): all expiries, watchlist snapshots, replay
+def _board_grid(contracts: list, spot: float) -> dict | None:
+    """Compact all-expiry grid. Rows are ranked by total gross, then shown by strike."""
+    by_exp: dict[date, list] = {}
+    for exp, call, k, g, oi, v in _slim(contracts):
+        if abs(k - spot) / spot <= _GRID_BAND:
+            by_exp.setdefault(exp, []).append((call, k, g, oi, v))
+    exps = sorted(by_exp)
+    if not exps:
+        return None
+    net: dict[float, list[float]] = {}
+    gross: dict[float, list[float]] = {}
+    for ei, exp in enumerate(exps):
+        for call, k, g, oi, v in by_exp[exp]:
+            ge = float(g) * float(oi) * 100
+            net.setdefault(k, [0.0] * len(exps))[ei] += ge if call else -ge
+            gross.setdefault(k, [0.0] * len(exps))[ei] += abs(ge)
+    rows = []
+    for k, vals in net.items():
+        gr = gross[k]
+        total = sum(vals)
+        total_gross = sum(gr)
+        if total or total_gross:
+            rows.append({"strike": k, "gex": [round(x, 1) for x in vals],
+                         "gross": [round(x, 1) for x in gr],
+                         "total": round(total, 1), "total_gross": round(total_gross, 1)})
+    if not rows:
+        return None
+    rows.sort(key=lambda r: r["total_gross"], reverse=True)
+    rows = rows[:_GRID_MAX_ROWS]
+    rows.sort(key=lambda r: -r["strike"])
+    return {"expiries": [e.isoformat() for e in exps],
+            "spot": round(float(spot), 4), "rows": rows}
+
+
+def _snapshot_path(symbol: str, day: str, hhmm: str) -> Path:
+    return _GEX_DIR / f"{symbol.upper()}_{day}_{hhmm}.json"
+
+
+def _snapshot_times(symbol: str, day: str | None = None) -> list[str]:
+    day = day or datetime.now(_NY).date().isoformat()
+    prefix = f"{symbol.upper()}_{day}_"
+    try:
+        return sorted(p.name[len(prefix):-5] for p in _GEX_DIR.glob(prefix + "*.json")
+                      if re.fullmatch(r"\d{4}", p.name[len(prefix):-5]))
+    except Exception as exc:
+        log.warning("GEX replay listing failed for %s: %s", symbol, exc)
+        return []
+
+
+def _read_snapshot(symbol: str, hhmm: str, day: str | None = None) -> dict | None:
+    day = day or datetime.now(_NY).date().isoformat()
+    try:
+        payload = json.loads(_snapshot_path(symbol, day, hhmm).read_text(encoding="utf-8"))
+        if payload.get("symbol") != symbol.upper() or payload.get("at", "")[11:16].replace(":", "") != hhmm:
+            return None
+        return payload
+    except Exception:
+        return None
+
+
+def has_snapshots(symbol: str) -> bool:
+    return bool(_snapshot_times(symbol))
+
+
+def _momentum(current: float, previous: float | None) -> float | None:
+    if previous is None:
+        return None
+    return round((current - previous) / max(abs(previous), 1.0) * 100, 1)
+
+
+def _decorate_board(payload: dict, previous: dict | None, walls_: dict | None) -> dict:
+    """Attach per-expiry and total momentum, plus descriptive labels based on total net GEX."""
+    rows = payload.get("rows") or []
+    prev_by_strike = {round(float(r["strike"]), 4): r for r in (previous or {}).get("rows", [])}
+    for row in rows:
+        old = prev_by_strike.get(round(float(row["strike"]), 4))
+        old_gex = old.get("gex", []) if old else []
+        row["mom"] = [_momentum(v, old_gex[i] if i < len(old_gex) else None)
+                      for i, v in enumerate(row.get("gex", []))]
+        row["total_mom"] = _momentum(float(row.get("total", 0)),
+                                      float(old.get("total", 0)) if old else None)
+        row["labels"] = []
+    ordered = sorted(rows, key=lambda r: float(r["strike"]))
+    flips = []
+    for i in range(1, len(ordered)):
+        a, b = float(ordered[i - 1].get("total", 0)), float(ordered[i].get("total", 0))
+        if (a < 0 <= b) or (a > 0 >= b):
+            ordered[i]["labels"].append("FLIP")
+            flips.append(ordered[i])
+    positive = [r for r in rows if float(r.get("total", 0)) > 0]
+    negative = [r for r in rows if float(r.get("total", 0)) < 0]
+    if positive:
+        max(positive, key=lambda r: r["total"])["labels"].append("CEILING")
+    if negative:
+        min(negative, key=lambda r: r["total"])["labels"].append("OS")
+    if walls_:
+        for key in ("call_wall", "put_wall"):
+            wall = walls_.get(key)
+            if wall is not None:
+                hit = next((r for r in rows if abs(float(r["strike"]) - float(wall)) < 0.001), None)
+                if hit and "CEILING" not in hit["labels"]:
+                    hit["labels"].append("Wall")
+    if flips:
+        min(flips, key=lambda r: abs(float(r["strike"]) - float(payload.get("spot") or 0)))["labels"].append("GF")
+    for i in range(1, len(ordered) - 1):
+        a, b, c = (abs(float(ordered[j].get("total", 0))) for j in (i - 1, i, i + 1))
+        if b > a and b > c:
+            ordered[i]["labels"].append("TB")
+    weakening = sorted((r for r in positive if r.get("total_mom") is not None and r["total_mom"] < 0),
+                       key=lambda r: float(r["total"]), reverse=True)[:_BOARD_RV_TOP]
+    for row in weakening:
+        row["labels"].append("RV")
+    return payload
+
+
+def snapshot_symbol(symbol: str, spot: float | None) -> bool:
+    """Force-refresh one watchlist chain and persist its compact all-expiry grid. Fail-open."""
+    sym = (symbol or "").upper()
+    try:
+        if not re.fullmatch(r"[A-Z][A-Z0-9.\\-]{0,9}", sym) or not spot or float(spot) <= 0:
+            return False
+        contracts = _fetch_contracts(sym, force=True)
+        if not contracts:
+            return False
+        now = datetime.now(_NY)
+        hhmm = now.strftime("%H%M")
+        grid_ = _board_grid(contracts, float(spot))
+        if not grid_:
+            return False
+        payload = {"symbol": sym, "at": now.isoformat(timespec="seconds"),
+                   "spot": grid_["spot"], "expiries": grid_["expiries"], "rows": grid_["rows"],
+                   "walls": _compute(contracts, float(spot), now.date())}
+        _GEX_DIR.mkdir(parents=True, exist_ok=True)
+        path = _snapshot_path(sym, now.date().isoformat(), hhmm)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(payload, separators=(",", ":"), allow_nan=False), encoding="utf-8")
+        os.replace(tmp, path)
+        return True
+    except Exception as exc:
+        log.warning("GEX snapshot skipped for %s: %s", sym, exc)
+        return False
+
+
+def snapshot_watchlist(symbols: list[str], spots: dict[str, object]) -> dict:
+    """Snapshot only the shared watchlist, with bounded parallel Cboe requests."""
+    now = datetime.now(_NY)
+    if now.weekday() >= 5 or now.hour * 60 + now.minute < 9 * 60 + 35 or now.hour * 60 + now.minute > 16 * 60:
+        return {"saved": 0, "skipped": len(symbols)}
+    try:
+        for p in _GEX_DIR.glob("*.json"):
+            if p.name.rsplit("_", 2)[-2] != now.date().isoformat():
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+    except Exception as exc:
+        log.warning("GEX snapshot prune failed: %s", exc)
+    def one(sym: str) -> bool:
+        item = spots.get(sym) or spots.get(sym.upper())
+        price = item.get("price") if isinstance(item, dict) else item
+        return snapshot_symbol(sym, price)
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        results = list(pool.map(one, list(dict.fromkeys(symbols))))
+    return {"saved": sum(bool(x) for x in results), "skipped": len(results) - sum(bool(x) for x in results)}
+
+
+def board(symbol: str, spot: float | None, at: str | None = None) -> dict | None:
+    """All-expiry GEX board. at=HHMM replays a saved watchlist snapshot. Fail-open."""
+    try:
+        sym = (symbol or "").upper()
+        if not re.fullmatch(r"[A-Z][A-Z0-9.\\-]{0,9}", sym):
+            return None
+        day = datetime.now(_NY).date().isoformat()
+        times = _snapshot_times(sym, day)
+        if at is not None:
+            if not re.fullmatch(r"\\d{4}", at):
+                return None
+            current = _read_snapshot(sym, at, day)
+            if not current:
+                return None
+            idx = times.index(at) if at in times else -1
+            previous = _read_snapshot(sym, times[idx - 1], day) if idx > 0 else None
+            payload = {"symbol": sym, "spot": current.get("spot"), "at": at,
+                       "expiries": current.get("expiries", []), "rows": current.get("rows", []),
+                       "replay": times, "has_snapshots": True}
+            return _decorate_board(payload, previous, current.get("walls"))
+        if not spot or float(spot) <= 0:
+            return None
+        with _LOCK:
+            contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            contracts = _fetch_contracts(sym)
+        if not contracts:
+            return None
+        grid_ = _board_grid(contracts, float(spot))
+        if not grid_:
+            return None
+        # The in-memory chain is refreshed by the latest scheduled snapshot. Compare it
+        # with the snapshot before that refresh, avoiding an artificial zero-momentum read.
+        previous = _read_snapshot(sym, times[-2], day) if len(times) >= 2 else None
+        w = _compute(contracts, float(spot), datetime.now(_NY).date())
+        payload = {"symbol": sym, "spot": grid_["spot"], "at": datetime.now(_NY).strftime("%H:%M"),
+                   "expiries": grid_["expiries"], "rows": grid_["rows"],
+                   "replay": times, "has_snapshots": bool(times)}
+        return _decorate_board(payload, previous, w)
+    except Exception as exc:
+        log.warning("GEX board failed for %s: %s", symbol, exc)
         return None
 
 
