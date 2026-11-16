@@ -189,6 +189,54 @@ def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> 
         return None
 
 
+_GRID_BAND = 0.10
+_GRID_MAX_ROWS = 25
+_GRID_MAX_EXP = 4
+
+
+def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
+    """Net-GEX grid per strike and expiry for the watch-only heat map.
+    Uses the four nearest expiries with chain data, including 0DTE; this is
+    intentionally a different horizon from the monthly walls/shelves.
+    Returns aligned expiry columns and strike rows, or None. Never raises."""
+    try:
+        sym = (symbol or "").upper()
+        if not spot or float(spot) <= 0:
+            return None
+        spot = float(spot)
+        if fetch:
+            contracts = _fetch_contracts(sym)
+        else:
+            with _LOCK:
+                contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            return None
+        by_exp: dict[date, list] = {}
+        for exp, call, k, g, oi, v in _slim(contracts):
+            if abs(k - spot) / spot > _GRID_BAND:
+                continue
+            by_exp.setdefault(exp, []).append((call, k, g, oi, v))
+        exps = sorted(by_exp)[:_GRID_MAX_EXP]
+        if not exps:
+            return None
+        net: dict[float, list] = {}
+        for ei, exp in enumerate(exps):
+            for call, k, g, oi, v in by_exp[exp]:
+                row = net.setdefault(k, [0.0] * len(exps))
+                row[ei] += g * oi * 100 if call else -(g * oi * 100)
+        rows = [{"strike": k, "gex": [round(x, 1) for x in vals]}
+                for k, vals in net.items() if any(vals)]
+        if not rows:
+            return None
+        rows.sort(key=lambda r: -sum(abs(x) for x in r["gex"]))
+        rows = rows[:_GRID_MAX_ROWS]
+        rows.sort(key=lambda r: -r["strike"])
+        return {"expiries": [e.isoformat() for e in exps], "spot": spot, "rows": rows}
+    except Exception as e:
+        log.warning("grid compute failed for %s: %s", symbol, e)
+        return None
+
+
 def flow_proxy(symbol: str, spot: float | None, direction: int) -> dict | None:
     """Volume-vs-OI proxy from the delayed Cboe chain, not Pulse/tape flow.
     Returns {call_voi, put_voi, side, expiry} or None. Never raises."""
