@@ -696,7 +696,10 @@ async function loadGexShelves() {
   try {
     const r = await fetch(`/api/gamma/${encodeURIComponent(SYM)}`);
     j = await r.json();
-  } catch (_) { return; }
+  } catch (_) {
+    renderGexHeatmap(null, "Gamma data could not be loaded. Check the connection and refresh.");
+    return;
+  }
   renderGexHeatmap(j);
   const sh = j && j.shelves;
   if (!sh || !sh.shelves || !sh.shelves.length) return;
@@ -720,11 +723,14 @@ async function loadGexShelves() {
 
 // GEX heat map (Patch 137, watch-only): net gamma by strike and near-term expiry.
 // White = positive gamma, red = negative gamma; stronger cells are brighter.
-function renderGexHeatmap(j) {
+function renderGexHeatmap(j, message) {
   const host = document.getElementById("gexHeatmap");
   if (!host) return;
   const g = j && j.grid;
-  if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) { host.remove(); return; }
+  if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) {
+    host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">CONFLUENCE</span></div><div style="padding:18px 14px;color:#A3A3A3;font-size:12px;line-height:1.5">${esc(message || "Options-chain gamma data is not available for this ticker right now. The heatmap will appear when Cboe chain data is available.")}</div>`;
+    return;
+  }
   const spot = g.spot;
   const maxV = Math.max(...g.rows.flatMap(r => r.gex.map(v => Math.abs(v))), 1);
   const nearStrike = g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike;
