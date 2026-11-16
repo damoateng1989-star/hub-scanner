@@ -1,15 +1,107 @@
 """Market data providers. Each returns intraday bars (tz-aware index, Open/High/Low/Close)."""
 from __future__ import annotations
 
+import json
+import logging
 import os
+import tempfile
 import time
 import zlib
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import requests
 
 COLS = ["Open", "High", "Low", "Close", "Volume"]
+
+# Persistent Alpaca bars cache. DATA_DIR matches db.py without importing it.
+_LOG = logging.getLogger(__name__)
+_BARS_DIR = Path(os.getenv("DATA_DIR", "data")) / "bars"
+_BARS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _bars_path(symbol: str, days: int) -> Path:
+    return _BARS_DIR / f"{symbol.upper()}_{int(days)}d.json"
+
+
+def _disk_read(symbol: str, days: int) -> pd.DataFrame | None:
+    """Read a validated UTC OHLCV frame; any cache problem is a cache miss."""
+    try:
+        payload = json.loads(_bars_path(symbol, days).read_text(encoding="utf-8"))
+        bars = payload["bars"]
+        if not isinstance(bars, list) or not bars or not isinstance(payload.get("fetched_at"), str):
+            return None
+        if any(not isinstance(row, list) or len(row) != 6 for row in bars):
+            return None
+        idx = pd.to_datetime([row[0] for row in bars], unit="s", utc=True, errors="raise")
+        df = pd.DataFrame([row[1:] for row in bars], index=idx, columns=COLS)
+        for col in COLS:
+            df[col] = pd.to_numeric(df[col], errors="raise")
+        if df.empty or not isinstance(df.index, pd.DatetimeIndex) or str(df.index.tz) != "UTC":
+            return None
+        return df.sort_index()
+    except Exception:
+        return None
+
+
+def _disk_write(symbol: str, days: int, df: pd.DataFrame) -> None:
+    """Best-effort atomic JSON write. A cache failure must never fail a chart."""
+    if df is None or df.empty:
+        return
+    tmp_name = None
+    try:
+        path = _bars_path(symbol, days)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        frame = df.reindex(columns=COLS).sort_index()
+        if frame.empty:
+            return
+        if not isinstance(frame.index, pd.DatetimeIndex) or frame.index.tz is None:
+            raise ValueError("bars index must be timezone-aware")
+        idx = frame.index.tz_convert("UTC")
+        bars = []
+        for ts, row in zip(idx, frame.itertuples(index=False, name=None)):
+            vals = [round(float(v), 4) for v in row[:4]] + [int(row[4])]
+            bars.append([int(ts.timestamp()), *vals])
+        payload = {"fetched_at": pd.Timestamp.now(tz="UTC").isoformat(), "bars": bars}
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=str(path.parent),
+                                         prefix=path.name + ".", suffix=".tmp", delete=False) as f:
+            tmp_name = f.name
+            json.dump(payload, f, separators=(",", ":"), allow_nan=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_name, path)
+    except Exception as exc:
+        _LOG.warning("Could not persist Alpaca bars for %s (%sd): %s", symbol, days, exc)
+        if tmp_name:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+
+
+def _alpaca_latest_starts(symbols: list[str], end: pd.Timestamp, feed: str,
+                          headers: dict[str, str]) -> dict[str, pd.Timestamp | None]:
+    """Get each symbol's latest 30-minute bar start. Isolated failures return None."""
+    latest: dict[str, pd.Timestamp | None] = {}
+    fmt = "%Y-%m-%dT%H:%M:%SZ"
+    start = end - pd.Timedelta(days=14)
+    for symbol in symbols:
+        try:
+            r = requests.get(f"https://data.alpaca.markets/v2/stocks/{symbol}/bars",
+                             headers=headers, timeout=15,
+                             params={"timeframe": "30Min", "start": start.strftime(fmt),
+                                     "end": end.strftime(fmt), "limit": 1, "sort": "desc",
+                                     "adjustment": "all", "feed": feed})
+            if r.status_code != 200:
+                raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
+            bars = (r.json().get("bars") or [])
+            latest[symbol] = pd.to_datetime(bars[0]["t"], utc=True) if bars else None
+        except Exception as exc:
+            _LOG.warning("Alpaca bars freshness check failed for %s: %s", symbol, exc)
+            latest[symbol] = None
+    return latest
+
 
 
 def provider() -> str:
@@ -150,16 +242,41 @@ def _alpaca_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
     key, secret = os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY")
     if not key or not secret:
         raise RuntimeError("ALPACA_API_KEY and ALPACA_SECRET_KEY are not set")
+    if not symbols:
+        return {}
     feed = os.getenv("ALPACA_FEED", "sip").lower()
     end = pd.Timestamp.now(tz="UTC")
     if feed == "sip":   # free plan: SIP data is available after a 15-minute delay
         end -= pd.Timedelta(minutes=16)
     start = end - pd.Timedelta(days=days)
     fmt = "%Y-%m-%dT%H:%M:%SZ"
-    params = dict(symbols=",".join(symbols), timeframe="30Min", start=start.strftime(fmt), end=end.strftime(fmt),
-                  limit=10000, adjustment="all", feed=feed)
     headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
-    rows: dict[str, list] = {s: [] for s in symbols}
+
+    # Disk is below scanner.py's in-memory cache. Only Alpaca data reaches this path.
+    cached = {sym: df for sym in symbols if (df := _disk_read(sym, days)) is not None}
+    latest = _alpaca_latest_starts(list(cached), end, feed, headers) if cached else {}
+    out: dict[str, pd.DataFrame] = {}
+    fetch_symbols = []
+    for sym in symbols:
+        df = cached.get(sym)
+        if df is None:
+            fetch_symbols.append(sym)
+            continue
+        disk_last = df.index[-1]
+        alpaca_last = latest.get(sym)
+        if alpaca_last is not None and alpaca_last > disk_last:
+            fetch_symbols.append(sym)
+        else:
+            # Equal means current. A failed check (None) or older provider result
+            # keeps the usable disk copy; the next chart load retries freshness.
+            out[sym] = df
+
+    if not fetch_symbols:
+        return out
+
+    params = dict(symbols=",".join(fetch_symbols), timeframe="30Min", start=start.strftime(fmt), end=end.strftime(fmt),
+                  limit=10000, adjustment="all", feed=feed)
+    rows: dict[str, list] = {s: [] for s in fetch_symbols}
     while True:
         r = requests.get("https://data.alpaca.markets/v2/stocks/bars", headers=headers, params=params, timeout=60)
         if r.status_code != 200:
@@ -171,14 +288,15 @@ def _alpaca_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
         if not token:
             break
         params["page_token"] = token
-    out = {}
     for sym, rs in rows.items():
         if not rs:
             out[sym] = pd.DataFrame(columns=COLS)
             continue
         df = pd.DataFrame(rs)
         df.index = pd.to_datetime(df["t"], utc=True)
-        out[sym] = df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close", "v": "Volume"}).reindex(columns=COLS).sort_index()
+        df = df.rename(columns={"o": "Open", "h": "High", "l": "Low", "c": "Close", "v": "Volume"}).reindex(columns=COLS).sort_index()
+        out[sym] = df
+        _disk_write(sym, days, df)
     return out
 
 
