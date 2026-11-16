@@ -412,7 +412,7 @@ async function load(tf = TF) {
 }
 
 function render(d) {
-  if (window.__nsLiveT) clearInterval(window.__nsLiveT);
+  if (window.__nsLiveT) clearTimeout(window.__nsLiveT);
   window.__nsLiveT = null;
   if (d.guest) $("signin").innerHTML = ` &nbsp;·&nbsp; <a href="/login" style="color:var(--hub)">Sign in</a>`;
   const st = d.status, [label, color] = STATES[st.state] || ["", "--idle"], s = d.stats;
@@ -607,30 +607,40 @@ function render(d) {
   // Live candle: poll the live price and move the forming candle in place.
   // The forming candle's time/open come from GET /api/forming (the server owns the 4H block),
   // the fresh price comes from GET /api/live (15 s cache). No chart rebuild.
-  if (window.__nsLiveT) clearInterval(window.__nsLiveT);
-  window.__nsLiveT = setInterval(async () => {
-    if (document.visibilityState === "hidden") return;
-    let px = null, fc = null;
-    try {
-      const r = await fetch(`/api/live?symbols=${encodeURIComponent(SYM)}`);
-      const j = await r.json();
-      if (!j.market_open) return;                    // market closed: nothing is forming
-      px = j.prices && j.prices[SYM] ? +j.prices[SYM].price : null;
-    } catch (e) { return; }
-    if (px == null || !Number.isFinite(px)) return;
-    try {
-      const r2 = await fetch(`/api/forming/${encodeURIComponent(SYM)}`);
-      fc = (await r2.json()).candle;
-    } catch (e) { return; }
-    if (!fc || fc.time == null) return;
-    const t = daily ? dayStart(fc.time) : fc.time;
-    if (ctype === "line") {
-      candles.update({time: t, value: px});
-    } else {
-      // candles / hollow / bars all take OHLC; open comes from the forming candle, close/high/low from the live price
-      candles.update({time: t, open: fc.open, high: Math.max(fc.high, px), low: Math.min(fc.low, px), close: px});
+  if (window.__nsLiveT) clearTimeout(window.__nsLiveT);
+  const liveChart = chart;
+  const pollLiveCandle = async () => {
+    let delay = 300000;                           // check every 5 minutes while the market is closed
+    if (document.visibilityState !== "hidden") {
+      let px = null, fc = null, marketOpen = false;
+      try {
+        const r = await fetch(`/api/live?symbols=${encodeURIComponent(SYM)}`);
+        const j = await r.json();
+        marketOpen = !!j.market_open;
+        if (marketOpen) px = j.prices && j.prices[SYM] ? +j.prices[SYM].price : null;
+      } catch (e) {}
+      if (marketOpen) {
+        delay = 30000;                             // same 30-second cadence as the app while market is open
+        if (px != null && Number.isFinite(px)) {
+          try {
+            const r2 = await fetch(`/api/forming/${encodeURIComponent(SYM)}`);
+            fc = (await r2.json()).candle;
+          } catch (e) {}
+          if (fc && fc.time != null && chart === liveChart) {
+            const t = daily ? dayStart(fc.time) : fc.time;
+            if (ctype === "line") {
+              candles.update({time: t, value: px});
+            } else {
+              // candles / hollow / bars all take OHLC; open comes from the forming candle, close/high/low from the live price
+              candles.update({time: t, open: fc.open, high: Math.max(fc.high, px), low: Math.min(fc.low, px), close: px});
+            }
+          }
+        }
+      }
     }
-  }, 30000);
+    if (chart === liveChart) window.__nsLiveT = setTimeout(pollLiveCandle, delay);
+  };
+  window.__nsLiveT = setTimeout(pollLiveCandle, 30000);
 }
 load();
 </script>
