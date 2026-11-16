@@ -227,12 +227,15 @@ def premarket_movers() -> dict:
         # Use only bars already persisted by the board scan; never trigger a universe-wide download here.
         for sym in symbols:
             bars = _disk_read(sym, days)
-            if bars is None or bars.empty or "Volume" not in bars.columns:
-                continue
-            day = bars.index.tz_convert("America/New_York").normalize()
-            dv = (bars["Volume"] * bars["Close"]).groupby(day).sum()
-            dv = dv[dv > 0].tail(20)
-            if len(dv) < 5 or float(dv.mean()) < min_dv:
+            dv20 = None
+            if bars is not None and not bars.empty and "Volume" in bars.columns:
+                day = bars.index.tz_convert("America/New_York").normalize()
+                dv = (bars["Volume"] * bars["Close"]).groupby(day).sum()
+                dv = dv[dv > 0].tail(20)
+                if len(dv) >= 5:
+                    dv20 = float(dv.mean())
+            # Match board.quality_skip: insufficient volume history is unknown and fails open.
+            if dv20 is not None and dv20 < min_dv:
                 continue
             mc = universe.market_cap(sym)
             if sym.upper() not in etfs and mc is not None and mc < min_cap:
