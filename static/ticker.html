@@ -624,7 +624,7 @@ function render(d) {
   // start zoomed to the last ~120 candles
   const n = d.candles.length;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (el.clientWidth < 600 ? 60 : 120)), to: n + 3 });
-    loadGexShelves();
+  loadGexShelves();
 
 
   // Live candle: poll the live price and move the forming candle in place.
@@ -691,9 +691,9 @@ async function loadGexShelves() {
     return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${r.side === "call" ? "ceiling shelf" : "floor shelf"}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtK(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
   };
   const line = above && below
-    ? `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor. Wrong below ${money(below.strike)}.`
+    ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
     : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
-  host.innerHTML = `<h2>GEX <em>shelves</em></h2><p class="scope">Nearest monthly expiry &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only, no Lab record yet</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
+  host.innerHTML = `<h2>GEX <em>shelves</em></h2><p class="scope">Swing expiry (monthly when available, 7+ days out) &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only, no Lab record yet</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
 }
 load();
 </script>
