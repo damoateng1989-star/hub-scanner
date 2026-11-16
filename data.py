@@ -158,6 +158,8 @@ def close_at(symbol: str, end: pd.Timestamp) -> float | None:
 # ---------------------------------------------------------------- live prices (watching only; signals still use 4H closes)
 _LIVE: dict[str, tuple[float, dict]] = {}
 LIVE_TTL = 15          # seconds: everyone shares one fetch, so Alpaca's free rate limit is never a problem
+_PREMARKET: dict | None = None
+_PREMARKET_AT = 0.0
 
 
 def market_open(now: pd.Timestamp | None = None) -> bool:
@@ -182,12 +184,13 @@ def latest_prices(symbols: list[str]) -> dict[str, dict]:
     return {s: _LIVE[s][1] for s in want if s in _LIVE}
 
 
-def _alpaca_snapshots(symbols: list[str]) -> dict[str, dict]:
+def _alpaca_snapshots(symbols: list[str], feed: str | None = None) -> dict[str, dict]:
     headers = {"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""), "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")}
     out = {}
+    snapshot_feed = feed or os.getenv("ALPACA_LIVE_FEED", "iex")
     for i in range(0, len(symbols), 100):
         r = requests.get("https://data.alpaca.markets/v2/stocks/snapshots", headers=headers, timeout=15,
-                         params={"symbols": ",".join(symbols[i:i + 100]), "feed": os.getenv("ALPACA_LIVE_FEED", "iex")})
+                         params={"symbols": ",".join(symbols[i:i + 100]), "feed": snapshot_feed})
         if r.status_code != 200:
             raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
         for sym, snap in (r.json() or {}).items():
@@ -201,6 +204,77 @@ def _alpaca_snapshots(symbols: list[str]) -> dict[str, dict]:
             out[sym] = dict(price=round(float(px), 2), time=t.get("t"),
                             change_pct=round((float(px) / float(prev) - 1) * 100, 2) if prev else None)
     return out
+
+
+def premarket_movers() -> dict:
+    """Top premarket movers among names passing the board's liquidity filters."""
+    global _PREMARKET, _PREMARKET_AT
+    now = time.time()
+    if _PREMARKET is not None and now - _PREMARKET_AT < 300:
+        return _PREMARKET
+    empty = dict(gainers=[], losers=[], as_of=None)
+    try:
+        if provider() != "alpaca":
+            return empty
+        import universe
+
+        symbols = universe.board_universe()
+        days = int(os.getenv("BOARD_DAYS", os.getenv("SCAN_DAYS", "260")))
+        min_dv = float(os.getenv("MIN_DOLLAR_VOLUME", 10_000_000))
+        min_cap = float(os.getenv("MIN_MARKET_CAP", 25_000_000_000))
+        etfs = set(universe.ETFS)
+        eligible = []
+        # Use only bars already persisted by the board scan; never trigger a universe-wide download here.
+        for sym in symbols:
+            bars = _disk_read(sym, days)
+            if bars is None or bars.empty or "Volume" not in bars.columns:
+                continue
+            day = bars.index.tz_convert("America/New_York").normalize()
+            dv = (bars["Volume"] * bars["Close"]).groupby(day).sum()
+            dv = dv[dv > 0].tail(20)
+            if len(dv) < 5 or float(dv.mean()) < min_dv:
+                continue
+            mc = universe.market_cap(sym)
+            if sym.upper() not in etfs and mc is not None and mc < min_cap:
+                continue
+            eligible.append(sym)
+        if not eligible:
+            return empty
+        snaps = _alpaca_snapshots(eligible, feed="sip")
+        if not snaps:
+            return empty
+        et_now = pd.Timestamp.now(tz="America/New_York")
+        today = et_now.date()
+        cutoff = et_now.normalize() + pd.Timedelta(hours=9, minutes=30)
+        movers = []
+        for sym, snap in snaps.items():
+            trade = snap.get("latestTrade") or {}
+            prev = (snap.get("prevDailyBar") or {}).get("c")
+            px, stamp = trade.get("p"), trade.get("t")
+            if not px or not prev or not stamp:
+                continue
+            ts = pd.Timestamp(stamp)
+            if ts.tzinfo is None:
+                ts = ts.tz_localize("UTC")
+            ts_et = ts.tz_convert("America/New_York")
+            if ts_et.date() != today or ts_et >= cutoff:
+                continue
+            change = round((float(px) / float(prev) - 1) * 100, 2)
+            movers.append(dict(symbol=sym, price=round(float(px), 2), change_pct=change))
+        if not movers:
+            return empty
+        movers.sort(key=lambda x: x["change_pct"])
+        result = dict(gainers=sorted((x for x in movers if x["change_pct"] > 0),
+                                     key=lambda x: x["change_pct"], reverse=True)[:5],
+                      losers=[x for x in movers if x["change_pct"] < 0][:5],
+                      as_of=pd.Timestamp.now(tz="UTC").isoformat())
+        if result["gainers"] or result["losers"]:
+            _PREMARKET, _PREMARKET_AT = result, now
+            return result
+        return empty
+    except Exception as e:
+        logging.getLogger(__name__).warning("premarket movers unavailable: %s", e)
+        return empty
 
 
 def _demo_live(symbols: list[str]) -> dict[str, dict]:
