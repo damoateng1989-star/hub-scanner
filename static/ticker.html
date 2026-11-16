@@ -467,6 +467,7 @@ function render(d) {
     </header>
     <p class="sum">${summary(st)}</p>
     <div class="chart-heat-split">
+    <div class="card" id="gexHeatmap"></div>
     <div class="card"><div id="chart"></div>
       <div class="legend">
         <span style="--c:var(--hub)"><i></i>Hubs</span>
@@ -482,7 +483,6 @@ function render(d) {
         ${d.setups && d.setups.levels.length ? `<span style="--c:#C3C7CF"><i class="dash"></i>Support / resistance (3+ touches)</span>` : ""}
       </div>
     </div>
-    <div class="card" id="gexHeatmap"></div>
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
