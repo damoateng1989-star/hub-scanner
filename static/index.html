@@ -5264,15 +5264,18 @@ function renderPremarket() {
   const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
   const pre = wd >= 1 && wd <= 5 && mins < 570;
   const g = (PREMARKET && PREMARKET.gainers) || [], l = (PREMARKET && PREMARKET.losers) || [];
-  if (!pre || PREMARKET && PREMARKET.locked || (!g.length && !l.length)) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!pre || PREMARKET && PREMARKET.locked) { el.hidden = true; el.innerHTML = ""; return; }
   const row = (x, up) => `<a class="arow" href="/t/${esc(x.symbol)}" style="--c:var(${up ? "--up" : "--down"})"><i></i>
     <span class="t"><span class="tk">${esc(x.symbol)}</span><span>${up ? "+" : ""}${x.change_pct.toFixed(2)}% · premarket</span></span>
     <span class="go">${money(x.price)}</span></a>`;
   const group = (title, rows, up) => rows.length
     ? `<div class="week-head"><div class="week-k">${title}</div></div><div class="lrows">${rows.map(x => row(x, up)).join("")}</div>` : "";
+  const emptyNote = !PREMARKET ? "Premarket data is temporarily unavailable."
+    : (!g.length && !l.length) ? "No qualifying premarket trades have been reported yet." : "";
   el.innerHTML = `<div class="week-head"><div class="week-k">PREMARKET MOVERS</div>`
-    + (PREMARKET.as_of ? `<span class="mb-quiet">as of ${esc(PREMARKET.as_of)}</span>` : "") + `</div>`
-    + group("Top gainers", g, true) + group("Top losers", l, false);
+    + (PREMARKET && PREMARKET.as_of ? `<span class="mb-quiet">as of ${esc(PREMARKET.as_of)}</span>` : "") + `</div>`
+    + group("Top gainers", g, true) + group("Top losers", l, false)
+    + (emptyNote ? `<p class="mb-quiet">${emptyNote}</p>` : "");
   el.hidden = false;
 }
 function renderToday() {
