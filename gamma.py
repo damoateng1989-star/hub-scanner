@@ -175,12 +175,25 @@ def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> 
         if not exp:
             return None
         net: dict[float, float] = {}
+        gross: dict[float, float] = {}
         for call, k, g, oi, v in by_exp[exp]:
-            net[k] = net.get(k, 0.0) + (g * oi * 100 if call else -(g * oi * 100))
+            ge = g * oi * 100
+            net[k] = net.get(k, 0.0) + (ge if call else -ge)
+            gross[k] = gross.get(k, 0.0) + abs(ge)
         pos = sorted(((k, v) for k, v in net.items() if v > 0), key=lambda kv: -kv[1])[:n]
         neg = sorted(((k, v) for k, v in net.items() if v < 0), key=lambda kv: kv[1])[:n]
-        rows = [{"strike": k, "gex": round(v, 1), "side": "call" if v > 0 else "put"}
-                for k, v in sorted(pos + neg, key=lambda kv: -kv[0])]
+        # Balanced strikes: huge gross but a small net — both sides cancel, so the
+        # net-only ladder misses them (SPCX $150 is both walls and has net ~0).
+        # Include one if its gross beats the largest |net| already in the ladder.
+        picked = {k for k, _ in pos + neg}
+        ladder_net = max([abs(v) for _, v in pos + neg], default=0.0)
+        bal = sorted(((k, gross[k]) for k in gross if k not in picked and abs(net.get(k, 0.0)) < 0.25 * gross[k]),
+                     key=lambda kv: -kv[1])
+        bal = [(k, net.get(k, 0.0)) for k, _ in bal if gross[k] > ladder_net][:n]
+        both_strikes = {k for k, _ in bal}
+        rows = [{"strike": k, "gex": round(v, 1), "gross": round(gross[k], 1),
+                 "side": "both" if k in both_strikes else ("call" if v > 0 else "put")}
+                for k, v in sorted(pos + neg + bal, key=lambda kv: -kv[0])]
         if not rows:
             return None
         return {"expiry": exp.isoformat(), "spot": spot, "shelves": rows}
@@ -220,12 +233,17 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         if not exps:
             return None
         net: dict[float, list] = {}
+        gross: dict[float, list] = {}
         for ei, exp in enumerate(exps):
             for call, k, g, oi, v in by_exp[exp]:
+                ge = g * oi * 100
                 row = net.setdefault(k, [0.0] * len(exps))
-                row[ei] += g * oi * 100 if call else -(g * oi * 100)
-        rows = [{"strike": k, "gex": [round(x, 1) for x in vals]}
-                for k, vals in net.items() if any(vals)]
+                row[ei] += ge if call else -ge
+                grow = gross.setdefault(k, [0.0] * len(exps))
+                grow[ei] += abs(ge)
+        rows = [{"strike": k, "gex": [round(x, 1) for x in vals],
+                 "gross": [round(x, 1) for x in gross[k]]}
+                for k, vals in net.items() if any(vals) or any(gross[k])]
         if not rows:
             return None
         rows.sort(key=lambda r: -sum(abs(x) for x in r["gex"]))
