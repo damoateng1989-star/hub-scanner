@@ -182,6 +182,26 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 .broker:hover { color: var(--ink, inherit); border-color: var(--faint, rgba(128,128,128,.5)); }
 .broker.logo-only, a.broker:has(> .broker-logo) { padding: 4px 6px !important; line-height: 0; }
 .broker-logo { width: 18px; height: 18px; vertical-align: -3px; display: block; }
+
+/* GEX shelves (Patch 135, watch-only) */
+.gex-ladder { border: 1px solid var(--line-2); border-radius: 12px; background: var(--surface); overflow: hidden; margin-top: 10px; }
+.gex-shelf { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.gex-shelf:last-child { border-bottom: none; }
+.gex-shelf .gex-bar { width: 4px; align-self: stretch; border-radius: 2px; background: var(--muted); flex: none; }
+.gex-shelf.call .gex-bar { background: var(--up); }
+.gex-shelf.put .gex-bar { background: var(--down); }
+.gex-shelf.at { background: rgba(59,130,246,.08); }
+.gex-shelf .gex-mid { flex: 1; min-width: 0; }
+.gex-shelf .gex-mid b { font-family: var(--mono); font-size: 16px; }
+.gex-shelf.at .gex-mid b { color: #93C5FD; }
+.gex-shelf .gex-mid small { display: block; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.gex-shelf .gex-right { text-align: right; flex: none; }
+.gex-shelf .gex-right b { font-family: var(--mono); font-size: 13px; }
+.gex-shelf.call .gex-right b { color: var(--up); }
+.gex-shelf.put .gex-right b { color: var(--down); }
+.gex-shelf .gex-right small { display: block; color: var(--muted); font-family: var(--mono); font-size: 11px; margin-top: 2px; }
+.gex-tag { font-style: normal; font-family: var(--mono); font-size: 9px; font-weight: 700; background: #3B82F6; color: #fff; border-radius: 3px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; }
+.gex-sika { margin-top: 10px; font-size: 13px; line-height: 1.55; color: var(--ink); }
 .seg{display:inline-flex;background:var(--sunk,#1A1C22);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer}
 .seg button.on{background:#fff;color:#111;font-weight:600}
@@ -445,6 +465,7 @@ function render(d) {
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
+    <div id="gexShelves"></div>
     <h2>Past <em>results</em></h2>
     <p class="scope">This ticker only · 4H breakouts</p>
     ${s.n ? `<div class="kv hero">
@@ -603,6 +624,8 @@ function render(d) {
   // start zoomed to the last ~120 candles
   const n = d.candles.length;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (el.clientWidth < 600 ? 60 : 120)), to: n + 3 });
+    loadGexShelves();
+
 
   // Live candle: poll the live price and move the forming candle in place.
   // The forming candle's time/open come from GET /api/forming (the server owns the 4H block),
@@ -641,6 +664,36 @@ function render(d) {
     if (chart === liveChart) window.__nsLiveT = setTimeout(pollLiveCandle, delay);
   };
   window.__nsLiveT = setTimeout(pollLiveCandle, 30000);
+}
+
+// GEX shelves (Patch 135, watch-only): the top gamma shelves near the price, drawn as
+// shelves like the hub band. Fail-open: a failed fetch or empty shelves leaves the section blank.
+async function loadGexShelves() {
+  const host = document.getElementById("gexShelves");
+  if (!host) return;
+  let j = null;
+  try {
+    const r = await fetch(`/api/gamma/${encodeURIComponent(SYM)}`);
+    j = await r.json();
+  } catch (_) { return; }
+  const sh = j && j.shelves;
+  if (!sh || !sh.shelves || !sh.shelves.length) return;
+  const spot = sh.spot, rows = sh.shelves;
+  const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const fmtK = v => (Math.abs(v) >= 1000 ? (v / 1000).toLocaleString("en-US", {maximumFractionDigits: 1}) + "K" : Math.round(v));
+  const pct = v => { const d = (v - spot) / spot * 100; return (d >= 0 ? "+" : "") + d.toFixed(1) + "%"; };
+  const near = rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a);
+  const above = rows.filter(r => r.strike > spot).sort((a, b) => a.strike - b.strike)[0];
+  const below = rows.filter(r => r.strike < spot).sort((a, b) => b.strike - a.strike)[0];
+  const shelf = r => {
+    const at = r.strike === near.strike;
+    const lab = r.side === "call" ? "Call wall" : "Put wall";
+    return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${r.side === "call" ? "ceiling shelf" : "floor shelf"}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtK(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
+  };
+  const line = above && below
+    ? `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor. Wrong below ${money(below.strike)}.`
+    : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
+  host.innerHTML = `<h2>GEX <em>shelves</em></h2><p class="scope">Nearest monthly expiry &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only, no Lab record yet</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
 }
 load();
 </script>
