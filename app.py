@@ -987,6 +987,13 @@ def board_data(u: dict | None = Maybe):
     return b
 
 
+@app.get("/api/premarket")
+def premarket_data(u: dict | None = Maybe):
+    if not u:
+        return dict(locked=True, guest=True, gainers=[], losers=[], as_of=None)
+    return dict(data.premarket_movers(), locked=False)
+
+
 @app.get("/api/heatmap")
 def heatmap(u: dict | None = Maybe):
     """Every stock on the board as a tile for the market map: sector, size (market cap) and where its setup stands."""
