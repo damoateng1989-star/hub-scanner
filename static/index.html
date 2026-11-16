@@ -466,6 +466,8 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-table th:first-child,.board-table td:first-child{text-align:left}
 .board-table td{padding:13px;border-bottom:1px solid #292A2D;text-align:right;white-space:nowrap;font-size:11px;color:#c8d3df}
 .board-table tr:last-child td{border-bottom:0}.board-table tbody tr:hover td{background:#1F2023}
+.board-table tr.board-row-stale td{opacity:.55}
+.board-stale{display:block;color:#d8b878;font-size:9px;font-weight:700;margin-top:2px}
 .board-sort{border:0!important;background:transparent!important;color:inherit!important;padding:0!important;font:inherit!important;letter-spacing:inherit!important;text-transform:inherit!important}
 .board-symbol a{font-weight:750;color:#E9EBEF;text-decoration:none;font-size:12px}.board-symbol small{display:block;color:#718296;font-size:9px;margin-top:2px}
 .board-state{display:inline-flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;background:#222326;color:#c4d4e5;font-size:10px;font-weight:650}
@@ -5479,8 +5481,8 @@ function renderInstitutionalBoard(){
     const metaLine=boardMetaLine(r,kind,shelf);
     const rangeCell=boardGauge(r,kind,status[1])+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
-    return '<tr><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+    return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -5570,7 +5572,8 @@ async function loadBoard() {
   } finally { clearTimeout(slow); BOARD_LOADING = false; }
   BOARD = b; renderStrip(); if (!$("agent").classList.contains("run")) renderAgent({running: false, next: AGENT_NEXT});
   const rg = b.regime, rgTxt = rg && rg.regime ? ` · Market: ${rg.regime === "up" ? "uptrend" : "downtrend"} · ${rg.index} ${money(rg.close)} vs ${rg.days || 50}-day ${money(rg.sma)} · alerts on longs and shorts` : "";
-  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}${rgTxt}` : "";
+  const staleN=["live","near","forming","recent"].reduce((n,g)=>n+(b[g]||[]).filter(r=>r.stale).length,0);
+  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}${staleN?` · ${staleN} row${staleN===1?"":"s"} from an earlier sweep`:""}${rgTxt}` : "";
   if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
   $("board").innerHTML = setupTabs(b) + '<div id="setupBoard" hidden></div><div id="hubBoard">' +
