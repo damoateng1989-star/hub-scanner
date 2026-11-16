@@ -5980,7 +5980,7 @@ function paintGexBoard(ticker) {
     const intensity = .12 + .58 * Math.sqrt(Math.max(0,Number(r.total_gross)||0)/maxGross);
     const totalBg = Number(r.total)>=0 ? 'rgba(255,255,255,'+intensity.toFixed(2)+')' : 'rgba(242,48,48,'+intensity.toFixed(2)+')';
     const totalMom = r.total_mom == null ? "" : '<small>'+gxbMom(r.total_mom)+'</small>';
-    const totalCell = '<td class="gxb-total" style="background:'+totalBg+'"><strong>'+gxbFmt(r.total)+'</strong>'+totalMom+'</td>';
+    const totalCell = '<td class="gxb-total" style="background:'+totalBg+'">'+totalMom+'<strong>'+gxbFmt(r.total)+'</strong></td>';
     const expCells = (d.expiries || []).map((e,i)=>{
       const val = Number((r.gex || [])[i] || 0), gr = Number((r.gross || [])[i] || 0);
       const a = .08 + .52*Math.sqrt(Math.max(0,gr)/maxGross);
@@ -5992,7 +5992,7 @@ function paintGexBoard(ticker) {
   }).join("");
   const replayHTML = hasReplay
     ? '<div class="gxb-replay"><div class="gxb-replay-top"><span><strong>REPLAY · COMPLETE</strong> · '+replay.length+'/78 RECORDED</span><span id="gxbTime">'+gxbTime(replay[Math.max(0,GEX_BOARD_INDEX)])+'</span><button class="gxb-play" id="gxbPlay" onclick="toggleGexReplay()">'+(GEX_BOARD_TIMER?'PAUSE':'PLAY')+'</button></div><input type="range" min="0" max="'+Math.max(0,replay.length-1)+'" step="1" value="'+Math.max(0,GEX_BOARD_INDEX)+'" oninput="seekGexReplay(this.value)"></div>'
-    : '<div class="gxb-note">Add this ticker to your watchlist for momentum and replay. The current grid is still available for every ticker.</div>';
+    : '<div class="gxb-note">'+(watched ? "Your first five-minute snapshots will enable momentum and replay." : "Add this ticker to your watchlist for momentum and replay.")+' The current grid is still available for every ticker.</div>';
   const rowsHTML = rows.length ? '<div class="gxb-grid-wrap"><table class="gxb-table"><thead><tr><th>STRIKE / LABELS</th><th>TOTAL NET</th>'+expiryHeads+'</tr></thead><tbody>'+body+'</tbody></table></div>'
     : '<div class="empty">No strikes with usable gamma data in the ±10% spot band.</div>';
   host.innerHTML = gxbPickerHTML()
@@ -7180,7 +7180,7 @@ html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117;
 </style>
 </body>
 </html>
-+Number(d.spot||0).toFixed(2)+' · '+(d.at || 'LIVE')+'</span></div><span>'+ (watched?'WATCHLIST · MOMENTUM ENABLED':'ON-DEMAND · CURRENT GRID')+'</span></div>'
++Number(d.spot||0).toFixed(2)+' · '+(d.at || 'LIVE')+'</span></div><span>'+ (hasReplay?'WATCHLIST · MOMENTUM ENABLED':(watched?'WATCHLIST · SNAPSHOTS PENDING':'ON-DEMAND · CURRENT GRID'))+'</span></div>'
     + replayHTML + rowsHTML
     + (!watched ? '' : '<div class="gxb-note">Momentum compares each strike and expiry with the prior recorded five-minute snapshot. Missing snapshots are skipped; a blank percentage means no prior reading.</div>')
     + '<div class="gxb-note">White = positive net GEX · red = negative net GEX · brighter cells = greater gross gamma. Labels are NextShelf display definitions, not tested trade signals. Cboe data is delayed.</div>';
