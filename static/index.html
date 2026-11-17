@@ -3332,8 +3332,8 @@ function openShelfTrade(sym) {
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym) || {};
   const hubLive = st.state === "breakout_up" || st.state === "breakdown";
   const other = !hubLive && (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
-  const setup = other || st;
-  const side = setup.state === "breakdown" ? "SELL" : "BUY";
+  const setup = other || (hubLive ? st : shownSetup(st));
+  const side = setup.state === "breakdown" || setup.dir === -1 ? "SELL" : "BUY";
   const price = Number(st.last_close || 0);
   const trigger = other ? other.edge : (hubLive ? (side === "BUY" ? st.hub?.high : st.hub?.low) : (st.hub ? (side === "BUY" ? (st.trigger_up || st.hub.high) : (st.trigger_down || st.hub.low)) : null));
   const target = other ? other.target : (st.target || (side === "BUY" ? st.shelf_up?.level : st.shelf_down?.level));
