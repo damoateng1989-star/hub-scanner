@@ -500,9 +500,17 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
             st["trigger_up"] = round(max(h["high"], float(prev.min()) + s.k * atr_now), 2)
         if atr_now == atr_now and atr_now > 0:
             st["atr"] = round(atr_now, 2)
-            if not st.get("shelf_up"):           # no shelf above: the trade aims 1 ATR past the hub top (same as target_for)
-                st["target_up"] = round(h["high"] + s.target_atr * atr_now, 2)
             st["trigger_down"] = round(min(h["low"], float(prev.max()) - s.k * atr_now), 2)
+            # Shelves measured from the trigger (the entry), not the hub edge.
+            # The trigger can sit above the hub high (prev closes + k*ATR), and a shelf
+            # measured from the hub high can land below the trigger (negative room).
+            # AMD showed this: trigger $549.85 above next shelf $549.33.
+            up_edge = st.get("trigger_up", h["high"])
+            dn_edge = st.get("trigger_down", h["low"])
+            st["shelf_up"] = shelf_json(find_shelf(res["hubs"], h, 1, up_edge, atr_now, s))
+            st["shelf_down"] = shelf_json(find_shelf(res["hubs"], h, -1, dn_edge, atr_now, s))
+            if not st.get("shelf_up"):           # no shelf above: the trade aims 1 ATR past the trigger (same as target_for)
+                st["target_up"] = round(up_edge + s.target_atr * atr_now, 2)
         return st
     trade = next((t for t in res["trades"] if t["hub"] is h), None)
     if trade is None and h.get("no_room") and n - 1 - h["no_room"]["i0"] < s.horizon:
