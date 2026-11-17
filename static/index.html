@@ -3241,11 +3241,13 @@ async function loadBrokerAccounts() {
         <button type="button" class="sec" onclick="showBrokerPositions('${esc(a.account_id)}')">Positions</button>
       </div>`).join("") : '<p class="broker-copy">No brokerage accounts connected yet. Connect Webull to get started.</p>';
     if (msg) msg.textContent = data.connected ? "Connected account data is provided by SnapTrade and may be cached by the brokerage." : "No connected brokerage account found.";
+    if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   } catch (e) {
     BROKER_ACCOUNTS = [];
     if (status) status.innerHTML = '<i></i> Not connected';
     host.innerHTML = '<p class="broker-copy">No connected account found yet. Use Connect Webull to authorize access.</p>';
     if (msg) msg.textContent = e.message || "Brokerage accounts are not available yet.";
+    if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   }
 }
 async function showBrokerPositions(accountId) {
@@ -3413,7 +3415,7 @@ function tip(term) {
 }
 function explain(term) { const [t, d] = GLOSS[term]; showSheet(`<h3>${t}</h3><p>${d}</p><p style="margin-top:12px"><a href="#guide" onclick="closeSheet()">How it all fits together →</a></p>`); }
 function showSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; }
-let SHELF_TRADE_PREVIEW = null, SHELF_TRADE_SYMBOL = "", SHELF_TRADE_PRICE = 0, SHELF_TRADE_TRIGGER = null, SHELF_TRADE_DEBOUNCE = null, SHELF_TRADE_REQUEST = 0;
+let SHELF_TRADE_PREVIEW = null, SHELF_TRADE_SYMBOL = "", SHELF_TRADE_PRICE = 0, SHELF_TRADE_TRIGGER = null, SHELF_TRADE_DEBOUNCE = null, SHELF_TRADE_EXPIRY_TIMER = null, SHELF_TRADE_REQUEST = 0;
 function shelfTradeAccountLabel(a) {
   const broker = a.brokerage || "Brokerage", name = a.name || "Investment account", masked = a.number_masked || "";
   return {broker, name, masked, full: broker + " · " + name + (masked ? " " + masked : "")};
@@ -3439,7 +3441,7 @@ function renderShelfTradeCard(sym) {
   host.innerHTML = `<div class="broker-ticket shelf-trade-ticket shelf-trade-embedded">
     <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>
     <div class="shelf-broker-line">${accountLine}<button type="button" class="shelf-change" onclick="toggleShelfTradeAccount()">Change</button></div>
-    <select id="shelfTradeAccount" class="shelf-account-select" onchange="invalidateShelfTradePreview()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>${options}</select>
+    <select id="shelfTradeAccount" class="shelf-account-select" onchange="updateShelfTradeBrokerLine();invalidateShelfTradePreview()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>${options}</select>
     <input id="shelfTradeSide" type="hidden" value="${side}">
     <input id="shelfTradeQty" type="hidden" value="1">
     <div class="shelf-segment-grid">
@@ -3462,6 +3464,13 @@ function openShelfTrade(sym) {
   if (!ME || !ME.is_admin) return;
   const card = $("shelfTradeCard");
   if (card) card.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function updateShelfTradeBrokerLine() {
+  const host = document.querySelector(".shelf-broker-line"), account = BROKER_ACCOUNTS.find(a => a.account_id === $("shelfTradeAccount")?.value);
+  if (!host || !account) return;
+  const label = shelfTradeAccountLabel(account);
+  host.innerHTML = '<span class="shelf-broker-mark">' + esc((label.broker || "B").slice(0,1).toUpperCase()) + '</span><span class="shelf-broker-name"><b>' + esc(label.broker) + '</b><small>' + esc(label.name) + (label.masked ? " · " + esc(label.masked) : "") + '</small></span><span class="shelf-connected">Connected</span><button type="button" class="shelf-change" onclick="toggleShelfTradeAccount()">Change</button>';
+  updateShelfTradeConfirmLabel();
 }
 function toggleShelfTradeAccount() {
   const select = $("shelfTradeAccount"); if (!select) return;
@@ -3493,7 +3502,7 @@ function stepShelfTradeQty(delta) {
   updateShelfTradeConfirmLabel(); invalidateShelfTradePreview();
 }
 function invalidateShelfTradePreview() {
-  SHELF_TRADE_PREVIEW = null;
+  SHELF_TRADE_PREVIEW = null; SHELF_TRADE_REQUEST++; clearTimeout(SHELF_TRADE_EXPIRY_TIMER);
   const btn = $("shelfTradeConfirmBtn"), out = $("shelfTradeImpact");
   if (btn) { btn.disabled = true; btn.classList.add("disabled-submit"); }
   if (out) out.textContent = "Order details changed. Checking a fresh brokerage preview…";
@@ -3525,7 +3534,7 @@ async function requestShelfTradeImpact() {
     if (out) out.textContent = order_type === "Limit" && !(price > 0) ? "Enter a valid limit price to preview this order." : "Choose a connected account and enter a valid whole-share quantity.";
     return;
   }
-  const requestId = ++SHELF_TRADE_REQUEST;
+  const requestId = ++SHELF_TRADE_REQUEST; clearTimeout(SHELF_TRADE_EXPIRY_TIMER);
   SHELF_TRADE_PREVIEW = null;
   const confirmBtn = $("shelfTradeConfirmBtn"); if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.classList.add("disabled-submit"); }
   if (out) out.textContent = "Checking the order with SnapTrade…";
@@ -3538,6 +3547,8 @@ async function requestShelfTradeImpact() {
     const fmtMoney = n => Number.isFinite(n) ? "$" + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "—";
     if (out) out.innerHTML = '<div class="shelf-impact-title">Order impact preview</div><div class="shelf-impact-row"><span>Estimated cost · ' + units + ' × ' + fmtMoney(unitPrice) + '</span><b>' + fmtMoney(estimate) + '</b></div><div class="shelf-impact-row"><span>Commission</span><b>' + (fee == null ? "—" : fmtMoney(fee)) + '</b></div><div class="shelf-impact-row shelf-impact-total"><span>Total</span><b>' + fmtMoney(total) + '</b></div><details class="shelf-impact-raw"><summary>View full brokerage response</summary><pre class="broker-position-json">' + esc(JSON.stringify(impact,null,2)) + '</pre></details><small>Preview expires in ' + Number(result.expires_in_seconds || 300) + ' seconds.</small>';
     if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.classList.remove("disabled-submit"); }
+    const ttl = Math.max(1, Number(result.expires_in_seconds || 300));
+    SHELF_TRADE_EXPIRY_TIMER = setTimeout(() => { if (requestId === SHELF_TRADE_REQUEST && SHELF_TRADE_PREVIEW) { SHELF_TRADE_PREVIEW = null; if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.classList.add("disabled-submit"); } if (out) out.textContent = "Preview expired. Checking a fresh brokerage preview…"; requestShelfTradeImpact(); } }, Math.max(1000, (ttl - 2) * 1000));
   } catch (e) {
     if (requestId !== SHELF_TRADE_REQUEST) return;
     if (out) out.textContent = e.message || "SnapTrade could not preview this order.";
@@ -3549,7 +3560,7 @@ async function submitShelfTrade() {
   const orderType = $("shelfTradeType")?.value || "Market", price = orderType === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
   const details = action + " " + units + " share(s) of " + symbol + " · " + orderType + (price ? " at $" + price.toFixed(2) : "");
   if (!confirm("You are about to submit a REAL brokerage order.\n\n" + details + "\n\nSubmit this exact order?")) return;
-  const preview = SHELF_TRADE_PREVIEW; SHELF_TRADE_PREVIEW = null;
+  const preview = SHELF_TRADE_PREVIEW; SHELF_TRADE_PREVIEW = null; clearTimeout(SHELF_TRADE_EXPIRY_TIMER); SHELF_TRADE_REQUEST++;
   const btn = $("shelfTradeConfirmBtn"), out = $("shelfTradeImpact");
   if (btn) btn.disabled = true; if (out) out.textContent = "Submitting the checked order to your brokerage…";
   try {
@@ -3934,6 +3945,7 @@ async function openBrief(sym, focus) {
   BRIEF_SEC = "levels";
   $("brief").scrollTop = 0;
   loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
+  if (ME && ME.is_admin) loadBrokerAccounts();
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
