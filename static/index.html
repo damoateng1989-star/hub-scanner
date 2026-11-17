@@ -3137,7 +3137,7 @@ async function loadAccount() {
   });
 }
 function brokerPreviewCard() {
-  return \`<div class="acct broker-preview">
+  return `<div class="acct broker-preview">
     <div class="broker-head"><div><div class="broker-kicker">Brokerage · early access</div><div class="broker-title">Trade from NextShelf</div>
       <p class="broker-copy">Connect your brokerage, review your buying power and positions, then place a stock order without leaving your setup workflow.</p></div>
       <span class="broker-status"><i></i> Not connected</span></div>
@@ -3160,7 +3160,7 @@ function brokerPreviewCard() {
       <div class="broker-ticket-actions"><button type="button" onclick="previewBrokerImpact()">Preview estimate</button><button type="button" class="disabled-submit" disabled>Confirm &amp; place order</button><button type="button" class="sec" onclick="toggleBrokerTicket(false)">Close</button></div>
       <div id="brokerPreviewMsg" class="broker-subnote" aria-live="polite">A real order will require a fresh impact check and explicit confirmation.</div>
     </div>
-  </div>\`;
+  </div>`;
 }
 let brokerSide = "BUY";
 function toggleBrokerTicket(open) {
