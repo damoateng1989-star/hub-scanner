@@ -120,7 +120,7 @@ def portal(user: dict) -> str:
     )
     body = getattr(response, "body", response)
     if isinstance(body, dict):
-        url = body.get("redirectURI") or body.get("redirectUri") or body.get("url")
+        url = body.get("redirectURI") or body.get("redirectUri") or body.get("redirect_uri") or body.get("url")
     else:
         url = None
     if not url:
