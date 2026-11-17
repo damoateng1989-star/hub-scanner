@@ -20,14 +20,39 @@ import swing_card
 
 log = logging.getLogger("sika_chat")
 
+# Shared ETF proxies for the GICS sectors used by the market map.
+_SECTOR_ETF = {
+    "Information Technology": "XLK",
+    "Financials": "XLF",
+    "Energy": "XLE",
+    "Health Care": "XLV",
+    "Consumer Discretionary": "XLY",
+    "Consumer Staples": "XLP",
+    "Industrials": "XLI",
+    "Materials": "XLB",
+    "Utilities": "XLU",
+    "Real Estate": "XLRE",
+    "Communication Services": "XLC",
+}
+_SEMICONDUCTORS = {
+    "AAOI", "ADI", "ALAB", "AMAT", "AMD", "AMKR", "ASML", "AVGO",
+    "COHR", "ENTG", "INTC", "KLAC", "LRCX", "MCHP", "MPWR", "MRVL",
+    "MU", "NVDA", "NXPI", "ON", "QCOM", "QRVO", "SMTC", "SWKS",
+    "TER", "TSM", "TXN",
+}
+_SECTOR_CACHE = {}
+_SECTOR_CACHE_LOCK = __import__("threading").Lock()
+_SECTOR_CACHE_TTL = 300
+
+
 SYSTEM_PROMPT = """You are Sika, NextShelf's plain-English setup explainer.
 You are answering a member's follow-up about the one ticker in this thread.
 
 GROUNDING RULES — follow every rule:
 1. Use ONLY the supplied data: the current Swing Play Card JSON, the supplied
    Plain-English paragraph, the supplied regime, the supplied recent 4H price
-   history, and the supplied record figures and news headlines when they are
-   present. Do not use training knowledge, outside market facts, other
+   history, supplied record figures, news headlines, and sector/market
+   performance when they are present. Do not use training knowledge, outside market facts, other
    tickers, news, or assumptions. Conversation history is context for the
    question only; it is NOT a source of facts.
 2. Never invent a number: no trigger, target, stop, price, grade, percentage,
@@ -55,10 +80,12 @@ GROUNDING RULES — follow every rule:
 10. News and catalysts: headlines, when supplied, are the only news
     you may cite. Quote the headline and its source; do not add a cause the
     headline does not state. A headline near the setup is a possible catalyst,
-    not proof that it caused the move. Separate company-specific news from
-    broad market or sector headlines when the supplied data allows it. Explain
-    whether the supplied headline supports, conflicts with, or does not clearly
-    explain the technical direction. Do not invent earnings dates, analyst
+    not proof that it caused the move. Use supplied sector/market returns
+    to compare the stock with its sector ETF and SPY over the 1-, 5-, and
+    20-session windows. State the comparison plainly (stronger/weaker/in line)
+    only when the relevant figures exist. For semiconductor tickers, use SMH
+    and SOXX as industry-group context when supplied. These are price
+    comparisons, not proof of causation. Do not invent earnings dates, analyst
     actions, upcoming events, sector moves, or market conditions. If no
     headlines are supplied, say there is no headline in the supplied data.
     If a supplied headline is labelled as a demo sample, never present it as
@@ -168,6 +195,100 @@ def _record(symbol: str, card: dict) -> dict | None:
                 profit_factor=g.get("pf"), reached_shelf=g.get("reached"))
 
 
+def _returns(frame) -> dict | None:
+    """Daily close returns over 1, 5 and 20 sessions from intraday provider bars."""
+    try:
+        if frame is None or frame.empty or "Close" not in frame:
+            return None
+        daily = frame["Close"].resample("1D").last().dropna()
+        if len(daily) < 2:
+            return None
+        last = float(daily.iloc[-1])
+        if last <= 0:
+            return None
+        out = {"last_close": round(last, 2), "sessions": int(len(daily))}
+        for label, offset in (("1d_pct", 1), ("5d_pct", 5), ("20d_pct", 20)):
+            if len(daily) > offset:
+                base = float(daily.iloc[-1 - offset])
+                out[label] = round((last / base - 1) * 100, 2) if base > 0 else None
+            else:
+                out[label] = None
+        out["as_of"] = str(daily.index[-1])
+        return out
+    except Exception:
+        return None
+
+
+def _sector_context(symbol: str) -> dict | None:
+    """Compare the stock with its sector ETF and SPY; add semiconductor-group proxies where relevant.
+    Uses the app's existing market-data provider and a short shared cache. Fail-open."""
+    try:
+        import data
+        import universe
+
+        if data.provider() == "demo":
+            return dict(available=False, reason="Sector performance is unavailable in demo market-data mode.")
+        sector = universe.sector(symbol)
+        sector_etf = _SECTOR_ETF.get(sector)
+        if not sector_etf:
+            return dict(available=False, sector=sector,
+                        reason="No sector ETF mapping is available for this ticker.")
+        symbols = [symbol, sector_etf, "SPY"]
+        industry = []
+        if symbol in _SEMICONDUCTORS:
+            industry = ["SMH", "SOXX"]
+            symbols.extend(industry)
+
+        key = tuple(sorted(set(symbols)))
+        now = __import__("time").time()
+        with _SECTOR_CACHE_LOCK:
+            hit = _SECTOR_CACHE.get(key)
+            if hit and now - hit[0] < _SECTOR_CACHE_TTL:
+                frames = hit[1]
+            else:
+                frames = None
+        if frames is None:
+            frames = data.get_bars_many(list(key), 35)
+            with _SECTOR_CACHE_LOCK:
+                _SECTOR_CACHE[key] = (now, frames)
+
+        perf = {s: _returns(frames.get(s)) for s in key}
+        stock = perf.get(symbol)
+        sector_data = perf.get(sector_etf)
+        spy = perf.get("SPY")
+        if not stock or not sector_data or not spy:
+            return dict(available=False, sector=sector, sector_etf=sector_etf,
+                        reason="The provider did not return enough recent bars for a sector comparison.")
+
+        def relative(a, b):
+            if a is None or b is None:
+                return None
+            return round(a - b, 2)
+
+        result = {
+            "available": True,
+            "sector": sector,
+            "sector_etf": sector_etf,
+            "stock": stock,
+            "sector_performance": sector_data,
+            "broad_market": {"symbol": "SPY", **spy},
+            "stock_minus_sector_pct_points": {
+                k: relative(stock.get(k), sector_data.get(k))
+                for k in ("1d_pct", "5d_pct", "20d_pct")
+            },
+            "sector_minus_spy_pct_points": {
+                k: relative(sector_data.get(k), spy.get(k))
+                for k in ("1d_pct", "5d_pct", "20d_pct")
+            },
+            "industry_proxies": {s: perf.get(s) for s in industry},
+            "note": "Returns are price performance, not proof of causation; daily bars reflect the configured provider's freshness and delay.",
+        }
+        return result
+    except Exception as e:
+        log.warning("sika chat %s: sector context failed: %s", symbol, e)
+        return dict(available=False, reason="Sector performance could not be retrieved.")
+
+
 def _news(symbol: str, card: dict) -> dict | None:
     """Latest 1–2 headlines for the ticker, catalyst first, then the newest
     item — the exact accessor the ticker page and the alerts use
@@ -243,6 +364,7 @@ def answer(sym: str, message: str, history=None, plain_english: str = "") -> dic
         nws = _news(symbol, card)
         if nws is not None:
             supplied["news_headlines"] = nws
+        supplied["sector_and_market_performance"] = _sector_context(symbol)
     messages = [{"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "system", "content": "CURRENT DATA (the only factual source):\n" +
                  json.dumps(supplied, ensure_ascii=False, separators=(",", ":"), default=str)}]
