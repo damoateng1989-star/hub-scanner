@@ -5968,6 +5968,7 @@ async function loadGexBoard(sym, at) {
     host.innerHTML = gxbPickerHTML()+'<div class="empty">No GEX chain is available for '+esc(sym)+' right now. Try again later.</div>';
   }
 }
+
 function paintGexBoard(ticker) {
   const host = $("setupBoard"), d = GEX_BOARD_DATA, replay = d.replay || [], rows = d.rows || [];
   const watched = !!(ticker && ticker.on_watchlist), hasReplay = replay.length > 0;
@@ -5983,8 +5984,8 @@ function paintGexBoard(ticker) {
     const totalCell = '<td class="gxb-total" style="background:'+totalBg+'">'+totalMom+'<strong>'+gxbFmt(r.total)+'</strong></td>';
     const expCells = (d.expiries || []).map((e,i)=>{
       const val = Number((r.gex || [])[i] || 0), gr = Number((r.gross || [])[i] || 0);
-      const a = .08 + .52*Math.sqrt(Math.max(0,gr)/maxGross);
-      const bg = val >= 0 ? 'rgba(255,255,255,'+a.toFixed(2)+')' : 'rgba(242,48,48,'+a.toFixed(2)+')';
+      const alpha = .08 + .52*Math.sqrt(Math.max(0,gr)/maxGross);
+      const bg = val >= 0 ? 'rgba(255,255,255,'+alpha.toFixed(2)+')' : 'rgba(242,48,48,'+alpha.toFixed(2)+')';
       const mom = (r.mom || [])[i];
       return '<td class="gxb-exp" style="background:'+bg+'"><small>'+gxbMom(mom)+'</small><strong>'+gxbFmt(val)+'</strong></td>';
     }).join("");
@@ -5996,7 +5997,32 @@ function paintGexBoard(ticker) {
   const rowsHTML = rows.length ? '<div class="gxb-grid-wrap"><table class="gxb-table"><thead><tr><th>STRIKE / LABELS</th><th>TOTAL NET</th>'+expiryHeads+'</tr></thead><tbody>'+body+'</tbody></table></div>'
     : '<div class="empty">No strikes with usable gamma data in the ±10% spot band.</div>';
   host.innerHTML = gxbPickerHTML()
-    + '<div class="gxb-toolbar"><div><b>'+symSafe(GEX_BOARD_SYMBOL)+'</b> <span>SPOT 
+    + '<div class="gxb-toolbar"><div><b>'+symSafe(GEX_BOARD_SYMBOL)+'</b> <span>SPOT $'+Number(d.spot||0).toFixed(2)+' · '+(d.at || 'LIVE')+'</span></div><span>'+(hasReplay?'WATCHLIST · MOMENTUM ENABLED':(watched?'WATCHLIST · SNAPSHOTS PENDING':'ON-DEMAND · CURRENT GRID'))+'</span></div>'
+    + replayHTML + rowsHTML
+    + (!hasReplay ? '' : '<div class="gxb-note">Momentum compares each strike and expiry with the prior recorded five-minute snapshot. Missing snapshots are skipped; a blank percentage means no prior reading.</div>')
+    + '<div class="gxb-note">White = positive net GEX · red = negative net GEX · brighter cells = greater gross gamma. Labels are NextShelf display definitions, not tested trade signals. Cboe data is delayed.</div>';
+}
+function symSafe(s) { return String(s || "").replace(/[^A-Z0-9.-]/g,""); }
+async function seekGexReplay(value) {
+  gxbStop();
+  const times = GEX_BOARD_DATA && GEX_BOARD_DATA.replay || [], idx = Math.max(0,Math.min(times.length-1,Number(value)||0));
+  if (!times.length) return;
+  GEX_BOARD_INDEX = idx;
+  await loadGexBoard(GEX_BOARD_SYMBOL, times[idx]);
+}
+function toggleGexReplay() {
+  if (GEX_BOARD_TIMER) { gxbStop(); const b=$("gxbPlay"); if(b)b.textContent="PLAY"; return; }
+  const times = GEX_BOARD_DATA && GEX_BOARD_DATA.replay || [];
+  if (times.length < 2) return;
+  const b=$("gxbPlay"); if(b)b.textContent="PAUSE";
+  GEX_BOARD_TIMER = setInterval(async ()=>{
+    const current = GEX_BOARD_DATA && GEX_BOARD_DATA.replay || times;
+    const next = (GEX_BOARD_INDEX + 1) % current.length;
+    GEX_BOARD_INDEX = next;
+    await loadGexBoard(GEX_BOARD_SYMBOL, current[next]);
+    const btn=$("gxbPlay"); if(btn && GEX_BOARD_TIMER)btn.textContent="PAUSE";
+  },1000);
+}
 function setupSketch(x) {
   const P = Number(x.last_close), live = x.state === "breakout_up" || x.state === "breakdown", gap = x.kind === "gapfade";
   const up = live ? x.state === "breakout_up" : x.trigger === "up";            // the direction the trade goes
