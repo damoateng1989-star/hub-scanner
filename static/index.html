@@ -761,6 +761,9 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .sp-hint { margin: 0; color: #9AA0AC; font-size: 13px; line-height: 1.45; }
 .sp-res { display: grid; gap: 4px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
 /* Ask Sika — Talon-style dialogue. */
+.ask-backdrop { position: fixed; inset: 0; z-index: 31; background: rgba(5,7,11,.48); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); animation: askBackdropIn .2s ease both; }
+.ask-backdrop[hidden] { display: none !important; }
+@keyframes askBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 .ask-pop { position: fixed; right: 22px; bottom: 100px; z-index: 32; width: min(380px, calc(100vw - 24px)); max-height: calc(100vh - 140px); display: flex; flex-direction: column; padding: 16px; border-radius: 18px;
   background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); animation: agIn .2s ease both; }
 .ask-pop[hidden] { display: none !important; }
@@ -2597,6 +2600,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
   <div class="sp-acts" id="spActs"></div>
   <div class="sp-res" id="spRes"></div>
 </div>
+<div class="ask-backdrop" id="askBackdrop" hidden onclick="askSikaClose()" aria-hidden="true"></div>
 <div class="ask-pop" id="askPop" hidden role="dialog" aria-label="Ask Sika">
   <div class="sp-head"><div><span class="sika-ava" id="askAva"></span><b>Sika</b><small class="live-pill">Live</small></div><button class="bf-x" onclick="askSikaClose()" aria-label="Close">✕</button></div>
   <div class="ask-body" id="askBody"></div>
@@ -6923,12 +6927,13 @@ function askSikaOpen() {
   toggleScout(false);
   const pop = $("askPop"); if (!pop) return;
   pop.hidden = false;
+  const backdrop = $("askBackdrop"); if (backdrop) backdrop.hidden = false;
   const ava = $("askAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
   const body = $("askBody");
   if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Tell me a ticker — for example <b>AMAT</b> — then ask me anything about its setup.</p>`;
   const inp = $("askInput"); if (inp) inp.focus();
 }
-function askSikaClose() { const pop = $("askPop"); if (pop) pop.hidden = true; }
+function askSikaClose() { const pop = $("askPop"), backdrop = $("askBackdrop"); if (pop) pop.hidden = true; if (backdrop) backdrop.hidden = true; }
 function askSikaSay(html, cls) {
   const body = $("askBody"); if (!body) return null;
   const d = document.createElement("div");
