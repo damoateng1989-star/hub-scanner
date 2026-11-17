@@ -3358,6 +3358,7 @@ function tip(term) {
 }
 function explain(term) { const [t, d] = GLOSS[term]; showSheet(`<h3>${t}</h3><p>${d}</p><p style="margin-top:12px"><a href="#guide" onclick="closeSheet()">How it all fits together →</a></p>`); }
 function showSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; }
+let SHELF_TRADE_PREVIEW = null;
 function openShelfTrade(sym) {
   if (!ME || !ME.is_admin) return;
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym) || {};
@@ -3369,33 +3370,92 @@ function openShelfTrade(sym) {
   const trigger = other ? other.edge : (hubLive ? (side === "BUY" ? st.hub?.high : st.hub?.low) : (st.hub ? (side === "BUY" ? (st.trigger_up || st.hub.high) : (st.trigger_down || st.hub.low)) : null));
   const target = other ? other.target : (st.target || (side === "BUY" ? st.shelf_up?.level : st.shelf_down?.level));
   const fmt = v => v == null || !Number.isFinite(Number(v)) ? "—" : money(Number(v));
+  SHELF_TRADE_PREVIEW = null;
+  const accountOptions = BROKER_ACCOUNTS.map(x => `<option value="${esc(x.account_id)}">${esc(x.brokerage)} · ${esc(x.name)} ${esc(x.number_masked || "")}</option>`).join("");
   showSheet(`<div class="broker-ticket shelf-trade-ticket">
-    <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">PREVIEW ONLY</span></div>
-    <p class="broker-copy">Prefilled from this NextShelf shelf card. Review the setup before considering an order.</p>
+    <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>
+    <p class="broker-copy">Prefilled from this NextShelf shelf card. Select your account and review the brokerage impact before confirming.</p>
     <div class="broker-fields">
+      <div class="broker-field"><label>ACCOUNT</label><select id="shelfTradeAccount">${accountOptions || '<option value="">Connect a brokerage first</option>'}</select></div>
       <div class="broker-field"><label>SYMBOL</label><input id="shelfTradeSymbol" value="${esc(sym)}" readonly></div>
-      <div class="broker-field"><label>QUANTITY · SHARES</label><input id="shelfTradeQty" type="number" min="1" max="10000" step="1" value="1" oninput="updateShelfTradeEstimate()"></div>
-      <div class="broker-field"><label>SIDE</label><div class="broker-side"><button type="button" class="${side === "BUY" ? "on buy" : ""}" disabled>Buy</button><button type="button" class="${side === "SELL" ? "on sell" : ""}" disabled>Sell</button></div></div>
-      <div class="broker-field"><label>ORDER TYPE</label><select id="shelfTradeType" onchange="updateShelfTradeEstimate()"><option value="market">Market</option><option value="limit">Limit</option></select></div>
-      <div class="broker-field" id="shelfTradeLimitWrap" hidden><label>LIMIT PRICE · USD</label><input id="shelfTradeLimit" type="number" min="0.01" step="0.01" value="${price > 0 ? price.toFixed(2) : ""}" oninput="updateShelfTradeEstimate()"></div>
+      <div class="broker-field"><label>QUANTITY · SHARES</label><input id="shelfTradeQty" type="number" min="1" max="10000" step="1" value="1" oninput="invalidateShelfTradePreview()"></div>
+      <div class="broker-field"><label>SIDE</label><div class="broker-side"><button type="button" class="${side === "BUY" ? "on buy" : ""}" disabled>Buy</button><button type="button" class="${side === "SELL" ? "on sell" : ""}" disabled>Sell</button></div><input id="shelfTradeSide" type="hidden" value="${side}"></div>
+      <div class="broker-field"><label>ORDER TYPE</label><select id="shelfTradeType" onchange="invalidateShelfTradePreview()"><option value="Market">Market</option><option value="Limit">Limit</option></select></div>
+      <div class="broker-field" id="shelfTradeLimitWrap" hidden><label>LIMIT PRICE · USD</label><input id="shelfTradeLimit" type="number" min="0.01" step="0.01" value="${price > 0 ? price.toFixed(2) : ""}" oninput="invalidateShelfTradePreview()"></div>
     </div>
-    <div class="broker-estimate"><div><small>Indicative value · last close, not a live quote</small><strong id="shelfTradeEstimate">${price > 0 ? money(price) : "—"}</strong></div><span class="broker-demo-tag">NOT BROKER DATA</span></div>
-    <div class="broker-subnote">Setup context · Trigger: ${fmt(trigger)} · Next target: ${fmt(target)}. A real order must receive a fresh brokerage impact preview before confirmation.</div>
-    <div class="broker-disclaimer">Broker connection and order execution are not enabled yet. This ticket cannot submit an order.</div>
-    <div class="broker-ticket-actions"><button type="button" class="disabled-submit" disabled>Confirm &amp; place order</button><button type="button" class="sec" onclick="closeSheet()">Close</button><a class="upsell" style="margin-left:auto" href="#account" onclick="closeSheet()">Manage brokerage →</a></div>
+    <div class="broker-subnote">Setup context · Trigger: ${fmt(trigger)} · Next target: ${fmt(target)}. These are setup levels, not an order recommendation.</div>
+    <div class="broker-disclaimer">A brokerage impact preview is required for every order. Orders are submitted only after you review the preview and explicitly confirm.</div>
+    <div id="shelfTradeImpact" class="broker-impact-result" aria-live="polite">Choose an account, quantity and order type, then request an impact preview.</div>
+    <div class="broker-ticket-actions"><button id="shelfTradePreviewBtn" type="button" onclick="requestShelfTradeImpact()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>Check order impact</button><button id="shelfTradeConfirmBtn" type="button" class="disabled-submit" onclick="submitShelfTrade()" disabled>Confirm &amp; place order</button><button type="button" class="sec" onclick="closeSheet()">Close</button></div>
+    ${BROKER_ACCOUNTS.length ? "" : '<p class="broker-subnote">No connected account. <a href="#account" onclick="closeSheet()">Connect Webull in Account →</a></p>'}
   </div>`);
-  updateShelfTradeEstimate();
+  updateShelfTradeLimit();
 }
-function updateShelfTradeEstimate() {
-  const qty = Math.max(0, Number($("shelfTradeQty")?.value || 0));
-  const type = $("shelfTradeType")?.value || "market";
-  const wrap = $("shelfTradeLimitWrap"), input = $("shelfTradeLimit");
-  if (wrap) wrap.hidden = type !== "limit";
-  const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus($("shelfTradeSymbol")?.value || "") || {};
-  const px = type === "limit" ? Number(input?.value || 0) : Number(st.last_close || 0);
-  const out = $("shelfTradeEstimate");
-  if (out) out.textContent = qty > 0 && px > 0 ? money(qty * px) : "—";
+function updateShelfTradeLimit() {
+  const type = $("shelfTradeType")?.value || "Market";
+  const wrap = $("shelfTradeLimitWrap");
+  if (wrap) wrap.hidden = type !== "Limit";
 }
+function invalidateShelfTradePreview() {
+  SHELF_TRADE_PREVIEW = null;
+  const btn = $("shelfTradeConfirmBtn"), out = $("shelfTradeImpact");
+  if (btn) { btn.disabled = true; btn.classList.add("disabled-submit"); }
+  if (out) out.textContent = "Order details changed. Request a new brokerage impact preview.";
+  updateShelfTradeLimit();
+}
+async function requestShelfTradeImpact() {
+  const btn = $("shelfTradePreviewBtn"), out = $("shelfTradeImpact");
+  if (!BROKER_ACCOUNTS.length) { if (out) out.textContent = "Connect Webull from the Account page first."; return; }
+  const account_id = $("shelfTradeAccount")?.value || "";
+  const symbol = $("shelfTradeSymbol")?.value || "";
+  const action = $("shelfTradeSide")?.value || "";
+  const units = Number($("shelfTradeQty")?.value || 0);
+  const order_type = $("shelfTradeType")?.value || "Market";
+  const price = order_type === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
+  if (!account_id || !Number.isInteger(units) || units < 1 || units > 10000 || (order_type === "Limit" && !(price > 0))) {
+    if (out) out.textContent = "Choose a connected account and enter a valid whole-share quantity and limit price.";
+    return;
+  }
+  SHELF_TRADE_PREVIEW = null;
+  const confirmBtn = $("shelfTradeConfirmBtn");
+  if (confirmBtn) confirmBtn.disabled = true;
+  if (btn) btn.disabled = true;
+  if (out) out.textContent = "Checking the order with SnapTrade…";
+  try {
+    const result = await api("/api/broker/impact", {method:"POST", body:JSON.stringify({account_id,symbol,action,units,order_type,price})});
+    SHELF_TRADE_PREVIEW = result.preview_id;
+    if (out) out.innerHTML = '<b>Brokerage impact preview received</b><pre class="broker-position-json">' + esc(JSON.stringify(result.impact || {}, null, 2)) + '</pre><small>Preview expires in ' + Number(result.expires_in_seconds || 300) + ' seconds. ' + esc(action) + ' ' + units + ' ' + esc(symbol) + ' · ' + esc(order_type) + '</small>';
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.classList.remove("disabled-submit"); }
+  } catch (e) {
+    if (out) out.textContent = e.message || "SnapTrade could not preview this order.";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+async function submitShelfTrade() {
+  if (!SHELF_TRADE_PREVIEW) { toast("Run a fresh order-impact preview first."); return; }
+  const symbol = $("shelfTradeSymbol")?.value || "";
+  const action = $("shelfTradeSide")?.value || "";
+  const units = Number($("shelfTradeQty")?.value || 0);
+  const orderType = $("shelfTradeType")?.value || "Market";
+  const price = orderType === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
+  const details = action + " " + units + " share(s) of " + symbol + " · " + orderType + (price ? " at $" + price.toFixed(2) : "");
+  if (!confirm("You are about to submit a REAL brokerage order.\n\n" + details + "\n\nSubmit this exact order?")) return;
+  const preview = SHELF_TRADE_PREVIEW;
+  SHELF_TRADE_PREVIEW = null;
+  const btn = $("shelfTradeConfirmBtn"), out = $("shelfTradeImpact");
+  if (btn) btn.disabled = true;
+  if (out) out.textContent = "Submitting the checked order to your brokerage…";
+  try {
+    const result = await api("/api/broker/order", {method:"POST", body:JSON.stringify({preview_id:preview,confirm:true})});
+    if (out) out.innerHTML = '<b>Order submitted</b><pre class="broker-position-json">' + esc(JSON.stringify(result.order || {}, null, 2)) + '</pre><small>Refresh your brokerage accounts to see updated positions and order status.</small>';
+    toast("Brokerage order submitted.");
+  } catch (e) {
+    if (out) out.textContent = e.message || "The brokerage did not confirm the order.";
+    toast(e.message || "Order submission failed.");
+  }
+}
+
 function closeSheet() { $("sheet").hidden = true; }
 $("sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") closeSheet(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
