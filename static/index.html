@@ -2583,7 +2583,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
 <div class="ask-pop" id="askPop" hidden role="dialog" aria-label="Ask Sika">
   <div class="sp-head"><div><span class="sika-ava" id="askAva"></span><b>Sika</b><small class="live-pill">Live</small></div><button class="bf-x" onclick="askSikaClose()" aria-label="Close">✕</button></div>
   <div class="ask-body" id="askBody"></div>
-  <div class="ask-row"><input id="askInput" type="text" placeholder="Ask Sika or type / for commands" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')askSikaSend()"><button class="sp-go ask-send" type="button" onclick="askSikaSend()">Send</button></div>
+  <div class="ask-row"><input id="askInput" type="text" placeholder="Enter a ticker or ask Sika a question" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')askSikaSend()"><button class="sp-go ask-send" type="button" onclick="askSikaSend()">Send</button></div>
   <p class="ask-foot">Sika's read — not financial advice.</p>
 </div>
 
@@ -6908,7 +6908,7 @@ function askSikaOpen() {
   pop.hidden = false;
   const ava = $("askAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
   const body = $("askBody");
-  if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Ask me about a ticker — try <b>AMAT</b>, or <b>/swing AMAT</b>. Once the card is open, ask me a follow-up.</p>`;
+  if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Tell me a ticker — for example <b>AMAT</b> — then ask me anything about its setup.</p>`;
   const inp = $("askInput"); if (inp) inp.focus();
 }
 function askSikaClose() { const pop = $("askPop"); if (pop) pop.hidden = true; }
@@ -6945,44 +6945,21 @@ async function askSikaDrain() {
 }
 async function askSikaProcess(raw) {
   askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
-  let sym = null, isCard = false;
-  if (raw.startsWith("/")) {
-    const parts = raw.slice(1).trim().split(/\s+/);
-    if ((parts[0] || "").toLowerCase() !== "swing") {
-      askSikaSay(`<p class="sp-hint">Sika only takes <b>/swing</b> for now — try <b>/swing AMAT</b>.</p>`);
-      return;
-    }
-    sym = (parts[1] || "").toUpperCase().replace(/[^A-Z0-9.]/g, "");
-    if (!sym) { askSikaSay(`<p class="sp-hint">Try <b>/swing AMAT</b> — a ticker after /swing.</p>`); return; }
-    isCard = true;
-  } else if (/^[A-Za-z][A-Za-z0-9.-]{0,9}$/.test(raw)) {
-    sym = raw.toUpperCase();
-    isCard = true;
-  }
-
-  if (!ME || ME.guest || !(isPro() || ME.options)) {
-    askSikaSay(`<div class="ox-lock"><b>Conversational Sika and Swing Play are a Pro feature.</b><p>See the favored side, trigger, targets, and follow-up explanations.</p><a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
+  const ticker = raw.toUpperCase().replace(/\$/g, "").trim();
+  if (/^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
+    if (ASK_SYMBOL !== ticker) { ASK_SYMBOL = ticker; ASK_HISTORY = []; }
+    askSikaHistory("user", `Let's discuss ${ticker}.`);
+    askSikaSay(`<p class="sp-hint">I'm ready to discuss <b>${esc(ticker)}</b>. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.</p>`);
     return;
   }
 
-  if (isCard) {
-    if (ASK_SYMBOL !== sym) { ASK_SYMBOL = sym; ASK_HISTORY = []; }
-    const reading = askSikaSay(`<p class="sp-hint">Sika is reading ${esc(sym)}…</p>`);
-    try {
-      const c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000});
-      if (reading) reading.innerHTML = swingCardHTML(c);
-      askSikaHistory("user", raw);
-      askSikaHistory("sika", `I’ve loaded the current Swing Play Card for ${sym}. Ask me about either side, the trigger, target, or what makes the setup wrong.`);
-    } catch (e) {
-      if (reading) reading.innerHTML = (e && e.status === 403)
-        ? `<div class="ox-lock"><b>Swing plays are a Pro feature.</b><p>Sika's read is part of Pro.</p><a class="btnx sm" href="#account">Pro feature · see plans</a></div>`
-        : `<p class="sp-hint">Sika couldn't read ${esc(sym)} right now (${esc(friendly(e))}).</p>`;
-    }
+  if (!ME || ME.guest || !(isPro() || ME.options)) {
+    askSikaSay(`<div class="ox-lock"><b>Conversational Sika is a Pro feature.</b><p>Ask follow-up questions about a ticker's setup and the data behind it.</p><a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
     return;
   }
 
   if (!ASK_SYMBOL) {
-    askSikaSay(`<p class="sp-hint">First give me a ticker — for example <b>AMAT</b>. Then ask your follow-up.</p>`);
+    askSikaSay(`<p class="sp-hint">First give me a ticker — for example <b>AMAT</b>. Then ask your question.</p>`);
     return;
   }
   const reading = askSikaSay(`<p class="sp-hint">Sika is thinking…</p>`);
