@@ -228,6 +228,35 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 .seg{display:inline-flex;background:var(--sunk,#1A1C22);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer}
 .seg button.on{background:#fff;color:#111;font-weight:600}
+/* Patch 151 — options swing panel styles, scoped to ticker page */
+#optionsSwing { margin-top:14px; } #optionsSwing h2 { margin-top:0; }
+#optionsSwing .ox-edu { margin-left:7px; padding:3px 9px; border:1px solid #8b7cf6; border-radius:8px; color:#a99bff; font-size:11px; letter-spacing:.1em; vertical-align:2px; }
+#optionsSwing .ox-note { margin:10px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+#optionsSwing .ox-lock { padding:16px; border:1px dashed var(--line-2); border-radius:14px; background:var(--bg); }
+#optionsSwing .ox-lock b { color:var(--ink); font-size:15px; } #optionsSwing .ox-lock p { color:var(--muted); margin:6px 0 12px; }
+#optionsSwing .ox-lock a { display:inline-flex; padding:7px 11px; border:1px solid var(--line-2); border-radius:9px; color:var(--ink); text-decoration:none; font-size:13px; }
+#optionsSwing .ox-demo { margin:0 0 10px; padding:6px 10px; border:1px solid rgba(255,138,76,.4); border-radius:8px; color:#ff8a4c; font-size:12.5px; }
+#optionsSwing .ox-closed { display:block; margin:0 0 10px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; color:var(--muted); font-size:13px; }
+#optionsSwing .ox-earn,#optionsSwing .oc-earn { margin:10px 0; padding:9px 12px; border:1px solid rgba(196,168,255,.35); border-radius:10px; color:#c4a8ff; background:rgba(124,58,237,.10); font-size:13px; line-height:1.45; }
+#optionsSwing .ox2 + .ox2 { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); }
+#optionsSwing .oc { padding:12px 0; } #optionsSwing .oc-t b { display:block; color:var(--ink); font:700 20px var(--sans); }
+#optionsSwing .oc-t small { display:block; margin:4px 0 14px; color:var(--muted); font-size:14px; }
+#optionsSwing .oc-rows > div { display:flex; justify-content:space-between; align-items:baseline; gap:12px; padding:13px 0; border-top:1px solid var(--line); font-size:14px; }
+#optionsSwing .oc-rows > div span { color:var(--muted); } #optionsSwing .oc-rows > div b { color:var(--ink); font-weight:700; text-align:right; font-variant-numeric:tabular-nums; }
+#optionsSwing .oc-rows em { margin-left:4px; font-style:normal; } #optionsSwing .oc-rows em.up,#optionsSwing .oc-rows > div b.oc-gain { color:var(--up); } #optionsSwing .oc-rows em.dn,#optionsSwing .oc-rows > div b.oc-lossv { color:var(--down); }
+#optionsSwing .oc-note { margin:0 !important; padding:2px 0 14px; color:var(--muted) !important; font-size:12.5px !important; line-height:1.55; } #optionsSwing .oc-assume { padding:12px 0 0; }
+#optionsSwing .oc-warn { margin:10px 0 0; color:var(--down); font-size:13px; line-height:1.5; }
+#optionsSwing .oc-more,#optionsSwing .oc-alt { border-top:1px solid var(--line); }
+#optionsSwing .oc-more > summary,#optionsSwing .oc-alt > summary { padding:13px 0; color:var(--hub); font:600 14px var(--sans); cursor:pointer; list-style:none; }
+#optionsSwing .oc-more > summary::-webkit-details-marker,#optionsSwing .oc-alt > summary::-webkit-details-marker { display:none; }
+#optionsSwing .oc-more > summary::before,#optionsSwing .oc-alt > summary::before { content:"▸"; display:inline-block; width:16px; font-size:11px; }
+#optionsSwing .oc-more[open] > summary::before,#optionsSwing .oc-alt[open] > summary::before { content:"▾"; }
+#optionsSwing .oc-alt { margin-top:14px; } #optionsSwing .oc-alt .oc-t b { font-size:17px; }
+#optionsSwing .ox-sim { font-style:normal; font-size:9.5px; font-weight:600; letter-spacing:.04em; text-transform:uppercase; padding:1px 5px; margin-left:4px; border-radius:5px; border:1px solid var(--line-2); vertical-align:1px; }
+#optionsSwing .ox-rules-title { margin:18px 0 6px; font:700 15px var(--sans); } #optionsSwing .ox-rules { margin:4px 0 12px; padding-left:22px; } #optionsSwing .ox-rules li { padding:8px 0; color:var(--muted); } #optionsSwing .ox-rules b { color:var(--ink); }
+#optionsSwing .ox-disclaimer { margin:12px 0 0; color:var(--muted); font-size:12px; line-height:1.55; }
+html[data-theme="light"] #optionsSwing .oc-rows > div b { color:#0d1117; } html[data-theme="light"] #optionsSwing .oc-rows em.up,html[data-theme="light"] #optionsSwing .oc-rows > div b.oc-gain { color:#15803d; } html[data-theme="light"] #optionsSwing .oc-rows em.dn,html[data-theme="light"] #optionsSwing .oc-rows > div b.oc-lossv { color:#b91c1c; }
+@media(max-width:600px) { #optionsSwing .oc-t b { font-size:18px; } #optionsSwing .oc-rows > div { font-size:13.5px; padding:12px 0; } }
 </style>
 
 <style>
@@ -489,6 +518,7 @@ function render(d) {
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
     <div id="gexShelves" class="card gex-shelf-card"></div>
+    <div id="optionsSwing" class="card"></div>
     <h2>Past <em>results</em></h2>
     <p class="scope">This ticker only · 4H breakouts</p>
     ${s.n ? `<div class="kv hero">
@@ -648,6 +678,7 @@ function render(d) {
   const n = d.candles.length;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (el.clientWidth < 600 ? 60 : 120)), to: n + 3 });
   loadGexShelves();
+  loadOptionsPanel();
 
 
   // Live candle: poll the live price and move the forming candle in place.
@@ -689,6 +720,199 @@ function render(d) {
   window.__nsLiveT = setTimeout(pollLiveCandle, 30000);
 }
 
+// Patch 151 — options swing display on the dedicated ticker page. Display only.
+async function loadOptionsPanel() {
+  const host = document.getElementById("optionsSwing");
+  if (!host) return;
+  const heading = '<h2>Options <em>swing</em> <span class="ox-edu">Educational</span></h2><p class="scope">Calls or puts for this setup</p>';
+  host.innerHTML = heading + '<p class="ox-note">Pricing the option chain…</p>';
+  let me = null;
+  try { const mr = await fetch("/api/me"); if (mr.ok) me = await mr.json(); } catch (e) {}
+  if (!me || me.guest || !me.options) {
+    host.innerHTML = heading + '<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you\'d lose if it fails.</p><a href="' + ((!me || me.guest) ? "/login#signup" : "#account") + '">' + ((!me || me.guest) ? "Sign up free" : "Pro feature · see plans") + '</a></div>';
+    return;
+  }
+  try {
+    const r = await fetch("/api/options/" + encodeURIComponent(SYM), {signal: AbortSignal.timeout(45000)});
+    if (!r.ok) throw new Error("options request failed");
+    host.innerHTML = heading + renderOptionsPanel(await r.json());
+  } catch (e) { host.innerHTML = heading + '<p class="ox-note">Options prices aren\'t available right now.</p>'; }
+}
+
+function renderOptionsPanel(o) {
+  if (!o || !Array.isArray(o.plans) || !o.plans.length) return '<p class="ox-note">' + esc(o && o.message || "No options swing to plan right now.") + '</p>';
+  const sgn = v => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
+  const day = iso => iso ? new Date(iso + "T12:00:00").toLocaleDateString(undefined, {month:"short", day:"numeric"}) : "–";
+  const closed = o.market_open === false ? '<p class="ox-closed"><i></i>Market closed. Prices as of the last close' + (o.session ? " (" + new Date(o.session + "T12:00:00").toLocaleDateString(undefined, {weekday:"short",month:"short",day:"numeric"}) + ")" : "") + '. They stay put until the open.</p>' : "";
+  const earnings = o.earnings && o.plans.some(p => o.earnings.date && p.expiry && o.earnings.date <= p.expiry) ? '<p class="ox-earn">📅 <b>Earnings ' + esc(o.earnings.label || day(o.earnings.date)) + '</b>, before these contracts expire. Option prices usually drop right after earnings (the "IV crush"), even when the stock moves your way, and a gap can skip past your exit.</p>' : "";
+  const contract = (c, p, up, cond, history) => {
+    if (!c) return "";
+    const move = up ? "breakout" : "breakdown", good = (c.at_shelf_pct ?? 0) > 0;
+    const odds = history && history.n ? "Reached the aim in <b>" + esc(history.reached ?? 0) + " of " + esc(history.n) + "</b> past setups." : "Too few past setups to judge the odds yet.";
+    const note = c.estimated ? "≈" + money(c.mid) + " if the " + move + " happens (about " + money(c.quote_now) + " now, since the stock isn\'t there yet). " + odds : money(c.cost) + " for one contract (100 shares). " + odds;
+    const gain = (Number(c.at_shelf || 0) - Number(c.mid || 0)) * 100;
+    return '<div class="oc"><div class="oc-t"><b>' + day(p.expiry) + " $" + esc(c.strike) + " " + (up ? "calls" : "puts") + '</b><small>' + cond + '</small></div>' +
+      '<div class="oc-rows"><div><span>' + (c.estimated ? "Est. cost at the " + move : "Cost now (mid)") + '</span><b>' + (c.estimated ? "≈ " : "") + money(c.mid) + '</b></div>' +
+      '<div><span>If it reaches the aim <i class="ox-sim">simulated</i></span><b>≈ ' + money(c.at_shelf) + ' <em class="' + (good ? "up" : "dn") + '">' + sgn(c.at_shelf_pct) + '</em></b></div>' +
+      '<p class="oc-note">' + note + '</p><div><span>If the ' + move + ' fails <i class="ox-sim">simulated</i></span><b>≈ ' + money(c.at_fail) + ' <em class="dn">' + sgn(c.at_fail_pct) + '</em></b></div>' +
+      '<div><span>Gain at the aim <i class="ox-sim">simulated</i></span><b class="' + (good ? "oc-gain" : "oc-lossv") + '">≈ ' + (gain >= 0 ? "+" : "−") + money(Math.abs(gain)) + '</b></div><div><span>Max loss</span><b>' + money(c.cost) + '</b></div>' +
+      '<p class="oc-note">Per contract (100 shares). The gain is not capped, so this is what the plan aims for, not a ceiling; the loss is capped at what you pay.</p></div>' +
+      (good ? "" : '<p class="oc-warn">⚠ Loses money even if the stock reaches ' + money(p.target) + ': the move is too small to pay for this contract\'s time value. Skip it.</p>') +
+      '<details class="oc-more"><summary>Show the math</summary><div class="oc-rows"><div><span>Breakeven at expiry</span><b>' + money(c.breakeven) + '</b></div><div><span>Expiry</span><b>' + day(p.expiry) + " · " + esc(p.dte) + ' days</b></div><div><span>Strike</span><b>' + esc(c.label) + " · delta " + esc(c.delta) + '</b></div><div><span>Bid / ask now</span><b>' + (c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted") + '</b></div><div><span>Implied volatility</span><b>' + esc(c.iv) + '%</b></div></div>' +
+      '<p class="oc-note"><b>Simulated:</b> the values at the aim and on a failure are Black-Scholes estimates, not real quotes. The cost' + (c.estimated ? " assumes the stock is at " + money(p.entry) + " when it breaks out" : " is the middle of the bid and ask") + '; the other values assume the volatility stays the same.</p></details>' +
+      '<p class="oc-note oc-assume">Figures assume the aim is reached in about ' + esc(p.days_to_target) + " trading day" + (p.days_to_target === 1 ? "" : "s") + " at today\'s implied volatility (" + esc(c.iv) + '%). Slower moves or falling volatility mean less.</p>' +
+      (c.wide_spread ? '<p class="oc-warn">⚠ Wide bid/ask spread (' + money(c.bid) + " / " + money(c.ask) + '). Use a limit order near the middle.</p>' : "") + '</div>';
+  };
+  const plans = o.plans.map(p => {
+    const up = p.direction === 1, h = p.history || {},
+      cond = p.mode === "prep" ? "If a 4-hour candle closes " + (up ? "above the hub top" : "below the hub bottom") + " (" + money(p.edge) + ")" : esc(p.setup || "Setup") + " " + (up ? "breakout" : "breakdown") + " is live · " + (up ? "bullish" : "bearish");
+    const contracts = p.contracts || [], primary = contracts[0], alternates = contracts.slice(1);
+    const earn = o.earnings && o.earnings.date && p.expiry && o.earnings.date <= p.expiry ? '<p class="oc-earn">⚠ Earnings ' + esc(o.earnings.label || day(o.earnings.date)) + ', before this contract expires. Options usually lose value right after earnings, even when the stock moves your way.</p>' : "";
+    return '<div class="ox2">' + contract(primary, p, up, cond, h) + earn + alternates.map(c => '<details class="oc-alt"><summary>Compare:  the top gamma shelves near the price, drawn as
+// shelves like the hub band. Fail-open: a failed fetch or empty shelves leaves the section blank.
+async function loadGexShelves() {
+  const host = document.getElementById("gexShelves");
+  if (!host) return;
+  let j = null, error = "";
+  try {
+    const r = await fetch(`/api/gamma/${encodeURIComponent(SYM)}`);
+    if (!r.ok) throw new Error(`Gamma request failed (${r.status})`);
+    j = await r.json();
+  } catch (e) {
+    error = "Gamma data could not be loaded. Check the connection and refresh.";
+  }
+  const sh = j && j.shelves;
+  const shelves = sh && Array.isArray(sh.shelves) ? sh.shelves : [];
+  let shelfHtml = `<p class="scope">Watch-only gamma levels · no Lab record or alert</p>`;
+  if (shelves.length) {
+    const spot = sh.spot, rows = shelves;
+    const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+    const fmtM = v => (Math.abs(Number(v)) / 1e6).toFixed(2) + "M";
+    const pct = v => { const d = (v - spot) / spot * 100; return (d >= 0 ? "+" : "") + d.toFixed(1) + "%"; };
+    const near = rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a);
+    const above = rows.filter(r => r.strike > near.strike).sort((a, b) => a.strike - b.strike)[0];
+    const below = rows.filter(r => r.strike < near.strike).sort((a, b) => b.strike - a.strike)[0];
+    const shelf = r => {
+      const at = r.strike === near.strike;
+      const both = r.side === "both";
+      const lab = both ? "Both walls" : (r.side === "call" ? "Call wall" : "Put wall");
+      const desc = both ? "Call and put gamma cancel here — the biggest two-sided wall." : (r.side === "call" ? "ceiling shelf" : "floor shelf");
+      return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${desc}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtM(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
+    };
+    const line = above && below
+      ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
+      : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
+    shelfHtml = `<p class="scope">Swing expiry (monthly when available, 7+ days out) &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
+  } else {
+    shelfHtml += `<p class="scope">Gamma shelf levels are unavailable for this ticker right now.</p>`;
+  }
+  host.innerHTML = `<h2>GEX <em>shelves</em> + heat map</h2><div class="gex-shelf-layout"><section>${shelfHtml}</section><div id="gexHeatmap"></div></div>`;
+  renderGexHeatmap(j, error);
+}
+
+// GEX heat map (Patch 137, watch-only): net gamma by strike and near-term expiry.
+// White = positive gamma, red = negative gamma; stronger cells are brighter.
+function renderGexHeatmap(j, message) {
+  const host = document.getElementById("gexHeatmap");
+  if (!host) return;
+  const g = j && j.grid;
+  if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) {
+    host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">CONFLUENCE</span></div><div style="padding:18px 14px;color:#A3A3A3;font-size:12px;line-height:1.5">${esc(message || "Options-chain gamma data is not available for this ticker right now. The heatmap will appear when Cboe chain data is available.")}</div>`;
+    return;
+  }
+  const spot = g.spot;
+  const maxV = Math.max(...g.rows.flatMap(r => (r.gross || r.gex).map(v => Math.abs(v))), 1);
+  const nearStrike = g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike;
+  // TOTAL notional per strike and strongest pull: largest absolute summed net GEX.
+  // All expiries share the same spot multiplier, so the ranking is scale-invariant.
+  const totals = g.rows.map(r => r.gex.reduce((a, b) => a + b, 0));
+  const grossTotals = g.rows.map(r => (r.gross || []).reduce((a, b) => a + b, 0));
+  const maxTotal = Math.max(...grossTotals.map(v => Math.abs(v)), 1);
+  const strongestIdx = totals.reduce((bi, t, i) => Math.abs(t) > Math.abs(totals[bi]) ? i : bi, 0);
+  const strongestStrike = g.rows[strongestIdx].strike;
+  const fmt = v => (Math.abs(Number(v)) / 1e6).toFixed(2) + "M";
+  const cell = (v, gv) => {
+    const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
+    const a = Math.min(0.10 + 0.90 * mag / maxV, 1).toFixed(2);
+    // Balanced cell: large gross, near-zero net — a pin. White (stabilise).
+    if (Math.abs(v) < 0.25 * Math.abs(gv || 0) && Math.abs(gv || 0) > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
+    if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
+    if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"}">−${fmt(v)}</td>`;
+    return `<td style="color:#6B7280">0</td>`;
+  };
+  const totalCell = (v, gv) => {
+    const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
+    const a = Math.min(0.10 + 0.90 * mag / maxTotal, 1).toFixed(2);
+    if (Math.abs(v) < 0.25 * Math.abs(gv || 0) && Math.abs(gv || 0) > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"};font-weight:700">${fmt(v)}</td>`;
+    if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"};font-weight:700">${fmt(v)}</td>`;
+    if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"};font-weight:700">−${fmt(v)}</td>`;
+    return `<td style="color:#6B7280;font-weight:700">0</td>`;
+  };
+  const head = g.expiries.map(e => {
+    const d = new Date(e + "T12:00:00");
+    return `<th>${d.toLocaleDateString("en-US", {month:"short", day:"numeric"}).toUpperCase()}</th>`;
+  }).join("");
+  const rowsHtml = g.rows.map((r, ri) => {
+    const at = r.strike === nearStrike;
+    const isStrongest = r.strike === strongestStrike;
+    const cls = [at ? "spotrow" : "", isStrongest ? "strongest" : ""].filter(Boolean).join(" ");
+    return `<tr${cls ? ` class="${cls}"` : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}${isStrongest ? ' <span class="pulltag">STRONGEST PULL</span>' : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}${totalCell(totals[ri], grossTotals[ri])}</tr>`;
+  }).join("");
+  host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">M = $1,000,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])} · TOTAL = sum across expiries</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}<th>TOTAL</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span><i class="sw r"></i>Strongest pull</span><span>Brighter = more gamma</span></div>`;
+}
+load();
+</script>
+<script>
+// leave the chart: go back to wherever you came from in NextShelf, otherwise to Browse setups
+function goBack(e) {
+  if (e) e.preventDefault();
+  let ref = "";
+  try { ref = document.referrer ? new URL(document.referrer).origin : ""; } catch (_) {}
+  if (ref === location.origin && history.length > 1) history.back();
+  else location.href = "/app#discover";
+  return false;
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") goBack(e); });
+</script>
+
+<script>
+/* the chart reads its colours when it draws: redraw after switching themes */
+(function () { var set = window.nsSetTheme; window.nsSetTheme = function (p) { set(p); location.reload(); }; })();
+</script>
+<script>
+// ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
+(function () {
+  const LAND = false;
+  const swap = (t) => {
+    const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
+    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join the waitlist" : "Join the waitlist") + arrow;
+    if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
+    return null;
+  };
+  function fix(root) {
+    (root.querySelectorAll ? root : document).querySelectorAll('a[href="/login#signup"]').forEach(a => {
+      if (a.dataset.wl) return; a.dataset.wl = 1;
+      if (LAND) a.href = "#join";
+      const n = [...a.childNodes].find(x => x.nodeType === 3 && x.textContent.trim());
+      const t = n ? swap(n.textContent) : null; if (t) n.textContent = t + (n.textContent.endsWith(" ") ? " " : "");
+    });
+  }
+  Promise.all([fetch("/auth/config").then(r => r.json()), fetch("/api/me").then(r => r.json()).catch(() => null)]).then(([c, me]) => {
+    if (c.signups_open !== false || (me && !me.guest)) return;
+    window.NS_WAITLIST = true; document.documentElement.classList.add("waitlist");
+    fix(document);
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => x.nodeType === 1 && fix(x.parentNode || x)))).observe(document.body, {childList: true, subtree: true});
+  }).catch(() => {});
+})();
+</script>
+</body>
+</html>
+ + esc(c.strike) + " " + (up ? "call" : "put") + " · " + esc(String(c.label || "").toLowerCase()) + '</summary>' + contract(c, p, up, esc(c.label || ""), h) + '</details>').join("") + '</div>';
+  }).join("");
+  return (o.demo ? '<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>' : "") + closed + earnings + plans +
+    '<h3 class="ox-rules-title">Rules for the trade</h3><ol class="ox-rules"><li>Take profit when the stock reaches the <b>shelf</b>, not when the option "feels" high.</li><li>Exit on a 4-hour <b>close back inside</b> the pattern, whatever the option is worth.</li><li>Size small. The most you can lose is what you pay for the contract.</li></ol>' +
+    '<p class="ox-disclaimer">Educational example, not a recommendation. Prices at the aim and on a failure are simulated with Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>';
+}
 // GEX shelves (Patch 135, watch-only): the top gamma shelves near the price, drawn as
 // shelves like the hub band. Fail-open: a failed fetch or empty shelves leaves the section blank.
 async function loadGexShelves() {
