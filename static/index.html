@@ -764,9 +764,14 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .ask-pop { position: fixed; right: 22px; bottom: 100px; z-index: 32; width: min(380px, calc(100vw - 24px)); max-height: calc(100vh - 140px); display: flex; flex-direction: column; padding: 16px; border-radius: 18px;
   background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); animation: agIn .2s ease both; }
 .ask-pop[hidden] { display: none !important; }
-.ask-body { flex: 1 1 auto; overflow-y: auto; margin-top: 12px; display: grid; gap: 10px; min-height: 120px; align-content: start; }
-.ask-msg.ask-you { text-align: right; }
-.ask-msg.ask-you b { display: inline-block; padding: 8px 12px; border-radius: 12px; background: #1D1E21; color: #E9EBEF; font: 600 14px var(--sans); }
+.ask-body { flex: 1 1 auto; overflow-y: auto; margin-top: 12px; display: grid; gap: 12px; min-height: 120px; align-content: start; }
+.ask-msg { max-width: 88%; width: fit-content; padding: 10px 13px; border-radius: 18px; overflow-wrap: anywhere; }
+.ask-msg.ask-sika { justify-self: start; background: #F2F1EC; color: #20242B; border-bottom-left-radius: 6px; }
+.ask-msg.ask-sika .ask-answer { color: #20242B; font-size: 14px; line-height: 1.58; }
+.ask-msg.ask-sika .sp-hint { color: #454B55; font-size: 14px; line-height: 1.5; }
+.ask-msg.ask-sika .ox-lock { color: #20242B; }
+.ask-msg.ask-you { justify-self: end; text-align: left; background: #DCEBFF; color: #173653; border-bottom-right-radius: 6px; }
+.ask-msg.ask-you b { display: block; color: #173653; font: 600 14px/1.5 var(--sans); }
 .ask-row { display: flex; gap: 8px; margin-top: 12px; }
 .ask-row input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 12px; border: 1px solid #353639; background: #0E0F12; color: #E9EBEF; font: 500 14px var(--sans); }
 .ask-row input::placeholder { color: #9AA0AC; }
