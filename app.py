@@ -1183,6 +1183,9 @@ async def gex_board(symbol: str, at: str | None = None, u: dict = User):
         raise HTTPException(400, "Unknown symbol")
     if at is not None and not re.fullmatch(r"\d{4}", at):
         raise HTTPException(400, "at must be HHMM")
+    on_watchlist = sym in db.user_symbols(u["id"])
+    if at is not None and not on_watchlist:
+        raise HTTPException(404, "Replay is available for your watchlist tickers only")
     spot = None
     if at is None:
         try:
@@ -1199,6 +1202,13 @@ async def gex_board(symbol: str, at: str | None = None, u: dict = User):
     result = await run_in_threadpool(gamma.board, sym, spot, at)
     if at is not None and result is None:
         raise HTTPException(404, "No GEX snapshot for that time")
+    if result and not on_watchlist:
+        result["replay"] = []
+        result["has_snapshots"] = False
+        for row in result.get("rows", []):
+            row["mom"] = [None for _ in row.get("gex", [])]
+            row["total_mom"] = None
+            row["labels"] = [label for label in row.get("labels", []) if label != "RV"]
     return result
 
 
