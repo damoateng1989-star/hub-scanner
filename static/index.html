@@ -1911,6 +1911,45 @@ html body .board-table td:nth-child(8) { white-space:normal; }
 .broker-account-value { color:var(--text); font:600 13px/1.3 "JetBrains Mono",monospace; white-space:nowrap; }
 .broker-impact-result { margin:14px 0; padding:12px; border:1px solid var(--line); border-radius:10px; background:var(--panel,rgba(255,255,255,.025)); font-size:13px; overflow-wrap:anywhere; }
 .broker-position-json { max-height:320px; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--muted); font:11px/1.5 "JetBrains Mono",monospace; }
+#shelfTradeCard{padding:14px 0 22px;scroll-margin-top:18px}
+.shelf-trade-embedded{margin:0;padding:16px;border:1px solid #26394c;border-radius:16px;background:#0b121b;box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.shelf-trade-embedded .broker-ticket-head{margin-bottom:14px}
+.shelf-broker-line{display:flex;align-items:center;gap:10px;min-height:48px;padding:9px 10px;border:1px solid #253649;border-radius:11px;background:#101c29}
+.shelf-broker-mark{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:#243b55;color:#dbeafe;font-weight:800}
+.shelf-broker-name{display:flex;flex:1;min-width:0;flex-direction:column;gap:2px}
+.shelf-broker-name b{font-size:13px;color:#e5edf7}.shelf-broker-name small{font-size:11px;color:#94a3b8;overflow-wrap:anywhere}
+.shelf-connected{padding:5px 8px;border-radius:99px;background:rgba(34,197,94,.13);color:#86efac;font-size:10px;font-weight:700}
+.shelf-change{padding:4px 2px!important;background:transparent!important;border:0!important;color:#93c5fd!important;font-size:12px!important}
+.shelf-account-select{display:none;width:100%;margin-top:8px;background:#101c29;color:#e5edf7;border:1px solid #31465d;border-radius:9px;padding:10px}
+.shelf-account-select.is-open{display:block}
+.shelf-segment-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+.shelf-segment-grid label,.shelf-qty-row label,.shelf-limit-wrap label{display:block;margin-bottom:7px;color:#91a0b3;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+.shelf-seg{display:flex;gap:4px;padding:4px;border:1px solid #26394c;border-radius:10px;background:#111c29}
+.shelf-seg button{flex:1;min-height:34px;padding:7px 5px!important;border:0!important;border-radius:7px!important;background:transparent!important;color:#aab8c8!important;font-size:11px!important;font-weight:700}
+.shelf-seg button.on-market{background:#e2e8f0!important;color:#0f172a!important}
+.shelf-seg.broker-side button.on.buy{background:#16a34a!important;color:white!important}
+.shelf-seg.broker-side button.on.sell{background:#b91c1c!important;color:white!important}
+.shelf-qty-row{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-bottom:1px solid #203044}
+.shelf-qty-row label{margin:0 0 3px}.shelf-qty-row small{color:#718198;font-size:11px}
+.shelf-stepper{display:flex;align-items:center;gap:16px}
+.shelf-stepper button{width:34px;height:34px;padding:0!important;border-radius:9px!important;background:#172638!important;border:1px solid #2b4057!important;color:#e2e8f0!important;font-size:20px!important}
+.shelf-stepper b{min-width:24px;text-align:center;font:600 17px var(--mono);color:#f1f5f9}
+.shelf-limit-wrap{padding-top:12px}.shelf-limit-wrap[hidden]{display:none}
+.shelf-limit-wrap input{width:100%;box-sizing:border-box;padding:10px;border-radius:9px;border:1px solid #31465d;background:#101c29;color:#f1f5f9;font:13px var(--mono)}
+.shelf-price-rows{padding:9px 0;border-bottom:1px solid #203044}
+.shelf-price-rows div,.shelf-impact-row{display:flex;justify-content:space-between;gap:12px;padding:7px 0;font-size:12px}
+.shelf-price-rows span,.shelf-impact-row span{color:#9aaabd}.shelf-price-rows b,.shelf-impact-row b{color:#e5edf7;font:600 12px var(--mono)}
+.shelf-impact{margin:14px 0;padding:12px;border:1px dashed #2e4a6b;border-radius:11px;background:#0a141f}
+.shelf-impact-title{margin-bottom:7px;color:#93c5fd;font-size:11px;font-weight:700;letter-spacing:.04em}
+.shelf-impact-total{margin-top:4px;padding-top:10px;border-top:1px solid #2b4057}
+.shelf-impact-total b{font-size:14px;color:#f8fafc}
+.shelf-impact-raw{margin-top:8px;color:#93a4b8;font-size:11px}.shelf-impact-raw summary{cursor:pointer;color:#93c5fd}
+.shelf-impact>small{display:block;margin-top:8px;color:#718198;font-size:10px}
+.shelf-confirm{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;min-height:54px;margin-top:10px;padding:10px 14px!important;border:0!important;border-radius:11px!important;background:linear-gradient(135deg,#22c55e,#16a34a)!important;color:#041207!important}
+.shelf-confirm b{font-size:14px}.shelf-confirm small{font-size:10px;color:#164323}
+.shelf-confirm:disabled{opacity:.42;cursor:not-allowed}
+.shelf-trade-note{margin:10px 2px 0;color:#8292a6;font-size:10px;line-height:1.5;text-align:center}
+@media(max-width:520px){.shelf-segment-grid{gap:8px}.shelf-trade-embedded{padding:13px}.shelf-broker-line{gap:7px}.shelf-connected{font-size:9px}}
 @media(max-width:560px) { .broker-account-row { grid-template-columns:minmax(0,1fr) auto; } .broker-account-row button { grid-column:1/-1; justify-self:start; } }
 
 
@@ -2489,6 +2528,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
   </div>
   <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
+  <div id="shelfTradeCard" hidden></div>
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><button id="bfTrade" type="button" class="broker-trade-cta" onclick="openShelfTrade(BRIEF_SYM)" hidden>↗ Trade</button><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
@@ -3373,10 +3413,15 @@ function tip(term) {
 }
 function explain(term) { const [t, d] = GLOSS[term]; showSheet(`<h3>${t}</h3><p>${d}</p><p style="margin-top:12px"><a href="#guide" onclick="closeSheet()">How it all fits together →</a></p>`); }
 function showSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; }
-let SHELF_TRADE_PREVIEW = null;
-async function openShelfTrade(sym) {
-  if (!ME || !ME.is_admin) return;
-  if (!BROKER_ACCOUNTS.length) await loadBrokerAccounts();
+let SHELF_TRADE_PREVIEW = null, SHELF_TRADE_SYMBOL = "", SHELF_TRADE_PRICE = 0, SHELF_TRADE_TRIGGER = null, SHELF_TRADE_DEBOUNCE = null, SHELF_TRADE_REQUEST = 0;
+function shelfTradeAccountLabel(a) {
+  const broker = a.brokerage || "Brokerage", name = a.name || "Investment account", masked = a.number_masked || "";
+  return {broker, name, masked, full: broker + " · " + name + (masked ? " " + masked : "")};
+}
+function renderShelfTradeCard(sym) {
+  const host = $("shelfTradeCard");
+  if (!host) return;
+  if (!ME || !ME.is_admin) { host.innerHTML = ""; host.hidden = true; return; }
   const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym) || {};
   const hubLive = st.state === "breakout_up" || st.state === "breakdown";
   const other = !hubLive && (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
@@ -3384,94 +3429,135 @@ async function openShelfTrade(sym) {
   const side = setup.state === "breakdown" || setup.dir === -1 ? "SELL" : "BUY";
   const price = Number(st.last_close || 0);
   const trigger = other ? other.edge : (hubLive ? (side === "BUY" ? st.hub?.high : st.hub?.low) : (st.hub ? (side === "BUY" ? (st.trigger_up || st.hub.high) : (st.trigger_down || st.hub.low)) : null));
-  const target = other ? other.target : (st.target || (side === "BUY" ? st.shelf_up?.level : st.shelf_down?.level));
+  SHELF_TRADE_SYMBOL = sym; SHELF_TRADE_PRICE = price; SHELF_TRADE_TRIGGER = trigger;
+  SHELF_TRADE_PREVIEW = null; clearTimeout(SHELF_TRADE_DEBOUNCE); SHELF_TRADE_REQUEST++;
+  const options = BROKER_ACCOUNTS.map(a => `<option value="${esc(a.account_id)}">${esc(shelfTradeAccountLabel(a).full)}</option>`).join("");
+  const account = BROKER_ACCOUNTS[0], label = account ? shelfTradeAccountLabel(account) : null;
+  const accountLine = label ? `<span class="shelf-broker-mark">${esc((label.broker || "B").slice(0,1).toUpperCase())}</span><span class="shelf-broker-name"><b>${esc(label.broker)}</b><small>${esc(label.name)} ${label.masked ? "· " + esc(label.masked) : ""}</small></span><span class="shelf-connected">Connected</span>` : `<span class="shelf-broker-name"><b>No connected account</b><small>Connect Webull from Account first.</small></span>`;
   const fmt = v => v == null || !Number.isFinite(Number(v)) ? "—" : money(Number(v));
-  SHELF_TRADE_PREVIEW = null;
-  const accountOptions = BROKER_ACCOUNTS.map(x => `<option value="${esc(x.account_id)}">${esc(x.brokerage)} · ${esc(x.name)} ${esc(x.number_masked || "")}</option>`).join("");
-  showSheet(`<div class="broker-ticket shelf-trade-ticket">
+  host.hidden = false;
+  host.innerHTML = `<div class="broker-ticket shelf-trade-ticket shelf-trade-embedded">
     <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>
-    <p class="broker-copy">Prefilled from this NextShelf shelf card. Select your account and review the brokerage impact before confirming.</p>
-    <div class="broker-fields">
-      <div class="broker-field"><label>ACCOUNT</label><select id="shelfTradeAccount" onchange="invalidateShelfTradePreview()">${accountOptions || '<option value="">Connect a brokerage first</option>'}</select></div>
-      <div class="broker-field"><label>SYMBOL</label><input id="shelfTradeSymbol" value="${esc(sym)}" readonly></div>
-      <div class="broker-field"><label>QUANTITY · SHARES</label><input id="shelfTradeQty" type="number" min="1" max="10000" step="1" value="1" oninput="invalidateShelfTradePreview()"></div>
-      <div class="broker-field"><label>SIDE</label><div class="broker-side"><button type="button" class="${side === "BUY" ? "on buy" : ""}" disabled>Buy</button><button type="button" class="${side === "SELL" ? "on sell" : ""}" disabled>Sell</button></div><input id="shelfTradeSide" type="hidden" value="${side}"></div>
-      <div class="broker-field"><label>ORDER TYPE</label><select id="shelfTradeType" onchange="invalidateShelfTradePreview()"><option value="Market">Market</option><option value="Limit">Limit</option></select></div>
-      <div class="broker-field" id="shelfTradeLimitWrap" hidden><label>LIMIT PRICE · USD</label><input id="shelfTradeLimit" type="number" min="0.01" step="0.01" value="${price > 0 ? price.toFixed(2) : ""}" oninput="invalidateShelfTradePreview()"></div>
+    <div class="shelf-broker-line">${accountLine}<button type="button" class="shelf-change" onclick="toggleShelfTradeAccount()">Change</button></div>
+    <select id="shelfTradeAccount" class="shelf-account-select" onchange="invalidateShelfTradePreview()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>${options}</select>
+    <input id="shelfTradeSide" type="hidden" value="${side}">
+    <input id="shelfTradeQty" type="hidden" value="1">
+    <div class="shelf-segment-grid">
+      <div><label>Side</label><div class="shelf-seg broker-side"><button type="button" class="${side === "BUY" ? "on buy" : ""}" disabled>BUY</button><button type="button" class="${side === "SELL" ? "on sell" : ""}" disabled>SELL</button></div></div>
+      <div><label>Order type</label><div class="shelf-seg shelf-order-seg"><button type="button" class="on-market" id="shelfMarketBtn" onclick="setShelfTradeType('Market')">Market</button><button type="button" id="shelfLimitBtn" onclick="setShelfTradeType('Limit')">Limit</button></div><input id="shelfTradeType" type="hidden" value="Market"></div>
     </div>
-    <div class="broker-subnote">Setup context · Trigger: ${fmt(trigger)} · Next target: ${fmt(target)}. These are setup levels, not an order recommendation.</div>
-    <div class="broker-disclaimer">A brokerage impact preview is required for every order. Orders are submitted only after you review the preview and explicitly confirm.</div>
-    <div id="shelfTradeImpact" class="broker-impact-result" aria-live="polite">Choose an account, quantity and order type, then request an impact preview.</div>
-    <div class="broker-ticket-actions"><button id="shelfTradePreviewBtn" type="button" onclick="requestShelfTradeImpact()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>Check order impact</button><button id="shelfTradeConfirmBtn" type="button" class="disabled-submit" onclick="submitShelfTrade()" disabled>Confirm &amp; place order</button><button type="button" class="sec" onclick="closeSheet()">Close</button></div>
-    ${BROKER_ACCOUNTS.length ? "" : '<p class="broker-subnote">No connected account. <a href="#account" onclick="closeSheet()">Connect Webull in Account →</a></p>'}
-  </div>`);
+    <div class="shelf-qty-row"><div><label>Quantity</label><small>Shares</small></div><div class="shelf-stepper"><button type="button" aria-label="Decrease quantity" onclick="stepShelfTradeQty(-1)">−</button><b id="shelfTradeQtyDisplay">1</b><button type="button" aria-label="Increase quantity" onclick="stepShelfTradeQty(1)">+</button></div></div>
+    <div class="shelf-limit-wrap" id="shelfTradeLimitWrap" hidden><label>Limit price · USD</label><input id="shelfTradeLimit" type="number" min="0.01" step="0.01" value="${price > 0 ? price.toFixed(2) : ""}" oninput="invalidateShelfTradePreview()"></div>
+    <div class="shelf-price-rows"><div><span>Last price</span><b>${fmt(price)}</b></div><div><span>Trigger</span><b>${fmt(trigger)}</b></div></div>
+    <div id="shelfTradeImpact" class="broker-impact-result shelf-impact" aria-live="polite">Checking the order with SnapTrade…</div>
+    <button id="shelfTradeConfirmBtn" type="button" class="shelf-confirm disabled-submit" onclick="submitShelfTrade()" disabled><b id="shelfConfirmLabel">Confirm ${side.toLowerCase()} · 1 ${esc(sym)}</b><small id="shelfConfirmSub">Market order · ${label ? esc(label.broker + " " + label.masked) : "Brokerage account"}</small></button>
+    <p class="shelf-trade-note">You confirm every order. No auto-trading. Preview first — nothing is placed until you tap confirm.</p>
+  </div>`;
   updateShelfTradeLimit();
+  updateShelfTradeConfirmLabel();
+  if (BROKER_ACCOUNTS.length) requestShelfTradeImpact();
+  else $("shelfTradeImpact").textContent = "Connect a brokerage from the Account page to preview an order.";
+}
+function openShelfTrade(sym) {
+  if (!ME || !ME.is_admin) return;
+  const card = $("shelfTradeCard");
+  if (card) card.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function toggleShelfTradeAccount() {
+  const select = $("shelfTradeAccount"); if (!select) return;
+  select.classList.toggle("is-open");
+  if (select.classList.contains("is-open")) select.focus();
+}
+function updateShelfTradeConfirmLabel() {
+  const action = $("shelfTradeSide")?.value || "BUY", units = Number($("shelfTradeQty")?.value || 1);
+  const type = $("shelfTradeType")?.value || "Market", account = BROKER_ACCOUNTS.find(a => a.account_id === $("shelfTradeAccount")?.value);
+  const label = account ? shelfTradeAccountLabel(account) : null;
+  const main = $("shelfConfirmLabel"), sub = $("shelfConfirmSub");
+  if (main) main.textContent = "Confirm " + action.toLowerCase() + " · " + units + " " + SHELF_TRADE_SYMBOL;
+  if (sub) sub.textContent = type + " order · " + (label ? label.broker + " " + label.masked : "Brokerage account");
 }
 function updateShelfTradeLimit() {
-  const type = $("shelfTradeType")?.value || "Market";
-  const wrap = $("shelfTradeLimitWrap");
+  const type = $("shelfTradeType")?.value || "Market", wrap = $("shelfTradeLimitWrap");
   if (wrap) wrap.hidden = type !== "Limit";
+  $("shelfMarketBtn")?.classList.toggle("on-market", type === "Market");
+  $("shelfLimitBtn")?.classList.toggle("on-market", type === "Limit");
+}
+function setShelfTradeType(type) {
+  const input = $("shelfTradeType"); if (!input) return;
+  input.value = type; updateShelfTradeLimit(); invalidateShelfTradePreview();
+}
+function stepShelfTradeQty(delta) {
+  const input = $("shelfTradeQty"); if (!input) return;
+  input.value = String(Math.max(1, Math.min(10000, Number(input.value || 1) + delta)));
+  const display = $("shelfTradeQtyDisplay"); if (display) display.textContent = input.value;
+  updateShelfTradeConfirmLabel(); invalidateShelfTradePreview();
 }
 function invalidateShelfTradePreview() {
   SHELF_TRADE_PREVIEW = null;
   const btn = $("shelfTradeConfirmBtn"), out = $("shelfTradeImpact");
   if (btn) { btn.disabled = true; btn.classList.add("disabled-submit"); }
-  if (out) out.textContent = "Order details changed. Request a new brokerage impact preview.";
-  updateShelfTradeLimit();
-}
-async function requestShelfTradeImpact() {
-  const btn = $("shelfTradePreviewBtn"), out = $("shelfTradeImpact");
-  if (!BROKER_ACCOUNTS.length) { if (out) out.textContent = "Connect Webull from the Account page first."; return; }
-  const account_id = $("shelfTradeAccount")?.value || "";
-  const symbol = $("shelfTradeSymbol")?.value || "";
-  const action = $("shelfTradeSide")?.value || "";
-  const units = Number($("shelfTradeQty")?.value || 0);
-  const order_type = $("shelfTradeType")?.value || "Market";
-  const price = order_type === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
-  if (!account_id || !Number.isInteger(units) || units < 1 || units > 10000 || (order_type === "Limit" && !(price > 0))) {
-    if (out) out.textContent = "Choose a connected account and enter a valid whole-share quantity and limit price.";
+  if (out) out.textContent = "Order details changed. Checking a fresh brokerage preview…";
+  updateShelfTradeLimit(); updateShelfTradeConfirmLabel();
+  clearTimeout(SHELF_TRADE_DEBOUNCE);
+  const units = Number($("shelfTradeQty")?.value || 0), account = $("shelfTradeAccount")?.value || "";
+  const type = $("shelfTradeType")?.value || "Market", limit = Number($("shelfTradeLimit")?.value || 0);
+  if (!account || !Number.isInteger(units) || units < 1 || units > 10000 || (type === "Limit" && !(limit > 0))) {
+    if (out) out.textContent = type === "Limit" && !(limit > 0) ? "Enter a valid limit price to preview this order." : "Choose a connected account and a valid whole-share quantity (1–10,000).";
     return;
   }
+  SHELF_TRADE_DEBOUNCE = setTimeout(() => requestShelfTradeImpact(), 400);
+}
+function shelfTradeFee(impact) {
+  const candidates = [impact?.commission, impact?.estimated_commission, impact?.total_fees, impact?.fees?.commission, impact?.fees?.total, impact?.fees, impact?.trade?.commission, impact?.trade?.estimated_commission, impact?.trade?.fees?.total];
+  for (const value of candidates) {
+    const n = typeof value === "number" ? value : (typeof value === "string" && value.trim() ? Number(value.replace(/[$,]/g,"")) : NaN);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+async function requestShelfTradeImpact() {
+  const out = $("shelfTradeImpact");
+  if (!BROKER_ACCOUNTS.length) { if (out) out.textContent = "Connect Webull from the Account page first."; return; }
+  const account_id = $("shelfTradeAccount")?.value || "", symbol = SHELF_TRADE_SYMBOL;
+  const action = $("shelfTradeSide")?.value || "", units = Number($("shelfTradeQty")?.value || 0);
+  const order_type = $("shelfTradeType")?.value || "Market", price = order_type === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
+  if (!account_id || !Number.isInteger(units) || units < 1 || units > 10000 || (order_type === "Limit" && !(price > 0))) {
+    if (out) out.textContent = order_type === "Limit" && !(price > 0) ? "Enter a valid limit price to preview this order." : "Choose a connected account and enter a valid whole-share quantity.";
+    return;
+  }
+  const requestId = ++SHELF_TRADE_REQUEST;
   SHELF_TRADE_PREVIEW = null;
-  const confirmBtn = $("shelfTradeConfirmBtn");
-  if (confirmBtn) confirmBtn.disabled = true;
-  if (btn) btn.disabled = true;
+  const confirmBtn = $("shelfTradeConfirmBtn"); if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.classList.add("disabled-submit"); }
   if (out) out.textContent = "Checking the order with SnapTrade…";
   try {
     const result = await api("/api/broker/impact", {method:"POST", body:JSON.stringify({account_id,symbol,action,units,order_type,price})});
+    if (requestId !== SHELF_TRADE_REQUEST || symbol !== SHELF_TRADE_SYMBOL) return;
     SHELF_TRADE_PREVIEW = result.preview_id;
-    if (out) out.innerHTML = '<b>Brokerage impact preview received</b><pre class="broker-position-json">' + esc(JSON.stringify(result.impact || {}, null, 2)) + '</pre><small>Preview expires in ' + Number(result.expires_in_seconds || 300) + ' seconds. ' + esc(action) + ' ' + units + ' ' + esc(symbol) + ' · ' + esc(order_type) + '</small>';
+    const impact = result.impact || {}, unitPrice = order_type === "Limit" ? price : SHELF_TRADE_PRICE;
+    const estimate = units * unitPrice, fee = shelfTradeFee(impact), total = estimate + (fee == null ? 0 : fee);
+    const fmtMoney = n => Number.isFinite(n) ? "$" + n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) : "—";
+    if (out) out.innerHTML = '<div class="shelf-impact-title">Order impact preview</div><div class="shelf-impact-row"><span>Estimated cost · ' + units + ' × ' + fmtMoney(unitPrice) + '</span><b>' + fmtMoney(estimate) + '</b></div><div class="shelf-impact-row"><span>Commission</span><b>' + (fee == null ? "—" : fmtMoney(fee)) + '</b></div><div class="shelf-impact-row shelf-impact-total"><span>Total</span><b>' + fmtMoney(total) + '</b></div><details class="shelf-impact-raw"><summary>View full brokerage response</summary><pre class="broker-position-json">' + esc(JSON.stringify(impact,null,2)) + '</pre></details><small>Preview expires in ' + Number(result.expires_in_seconds || 300) + ' seconds.</small>';
     if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.classList.remove("disabled-submit"); }
   } catch (e) {
+    if (requestId !== SHELF_TRADE_REQUEST) return;
     if (out) out.textContent = e.message || "SnapTrade could not preview this order.";
-  } finally {
-    if (btn) btn.disabled = false;
   }
 }
 async function submitShelfTrade() {
-  if (!SHELF_TRADE_PREVIEW) { toast("Run a fresh order-impact preview first."); return; }
-  const symbol = $("shelfTradeSymbol")?.value || "";
-  const action = $("shelfTradeSide")?.value || "";
-  const units = Number($("shelfTradeQty")?.value || 0);
-  const orderType = $("shelfTradeType")?.value || "Market";
-  const price = orderType === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
+  if (!SHELF_TRADE_PREVIEW) { toast("A fresh order-impact preview is required first."); return; }
+  const symbol = SHELF_TRADE_SYMBOL, action = $("shelfTradeSide")?.value || "", units = Number($("shelfTradeQty")?.value || 0);
+  const orderType = $("shelfTradeType")?.value || "Market", price = orderType === "Limit" ? Number($("shelfTradeLimit")?.value || 0) : null;
   const details = action + " " + units + " share(s) of " + symbol + " · " + orderType + (price ? " at $" + price.toFixed(2) : "");
   if (!confirm("You are about to submit a REAL brokerage order.\n\n" + details + "\n\nSubmit this exact order?")) return;
-  const preview = SHELF_TRADE_PREVIEW;
-  SHELF_TRADE_PREVIEW = null;
+  const preview = SHELF_TRADE_PREVIEW; SHELF_TRADE_PREVIEW = null;
   const btn = $("shelfTradeConfirmBtn"), out = $("shelfTradeImpact");
-  if (btn) btn.disabled = true;
-  if (out) out.textContent = "Submitting the checked order to your brokerage…";
+  if (btn) btn.disabled = true; if (out) out.textContent = "Submitting the checked order to your brokerage…";
   try {
     const result = await api("/api/broker/order", {method:"POST", body:JSON.stringify({preview_id:preview,confirm:true})});
-    if (out) out.innerHTML = '<b>Order submitted</b><pre class="broker-position-json">' + esc(JSON.stringify(result.order || {}, null, 2)) + '</pre><small>Refresh your brokerage accounts to see updated positions and order status.</small>';
+    if (out) out.innerHTML = '<b>Order submitted</b><details class="shelf-impact-raw"><summary>View full brokerage response</summary><pre class="broker-position-json">' + esc(JSON.stringify(result.order || {},null,2)) + '</pre></details><small>Refresh your brokerage accounts to see updated positions and order status.</small>';
     toast("Brokerage order submitted.");
-  } catch (e) {
-    if (out) out.textContent = e.message || "The brokerage did not confirm the order.";
-    toast(e.message || "Order submission failed.");
-  }
+  } catch (e) { if (out) out.textContent = e.message || "The brokerage did not confirm the order."; toast(e.message || "Order submission failed."); }
 }
-
 function closeSheet() { $("sheet").hidden = true; }
 $("sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") closeSheet(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
@@ -3844,12 +3930,13 @@ async function openBrief(sym, focus) {
   document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false"); $("brief").scrollTop = 0;
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
+  renderShelfTradeCard(sym);
   BRIEF_SEC = "levels";
   $("brief").scrollTop = 0;
   loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
   } catch (e) {
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
