@@ -173,12 +173,17 @@ def accounts(user: dict) -> list[dict]:
         aid = _account_id(a)
         number = str(a.get("number") or a.get("account_number") or "")
         masked = ("•••• " + number[-4:]) if number else ""
+        total = a.get("total_value") or a.get("equity") or a.get("balance")
+        if isinstance(total, dict):
+            total = total.get("total") or total.get("value") or total.get("amount")
+        if not isinstance(total, (str, int, float)):
+            total = None
         result.append({
             "account_id": aid,
             "brokerage": a.get("brokerage_name") or a.get("brokerage") or a.get("institution_name") or "Brokerage",
             "name": a.get("name") or a.get("account_name") or "Investment account",
             "number_masked": masked,
-            "total_value": a.get("balance") or a.get("total_value") or a.get("equity"),
+            "total_value": total,
             "currency": a.get("currency") or "USD",
         })
     return result
