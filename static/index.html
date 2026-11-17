@@ -5919,6 +5919,7 @@ function gxbFmt(v) {
 }
 function gxbMom(v) { return v == null ? "" : (v > 0 ? "+" : "") + Number(v).toFixed(1) + "%"; }
 function gxbTime(t) { return t ? fmtET(t.slice(0,2)+":"+t.slice(2)) + " ET" : "—"; }
+function gxbDate() { return new Date().toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"America/New_York"}); }
 async function renderGexBoardGrid() {
   gxbStop();
   const host = $("setupBoard");
@@ -5992,7 +5993,7 @@ function paintGexBoard(ticker) {
     return '<tr class="'+(isPrice?'gxb-price':'')+'"><td><span class="gxb-strike">'+Number(r.strike).toFixed(2)+'</span>'+(isPrice?'<span class="gxb-price-tag">PRICE</span>':'')+(tags?'<div class="gxb-tags">'+tags+'</div>':'')+'</td>'+totalCell+expCells+'</tr>';
   }).join("");
   const replayHTML = hasReplay
-    ? '<div class="gxb-replay"><div class="gxb-replay-top"><span><strong>REPLAY · COMPLETE</strong> · '+replay.length+'/78 RECORDED</span><span id="gxbTime">'+gxbTime(replay[Math.max(0,GEX_BOARD_INDEX)])+'</span><button class="gxb-play" id="gxbPlay" onclick="toggleGexReplay()">'+(GEX_BOARD_TIMER?'PAUSE':'PLAY')+'</button></div><input type="range" min="0" max="'+Math.max(0,replay.length-1)+'" step="1" value="'+Math.max(0,GEX_BOARD_INDEX)+'" oninput="seekGexReplay(this.value)"></div>'
+    ? '<div class="gxb-replay"><div class="gxb-replay-top"><span><strong>REPLAY · COMPLETE</strong> · '+replay.length+'/78 RECORDED</span><span id="gxbTime">'+gxbTime(replay[Math.max(0,GEX_BOARD_INDEX)])+' · '+gxbDate()+'</span><button class="gxb-play" id="gxbPlay" onclick="toggleGexReplay()">'+(GEX_BOARD_TIMER?'PAUSE':'PLAY')+'</button></div><input type="range" min="0" max="'+Math.max(0,replay.length-1)+'" step="1" value="'+Math.max(0,GEX_BOARD_INDEX)+'" oninput="seekGexReplay(this.value)"></div>'
     : '<div class="gxb-note">'+(watched ? "Your first five-minute snapshots will enable momentum and replay." : "Add this ticker to your watchlist for momentum and replay.")+' The current grid is still available for every ticker.</div>';
   const rowsHTML = rows.length ? '<div class="gxb-grid-wrap"><table class="gxb-table"><thead><tr><th>STRIKE / LABELS</th><th>TOTAL NET</th>'+expiryHeads+'</tr></thead><tbody>'+body+'</tbody></table></div>'
     : '<div class="empty">No strikes with usable gamma data in the ±10% spot band.</div>';
