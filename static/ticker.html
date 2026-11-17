@@ -205,7 +205,7 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
   .gex-shelf-card { margin-top: 16px; min-width: 0; }
   .gex-shelf-layout { display: grid; grid-template-columns: minmax(260px, .85fr) minmax(0, 1.15fr); gap: 16px; align-items: start; margin-top: 12px; }
   .gex-shelf-layout > * { min-width: 0; }
-  #gexHeatmap { background: #0A0A0A; color: #FFFFFF; border: 1px solid #262626; border-radius: 10px; min-width: 0; overflow-x: auto; }
+  #gexHeatmap { background: #000000; color: #FFFFFF; border: 1px solid #262626; border-radius: 10px; min-width: 0; overflow-x: auto; }
   @media (max-width: 860px) { .gex-shelf-layout { grid-template-columns: 1fr; } }
   .gex-map-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 12px 14px 10px; border-bottom: 1px solid #262626; }
   .gex-map-head .t { font-size: 13px; font-weight: 800; letter-spacing: .08em; }
@@ -218,6 +218,9 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
   table.gex-map tr.spotrow th { color: #FFFFFF; }
   table.gex-map tr.spotrow td { outline: 2px solid #FFFFFF; outline-offset: -1px; }
   .gex-map .pricetag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; background: #FFFFFF; color: #000000; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: 1px; }
+  table.gex-map tr.strongest th { color: #FFFFFF; }
+  table.gex-map tr.strongest td { outline: 2px solid #FFFFFF; outline-offset: -1px; }
+  .gex-map .pulltag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; background: #DC2626; color: #FFFFFF; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: 1px; }
   .gex-map-legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid #262626; font-family: var(--mono); font-size: 11px; color: #A3A3A3; }
   .gex-map-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
   .gex-map-legend .sw.w { background: #FFFFFF; }
@@ -741,6 +744,13 @@ function renderGexHeatmap(j, message) {
   const spot = g.spot;
   const maxV = Math.max(...g.rows.flatMap(r => (r.gross || r.gex).map(v => Math.abs(v))), 1);
   const nearStrike = g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike;
+  // TOTAL notional per strike and strongest pull: largest absolute summed net GEX.
+  // All expiries share the same spot multiplier, so the ranking is scale-invariant.
+  const totals = g.rows.map(r => r.gex.reduce((a, b) => a + b, 0));
+  const grossTotals = g.rows.map(r => (r.gross || []).reduce((a, b) => a + b, 0));
+  const maxTotal = Math.max(...grossTotals.map(v => Math.abs(v)), 1);
+  const strongestIdx = totals.reduce((bi, t, i) => Math.abs(t) > Math.abs(totals[bi]) ? i : bi, 0);
+  const strongestStrike = g.rows[strongestIdx].strike;
   const fmt = v => (Math.abs(Number(v)) / 1e6).toFixed(2) + "M";
   const cell = (v, gv) => {
     const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
@@ -751,15 +761,25 @@ function renderGexHeatmap(j, message) {
     if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"}">−${fmt(v)}</td>`;
     return `<td style="color:#6B7280">0</td>`;
   };
+  const totalCell = (v, gv) => {
+    const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
+    const a = Math.min(0.10 + 0.90 * mag / maxTotal, 1).toFixed(2);
+    if (Math.abs(v) < 0.25 * Math.abs(gv || 0) && Math.abs(gv || 0) > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"};font-weight:700">${fmt(v)}</td>`;
+    if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"};font-weight:700">${fmt(v)}</td>`;
+    if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"};font-weight:700">−${fmt(v)}</td>`;
+    return `<td style="color:#6B7280;font-weight:700">0</td>`;
+  };
   const head = g.expiries.map(e => {
     const d = new Date(e + "T12:00:00");
     return `<th>${d.toLocaleDateString("en-US", {month:"short", day:"numeric"}).toUpperCase()}</th>`;
   }).join("");
-  const rowsHtml = g.rows.map(r => {
+  const rowsHtml = g.rows.map((r, ri) => {
     const at = r.strike === nearStrike;
-    return `<tr${at ? ' class="spotrow"' : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}</tr>`;
+    const isStrongest = r.strike === strongestStrike;
+    const cls = [at ? "spotrow" : "", isStrongest ? "strongest" : ""].filter(Boolean).join(" ");
+    return `<tr${cls ? ` class="${cls}"` : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}${isStrongest ? ' <span class="pulltag">STRONGEST PULL</span>' : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}${totalCell(totals[ri], grossTotals[ri])}</tr>`;
   }).join("");
-  host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">M = $1,000,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])}</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span>Brighter = more gamma</span></div>`;
+  host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">M = $1,000,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])} · TOTAL = sum across expiries</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}<th>TOTAL</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span><i class="sw r"></i>Strongest pull</span><span>Brighter = more gamma</span></div>`;
 }
 load();
 </script>
