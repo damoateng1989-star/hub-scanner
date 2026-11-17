@@ -253,7 +253,8 @@ def impact(user: dict, payload: dict) -> dict:
         notional_value=None,
     )
     body = _body(response)
-    trade_id = body.get("tradeId") or body.get("trade_id") if isinstance(body, dict) else None
+    trade = body.get("trade") if isinstance(body, dict) else None
+    trade_id = (trade.get("id") if isinstance(trade, dict) else None) or (body.get("tradeId") or body.get("trade_id") if isinstance(body, dict) else None)
     if not trade_id:
         raise RuntimeError("SnapTrade did not return a checked trade ID")
     preview_id = uuid.uuid4().hex
@@ -270,6 +271,8 @@ def impact(user: dict, payload: dict) -> dict:
     safe_body = dict(body) if isinstance(body, dict) else {"impact": body}
     safe_body.pop("tradeId", None)
     safe_body.pop("trade_id", None)
+    if isinstance(safe_body.get("trade"), dict):
+        safe_body["trade"].pop("id", None)
     return {"preview_id": preview_id, "expires_in_seconds": _PREVIEW_TTL,
             "order": {"symbol": symbol, "action": action, "units": units,
                       "order_type": order_type, "limit_price": price},
