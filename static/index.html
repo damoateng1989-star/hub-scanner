@@ -3231,6 +3231,15 @@ async function loadBrokerAccounts() {
   // Fetch account data even when the Account page is not mounted (e.g. from the ticker ticket).
   const host = $("brokerAccounts"), status = $("brokerStatus"), msg = $("brokerMessage");
   try {
+    const credentialState = await api("/api/broker/status");
+    if (!credentialState.credentials_available) {
+      BROKER_ACCOUNTS = [];
+      if (status) status.innerHTML = '<i></i> Needs recovery';
+      if (host) host.innerHTML = '<p class="broker-copy">The saved SnapTrade credentials are missing. Your existing Webull authorization has not been deleted. Do not reconnect yet; account recovery must be completed first.</p>';
+      if (msg) msg.textContent = "SnapTrade user: " + esc(credentialState.registered_user_id || "unknown") + " · Credential store: missing.";
+      if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
+      return;
+    }
     const data = await api("/api/broker/accounts");
     BROKER_ACCOUNTS = data.accounts || [];
     if (status) status.innerHTML = '<i></i> ' + (data.connected ? "Connected" : "Not connected");
