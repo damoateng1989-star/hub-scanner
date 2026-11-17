@@ -185,7 +185,7 @@ def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> 
         net: dict[float, float] = {}
         gross: dict[float, float] = {}
         for call, k, g, oi, v in by_exp[exp]:
-            ge = g * oi * 100
+            ge = g * oi * 100 * float(spot)
             net[k] = net.get(k, 0.0) + (ge if call else -ge)
             gross[k] = gross.get(k, 0.0) + abs(ge)
         pos = sorted(((k, v) for k, v in net.items() if v > 0), key=lambda kv: -kv[1])[:n]
@@ -244,7 +244,7 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         gross: dict[float, list] = {}
         for ei, exp in enumerate(exps):
             for call, k, g, oi, v in by_exp[exp]:
-                ge = g * oi * 100
+                ge = g * oi * 100 * float(spot)
                 row = net.setdefault(k, [0.0] * len(exps))
                 row[ei] += ge if call else -ge
                 grow = gross.setdefault(k, [0.0] * len(exps))
@@ -277,7 +277,7 @@ def _board_grid(contracts: list, spot: float) -> dict | None:
     gross: dict[float, list[float]] = {}
     for ei, exp in enumerate(exps):
         for call, k, g, oi, v in by_exp[exp]:
-            ge = float(g) * float(oi) * 100
+            ge = float(g) * float(oi) * 100 * float(spot)
             net.setdefault(k, [0.0] * len(exps))[ei] += ge if call else -ge
             gross.setdefault(k, [0.0] * len(exps))[ei] += abs(ge)
     rows = []
