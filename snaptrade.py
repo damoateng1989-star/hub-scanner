@@ -25,9 +25,10 @@ _PENDING: dict[str, dict[str, Any]] = {}
 _PREVIEW_TTL = 300
 
 try:
-    from snaptrade_client import SnapTrade
+    from snaptrade_client import SnapTrade, SnapTradeAuth
 except Exception:  # Keep the rest of NextShelf available if the optional SDK is absent.
     SnapTrade = None
+    SnapTradeAuth = None
 
 
 def configured() -> bool:
@@ -36,11 +37,15 @@ def configured() -> bool:
 
 
 def _client():
-    if not configured() or SnapTrade is None:
+    if not configured() or SnapTrade is None or SnapTradeAuth is None:
         raise RuntimeError("broker trading not configured")
+    # SDK 13.x requires an explicit Commercial API-key auth object.
+    # Passing client_id/consumer_key directly raises TypeError before any HTTP request.
     return SnapTrade(
-        client_id=os.environ["SNAPTRADE_CLIENT_ID"].strip(),
-        consumer_key=os.environ["SNAPTRADE_CONSUMER_KEY"].strip(),
+        auth=SnapTradeAuth.commercial_api_key(
+            client_id=os.environ["SNAPTRADE_CLIENT_ID"].strip(),
+            consumer_key=os.environ["SNAPTRADE_CONSUMER_KEY"].strip(),
+        )
     )
 
 
