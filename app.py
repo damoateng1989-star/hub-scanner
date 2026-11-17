@@ -1482,7 +1482,7 @@ class BrokerOrderBody(BaseModel):
     confirm: bool = False
 
 
-def _broker_error(exc: Exception):
+def _broker_error(exc: Exception, safe_message: str | None = None):
     if isinstance(exc, LookupError):
         raise HTTPException(404, str(exc))
     if isinstance(exc, PermissionError):
@@ -1496,7 +1496,7 @@ def _broker_error(exc: Exception):
     reason = getattr(exc, "reason", None)
     log.error("SnapTrade request failed: exception=%s status=%s reason=%s",
               type(exc).__name__, status, str(reason)[:160] if reason else "unavailable")
-    raise HTTPException(502, "Brokerage service could not complete the request")
+    raise HTTPException(502, safe_message or "Brokerage service could not complete the request")
 
 
 @app.post("/api/broker/register")
@@ -1531,7 +1531,10 @@ async def broker_accounts(u: dict = Admin):
         rows = await run_in_threadpool(snaptrade.accounts, u)
         return {"accounts": rows, "connected": bool(rows)}
     except Exception as e:
-        _broker_error(e)
+        _broker_error(
+            e,
+            "SnapTrade could not return your brokerage accounts. Your saved NextShelf credentials are still present; this error does not mean your Webull authorization was deleted. Do not reconnect while this is investigated.",
+        )
 
 
 @app.get("/api/broker/accounts/{account_id}/positions")
