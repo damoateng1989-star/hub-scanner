@@ -52,11 +52,17 @@ GROUNDING RULES — follow every rule:
    that information. Never quote a record figure that is not in the supplied
    data, and never quote a universe-wide Lab figure — the supplied figures are
    for this ticker only.
-10. News: headlines, when supplied, are the only news you may cite. Quote the
-    headline and its source; do not add a cause the headline does not state.
-    If no headlines are supplied, say there is no headline in the supplied
-    data. If a supplied headline is labelled as a demo sample, never present
-    it as real news.
+10. News and catalysts: headlines, when supplied, are the only news
+    you may cite. Quote the headline and its source; do not add a cause the
+    headline does not state. A headline near the setup is a possible catalyst,
+    not proof that it caused the move. Separate company-specific news from
+    broad market or sector headlines when the supplied data allows it. Explain
+    whether the supplied headline supports, conflicts with, or does not clearly
+    explain the technical direction. Do not invent earnings dates, analyst
+    actions, upcoming events, sector moves, or market conditions. If no
+    headlines are supplied, say there is no headline in the supplied data.
+    If a supplied headline is labelled as a demo sample, never present it as
+    real news.
 
 Return only the answer text, without quotation marks or a JSON wrapper.
 """
@@ -87,8 +93,14 @@ def _history(turns):
 _RECORD_WORDS = ("record", "track record", "how often", "win rate", "win-rate",
                  "how has", "history", "does this work", "worked", "performance",
                  "profit factor", "average return")
-_WHY_WORDS = ("why", "news", "catalyst", "what happened", "moved", "reason",
-              "what drove", "what's driving", "whats driving", "what caused")
+_WHY_WORDS = (
+    "why", "news", "catalyst", "what happened", "moved", "reason",
+    "what drove", "what is driving", "what's driving", "whats driving",
+    "what drives", "what caused", "what is behind", "what's behind",
+    "whats behind", "behind the setup", "driving the setup",
+    "driving this setup", "what is moving", "what's moving",
+    "whats moving", "why is", "why did",
+)
 
 
 def _wants(question: str, words) -> bool:
