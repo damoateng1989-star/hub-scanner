@@ -755,20 +755,30 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .sp-acts button, .sp-acts a { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 14px !important; border-radius: 12px !important;
   font: 700 14px var(--sans) !important; cursor: pointer; text-decoration: none; }
 .sp-go { background: #F4F6F9 !important; color: #0E0F12 !important; border: 0 !important; }
-.sp-go:disabled { opacity: .55; cursor: default; }
+ .sp-go:disabled { opacity: .55; cursor: default; }
+.sp-alt:disabled { opacity: .55; cursor: default; }
 .sp-alt { background: transparent !important; color: #C3C7CF !important; border: 1px solid #353639 !important; }
 .sp-hint { margin: 0; color: #9AA0AC; font-size: 13px; line-height: 1.45; }
 .sp-res { display: grid; gap: 4px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
+/* Ask Sika — Talon-style dialogue. */
+.ask-pop { position: fixed; right: 22px; bottom: 100px; z-index: 32; width: min(380px, calc(100vw - 24px)); max-height: calc(100vh - 140px); display: flex; flex-direction: column; padding: 16px; border-radius: 18px;
+  background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); animation: agIn .2s ease both; }
+.ask-pop[hidden] { display: none !important; }
+.ask-body { flex: 1 1 auto; overflow-y: auto; margin-top: 12px; display: grid; gap: 10px; min-height: 120px; align-content: start; }
+.ask-msg.ask-you { text-align: right; }
+.ask-msg.ask-you b { display: inline-block; padding: 8px 12px; border-radius: 12px; background: #1D1E21; color: #E9EBEF; font: 600 14px var(--sans); }
+.ask-row { display: flex; gap: 8px; margin-top: 12px; }
+.ask-row input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 12px; border: 1px solid #353639; background: #0E0F12; color: #E9EBEF; font: 500 14px var(--sans); }
+.ask-row input::placeholder { color: #9AA0AC; }
+.ask-send { flex: 0 0 auto; padding: 11px 14px; border-radius: 12px; font: 700 14px var(--sans); cursor: pointer; }
+.ask-foot { margin: 10px 0 0; color: #9AA0AC; font-size: 12px; text-align: center; }
+@media (max-width: 999px) { .ask-pop { right: 12px; bottom: calc(152px + env(safe-area-inset-bottom)); } }
 .sp-res:empty { display: none; }
 .sp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #0E0F12; border: 0 !important;
   color: #E9EBEF !important; font: 600 14px var(--sans) !important; cursor: pointer; text-align: left; width: 100%; }
 .sp-row:hover { background: #1D1E21 !important; }
 .sp-row span { display: inline-flex; align-items: center; gap: 7px; color: var(--c); font: 500 13px var(--sans); }
 .sp-row span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
-.sp-row-wrap { display: flex; gap: 6px; align-items: stretch; }
-.sp-row-wrap .sp-row { flex: 1; min-width: 0; }
-.sp-swing { flex: 0 0 auto; align-self: center; padding: 7px 10px; border-radius: 9px; border: 1px solid #353639; background: transparent; color: #C3C7CF; font: 600 12px var(--sans); cursor: pointer; }
-.sp-swing:hover { border-color: #3DD68C; color: #3DD68C; }
 @media (max-width: 999px) { .scout-fab { right: 14px; bottom: calc(84px + env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 19px !important; }
   .sf-radar { border-radius: 19px; } .scout-pop { right: 12px; bottom: calc(152px + env(safe-area-inset-bottom)); } .sf-tip { display: none; } }
 
@@ -2569,6 +2579,12 @@ html[data-theme="light"] .sg-b { color: #fff; }
   <div class="sp-acts" id="spActs"></div>
   <div class="sp-res" id="spRes"></div>
 </div>
+<div class="ask-pop" id="askPop" hidden role="dialog" aria-label="Ask Sika">
+  <div class="sp-head"><div><span class="sika-ava" id="askAva"></span><b>Sika</b><small class="live-pill">Live</small></div><button class="bf-x" onclick="askSikaClose()" aria-label="Close">✕</button></div>
+  <div class="ask-body" id="askBody"></div>
+  <div class="ask-row"><input id="askInput" type="text" placeholder="Ask Sika or type / for commands" autocomplete="off" autocapitalize="characters" spellcheck="false" onkeydown="if(event.key==='Enter')askSikaSend()"><button class="sp-go ask-send" type="button" onclick="askSikaSend()">Send</button></div>
+  <p class="ask-foot">Sika's read — not financial advice.</p>
+</div>
 
 <nav class="bottom" aria-label="Main"><a href="#today" data-tab="today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Today</span></a><a href="#discover" data-tab="discover"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Setups</span></a><a href="#list" data-tab="list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6L3.3 9.2l6.1-.6z"/></svg><span>Watchlist</span></a><a href="#results" data-tab="results"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg><span>Results</span></a><a href="#account" data-tab="account"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Account</span></a></nav>
 <div id="sheet" hidden><div class="sheet-card"><button class="x" onclick="closeSheet()" aria-label="Close">×</button><div id="sheetBody"></div></div></div>
@@ -2741,7 +2757,7 @@ function plainEnglish(r, kind) {
   return done || "No tight range right now. NextShelf will flag it once price settles into a tight range for 4+ four-hour candles.";
 }
 function plainRow(r, kind) {
-  return `<tr class="plain-row" hidden><td colspan="11"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">${ROBOT_SVG}</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div></div></td></tr>`;
+  return `<tr class="plain-row" hidden><td colspan="11"><div class="plain-panel" role="region" aria-label="Plain English: ${esc(r.symbol)}" data-sym="${esc(r.symbol)}"><div class="sika-head"><span class="sika-ava">${ROBOT_SVG}</span><span class="sika-name">Sika</span><span class="sika-live"><i></i>LIVE</span></div><div class="sika-analyzing"><div class="sika-step">Checking the hub</div><div class="sika-step">Measuring the distance to the edge</div><div class="sika-step">Finding the next shelf</div></div><div class="plain-body">${plainEnglish(r, kind)}</div><div class="plain-swing"></div></div></td></tr>`;
 }
 function togglePlain(btn) {
   const row = btn.closest("tr").nextElementSibling;
@@ -2752,6 +2768,11 @@ function togglePlain(btn) {
   btn.setAttribute("aria-expanded", String(open));
   btn.classList.toggle("on", open);
   if (!open) return;
+  // The Swing Play Card is part of Sika's read (Patch 153): load it into the
+  // panel below the paragraph. It fetches /api/swing-card/{symbol} (cached 60s).
+  const host = row.querySelector(".plain-swing");
+  const sym = row.querySelector(".plain-panel").dataset.sym;
+  if (host && sym) loadSwingCard(sym, host);
   // staged reveal: the text is already built from the row; the steps are presentation (~1.6s, no network).
   // The run guard ignores stale timers if the panel is closed and reopened mid-sequence.
   const steps = row.querySelectorAll(".sika-analyzing .sika-step");
@@ -4879,6 +4900,7 @@ function paintMap() {
       <div class="mp-right">
       <div class="mp-card mp-sika"><div class="mp-sh"><span class="sika-ava mp-ava" id="mpAva"></span><b>Sika</b><small>Plain English</small></div>
         <p class="mp-say">${MAP_Q ? mapAnswer(MAP_Q, P, st) : mapSummary(P, st)}</p>
+        <div id="mpSwing"></div>
         ${matchMedia("(max-width: 899px)").matches && !MAP_ASK && !MAP_Q ? `<div class="mp-qs"><button onclick="MAP_ASK=true;paintMap()">Ask Sika<span>›</span></button></div>`
           : `<div class="mp-qs">${qs.map(([k, t]) => `<button class="${MAP_Q === k ? "on" : ""}" onclick="mapQ('${k}')">${t}<span>›</span></button>`).join("")}</div>`}
         <p class="mp-fine">Based on NextShelf's rules and past prices. For education only, not financial advice.</p></div>
@@ -4889,6 +4911,7 @@ function paintMap() {
   const slot = $("mpBodySlot"), body = $("bfBody"); if (slot && body) slot.appendChild(body);   // Game plan etc. sit right under the grade
   initLightweightMapChart();
   mapWire();
+  if ($("mpSwing") && BRIEF_SYM) loadSwingCard(BRIEF_SYM, "mpSwing");
   if (MAP_HOVER) mapShowAt(MAP_HOVER.x, MAP_HOVER.yy, true);
 }
 // ---------------- replay ----------------
@@ -6076,8 +6099,17 @@ const OPT_FETCHING = {};
 // ---------------------------------------------------------------- swing play card (Sika's read, Patch 152)
 const SWING_CACHE = {};
 const SWING_FETCHING = {};
-async function loadSwingCard(sym) {
-  const put = (h) => { if (BRIEF_SYM === sym && $("bfSwing")) $("bfSwing").innerHTML = h; };
+async function loadSwingCard(sym, host) {
+  // host: optional. An id string ("mpSwing") re-queries that id at put time (the brief's
+  // containers — the BRIEF_SYM guard still applies, so a slow fetch never overwrites the
+  // brief after navigating away). An element (the board's Plain English panel) is written
+  // into only while it is still in the document. Omitted = #bfSwing (unchanged behaviour).
+  const put = (h) => {
+    const el = !host ? $("bfSwing") : (typeof host === "string" ? $(host) : host);
+    if (!el || !el.isConnected) return;
+    if (typeof host !== "object" && BRIEF_SYM !== sym) return;
+    el.innerHTML = h;
+  };
   if (!ME || ME.guest || !(isPro() || ME.options)) {
     put(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
       <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}" onclick="closeBrief()">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
@@ -6857,27 +6889,62 @@ document.addEventListener("click", (e) => {
   if (!pop.hidden && document.contains(e.target) && !pop.contains(e.target) && !$("scoutFab").contains(e.target)) toggleScout(false);
 });
 function scoutRow(sym, kind, color) {
-  return `<div class="sp-row-wrap"><button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button><button class="sp-swing" type="button" onclick="event.stopPropagation();askSwingPlay('${esc(sym)}')">Swing play</button></div>`;
+  return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
 }
-async function askSwingPlay(sym) {
-  const host = $("spRes"); if (!host) return;
-  const back = `<button class="sp-alt" type="button" onclick="renderScout()">← Back to the list</button>`;
+// Ask Sika — a dialogue box (Patch 153). Talon-style chat panel: the member
+// types a ticker, or /swing SYM, and Sika returns the Swing Play Card in the
+// body above the input. Only /swing is a command; do not add others.
+function askSikaOpen() {
+  if ((SCOUT_SC && SCOUT_SC.running) || MY_SCANNING) return;
+  toggleScout(false);
+  const pop = $("askPop"); if (!pop) return;
+  pop.hidden = false;
+  const ava = $("askAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
+  const body = $("askBody");
+  if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Ask me about a ticker — try <b>AMAT</b>, or <b>/swing AMAT</b>.</p>`;
+  const inp = $("askInput"); if (inp) inp.focus();
+}
+function askSikaClose() { const pop = $("askPop"); if (pop) pop.hidden = true; }
+function askSikaSay(html, cls) {
+  const body = $("askBody"); if (!body) return null;
+  const d = document.createElement("div");
+  d.className = "ask-msg " + (cls || "ask-sika");
+  d.innerHTML = html;
+  body.appendChild(d);
+  body.scrollTop = body.scrollHeight;
+  return d;
+}
+async function askSikaSend() {
+  const inp = $("askInput"); if (!inp) return;
+  const raw = (inp.value || "").trim();
+  if (!raw) return;
+  inp.value = "";
+  askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
+  let sym = null;
+  if (raw.startsWith("/")) {
+    const parts = raw.slice(1).split(/\s+/);
+    const cmd = (parts[0] || "").toLowerCase();
+    if (cmd !== "swing") { askSikaSay(`<p class="sp-hint">Sika only takes <b>/swing</b> for now — try <b>/swing AMAT</b>.</p>`); return; }
+    sym = (parts[1] || "").toUpperCase().replace(/[^A-Z0-9.]/g, "");
+    if (!sym) { askSikaSay(`<p class="sp-hint">Try <b>/swing AMAT</b> — a ticker after /swing.</p>`); return; }
+  } else {
+    sym = raw.toUpperCase().replace(/[^A-Z0-9.\s]/g, "").split(/\s+/)[0] || "";
+    if (!sym) { askSikaSay(`<p class="sp-hint">Type a ticker, like <b>AMAT</b> — or <b>/swing AMAT</b>.</p>`); return; }
+  }
   if (!ME || ME.guest || !(isPro() || ME.options)) {
-    host.innerHTML = `<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
-      <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>` + back;
+    askSikaSay(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p><a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
     return;
   }
-  host.innerHTML = `<p class="sp-hint">Sika is reading ${esc(sym)}…</p>`;
+  const reading = askSikaSay(`<p class="sp-hint">Sika is reading ${esc(sym)}…</p>`);
   let c = null;
   try { c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000}); }
   catch (e) {
-    host.innerHTML = (e && e.status === 403)
+    if (reading) reading.innerHTML = (e && e.status === 403)
       ? `<div class="ox-lock"><b>Swing plays are a Pro feature.</b><p>Sika's read — the favored side, the trigger, the targets, and the wrong-if — is part of Pro.</p><a class="btnx sm" href="#account">Pro feature · see plans</a></div>`
       : `<p class="sp-hint">Sika couldn't read ${esc(sym)} right now (${esc(friendly(e))}).</p>`;
-    host.innerHTML += back;
     return;
   }
-  host.innerHTML = swingCardHTML(c) + back;
+  if (reading) reading.innerHTML = swingCardHTML(c);
 }
 function renderScout() {
   const sc = SCOUT_SC, pop = $("scoutPop");
@@ -6901,6 +6968,7 @@ function renderScout() {
     : (n ? `<button class="sp-go" onclick="scoutScanMine()" ${MY_SCANNING ? "disabled" : ""}>🔍 ${MY_SCANNING ? "Scanning…" : "Scan my watchlist now"}</button>`
          : `<a class="sp-go" href="#list" onclick="toggleScout(false)">＋ Add stocks to your Watchlist</a><p class="sp-hint">Your watchlist is empty. Add a few stocks (like NVDA or AAPL) and I can scan them for you anytime.</p>`)
       + (admin ? `<button class="sp-alt" onclick="scoutSweep()" ${sc.running ? "disabled" : ""}>${sc.running ? "Sweep running…" : "Sweep the whole market"}</button>` : "")
+      + `<button class="sp-alt" type="button" onclick="askSikaOpen()" ${(sc.running || MY_SCANNING) ? "disabled" : ""}>Ask Sika</button>`
       + `<a class="sp-alt" href="#discover" onclick="toggleScout(false)">Open the market board</a>`;
   const col = { breakout_up: ["Breaking out ↑", "#3DD68C"], breakdown: ["Breaking down ↓", "#FF6B5E"], forming: ["Resting in a hub", "#7C93FF"] };
   if (sc.running && (sc.found || []).length) $("spRes").innerHTML = sc.found.slice().reverse().map(f => scoutRow(f.symbol, (f.setup ? f.setup + " " : "") + f.kind, FIND_C[f.kind] || "#9AA0AC")).join("");
@@ -7499,6 +7567,8 @@ html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cd
 .mp-ava { width: 34px !important; height: 34px !important; display: inline-grid; place-items: center; }
 .mp-ava svg { width: 100%; height: 100%; }
 .mp-say { margin: 0; font-size: 14px; line-height: 1.55; padding: 12px 14px; border-radius: 12px; background: color-mix(in srgb, var(--mp-ink) 5%, transparent); }
+#mpSwing, .plain-swing { margin-top: 12px; }
+#mpSwing:empty, .plain-swing:empty { display: none; }
 .mp-qs { display: grid; gap: 8px; }
 .mp-qs button { display: flex; justify-content: space-between; align-items: center; text-align: left; font: 500 13.5px var(--sans, system-ui); color: var(--mp-ink);
   background: transparent; border: 1px solid var(--mp-line); border-radius: 10px; padding: 10px 12px; cursor: pointer; }
