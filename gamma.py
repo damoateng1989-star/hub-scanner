@@ -106,7 +106,7 @@ def _compute(contracts: list, spot: float, today: date) -> dict | None:
 
 
 def _fetch_contracts(symbol: str, force: bool = False) -> list:
-    """Chain for (symbol, today), fetched once a day and kept slim. [] on failure (fail-open). Never raises."""
+    """Slim chain cache; normally once/day, with force=True for scheduled GEX snapshots. [] on failure."""
     sym = (symbol or "").upper()
     today = date.today().isoformat()
     key = (sym, today)
@@ -329,6 +329,9 @@ def _board_grid(contracts: list, spot: float) -> dict | None:
     # Keep the defining levels visible even when they are not among the 25
     # largest gross strikes; fill by replacing the weakest non-mandatory row.
     mandatory = [r for r in rows if any(tag in r["labels"] for tag in ("GF", "CEILING", "OS", "Wall"))]
+    nearest = min(rows, key=lambda r: abs(float(r["strike"]) - float(spot)))
+    if nearest not in mandatory:
+        mandatory.append(nearest)
     for required in mandatory:
         if required not in selected:
             replace_at = next((i for i in range(len(selected) - 1, -1, -1)
