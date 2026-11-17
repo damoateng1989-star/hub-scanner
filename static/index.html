@@ -765,6 +765,10 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .sp-row:hover { background: #1D1E21 !important; }
 .sp-row span { display: inline-flex; align-items: center; gap: 7px; color: var(--c); font: 500 13px var(--sans); }
 .sp-row span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.sp-row-wrap { display: flex; gap: 6px; align-items: stretch; }
+.sp-row-wrap .sp-row { flex: 1; min-width: 0; }
+.sp-swing { flex: 0 0 auto; align-self: center; padding: 7px 10px; border-radius: 9px; border: 1px solid #353639; background: transparent; color: #C3C7CF; font: 600 12px var(--sans); cursor: pointer; }
+.sp-swing:hover { border-color: #3DD68C; color: #3DD68C; }
 @media (max-width: 999px) { .scout-fab { right: 14px; bottom: calc(84px + env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 19px !important; }
   .sf-radar { border-radius: 19px; } .scout-pop { right: 12px; bottom: calc(152px + env(safe-area-inset-bottom)); } .sf-tip { display: none; } }
 
@@ -1533,6 +1537,27 @@ html[data-theme="light"] .sweep-btn { box-shadow: 0 6px 18px rgba(22,163,74,.18)
 .bf-earn b { color: #F2C14E; } .bf-earn i { font-style: normal; }
 .ox-earn { margin: 0 0 10px; padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #e9d9a6; background: rgba(242,193,78,.08); border: 1px solid rgba(242,193,78,.3); }
 .ox-earn b { color: #F2C14E; }
+/* Swing Play Card (Patch 152) — Sika's read. Favored side green, opposite red. */
+.sw-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.sw-head b { font: 700 17px var(--sans); }
+.sw-setup { color: var(--muted); font-size: 13px; }
+.sw-grade { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 7px; background: #1D1E21; color: #F2C14E; font: 800 12.5px var(--sans); }
+.sw-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 600px) { .sw-sides { grid-template-columns: 1fr; } }
+.sw-side { border: 1px solid var(--line); border-radius: 12px; padding: 12px; }
+.sw-side.fav { border-color: rgba(61,214,140,.45); background: rgba(61,214,140,.06); }
+.sw-side.opp { border-color: rgba(255,107,94,.45); background: rgba(255,107,94,.06); }
+.sw-side h4 { margin: 0 0 8px; font: 700 14.5px var(--sans); }
+.sw-side.fav h4 { color: #3DD68C; }
+.sw-side.opp h4 { color: #FF6B5E; }
+.sw-rows > div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.sw-rows > div span { color: var(--muted); flex: 0 0 auto; }
+.sw-rows > div b { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sw-contract { margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+.sw-note { margin: 4px 0 0; padding: 12px; border: 1px dashed var(--line-2); border-radius: 12px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.sw-ctx { margin: 10px 0 0; padding: 9px 12px; border: 1px solid rgba(242,193,78,.3); border-radius: 10px; color: #e9d9a6; background: rgba(242,193,78,.08); font-size: 13px; line-height: 1.45; }
+html[data-theme="light"] .sw-ctx { color: #78350f; background: #fffbeb; border-color: #fcd34d; }
+.sw-foot { margin: 10px 0 0; color: var(--muted); font-size: 12px; }
 html[data-theme="light"] .earn-tag { color: #92400e; background: rgba(217,119,6,.08); border-color: rgba(217,119,6,.35); }
 html[data-theme="light"] .earn-tag.soon { color: #fff; background: #d97706; border-color: #d97706; }
 html[data-theme="light"] .bf-earn, html[data-theme="light"] .ox-earn { color: #78350f; background: #fffbeb; border-color: #fcd34d; }
@@ -2526,6 +2551,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   </div>
+  <div id="bfSwing"></div>
   <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
   <div id="shelfTradeCard" hidden></div>
@@ -3957,11 +3983,11 @@ async function openBrief(sym, focus) {
   renderShelfTradeCard(sym);
   BRIEF_SEC = "levels";
   $("brief").scrollTop = 0;
-  loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
+  loadOptions(sym); loadSwingCard(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
   if (ME && ME.is_admin) loadBrokerAccounts();
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadSwingCard(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
   } catch (e) {
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
@@ -6047,6 +6073,29 @@ $("bScan").addEventListener("click", async () => {
 // ---------------------------------------------------------------- options swing plan (Shelf card)
 const OPT_CACHE = {};
 const OPT_FETCHING = {};
+// ---------------------------------------------------------------- swing play card (Sika's read, Patch 152)
+const SWING_CACHE = {};
+const SWING_FETCHING = {};
+async function loadSwingCard(sym) {
+  const put = (h) => { if (BRIEF_SYM === sym && $("bfSwing")) $("bfSwing").innerHTML = h; };
+  if (!ME || ME.guest || !(isPro() || ME.options)) {
+    put(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
+      <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}" onclick="closeBrief()">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
+    return;
+  }
+  const fresh = SWING_CACHE[sym] && Date.now() - SWING_CACHE[sym]._t < 60000;
+  if (fresh) { put(swingCardHTML(SWING_CACHE[sym])); return; }
+  if (SWING_FETCHING[sym]) return;
+  SWING_FETCHING[sym] = true;
+  put(loadingHTML("Sika is reading the play…"));
+  try {
+    const c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000});
+    delete SWING_FETCHING[sym]; c._t = Date.now(); SWING_CACHE[sym] = c; put(swingCardHTML(c));
+  } catch (e) {
+    delete SWING_FETCHING[sym];
+    put(`<p class="ox-note">Sika couldn't read the swing play right now (${esc(friendly(e))}).</p>`);
+  }
+}
 async function loadOptions(sym) {
   const put = (h) => { if (BRIEF_SYM === sym && $("bfOpt")) $("bfOpt").innerHTML = h; };
   if (!ME || ME.guest || !(isPro() || ME.options)) {
@@ -6062,6 +6111,30 @@ async function loadOptions(sym) {
   try { const o = await api(`/api/options/${encodeURIComponent(sym)}`, {timeout: 45000}); clearTimeout(slow); delete OPT_FETCHING[sym]; o._t = Date.now(); OPT_CACHE[sym] = o; put(optionsHTML(o)
       + (ME && ME.is_admin && o.timing ? `<p class="bf-fine">Priced in ${o.timing.total}s · price history ${o.timing.history}s · analysis ${o.timing.analysis}s · option chain ${o.timing.chain}s</p>` : "")); }
   catch (e) { clearTimeout(slow); delete OPT_FETCHING[sym]; put(`<p class="ox-note">Options prices aren't available right now (${esc(friendly(e))}).</p>`); }
+}
+function swingCardHTML(c) {
+  if (!c) return `<p class="ox-note">Sika couldn't read the swing play right now.</p>`;
+  const head = `<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>${c.setup ? `<span class="sw-setup">${esc(c.setup)}</span>` : ""}${c.grade ? `<span class="sw-grade">${esc(c.grade)}</span>` : ""}</div>`;
+  const asof = c.as_of ? `<p class="sw-foot">As of ${new Date(c.as_of).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}. For education only, not financial advice.</p>` : `<p class="sw-foot">For education only, not financial advice.</p>`;
+  const ctx = (c.context || []).map(x => `<p class="sw-ctx">${esc(x)}</p>`).join("");
+  if (c.state === "in_between" && c.in_between) {
+    return head + `<p class="sw-note">${esc(c.in_between.text)}</p>` + ctx + asof;
+  }
+  if (c.state === "waiting" || !c.favored) {
+    return head + `<p class="sw-note">${esc(c.message || "No setup in play right now.")}</p>` + ctx + asof;
+  }
+  const side = (s, cls) => {
+    const rows = [
+      ["Trigger", esc(s.trigger.text)],
+      ["Targets", s.targets.map(esc).join(" · ")],
+      ["Extension", esc(s.extension.text)],
+      ["Confirm", s.confirm.map(esc).join("<br>")],
+      ["Wrong if", esc(s.wrong_if)],
+    ];
+    const ct = s.contract ? `<p class="sw-contract">${esc(s.contract.expiry)} ${s.contract.strike} ${s.contract.side}s · ${s.contract.cost_mid.toFixed(2)} mid</p>` : "";
+    return `<div class="sw-side ${cls}"><h4>${esc(s.label)}</h4><div class="sw-rows">${rows.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div>${ct}</div>`;
+  };
+  return head + `<div class="sw-sides">${side(c.favored, "fav")}${c.opposite ? side(c.opposite, "opp") : ""}</div>` + ctx + asof;
 }
 function optionsHTML(o) {
   if (!o.plans || !o.plans.length) return `<p class="ox-note">${esc(o.message || "No options swing to plan right now.")}</p>`;
@@ -6784,7 +6857,27 @@ document.addEventListener("click", (e) => {
   if (!pop.hidden && document.contains(e.target) && !pop.contains(e.target) && !$("scoutFab").contains(e.target)) toggleScout(false);
 });
 function scoutRow(sym, kind, color) {
-  return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
+  return `<div class="sp-row-wrap"><button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button><button class="sp-swing" type="button" onclick="event.stopPropagation();askSwingPlay('${esc(sym)}')">Swing play</button></div>`;
+}
+async function askSwingPlay(sym) {
+  const host = $("spRes"); if (!host) return;
+  const back = `<button class="sp-alt" type="button" onclick="renderScout()">← Back to the list</button>`;
+  if (!ME || ME.guest || !(isPro() || ME.options)) {
+    host.innerHTML = `<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
+      <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>` + back;
+    return;
+  }
+  host.innerHTML = `<p class="sp-hint">Sika is reading ${esc(sym)}…</p>`;
+  let c = null;
+  try { c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000}); }
+  catch (e) {
+    host.innerHTML = (e && e.status === 403)
+      ? `<div class="ox-lock"><b>Swing plays are a Pro feature.</b><p>Sika's read — the favored side, the trigger, the targets, and the wrong-if — is part of Pro.</p><a class="btnx sm" href="#account">Pro feature · see plans</a></div>`
+      : `<p class="sp-hint">Sika couldn't read ${esc(sym)} right now (${esc(friendly(e))}).</p>`;
+    host.innerHTML += back;
+    return;
+  }
+  host.innerHTML = swingCardHTML(c) + back;
 }
 function renderScout() {
   const sc = SCOUT_SC, pop = $("scoutPop");
