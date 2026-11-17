@@ -3376,7 +3376,7 @@ function openShelfTrade(sym) {
     <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>
     <p class="broker-copy">Prefilled from this NextShelf shelf card. Select your account and review the brokerage impact before confirming.</p>
     <div class="broker-fields">
-      <div class="broker-field"><label>ACCOUNT</label><select id="shelfTradeAccount">${accountOptions || '<option value="">Connect a brokerage first</option>'}</select></div>
+      <div class="broker-field"><label>ACCOUNT</label><select id="shelfTradeAccount" onchange="invalidateShelfTradePreview()">${accountOptions || '<option value="">Connect a brokerage first</option>'}</select></div>
       <div class="broker-field"><label>SYMBOL</label><input id="shelfTradeSymbol" value="${esc(sym)}" readonly></div>
       <div class="broker-field"><label>QUANTITY · SHARES</label><input id="shelfTradeQty" type="number" min="1" max="10000" step="1" value="1" oninput="invalidateShelfTradePreview()"></div>
       <div class="broker-field"><label>SIDE</label><div class="broker-side"><button type="button" class="${side === "BUY" ? "on buy" : ""}" disabled>Buy</button><button type="button" class="${side === "SELL" ? "on sell" : ""}" disabled>Sell</button></div><input id="shelfTradeSide" type="hidden" value="${side}"></div>
