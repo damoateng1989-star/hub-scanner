@@ -2794,6 +2794,13 @@ async function loadTickers() {
     return;
   }
   render(); renderStrip(); renderRule(); paintLive();
+  // Patch 143: the GEX tab badges count the watchlist (setupTabs reads TICKERS),
+  // so refresh them as soon as the watchlist loads — otherwise they read 0 until
+  // the next board refresh.
+  document.querySelectorAll(".setup-tabs button").forEach((btn, i) => {
+    const k = SETUP_TABS[i] && SETUP_TABS[i][0];
+    if ((k === "gex" || k === "gexboard") && btn.querySelector("small")) btn.querySelector("small").textContent = TICKERS.length;
+  });
   if (ME && ME.ticker_limit) $("err").innerHTML = TICKERS.length >= ME.ticker_limit && !$("err").textContent
     ? `Free plan: ${TICKERS.length}/${ME.ticker_limit} tickers. <a class="upsell" style="margin:0" href="#account">Upgrade for unlimited →</a>` : $("err").innerHTML;
 }
@@ -5567,8 +5574,9 @@ function renderInstitutionalBoard(){
     const metaLine=boardMetaLine(r,kind,shelf);
     const rangeCell=boardGauge(r,kind,status[1])+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
+    const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(r.last_close)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -5839,6 +5847,7 @@ function setupWord(x) {
 }
 function setupTabs(b) {
   const n = (k) => k === "hub" ? (b.forming || []).length + ((b.live || []).length || b.live_count || 0)   // hubs in play: resting (incl. at the edge) + breaking out now
+    : (k === "gex" || k === "gexboard") ? (typeof TICKERS !== "undefined" ? TICKERS.length : 0)   // GEX boards are watchlist-built, not from BOARD_DATA.setups
     : (b.setups || []).filter(x => x.style === k).length;
   return `<div class="setup-tabs" role="tablist">${SETUP_TABS.map(([k, label]) =>
     `<button class="${SETUP_TAB === k ? "on" : ""}" onclick="pickSetupTab('${k}')">${setupIcon(k)}<span>${label}</span><small>${n(k)}</small>${k !== "hub" && k !== "double" && k !== "gapfade" ? '<i>beta</i>' : ""}</button>`).join("")}</div>`;
@@ -5877,22 +5886,29 @@ function renderSetupBoard() {
 
  // GEX board (Patch 135, watch-only): one mini card per watchlist ticker — price, nearest
 // walls, and a one-word state. Built from the watchlist (TICKERS) and /api/gamma per ticker.
-// No Lab record behind it, no alerts. A failed fetch for one ticker skips that card.
+// No Lab record behind it, no alerts. A failed fetch is retried once; if it still fails,
+// that ticker renders a visible NO GAMMA card instead of being silently skipped.
 async function renderGexBoard() {
   const host = $("setupBoard");
   host.innerHTML = `<div class="beta-note"><b>Watch-only.</b> Gamma shelves are levels, not a setup — there is no Lab record behind them yet, and no alert fires on them. The Lab measures the wall trigger next; only a passing trigger earns an alert.</div><p class="setup-about">A call wall is a ceiling shelf, a put wall is a floor shelf. This board shows where each stock on your watchlist sits against its gamma walls.</p><div class="empty">Loading gamma walls…</div>`;
   const syms = (typeof TICKERS !== "undefined" ? TICKERS : []).map(t => t.symbol).filter(Boolean);
   if (!syms.length) { host.innerHTML = `<div class="beta-note"><b>Watch-only.</b> Gamma shelves are levels, not a setup — there is no Lab record behind them yet, and no alert fires on them.</div><div class="empty">Your watchlist is empty. Add a ticker and its gamma walls will show here.</div>`; return; }
-  const results = await Promise.all(syms.map(async sym => {
-    try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); return { sym, j }; }
-    catch (_) { return { sym, j: null }; }
-  }));
+  const fetchGamma = async (sym) => {
+    try { return await api(`/api/gamma/${encodeURIComponent(sym)}`); }
+    catch (_) {
+      await new Promise(r => setTimeout(r, 500));
+      try { return await api(`/api/gamma/${encodeURIComponent(sym)}`); }
+      catch (_) { return null; }
+    }
+  };
+  const results = await Promise.all(syms.map(async sym => ({ sym, j: await fetchGamma(sym) })));
   const cards = results.map(({ sym, j }) => {
     const w = j && j.walls, s = j && j.shelves;
-    if (!w && !s) return "";
+    const missing = `<a class="gex-mini gex-mini-missing" href="/t/${esc(sym)}"><span class="gex-mini-top"><b>${esc(sym)}</b><i>NO GAMMA</i></span><span class="gex-mini-px">—</span><span class="gex-mini-wall">Gamma walls could not be loaded. Check again after the next 4-hour close.</span></a>`;
+    if (!w && !s) return missing;
     const spot = s ? s.spot : null;
     const cw = w ? w.call_wall : null, pw = w ? w.put_wall : null;
-    if (spot == null || cw == null || pw == null) return "";
+    if (spot == null || cw == null || pw == null) return missing;
     const near = Math.min(Math.abs(spot - cw), Math.abs(spot - pw)) / spot;
     const at = near <= 0.01;
     const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
