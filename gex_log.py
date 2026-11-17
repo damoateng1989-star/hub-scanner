@@ -47,7 +47,8 @@ def _metrics(rs: list) -> dict:
 
 def stats() -> dict:
     """Gate numbers per trigger type and combined. Overlapping labels count once in combined."""
-    rows = [r for r in _load() if r.get("outcome") in ("follow-through", "snap-back", "stalled")]
+    rows = sorted((r for r in _load() if r.get("outcome") in ("follow-through", "snap-back", "stalled")),
+                  key=lambda r: (r.get("close_time") or "", r.get("ticker") or "", r.get("direction") or 0))
     out = {}
     for trig in ("T1", "T2", "T3-long", "T3-short", "T4-long", "T4-short"):
         out[trig] = _metrics([r for r in rows if r.get("key") == trig])
