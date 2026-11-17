@@ -116,7 +116,6 @@ def portal(user: dict) -> str:
     uid, secret = _credentials(user)
     response = client.authentication.login_snap_trade_user(
         user_id=uid, user_secret=secret, connection_type="trade-if-available",
-        connection_portal_version="v4", dark_mode=True,
     )
     body = getattr(response, "body", response)
     if isinstance(body, dict):
