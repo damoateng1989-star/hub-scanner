@@ -228,6 +228,32 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
 .seg{display:inline-flex;background:var(--sunk,#1A1C22);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
 .seg button{border:0;background:transparent;color:var(--muted);font:inherit;font-size:12px;padding:4px 12px;border-radius:999px;cursor:pointer}
 .seg button.on{background:#fff;color:#111;font-weight:600}
+/* Patch 152 — Swing Play Card, scoped to ticker page */
+#swingPlay { margin-top:14px; } #swingPlay h2 { margin-top:0; }
+#swingPlay .sw-head { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+#swingPlay .sw-head b { font:700 17px var(--sans); }
+#swingPlay .sw-setup { color:var(--muted); font-size:13px; }
+#swingPlay .sw-grade { display:inline-flex; align-items:center; justify-content:center; min-width:22px; height:22px; padding:0 6px; border-radius:7px; background:#1D1E21; color:#F2C14E; font:800 12.5px var(--sans); }
+#swingPlay .sw-sides { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#swingPlay .sw-side { border:1px solid var(--line); border-radius:12px; padding:12px; }
+#swingPlay .sw-side.fav { border-color:rgba(61,214,140,.45); background:rgba(61,214,140,.06); }
+#swingPlay .sw-side.opp { border-color:rgba(255,107,94,.45); background:rgba(255,107,94,.06); }
+#swingPlay .sw-side h4 { margin:0 0 8px; font:700 14.5px var(--sans); }
+#swingPlay .sw-side.fav h4 { color:#3DD68C; } #swingPlay .sw-side.opp h4 { color:#FF6B5E; }
+#swingPlay .sw-rows > div { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-top:1px solid var(--line); font-size:13.5px; }
+#swingPlay .sw-rows > div span { color:var(--muted); flex:0 0 auto; }
+#swingPlay .sw-rows > div b { text-align:right; font-weight:600; font-variant-numeric:tabular-nums; }
+#swingPlay .sw-contract { margin:10px 0 0; padding-top:10px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+#swingPlay .sw-note { margin:4px 0 0; padding:12px; border:1px dashed var(--line-2); border-radius:12px; color:var(--muted); font-size:14px; line-height:1.5; }
+#swingPlay .sw-ctx { margin:10px 0 0; padding:9px 12px; border:1px solid rgba(242,193,78,.3); border-radius:10px; color:#e9d9a6; background:rgba(242,193,78,.08); font-size:13px; line-height:1.45; }
+html[data-theme="light"] #swingPlay .sw-ctx { color:#78350f; background:#fffbeb; border-color:#fcd34d; }
+#swingPlay .sw-foot { margin:10px 0 0; color:var(--muted); font-size:12px; }
+#swingPlay .ox-edu { margin-left:7px; padding:3px 9px; border:1px solid #8b7cf6; border-radius:8px; color:#a99bff; font-size:11px; letter-spacing:.1em; vertical-align:2px; }
+#swingPlay .ox-note { margin:10px 0 0; color:var(--muted); font-size:13px; line-height:1.5; }
+#swingPlay .ox-lock { padding:16px; border:1px dashed var(--line-2); border-radius:14px; background:var(--bg); }
+#swingPlay .ox-lock b { color:var(--ink); font-size:15px; } #swingPlay .ox-lock p { color:var(--muted); margin:6px 0 12px; }
+#swingPlay .ox-lock a { display:inline-flex; padding:7px 11px; border:1px solid var(--line-2); border-radius:9px; color:var(--ink); text-decoration:none; font-size:13px; }
+@media(max-width:600px) { #swingPlay .sw-sides { grid-template-columns:1fr; } }
 /* Patch 151 — options swing panel styles, scoped to ticker page */
 #optionsSwing { margin-top:14px; } #optionsSwing h2 { margin-top:0; }
 #optionsSwing .ox-edu { margin-left:7px; padding:3px 9px; border:1px solid #8b7cf6; border-radius:8px; color:#a99bff; font-size:11px; letter-spacing:.1em; vertical-align:2px; }
@@ -507,6 +533,7 @@ function render(d) {
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
+    <div id="swingPlay" class="card"></div>
     <div id="gexShelves" class="card gex-shelf-card"></div>
     <div id="optionsSwing" class="card"></div>
     <h2>Past <em>results</em></h2>
@@ -669,6 +696,7 @@ function render(d) {
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (el.clientWidth < 600 ? 60 : 120)), to: n + 3 });
   loadGexShelves();
   loadOptionsPanel();
+  loadSwingCard();
 
 
   // Live candle: poll the live price and move the forming candle in place.
@@ -708,6 +736,56 @@ function render(d) {
     if (chart === liveChart) window.__nsLiveT = setTimeout(pollLiveCandle, delay);
   };
   window.__nsLiveT = setTimeout(pollLiveCandle, 30000);
+}
+
+// Patch 152 — Swing Play Card (Sika's read) on the dedicated ticker page. Display only.
+async function loadSwingCard() {
+  const host = document.getElementById("swingPlay");
+  if (!host) return;
+  const heading = '<h2>Swing <em>play</em> <span class="ox-edu">Educational</span></h2><p class="scope">Sika\'s read: the favored side, and the other side only on a break</p>';
+  host.innerHTML = heading + '<p class="ox-note">Sika is reading the play…</p>';
+  let me = null;
+  try { me = await (await fetch("/api/me")).json(); } catch (e) {}
+  if (!me || me.guest || !me.options) {
+    host.innerHTML = heading + \`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
+      <a class="btnx sm" href="\${!me || me.guest ? "/login#signup" : "#account"}">\${!me || me.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>\`;
+    return;
+  }
+  let c = null;
+  try {
+    const r = await fetch("/api/swing-card/" + encodeURIComponent(SYM), {signal: AbortSignal.timeout(45000)});
+    if (!r.ok) throw new Error("swing-card request failed");
+    c = await r.json();
+  } catch (e) {
+    host.innerHTML = heading + '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
+    return;
+  }
+  host.innerHTML = heading + renderSwingCard(c);
+}
+
+function renderSwingCard(c) {
+  if (!c) return '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
+  const head = \`<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>\${c.setup ? \`<span class="sw-setup">\${esc(c.setup)}</span>\` : ""}\${c.grade ? \`<span class="sw-grade">\${esc(c.grade)}</span>\` : ""}</div>\`;
+  const asof = c.as_of ? \`<p class="sw-foot">As of \${new Date(c.as_of).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}. For education only, not financial advice.</p>\` : \`<p class="sw-foot">For education only, not financial advice.</p>\`;
+  const ctx = (c.context || []).map(x => \`<p class="sw-ctx">\${esc(x)}</p>\`).join("");
+  if (c.state === "in_between" && c.in_between) {
+    return head + \`<p class="sw-note">\${esc(c.in_between.text)}</p>\` + ctx + asof;
+  }
+  if (c.state === "waiting" || !c.favored) {
+    return head + \`<p class="sw-note">\${esc(c.message || "No setup in play right now.")}</p>\` + ctx + asof;
+  }
+  const side = (s, cls) => {
+    const rows = [
+      ["Trigger", esc(s.trigger.text)],
+      ["Targets", s.targets.map(esc).join(" · ")],
+      ["Extension", esc(s.extension.text)],
+      ["Confirm", s.confirm.map(esc).join("<br>")],
+      ["Wrong if", esc(s.wrong_if)],
+    ];
+    const ct = s.contract ? \`<p class="sw-contract">\${esc(s.contract.expiry)} $\${s.contract.strike} \${s.contract.side}s · $\${s.contract.cost_mid.toFixed(2)} mid</p>\` : "";
+    return \`<div class="sw-side \${cls}"><h4>\${esc(s.label)}</h4><div class="sw-rows">\${rows.map(([l, v]) => \`<div><span>\${l}</span><b>\${v}</b></div>\`).join("")}</div>\${ct}</div>\`;
+  };
+  return head + \`<div class="sw-sides">\${side(c.favored, "fav")}\${c.opposite ? side(c.opposite, "opp") : ""}</div>\` + ctx + asof;
 }
 
 // Patch 151 — options swing display on the dedicated ticker page. Display only.
