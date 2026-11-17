@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import sqlite3
 import tempfile
 import threading
 import time
@@ -20,6 +21,7 @@ log = logging.getLogger("snaptrade")
 
 _DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 _STORE = _DATA_DIR / "snaptrade_users.json"
+_DB_STORE = _DATA_DIR / "hubscanner.db"
 _LOCK = threading.RLock()
 _PENDING: dict[str, dict[str, Any]] = {}
 _PREVIEW_TTL = 300
@@ -90,27 +92,101 @@ def _uid(user: dict) -> str:
     return "nextshelf-" + str(int(user["id"]))
 
 
+def _db_secret(uid: str) -> str | None:
+    """Read the SnapTrade user secret from the same persistent DATA_DIR as NextShelf's DB."""
+    _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(_DB_STORE, timeout=10) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS snaptrade_credentials (
+                user_id TEXT PRIMARY KEY,
+                user_secret TEXT NOT NULL,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        row = conn.execute(
+            "SELECT user_secret FROM snaptrade_credentials WHERE user_id = ?", (uid,)
+        ).fetchone()
+    return str(row[0]) if row and row[0] else None
+
+
+def _db_save_secret(uid: str, secret: str) -> None:
+    """Persist credentials transactionally alongside the app's existing SQLite data."""
+    _DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(_DB_STORE, timeout=10) as conn:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS snaptrade_credentials (
+                user_id TEXT PRIMARY KEY,
+                user_secret TEXT NOT NULL,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            INSERT INTO snaptrade_credentials (user_id, user_secret, updated_at)
+            VALUES (?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(user_id) DO UPDATE SET
+                user_secret = excluded.user_secret,
+                updated_at = CURRENT_TIMESTAMP
+        """, (uid, secret))
+        conn.commit()
+
+
+def credential_status(user: dict) -> dict:
+    """Safe diagnostics only; never returns the secret itself."""
+    uid = _uid(user)
+    with _LOCK:
+        secret = _db_secret(uid)
+        source = "sqlite" if secret else None
+        if not secret:
+            legacy = _load().get(uid, {})
+            secret = legacy.get("user_secret") if isinstance(legacy, dict) else None
+            if secret:
+                _db_save_secret(uid, str(secret))
+                source = "legacy-file-migrated"
+    return {
+        "registered_user_id": uid,
+        "credentials_available": bool(secret),
+        "credential_source": source or "missing",
+        "reconnect_required": not bool(secret),
+    }
+
+
 def _credentials(user: dict) -> tuple[str, str]:
     uid = _uid(user)
     with _LOCK:
+        secret = _db_secret(uid)
+        if secret:
+            return uid, secret
+        # One-time migration from the original JSON store used by the first prototype.
         record = _load().get(uid)
-    if not record or not record.get("user_secret"):
-        raise LookupError("broker account not registered")
-    return uid, record["user_secret"]
+        secret = record.get("user_secret") if isinstance(record, dict) else None
+        if secret:
+            _db_save_secret(uid, str(secret))
+            return uid, str(secret)
+    raise LookupError("SnapTrade credentials are missing from persistent storage; connection recovery is required")
 
 
 def register(user: dict) -> dict:
     client = _client()
     uid = _uid(user)
     with _LOCK:
-        store = _load()
-        if uid in store and store[uid].get("user_secret"):
+        # Reuse the existing user record whenever its secret is still available.
+        existing = _db_secret(uid)
+        if not existing:
+            legacy = _load().get(uid, {})
+            existing = legacy.get("user_secret") if isinstance(legacy, dict) else None
+            if existing:
+                _db_save_secret(uid, str(existing))
+        if existing:
             return {"registered": True, "already_registered": True}
         response = client.authentication.register_snap_trade_user(user_id=uid)
         body = _plain(getattr(response, "body", response))
         secret = (body.get("userSecret") or body.get("user_secret")) if isinstance(body, dict) else None
         if not secret:
             raise RuntimeError("SnapTrade did not return a user secret")
+        # Save to durable app SQLite before reporting success. Keep legacy JSON mirror
+        # temporarily for rollback compatibility, but SQLite is now authoritative.
+        _db_save_secret(uid, str(secret))
+        store = _load()
         store[uid] = {"user_secret": str(secret)}
         _save(store)
     return {"registered": True, "already_registered": False}
