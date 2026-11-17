@@ -2483,7 +2483,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
   </div>
   <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
-  <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions">${ME && ME.is_admin ? '<button type="button" class="broker-trade-cta" onclick="openShelfTrade(BRIEF_SYM)">↗ Trade</button>' : ""}<a id="bfChart" href="#">Open full chart →</a></span></div>
+  <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><button id="bfTrade" type="button" class="broker-trade-cta" onclick="openShelfTrade(BRIEF_SYM)" hidden>↗ Trade</button><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
@@ -3730,6 +3730,7 @@ function openShelfFromUrl() {
 async function openBrief(sym, focus) {
   BRIEF_FOCUS = focus || null;
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null; MAP_Q = null; MAP_DCH = null; MAP_ASK = false; MAP_CTX = new Set();
+  if ($("bfTrade")) $("bfTrade").hidden = !(ME && ME.is_admin);
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
   paintBriefWatch(sym);
