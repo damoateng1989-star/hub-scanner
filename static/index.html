@@ -770,10 +770,18 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .ask-msg.ask-sika .ask-answer { color: #20242B; font-size: 14px; line-height: 1.58; }
 .ask-msg.ask-sika .sp-hint { color: #454B55; font-size: 14px; line-height: 1.5; }
 .ask-msg.ask-sika .ox-lock { color: #20242B; }
+/* Sika typing bubble (Patch 155). */
+.ask-msg.ask-typing { justify-self: start; background: #3A3D42; border-bottom-left-radius: 6px; padding: 12px 15px; }
+.ask-typing-dots { display: inline-flex; gap: 6px; align-items: center; }
+.ask-typing-dots i { width: 8px; height: 8px; border-radius: 50%; background: #C3C7CF; animation: askType 1.2s infinite; }
+.ask-typing-dots i:nth-child(2) { animation-delay: .2s; }
+.ask-typing-dots i:nth-child(3) { animation-delay: .4s; }
+@keyframes askType { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ask-typing-dots i { animation: none; opacity: .7; } }
 .ask-msg.ask-you { justify-self: end; text-align: left; background: #DCEBFF; color: #173653; border-bottom-right-radius: 6px; }
 .ask-msg.ask-you b { display: block; color: #173653; font: 600 14px/1.5 var(--sans); }
 .ask-row { display: flex; gap: 8px; margin-top: 12px; }
-.ask-row input { flex: 1; min-width: 0; padding: 11px 12px; border-radius: 12px; border: 1px solid #353639; background: #0E0F12; color: #E9EBEF; font: 500 14px var(--sans); }
+.ask-row input { flex: 1; min-width: 0; padding: 11px 16px; border-radius: 999px; border: 1px solid #353639; background: #0E0F12; color: #E9EBEF; font: 500 14px var(--sans); }
 .ask-row input::placeholder { color: #9AA0AC; }
 .ask-send { flex: 0 0 auto; padding: 11px 14px; border-radius: 12px; font: 700 14px var(--sans); cursor: pointer; }
 .ask-foot { margin: 10px 0 0; color: #9AA0AC; font-size: 12px; text-align: center; }
@@ -6967,7 +6975,14 @@ async function askSikaProcess(raw) {
     askSikaSay(`<p class="sp-hint">First give me a ticker — for example <b>AMAT</b>. Then ask your question.</p>`);
     return;
   }
-  const reading = askSikaSay(`<p class="sp-hint">Sika is thinking…</p>`);
+  // Typing bubble (Patch 155): keep it visible for at least three seconds.
+  const reading = askSikaSay(`<span class="ask-typing-dots" aria-label="Sika is typing"><i></i><i></i><i></i></span>`, "ask-typing");
+  const shownAt = Date.now();
+  const waitMin = async () => {
+    if (!reading) return;
+    const wait = Math.max(0, 3000 - (Date.now() - shownAt));
+    if (wait) await new Promise(r => setTimeout(r, wait));
+  };
   try {
     const result = await api("/api/sika/chat", {
       method: "POST", timeout: 35000,
@@ -6978,12 +6993,14 @@ async function askSikaProcess(raw) {
     });
     askSikaHistory("user", raw);
     askSikaHistory("sika", result.answer);
-    if (reading) reading.innerHTML = `<div class="ask-answer">${esc(result.answer)}</div>`;
+    await waitMin();
+    if (reading) { reading.className = "ask-msg ask-sika"; reading.innerHTML = `<div class="ask-answer">${esc(result.answer)}</div>`; }
   } catch (e) {
     askSikaHistory("user", raw);
     const fallback = "Sika couldn't answer that right now.";
     askSikaHistory("sika", fallback);
-    if (reading) reading.innerHTML = `<p class="sp-hint">${fallback}</p>`;
+    await waitMin();
+    if (reading) { reading.className = "ask-msg ask-sika"; reading.innerHTML = `<p class="sp-hint">${fallback}</p>`; }
   }
 }
 function renderScout() {
