@@ -6891,9 +6891,15 @@ document.addEventListener("click", (e) => {
 function scoutRow(sym, kind, color) {
   return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
 }
-// Ask Sika — a dialogue box (Patch 153). Talon-style chat panel: the member
-// types a ticker, or /swing SYM, and Sika returns the Swing Play Card in the
-// body above the input. Only /swing is a command; do not add others.
+// Conversational Sika — ticker cards stay deterministic; only follow-up questions use the model.
+let ASK_SYMBOL = null, ASK_HISTORY = [], ASK_BUSY = false, ASK_QUEUE = [];
+function askSikaPlain(sym) {
+  const panels = [...document.querySelectorAll(".plain-panel")];
+  const panel = panels.find(p => (p.dataset.sym || "").toUpperCase() === sym);
+  if (panel) return panel.querySelector(".plain-body")?.innerText || "";
+  if (BRIEF_SYM === sym) return $("bfMap")?.querySelector(".mp-say")?.innerText || "";
+  return "";
+}
 function askSikaOpen() {
   if ((SCOUT_SC && SCOUT_SC.running) || MY_SCANNING) return;
   toggleScout(false);
@@ -6901,7 +6907,7 @@ function askSikaOpen() {
   pop.hidden = false;
   const ava = $("askAva"), src = $("spAva"); if (ava && src) ava.innerHTML = src.innerHTML;
   const body = $("askBody");
-  if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Ask me about a ticker — try <b>AMAT</b>, or <b>/swing AMAT</b>.</p>`;
+  if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Ask me about a ticker — try <b>AMAT</b>, or <b>/swing AMAT</b>. Once the card is open, ask me a follow-up.</p>`;
   const inp = $("askInput"); if (inp) inp.focus();
 }
 function askSikaClose() { const pop = $("askPop"); if (pop) pop.hidden = true; }
@@ -6914,37 +6920,88 @@ function askSikaSay(html, cls) {
   body.scrollTop = body.scrollHeight;
   return d;
 }
-async function askSikaSend() {
+function askSikaHistory(role, text) {
+  ASK_HISTORY.push({role, text: String(text || "").slice(0, 1200)});
+  ASK_HISTORY = ASK_HISTORY.slice(-10);
+}
+function askSikaSend() {
   const inp = $("askInput"); if (!inp) return;
   const raw = (inp.value || "").trim();
   if (!raw) return;
   inp.value = "";
+  ASK_QUEUE.push(raw);
+  askSikaDrain();
+}
+async function askSikaDrain() {
+  if (ASK_BUSY || !ASK_QUEUE.length) return;
+  ASK_BUSY = true;
+  try {
+    while (ASK_QUEUE.length) await askSikaProcess(ASK_QUEUE.shift());
+  } finally {
+    ASK_BUSY = false;
+    const body = $("askBody"); if (body) body.scrollTop = body.scrollHeight;
+  }
+}
+async function askSikaProcess(raw) {
   askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
-  let sym = null;
+  let sym = null, isCard = false;
   if (raw.startsWith("/")) {
-    const parts = raw.slice(1).split(/\s+/);
-    const cmd = (parts[0] || "").toLowerCase();
-    if (cmd !== "swing") { askSikaSay(`<p class="sp-hint">Sika only takes <b>/swing</b> for now — try <b>/swing AMAT</b>.</p>`); return; }
+    const parts = raw.slice(1).trim().split(/\s+/);
+    if ((parts[0] || "").toLowerCase() !== "swing") {
+      askSikaSay(`<p class="sp-hint">Sika only takes <b>/swing</b> for now — try <b>/swing AMAT</b>.</p>`);
+      return;
+    }
     sym = (parts[1] || "").toUpperCase().replace(/[^A-Z0-9.]/g, "");
     if (!sym) { askSikaSay(`<p class="sp-hint">Try <b>/swing AMAT</b> — a ticker after /swing.</p>`); return; }
-  } else {
-    sym = raw.toUpperCase().replace(/[^A-Z0-9.\s]/g, "").split(/\s+/)[0] || "";
-    if (!sym) { askSikaSay(`<p class="sp-hint">Type a ticker, like <b>AMAT</b> — or <b>/swing AMAT</b>.</p>`); return; }
+    isCard = true;
+  } else if (/^[A-Za-z][A-Za-z0-9.-]{0,9}$/.test(raw)) {
+    sym = raw.toUpperCase();
+    isCard = true;
   }
+
   if (!ME || ME.guest || !(isPro() || ME.options)) {
-    askSikaSay(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p><a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
+    askSikaSay(`<div class="ox-lock"><b>Conversational Sika and Swing Play are a Pro feature.</b><p>See the favored side, trigger, targets, and follow-up explanations.</p><a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
     return;
   }
-  const reading = askSikaSay(`<p class="sp-hint">Sika is reading ${esc(sym)}…</p>`);
-  let c = null;
-  try { c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000}); }
-  catch (e) {
-    if (reading) reading.innerHTML = (e && e.status === 403)
-      ? `<div class="ox-lock"><b>Swing plays are a Pro feature.</b><p>Sika's read — the favored side, the trigger, the targets, and the wrong-if — is part of Pro.</p><a class="btnx sm" href="#account">Pro feature · see plans</a></div>`
-      : `<p class="sp-hint">Sika couldn't read ${esc(sym)} right now (${esc(friendly(e))}).</p>`;
+
+  if (isCard) {
+    if (ASK_SYMBOL !== sym) { ASK_SYMBOL = sym; ASK_HISTORY = []; }
+    const reading = askSikaSay(`<p class="sp-hint">Sika is reading ${esc(sym)}…</p>`);
+    try {
+      const c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000});
+      if (reading) reading.innerHTML = swingCardHTML(c);
+      askSikaHistory("user", raw);
+      askSikaHistory("sika", `I’ve loaded the current Swing Play Card for ${sym}. Ask me about either side, the trigger, target, or what makes the setup wrong.`);
+    } catch (e) {
+      if (reading) reading.innerHTML = (e && e.status === 403)
+        ? `<div class="ox-lock"><b>Swing plays are a Pro feature.</b><p>Sika's read is part of Pro.</p><a class="btnx sm" href="#account">Pro feature · see plans</a></div>`
+        : `<p class="sp-hint">Sika couldn't read ${esc(sym)} right now (${esc(friendly(e))}).</p>`;
+    }
     return;
   }
-  if (reading) reading.innerHTML = swingCardHTML(c);
+
+  if (!ASK_SYMBOL) {
+    askSikaSay(`<p class="sp-hint">First give me a ticker — for example <b>AMAT</b>. Then ask your follow-up.</p>`);
+    return;
+  }
+  const reading = askSikaSay(`<p class="sp-hint">Sika is thinking…</p>`);
+  try {
+    const result = await api("/api/sika/chat", {
+      method: "POST", timeout: 35000,
+      body: JSON.stringify({
+        symbol: ASK_SYMBOL, message: raw, history: ASK_HISTORY.slice(-10),
+        plain_english: askSikaPlain(ASK_SYMBOL)
+      })
+    });
+    askSikaHistory("user", raw);
+    askSikaHistory("sika", result.answer);
+    if (reading) reading.innerHTML = `<div class="ask-answer">${esc(result.answer)}</div>`;
+  } catch (e) {
+    askSikaHistory("user", raw);
+    const fallback = "Sika couldn't answer that right now.";
+    askSikaHistory("sika", fallback);
+    if (reading) reading.innerHTML = `<p class="sp-hint">${fallback}</p>`;
+  }
 }
 function renderScout() {
   const sc = SCOUT_SC, pop = $("scoutPop");
