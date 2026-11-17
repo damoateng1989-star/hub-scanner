@@ -656,9 +656,17 @@ def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False)
     hit = _CHART_CACHE.get(key)
     if hit and hit[0] > now and not fresh:
         out = dict(hit[1])
-        out["forming"] = _forming(sym) if tf == "4h" else None
-        out["timing"] = dict(cached=True, total=round((time.time() - t0) * 1000))
-        return out
+        # Patch 145: never serve a cached "Inside the hub" whose price already
+        # left the hub (stale hub state). Rebuild instead of returning it.
+        _st = (out.get("status") or {})
+        _h = _st.get("hub") or {}
+        _lc = _st.get("last_close")
+        if _st.get("state") == "forming" and _h and _lc is not None and (_lc < _h.get("low", _lc) or _lc > _h.get("high", _lc)):
+            pass  # stale: fall through and rebuild below
+        else:
+            out["forming"] = _forming(sym) if tf == "4h" else None
+            out["timing"] = dict(cached=True, total=round((time.time() - t0) * 1000))
+            return out
     out = _build_chart(sym, tf, lab_mode)
     with _CHART_LOCK:
         if len(_CHART_CACHE) > 400:                 # stay small on a 512 MB server
