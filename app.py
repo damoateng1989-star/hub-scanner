@@ -46,6 +46,7 @@ import paper  # noqa: E402
 import paper_opt  # noqa: E402
 import phone  # noqa: E402
 import scanner  # noqa: E402
+import snaptrade  # noqa: E402
 import telegram_bot  # noqa: E402
 import universe  # noqa: E402
 
@@ -1464,3 +1465,92 @@ def admin_subscribers_csv(u: dict = Admin):
         w.writerow([s_["email"], s_["status"], s_["source"], s_["created_at"], s_["unsubscribed_at"] or ""])
     return Response(buf.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": 'attachment; filename="nextshelf-email-list.csv"'})
+
+
+# ---------------------------------------------------------------- SnapTrade brokerage (owner-only prototype)
+class BrokerImpactBody(BaseModel):
+    account_id: str
+    symbol: str
+    action: str
+    units: int
+    order_type: str = "Market"
+    price: float | None = None
+
+
+class BrokerOrderBody(BaseModel):
+    preview_id: str
+    confirm: bool = False
+
+
+def _broker_error(exc: Exception):
+    if isinstance(exc, LookupError):
+        raise HTTPException(404, str(exc))
+    if isinstance(exc, PermissionError):
+        raise HTTPException(403, str(exc))
+    if isinstance(exc, ValueError):
+        raise HTTPException(400, str(exc))
+    if isinstance(exc, RuntimeError) and "not configured" in str(exc):
+        raise HTTPException(503, "broker trading not configured")
+    log.exception("SnapTrade request failed")
+    raise HTTPException(502, "Brokerage service could not complete the request")
+
+
+@app.post("/api/broker/register")
+async def broker_register(u: dict = Admin):
+    try:
+        return await run_in_threadpool(snaptrade.register, u)
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.post("/api/broker/portal")
+async def broker_portal(u: dict = Admin):
+    try:
+        url = await run_in_threadpool(snaptrade.portal, u)
+        return {"url": url}
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.get("/api/broker/accounts")
+async def broker_accounts(u: dict = Admin):
+    try:
+        rows = await run_in_threadpool(snaptrade.accounts, u)
+        return {"accounts": rows, "connected": bool(rows)}
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.get("/api/broker/accounts/{account_id}/positions")
+async def broker_positions(account_id: str, u: dict = Admin):
+    try:
+        return {"positions": await run_in_threadpool(snaptrade.positions, u, account_id)}
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.get("/api/broker/accounts/{account_id}/orders")
+async def broker_orders(account_id: str, u: dict = Admin):
+    try:
+        return {"orders": await run_in_threadpool(snaptrade.orders, u, account_id)}
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.post("/api/broker/impact")
+async def broker_impact(body: BrokerImpactBody, u: dict = Admin):
+    try:
+        return await run_in_threadpool(snaptrade.impact, u, body.model_dump())
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.post("/api/broker/order")
+async def broker_order(body: BrokerOrderBody, u: dict = Admin):
+    if body.confirm is not True:
+        raise HTTPException(400, "Explicit order confirmation is required")
+    try:
+        result = await run_in_threadpool(snaptrade.place_checked_order, u, body.preview_id)
+        return {"order": result}
+    except Exception as e:
+        _broker_error(e)
