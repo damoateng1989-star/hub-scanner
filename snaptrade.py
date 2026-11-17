@@ -102,8 +102,8 @@ def register(user: dict) -> dict:
         if uid in store and store[uid].get("user_secret"):
             return {"registered": True, "already_registered": True}
         response = client.authentication.register_snap_trade_user(user_id=uid)
-        body = getattr(response, "body", response)
-        secret = body.get("userSecret") if isinstance(body, dict) else None
+        body = _plain(getattr(response, "body", response))
+        secret = (body.get("userSecret") or body.get("user_secret")) if isinstance(body, dict) else None
         if not secret:
             raise RuntimeError("SnapTrade did not return a user secret")
         store[uid] = {"user_secret": str(secret)}
@@ -118,7 +118,7 @@ def portal(user: dict) -> str:
         user_id=uid, user_secret=secret, connection_type="trade-if-available",
         connection_portal_version="v4", dark_mode=True,
     )
-    body = getattr(response, "body", response)
+    body = _plain(getattr(response, "body", response))
     if isinstance(body, dict):
         url = body.get("redirectURI") or body.get("redirectUri") or body.get("redirect_uri") or body.get("url")
     else:
