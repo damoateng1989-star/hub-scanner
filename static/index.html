@@ -3165,17 +3165,26 @@ function brokerPreviewCard() {
 let BROKER_ACCOUNTS = [];
 async function connectBroker() {
   const msg = $("brokerMessage");
-  const popup = window.open("about:blank", "_blank");
-  if (msg) msg.textContent = "Preparing your secure brokerage connection…";
+  const btn = document.querySelector(".broker-connect");
+  let stage = "Starting connection";
+  if (btn) { btn.disabled = true; btn.textContent = "Connecting…"; }
+  if (msg) msg.textContent = "Registering your secure brokerage connection…";
   try {
+    stage = "Registering your NextShelf account with SnapTrade";
     await api("/api/broker/register", {method:"POST"});
+    stage = "Requesting the secure connection link";
+    if (msg) msg.textContent = "Opening the secure SnapTrade connection…";
     const result = await api("/api/broker/portal", {method:"POST"});
-    if (popup) popup.location = result.url;
-    else location.href = result.url;
-    if (msg) msg.textContent = "Complete the connection with SnapTrade, then return here and refresh accounts.";
+    if (!result || typeof result.url !== "string" || !/^https:\/\//i.test(result.url)) {
+      throw new Error("SnapTrade did not return a valid secure connection link.");
+    }
+    if (msg) msg.textContent = "Redirecting to SnapTrade…";
+    // Same-tab navigation is more reliable than a delayed popup on iOS Safari
+    // and the ChatGPT in-app browser, where popup windows may be discarded.
+    window.location.assign(result.url);
   } catch (e) {
-    if (popup) popup.close();
-    if (msg) msg.textContent = e.message || "Could not start the brokerage connection.";
+    if (msg) msg.textContent = stage + " failed: " + (e.message || "Unknown error") + ". Please try again; if it repeats, send us this message.";
+    if (btn) { btn.disabled = false; btn.textContent = "Try Connect Webull Again"; }
   }
 }
 async function loadBrokerAccounts() {
