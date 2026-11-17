@@ -3945,6 +3945,7 @@ function mapPlan(sym, st) {
   const k = st.state, h = st.hub, L = LIVE[sym], isLive = !!(LIVE_OPEN && L && L.price != null);
   const px = isLive ? L.price : st.last_close;
   const P = {sym, px, isLive, chg: isLive ? L.change_pct : null, hub: null, trig: null, stop: null, shelf: null, shelfZone: null, obst: null,
+             oldHigh: st.old_high ? st.old_high.level : null,
              dir: 1, steps: "none", phase: 0, watch: false, status: "", sub: "", tone: "wait", setupName: "Hub breakout", retest: null};
   // opened from a double top / bottom card: show that pattern, not the hub
   const fx = BRIEF_FOCUS && BRIEF_FOCUS.startsWith("double") && (st.setups || []).find(x => x.kind === BRIEF_FOCUS);
@@ -4124,32 +4125,6 @@ class MapLabelsPaneView {
             }
           }
         }
-        if (W >= MAP_LABEL_MIN_W) {
-          const rows = [
-            { label: d.shelfLabel, price: d.shelf, color: d.shelfColor, primary: true },
-            { label: "Trigger", price: d.trig, color: d.triggerColor, primary: true },
-            { label: "Stop", price: d.stop, color: d.stopColor, primary: true },
-            { label: "Call wall", price: d.callWall, color: d.callWallColor },
-            { label: "Put wall", price: d.putWall, color: d.putWallColor },
-          ].filter(r => r.price != null && Number.isFinite(+r.price))
-           .map(r => ({ ...r, yy: yOf(+r.price) })).filter(r => r.yy != null);
-          rows.sort((a, b) => a.yy - b.yy);
-          for (let i = 1; i < rows.length; i++)
-            if (rows[i].yy - rows[i - 1].yy < MAP_LABEL_GAP) rows[i].yy = rows[i - 1].yy + MAP_LABEL_GAP;
-          const x0 = W - 178;
-          ctx.textBaseline = "middle";
-          rows.forEach(r => {
-            const text = r.label + " $" + (+r.price).toFixed(2);
-            ctx.font = r.primary ? "800 10px 'JetBrains Mono',ui-monospace,monospace" : "700 12px 'JetBrains Mono',ui-monospace,monospace";
-            ctx.lineJoin = "round";
-            ctx.strokeStyle = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
-            ctx.lineWidth = r.primary ? 3.5 : 2.5;
-            ctx.strokeText(text, x0 + 14, r.yy);
-            ctx.fillStyle = r.color;
-            ctx.beginPath(); ctx.arc(x0 + 4, r.yy, r.primary ? 4 : 3.5, 0, Math.PI * 2); ctx.fill();
-            ctx.fillText(text, x0 + 14, r.yy);
-          });
-        }
         ctx.restore();
       });
     } };
@@ -4198,29 +4173,34 @@ function initLightweightMapChart() {
     const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const pl=candles.createPriceLine({price:+price,title,color:color,lineWidth:1,lineStyle:style||L.LineStyle.Solid,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
     const css = getComputedStyle(document.documentElement);
     const signal = name => css.getPropertyValue(name).trim();
-    const hubColor = signal("--hub") || (light ? "#4f46e5" : "#7f9ec7");
+    const hubColor = "#5AC8FA";
     const upColor = signal("--up") || (light ? "#15803d" : "#39c98a");
     const downColor = signal("--down") || (light ? "#dc2626" : "#e46d70");
     // One source of truth for each plotted level: line, axis marker and chart label.
-    const triggerColor = light ? "#8A6D1B" : "#E9C46A";
-    const stopColor = light ? "#B91C1C" : "#E5736A";
+    const triggerColor = "#F2C14E";
+    const stopColor = downColor;
     const shelfColor = D.P.dir === -1 ? downColor : upColor;
     line(D.P.trig,"TRIGGER",triggerColor);
     line(D.P.stop,"STOP",stopColor,L.LineStyle.Dashed);
-    line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",shelfColor);
+    line(D.P.shelf,D.P.atrTarget?"TARGET":"NEXT SHELF",upColor);
+    line(D.P.oldHigh,"Old high","#B48CFF",L.LineStyle.Dotted);
     if(D.P.hub){
       line(D.P.hub.high,"HUB HIGH",hubColor,L.LineStyle.Solid);
       line(D.P.hub.low,"HUB LOW",hubColor,L.LineStyle.Solid);
     }
     const gamma = GAMMA[D.P.sym];
-    const callWall = gamma && gamma !== "loading" ? gamma.call_wall : null;
-    const putWall = gamma && gamma !== "loading" ? gamma.put_wall : null;
-    const callWallColor = light ? "#B7791F" : "#F2C14E";
-    const putWallColor = light ? "#7C3AED" : "#B58CFF";
+    const spotPrice = D.P.px != null ? +D.P.px : null;
+    const callCandidate = gamma && gamma !== "loading" ? gamma.call_wall : null;
+    const putCandidate = gamma && gamma !== "loading" ? gamma.put_wall : null;
+    const callWall = callCandidate != null && (spotPrice == null || +callCandidate > spotPrice) ? callCandidate : null;
+    const putWall = putCandidate != null && (spotPrice == null || +putCandidate < spotPrice) ? putCandidate : null;
+    const callWallColor = "#F2C14E";
+    const putWallColor = "#B48CFF";
     if(callWall != null) line(callWall,"CALL WALL",callWallColor,L.LineStyle.Solid);
     if(putWall != null) line(putWall,"PUT WALL",putWallColor,L.LineStyle.Solid);
-    if(D.P.obst && !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
-      line(D.P.obst.level,D.P.obst.name || "OBSTACLE",light ? "#6D28D9" : "#B6A0E8",L.LineStyle.Solid);
+    if(D.P.obst && !(D.P.oldHigh != null && Math.abs(+D.P.obst.level-+D.P.oldHigh)<0.000001) &&
+       !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
+      line(D.P.obst.level,D.P.obst.name || "OBSTACLE","#B48CFF",L.LineStyle.Solid);
     // Stretch the price scale to the plotted levels (only expands, +4% pad) so the
     // next shelf / walls are on screen, not just the candles. Uses the supported
     // autoscaleInfoProvider (LWC v5), not a price-scale range API.
@@ -4228,7 +4208,7 @@ function initLightweightMapChart() {
       const original = baseImplementation();
       if (!original || !original.priceRange) return original;
       let lo = original.priceRange.minValue, hi = original.priceRange.maxValue;
-      [D.P.trig, D.P.stop, D.P.shelf,
+      [D.P.trig, D.P.stop, D.P.shelf, D.P.oldHigh,
        D.P.hub && D.P.hub.high, D.P.hub && D.P.hub.low,
        callWall, putWall, D.P.obst && D.P.obst.level]
         .filter(v => v != null && Number.isFinite(+v))
@@ -4252,11 +4232,7 @@ function initLightweightMapChart() {
           callWall, callWallColor, putWall, putWallColor,
           bandText: light ? "#141412" : "#FFFFFF",
         }));
-        // Only hide the axis tags when the on-chart cluster will draw (wide charts).
-        // On a phone the cluster is hidden (W < 560), so the axis tags are the only labels.
-        if ((host.clientWidth || 600) >= MAP_LABEL_MIN_W) {
-          mapPriceLines.forEach(pl => pl.applyOptions({axisLabelVisible:false}));
-        }
+        // Keep price-axis labels visible at every width so desktop matches mobile.
       } catch (e) { console.warn("NextShelf map labels unavailable", e); }
     }
     // Restore the user's view instead of re-fitting everything: a price update must not
