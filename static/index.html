@@ -3197,7 +3197,7 @@ function brokerPreviewCard() {
       <span class="broker-status" id="brokerStatus"><i></i> Checking</span></div>
     <div class="broker-divider"></div>
     <div id="brokerAccounts"><p class="broker-copy">Loading connected brokerage accounts…</p></div>
-    <div class="broker-actions"><button class="broker-connect" type="button" onclick="connectBroker()">Connect Webull</button>
+    <div class="broker-actions"><button class="broker-connect" type="button" onclick="connectBroker()" hidden>Connect Webull</button>
       <button type="button" class="sec" onclick="loadBrokerAccounts()">Refresh accounts</button></div>
     <div id="brokerMessage" class="broker-subnote" aria-live="polite">Brokerage access is owner-only during this prototype.</div>
   </div>`;
@@ -3230,32 +3230,36 @@ async function connectBroker() {
 async function loadBrokerAccounts() {
   // Fetch account data even when the Account page is not mounted (e.g. from the ticker ticket).
   const host = $("brokerAccounts"), status = $("brokerStatus"), msg = $("brokerMessage");
+  let stage = "Checking saved SnapTrade credentials";
+  const connectBtn = document.querySelector(".broker-connect");
+  if (connectBtn) { connectBtn.hidden = true; connectBtn.disabled = true; }
   try {
     const credentialState = await api("/api/broker/status");
     if (!credentialState.credentials_available) {
       BROKER_ACCOUNTS = [];
       if (status) status.innerHTML = '<i></i> Needs recovery';
-      if (host) host.innerHTML = '<p class="broker-copy">The saved SnapTrade credentials are missing. Your existing Webull authorization has not been deleted. Do not reconnect yet; account recovery must be completed first.</p>';
-      if (msg) msg.textContent = "SnapTrade user: " + esc(credentialState.registered_user_id || "unknown") + " · Credential store: missing.";
+      if (host) host.innerHTML = '<p class="broker-copy">The saved SnapTrade credentials are missing. Your existing Webull authorization has not been deleted. Do not reconnect; recover the existing SnapTrade user credentials first.</p>';
+      if (msg) msg.textContent = "SnapTrade user: " + esc(credentialState.registered_user_id || "unknown") + " · Credential store: missing. New registration is disabled in this screen.";
       if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
       return;
     }
+    stage = "Retrieving your existing accounts from SnapTrade";
     const data = await api("/api/broker/accounts");
     BROKER_ACCOUNTS = data.accounts || [];
-    if (status) status.innerHTML = '<i></i> ' + (data.connected ? "Connected" : "Not connected");
+    if (status) status.innerHTML = '<i></i> ' + (data.connected ? "Connected" : "No accounts returned");
     if (host) host.innerHTML = BROKER_ACCOUNTS.length ? BROKER_ACCOUNTS.map(a => `
       <div class="broker-account-row">
         <div><b>${esc(a.brokerage)}</b><div class="broker-copy">${esc(a.name)} ${a.number_masked ? "· " + esc(a.number_masked) : ""}</div></div>
         <div class="broker-account-value">${a.total_value == null ? "—" : esc(String(a.total_value))} ${esc(a.currency || "USD")}</div>
         <button type="button" class="sec" onclick="showBrokerPositions('${esc(a.account_id)}')">Positions</button>
-      </div>`).join("") : '<p class="broker-copy">No brokerage accounts connected yet. Connect Webull to get started.</p>';
-    if (msg) msg.textContent = data.connected ? "Connected account data is provided by SnapTrade and may be cached by the brokerage." : "No connected brokerage account found.";
+      </div>`).join("") : '<p class="broker-copy">SnapTrade returned zero brokerage accounts for the saved NextShelf user. This does not prove your Webull authorization was deleted. Do not reconnect yet; investigate the existing SnapTrade authorization first.</p>';
+    if (msg) msg.textContent = data.connected ? "Existing connected account data is provided by SnapTrade and may be cached by the brokerage." : "Saved credentials are present, but SnapTrade returned no accounts. No new connection was started.";
     if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   } catch (e) {
     BROKER_ACCOUNTS = [];
-    if (status) status.innerHTML = '<i></i> Not connected';
-    if (host) host.innerHTML = '<p class="broker-copy">No connected account found yet. Use Connect Webull to authorize access.</p>';
-    if (msg) msg.textContent = e.message || "Brokerage accounts are not available yet.";
+    if (status) status.innerHTML = '<i></i> ' + (stage.startsWith("Checking") ? "Status unavailable" : "Account lookup failed");
+    if (host) host.innerHTML = '<p class="broker-copy">' + esc(e.message || (stage + " failed.")) + '</p>';
+    if (msg) msg.textContent = stage + " failed. No reconnect or new SnapTrade registration was attempted.";
     if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   }
 }
@@ -3444,7 +3448,7 @@ function renderShelfTradeCard(sym) {
   SHELF_TRADE_PREVIEW = null; clearTimeout(SHELF_TRADE_DEBOUNCE); SHELF_TRADE_REQUEST++;
   const options = BROKER_ACCOUNTS.map(a => `<option value="${esc(a.account_id)}">${esc(shelfTradeAccountLabel(a).full)}</option>`).join("");
   const account = BROKER_ACCOUNTS[0], label = account ? shelfTradeAccountLabel(account) : null;
-  const accountLine = label ? `<span class="shelf-broker-mark">${esc((label.broker || "B").slice(0,1).toUpperCase())}</span><span class="shelf-broker-name"><b>${esc(label.broker)}</b><small>${esc(label.name)} ${label.masked ? "· " + esc(label.masked) : ""}</small></span><span class="shelf-connected">Connected</span>` : `<span class="shelf-broker-name"><b>No connected account</b><small>Connect Webull from Account first.</small></span>`;
+  const accountLine = label ? `<span class="shelf-broker-mark">${esc((label.broker || "B").slice(0,1).toUpperCase())}</span><span class="shelf-broker-name"><b>${esc(label.broker)}</b><small>${esc(label.name)} ${label.masked ? "· " + esc(label.masked) : ""}</small></span><span class="shelf-connected">Connected</span>` : `<span class="shelf-broker-name"><b>Account unavailable</b><small>Refresh the existing SnapTrade account lookup. Do not reconnect yet.</small></span>`;
   const fmt = v => v == null || !Number.isFinite(Number(v)) ? "—" : money(Number(v));
   host.hidden = false;
   host.innerHTML = `<div class="broker-ticket shelf-trade-ticket shelf-trade-embedded">
