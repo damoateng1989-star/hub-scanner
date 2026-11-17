@@ -48,6 +48,7 @@ import phone  # noqa: E402
 import scanner  # noqa: E402
 import snaptrade  # noqa: E402
 import swing_card  # noqa: E402
+import sika_chat  # noqa: E402
 import telegram_bot  # noqa: E402
 import universe  # noqa: E402
 
@@ -247,6 +248,13 @@ Admin = Depends(auth.require_admin)
 
 class AddBody(BaseModel):
     symbol: str
+
+
+class SikaChatBody(BaseModel):
+    symbol: str
+    message: str
+    history: list[dict] | None = None
+    plain_english: str = ""
 
 
 class SignupBody(BaseModel):
@@ -1163,6 +1171,24 @@ async def swing_card_endpoint(symbol: str, u: dict = User):
         return await run_in_threadpool(swing_card.card, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+@app.post("/api/sika/chat")
+async def sika_chat_endpoint(body: SikaChatBody, u: dict = User):
+    """Grounded conversational follow-up about the current Swing Play Card. Display only."""
+    if not options_for(u):
+        raise HTTPException(403, "Options plans are a Pro feature")
+    if len((body.message or "").strip()) > 1200:
+        raise HTTPException(400, "Message is too long")
+    try:
+        return await run_in_threadpool(
+            sika_chat.answer, body.symbol, body.message, body.history or [], body.plain_english
+        )
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        log.warning("Sika chat unavailable for %s: %s", body.symbol[:12], type(e).__name__)
+        raise HTTPException(503, "Sika couldn't answer that right now")
 
 
 @app.get("/api/gamma/{symbol}")
