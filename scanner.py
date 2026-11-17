@@ -590,6 +590,14 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         raise ValueError("not enough price history (check the ticker)")
     res = engine.analyze(c4, SETTINGS)
     status = engine.current_status(c4, res, SETTINGS)
+    # GEX wall Lab test (Patch 149, forward log): check this 4H close and settle open rows.
+    # Silent: writes wall_log.json only. No alert, record entry, or paper trade.
+    try:
+        import gex_log
+        gex_log.check_close(sym, c4, res, SETTINGS)
+        gex_log.settle(sym, c4, res, SETTINGS)
+    except Exception as e:
+        log.warning("gex_log failed for %s: %s", sym, e)
     row = db.get_ticker(sym)
     baseline = row["last_candle"] if row else None
     sent = []
