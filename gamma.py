@@ -540,6 +540,7 @@ def attach(c: dict, fetch: bool = True) -> dict:
     A call wall (put wall for shorts) between the edge and the target becomes the target."""
     c["gamma_wall"] = c["gamma_flip"] = None
     c["wall_in_path"] = c["gamma_capped"] = False
+    c["gamma_expiry"] = c["gamma_call_wall"] = c["gamma_put_wall"] = c["gamma_strongest"] = None
     try:
         d, edge, target = c["d"], c["edge"], c["target"]
         if not edge or not target:
@@ -549,6 +550,13 @@ def attach(c: dict, fetch: bool = True) -> dict:
             return c
         wall = w["call_wall"] if d == 1 else w["put_wall"]
         c["gamma_wall"], c["gamma_flip"] = wall, w["flip"]
+        # Expiry + both walls + strongest pull on the same monthly horizon as the walls.
+        c["gamma_expiry"] = w.get("expiry")
+        c["gamma_call_wall"], c["gamma_put_wall"] = w.get("call_wall"), w.get("put_wall")
+        sh = shelves(c["symbol"], c.get("price"), fetch=fetch)
+        if sh and sh.get("shelves"):
+            strongest = max(sh["shelves"], key=lambda r: abs(r["gex"]))
+            c["gamma_strongest"] = strongest["strike"]
         if wall and (edge < wall < target if d == 1 else target < wall < edge):
             c["wall_in_path"] = c["gamma_capped"] = True
             c["shelf_target"] = target
@@ -559,7 +567,8 @@ def attach(c: dict, fetch: bool = True) -> dict:
 
 
 def line(c: dict) -> str:
-    """One-line wall summary for an alert / paper message. '' when no data."""
+    """One-line wall summary for an alert / paper message. '' when no data.
+    Adds the expiry (+ days out), both walls, and strongest monthly pull."""
     try:
         wall, flip, target = c.get("gamma_wall"), c.get("gamma_flip"), c["target"]
         if not wall:
@@ -567,9 +576,23 @@ def line(c: dict) -> str:
         d, edge = c["d"], c["edge"]
         name = "Call wall" if d == 1 else "Put wall"
         pct = (wall / edge - 1) * 100 * d
+        exp_s = ""
+        exp = c.get("gamma_expiry")
+        if exp:
+            try:
+                days = (date.fromisoformat(exp) - date.today()).days
+                exp_d = date.fromisoformat(exp).strftime("%b %d")
+                exp_s = f" · GEX {exp_d} ({days}d)"
+            except Exception:
+                exp_s = f" · GEX {exp}"
+        other = c.get("gamma_put_wall") if d == 1 else c.get("gamma_call_wall")
+        other_name = "put wall" if d == 1 else "call wall"
+        other_s = f" · {other_name} ${other:.2f}" if other else ""
+        sp = c.get("gamma_strongest")
+        sp_s = f" · strongest pull ${sp:.2f}" if sp else ""
         if c.get("wall_in_path"):
-            return f"🧱 {name} ${wall:.2f} ({pct:+.1f}% from entry) · target capped at the wall"
+            return f"🧱 {name} ${wall:.2f} ({pct:+.1f}% from entry) · target capped at the wall{other_s}{sp_s}{exp_s}"
         flip_s = f" · flip ${flip:.2f}" if flip else ""
-        return f"🧱 Open gamma to ${target:.2f} · {name.lower()} ${wall:.2f}{flip_s}"
+        return f"🧱 Open gamma to ${target:.2f} · {name.lower()} ${wall:.2f}{other_s}{flip_s}{sp_s}{exp_s}"
     except Exception:
         return ""
