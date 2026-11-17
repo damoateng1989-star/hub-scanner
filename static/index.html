@@ -1108,6 +1108,40 @@ html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px
 @media (min-width: 761px) and (max-width: 1279px) { html body .board-table td:nth-child(8) { padding-right: 60px !important; } }
 @media (min-width: 1280px) and (max-width: 1439px) { html body .board-table td:nth-child(8) { padding-right: 44px !important; } }
 .board-table th .board-sort { white-space: normal !important; text-align: inherit; }
+
+/* SnapTrade brokerage UI preview — visual prototype only */
+.broker-preview{border:1px solid #34404c!important;background:linear-gradient(145deg,#171d25,#12161c)!important;position:relative;overflow:hidden}
+.broker-preview:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#8ca8c4}
+.broker-head{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}
+.broker-kicker{font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:#9aacc0;margin-bottom:7px}
+.broker-title{font-size:18px;font-weight:600;letter-spacing:-.02em}
+.broker-copy{color:#9aa4b1;font-size:13px;max-width:540px;margin:5px 0 0}
+.broker-status{display:inline-flex;align-items:center;gap:7px;border:1px solid #3b4653;border-radius:99px;padding:6px 10px;color:#b9c5d2;font:11px var(--mono);white-space:nowrap}
+.broker-status i{width:6px;height:6px;border-radius:50%;background:#d3a45f}
+.broker-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.broker-actions button{font-size:13px}
+.broker-connect{background:#dce7f2!important;color:#111820!important;border-color:#dce7f2!important}
+.broker-subnote{font-size:11px;color:#778493;margin-top:10px}
+.broker-divider{height:1px;background:#2a333e;margin:18px 0}
+.broker-ticket{margin-top:18px;padding:16px;border:1px solid #35404c;border-radius:12px;background:#10141a}
+.broker-ticket[hidden]{display:none}
+.broker-ticket-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
+.broker-ticket-head b{font-size:14px}
+.broker-demo-tag{font:10px var(--mono);letter-spacing:.08em;color:#d4b276;border:1px solid #625239;border-radius:5px;padding:4px 7px}
+.broker-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.broker-field label{display:block;font-size:11px;color:#98a2af;margin-bottom:5px}
+.broker-field input,.broker-field select{width:100%;min-width:0;background:#191f27;color:#edf1f5;border:1px solid #37414d;border-radius:8px;padding:10px;font:13px var(--mono)}
+.broker-side{display:flex;gap:7px}
+.broker-side button{flex:1;background:#1b242b!important;color:#aeb8c4!important;border-color:#37414d!important}
+.broker-side button.on.buy{background:#153d30!important;color:#65d6a1!important;border-color:#2b7959!important}
+.broker-side button.on.sell{background:#402326!important;color:#f08b8b!important;border-color:#84484b!important}
+.broker-estimate{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #2a333e;margin-top:14px}
+.broker-estimate small{display:block;color:#8995a3;font-size:11px}
+.broker-estimate strong{font:600 19px var(--mono);color:#e7edf4}
+.broker-disclaimer{font-size:11px;line-height:1.5;color:#82909f;margin-top:8px}
+.broker-ticket-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.broker-ticket-actions .disabled-submit{opacity:.42;cursor:not-allowed}
+@media(max-width:520px){.broker-fields{grid-template-columns:1fr}.broker-head{display:block}.broker-status{margin-top:12px}}
 </style>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
@@ -3055,6 +3089,7 @@ async function loadAccount() {
       <div class="row"><span class="plan${isPro() ? " pro" : ""}">${isPro() ? "Pro" : "Free"} plan</span>
       <button onclick="signOut()">Sign out</button></div></div>
 
+    ${m.is_admin ? brokerPreviewCard() : ""}
     ${isPro() ? "" : `<div class="acct"><h3>Free and Pro plans</h3><p>Pricing will be announced at launch. During the beta, contact the site owner to try Pro.</p>
       <div class="tiers">
         <div class="tier"><b>Free · your plan</b><ul><li>Watch up to ${m.ticker_limit} tickers</li><li>Telegram alerts after each breakout</li>
@@ -3101,6 +3136,57 @@ async function loadAccount() {
     catch (err) { $("phoneMsg").textContent = err.message; }
   });
 }
+function brokerPreviewCard() {
+  return \`<div class="acct broker-preview">
+    <div class="broker-head"><div><div class="broker-kicker">Brokerage · early access</div><div class="broker-title">Trade from NextShelf</div>
+      <p class="broker-copy">Connect your brokerage, review your buying power and positions, then place a stock order without leaving your setup workflow.</p></div>
+      <span class="broker-status"><i></i> Not connected</span></div>
+    <div class="broker-divider"></div>
+    <b style="font-size:13px">Your brokerage accounts</b><p class="broker-copy">Connected accounts will appear here with balances and positions.</p>
+    <div class="broker-actions"><button class="broker-connect" type="button" disabled>Connect Webull</button>
+      <button type="button" class="sec" onclick="toggleBrokerTicket(true)">Preview trade ticket</button></div>
+    <div class="broker-subnote">Connection setup is not active yet. Broker credentials are entered only on the brokerage connection portal.</div>
+    <div id="brokerTicket" class="broker-ticket" hidden>
+      <div class="broker-ticket-head"><b>Trade ticket · NVDA</b><span class="broker-demo-tag">UI PREVIEW ONLY</span></div>
+      <div class="broker-fields">
+        <div class="broker-field"><label>SYMBOL</label><input id="brokerSymbol" value="NVDA" maxlength="8"></div>
+        <div class="broker-field"><label>QUANTITY · SHARES</label><input id="brokerQty" type="number" min="1" max="10000" step="1" value="1"></div>
+        <div class="broker-field"><label>SIDE</label><div class="broker-side"><button id="brokerBuy" type="button" class="on buy" onclick="setBrokerSide('BUY')">Buy</button><button id="brokerSell" type="button" onclick="setBrokerSide('SELL')">Sell</button></div></div>
+        <div class="broker-field"><label>ORDER TYPE</label><select id="brokerType" onchange="brokerOrderTypeChanged()"><option value="market">Market</option><option value="limit">Limit</option></select></div>
+        <div class="broker-field" id="brokerPriceWrap" hidden><label>LIMIT PRICE · USD</label><input id="brokerPrice" type="number" min="0.01" step="0.01" value="185.00"></div>
+      </div>
+      <div class="broker-estimate"><div><small>Illustrative order value</small><strong id="brokerEstimate">$185.00</strong></div><span class="broker-demo-tag">NOT LIVE DATA</span></div>
+      <div class="broker-disclaimer">This is a visual prototype. The estimate uses a sample price and is not a live brokerage impact check. No account is connected and no order can be submitted.</div>
+      <div class="broker-ticket-actions"><button type="button" onclick="previewBrokerImpact()">Preview estimate</button><button type="button" class="disabled-submit" disabled>Confirm &amp; place order</button><button type="button" class="sec" onclick="toggleBrokerTicket(false)">Close</button></div>
+      <div id="brokerPreviewMsg" class="broker-subnote" aria-live="polite">A real order will require a fresh impact check and explicit confirmation.</div>
+    </div>
+  </div>\`;
+}
+let brokerSide = "BUY";
+function toggleBrokerTicket(open) {
+  const el=document.getElementById("brokerTicket"); if(!el)return;
+  el.hidden=!open; if(open){brokerOrderTypeChanged();previewBrokerImpact();}
+}
+function setBrokerSide(side) {
+  brokerSide=side; const b=document.getElementById("brokerBuy"),s=document.getElementById("brokerSell");
+  if(b&&s){b.className=side==="BUY"?"on buy":"";s.className=side==="SELL"?"on sell":"";}
+  previewBrokerImpact();
+}
+function brokerOrderTypeChanged() {
+  const t=document.getElementById("brokerType"),w=document.getElementById("brokerPriceWrap");
+  if(t&&w)w.hidden=t.value!=="limit"; previewBrokerImpact();
+}
+function previewBrokerImpact() {
+  const qty=Math.max(0,Number(document.getElementById("brokerQty")?.value||0));
+  const price=Number(document.getElementById("brokerPrice")?.value||185);
+  const type=document.getElementById("brokerType")?.value||"market";
+  const symbol=(document.getElementById("brokerSymbol")?.value||"NVDA").toUpperCase().replace(/[^A-Z0-9.]/g,"").slice(0,8);
+  const total=qty*(type==="limit"?price:185),out=document.getElementById("brokerEstimate");
+  if(out)out.textContent=total>0&&Number.isFinite(total)?total.toLocaleString("en-US",{style:"currency",currency:"USD"}):"—";
+  const msg=document.getElementById("brokerPreviewMsg");
+  if(msg)msg.textContent=qty>0&&(type!=="limit"||price>0)?brokerSide+" "+qty+" share"+(qty===1?"":"s")+" of "+(symbol||"—")+" · illustrative only":"Enter a valid quantity and price to preview.";
+}
+
 // ---------------------------------------------------------------- admin dashboard: members, waitlist, invites, inbox
 async function loadAdmin() {
   if (!ME) await loadMe();
