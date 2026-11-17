@@ -1540,7 +1540,7 @@ async def broker_orders(account_id: str, u: dict = Admin):
 @app.post("/api/broker/impact")
 async def broker_impact(body: BrokerImpactBody, u: dict = Admin):
     try:
-        return await run_in_threadpool(snaptrade.impact, u, body.model_dump())
+        return await run_in_threadpool(snaptrade.impact, u, body.dict())
     except Exception as e:
         _broker_error(e)
 
