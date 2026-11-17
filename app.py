@@ -47,6 +47,7 @@ import paper_opt  # noqa: E402
 import phone  # noqa: E402
 import scanner  # noqa: E402
 import snaptrade  # noqa: E402
+import swing_card  # noqa: E402
 import telegram_bot  # noqa: E402
 import universe  # noqa: E402
 
@@ -1150,6 +1151,16 @@ async def options_plan(symbol: str, u: dict = User):
         raise HTTPException(403, "Options plans are a Pro feature")
     try:
         return await run_in_threadpool(options.plan, symbol)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+@app.get("/api/swing-card/{symbol}")
+async def swing_card_endpoint(symbol: str, u: dict = User):
+    """Sika's swing-play read for the current setup (Pro; same gate as /api/options). Display only."""
+    if not options_for(u):
+        raise HTTPException(403, "Options plans are a Pro feature")
+    try:
+        return await run_in_threadpool(swing_card.card, symbol)
     except Exception as e:
         raise HTTPException(400, str(e))
 
