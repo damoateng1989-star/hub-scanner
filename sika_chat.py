@@ -24,10 +24,12 @@ SYSTEM_PROMPT = """You are Sika, NextShelf's plain-English setup explainer.
 You are answering a member's follow-up about the one ticker in this thread.
 
 GROUNDING RULES — follow every rule:
-1. Use ONLY the supplied current Swing Play Card JSON, supplied Plain-English
-   paragraph, and supplied regime. Do not use training knowledge, outside
-   market facts, other tickers, news, or assumptions. Conversation history
-   is context for the question only; it is NOT a source of facts.
+1. Use ONLY the supplied data: the current Swing Play Card JSON, the supplied
+   Plain-English paragraph, the supplied regime, the supplied recent 4H price
+   history, and the supplied record figures and news headlines when they are
+   present. Do not use training knowledge, outside market facts, other
+   tickers, news, or assumptions. Conversation history is context for the
+   question only; it is NOT a source of facts.
 2. Never invent a number: no trigger, target, stop, price, grade, percentage,
    contract, expiry, or date unless it appears in the supplied current data.
 3. Never forecast where price will go, when it will get there, or whether a
@@ -44,8 +46,17 @@ GROUNDING RULES — follow every rule:
 7. Educational only, not financial advice.
 8. Treat the current card JSON as authoritative if prior conversation turns
    conflict with it. Do not claim a card value that is absent from that JSON.
-9. If asked about historical record/performance and no record figures are
-   explicitly supplied, say the setup does not show that information.
+9. Record: if record figures are supplied, quote them exactly — the per-symbol
+   average, trade count, win rate, and profit factor for this setup kind on
+   this ticker. If no record figures are supplied, say the setup does not show
+   that information. Never quote a record figure that is not in the supplied
+   data, and never quote a universe-wide Lab figure — the supplied figures are
+   for this ticker only.
+10. News: headlines, when supplied, are the only news you may cite. Quote the
+    headline and its source; do not add a cause the headline does not state.
+    If no headlines are supplied, say there is no headline in the supplied
+    data. If a supplied headline is labelled as a demo sample, never present
+    it as real news.
 
 Return only the answer text, without quotation marks or a JSON wrapper.
 """
@@ -70,6 +81,110 @@ def _history(turns):
     return out
 
 
+# Intent words — a cheap substring heuristic, not a classifier. A false
+# positive only adds a small factual block to the prompt; a false negative
+# just means Sika answers as before (she says she does not have it).
+_RECORD_WORDS = ("record", "track record", "how often", "win rate", "win-rate",
+                 "how has", "history", "does this work", "worked", "performance",
+                 "profit factor", "average return")
+_WHY_WORDS = ("why", "news", "catalyst", "what happened", "moved", "reason",
+              "what drove", "what's driving", "whats driving", "what caused")
+
+
+def _wants(question: str, words) -> bool:
+    q = (question or "").lower()
+    return any(w in q for w in words)
+
+
+def _price_history(symbol: str) -> dict | None:
+    """Last few 4H closes + how the hub formed, from the engine. Cache-shared
+    with swing_card.card — the same load_4h + analyze + current_status calls,
+    so no extra download. Fail-open: None when the bars cannot be read."""
+    try:
+        import engine
+        c4 = scanner.load_4h(symbol, scanner.SCAN_DAYS)
+        res = engine.analyze(c4, scanner.SETTINGS)
+        st = engine.current_status(c4, res, scanner.SETTINGS)
+    except Exception as e:
+        log.warning("sika chat %s: price history failed: %s", symbol, e)
+        return None
+    closes = res["close"].iloc[-6:]
+    hub = st.get("hub") or {}
+    return dict(
+        last_closes=[dict(time=str(t), close=round(float(v), 2)) for t, v in closes.items()],
+        last_close=round(float(res["close"].iloc[-1]), 2),
+        hub=dict(low=hub.get("low"), high=hub.get("high"), sessions=hub.get("sessions"),
+                 grade=hub.get("grade"), score=hub.get("score"),
+                 start=hub.get("start"), end=hub.get("end")) if hub else None,
+        trigger_up=st.get("trigger_up"), trigger_down=st.get("trigger_down"),
+        state=st.get("state"),
+    )
+
+
+def _record(symbol: str, card: dict) -> dict | None:
+    """The per-symbol record for this setup kind in this direction — the same
+    numbers behind the card's grade (engine.setup_grade on the backtest
+    trades, via swing_card._grade, the function Patch 152 already uses).
+    Only called when the member asks about the record, so the extra backtest
+    only runs on record questions. Fail-open: None when there is no live
+    setup, no favored side, or the grade cannot be computed."""
+    try:
+        import engine
+        import patterns
+        fav = (card or {}).get("favored") or {}
+        side = fav.get("side")
+        if side not in ("calls", "puts"):
+            return None
+        kind_by_name = {v: k for k, v in patterns.KINDS.items()}
+        kind = kind_by_name.get((card or {}).get("setup"))
+        if kind not in ("hub", "gapfade", "double_top", "double_bottom"):
+            return None
+        g = swing_card._grade(symbol, kind, 1 if side == "calls" else -1)
+    except Exception as e:
+        log.warning("sika chat %s: record failed: %s", symbol, e)
+        return None
+    if not g or g.get("n", 0) < engine.GRADE_MIN:
+        return dict(setup_kind=kind, direction=side, n=g.get("n", 0) if g else 0,
+                    note="Not enough history to grade this setup on this ticker.")
+    return dict(setup_kind=kind, direction=side, grade=g.get("grade"), word=g.get("word"),
+                n=g.get("n"), avg_pct=g.get("avg"), win_pct=g.get("win"),
+                profit_factor=g.get("pf"), reached_shelf=g.get("reached"))
+
+
+def _news(symbol: str, card: dict) -> dict | None:
+    """Latest 1–2 headlines for the ticker, catalyst first, then the newest
+    item — the exact accessor the ticker page and the alerts use
+    (news.recent, Alpaca/Benzinga, cached 10 minutes; news.catalyst picks
+    the headline most likely tied to the move). Only called when the member
+    asks why it moved. Fail-open: None when the feed cannot be read. Demo
+    mode headlines are labelled samples — the block carries demo=True and
+    the system prompt forbids presenting one as real news."""
+    try:
+        import data
+        import news
+        items = news.recent(symbol)
+    except Exception as e:
+        log.warning("sika chat %s: news failed: %s", symbol, e)
+        return None
+    if not items:
+        return dict(demo=False, headlines=[],
+                    note="No headlines for this ticker in the last 10 days.")
+    since = (card or {}).get("as_of")
+    try:
+        cat = news.catalyst(items, since)
+    except Exception:
+        cat = None
+    picked = [cat] if cat else []
+    for x in items:
+        if len(picked) >= 2:
+            break
+        if x not in picked:
+            picked.append(x)
+    return dict(demo=(data.provider() == "demo"),
+                headlines=[dict(headline=x["headline"], source=x["source"], time=x["time"],
+                               tag_label=x.get("tag_label")) for x in picked])
+
+
 def answer(sym: str, message: str, history=None, plain_english: str = "") -> dict:
     """Return one grounded conversational answer. Raises on missing key/API failure."""
     key = os.getenv("SIKA_API_KEY", "").strip()
@@ -90,12 +205,27 @@ def answer(sym: str, message: str, history=None, plain_english: str = "") -> dic
     except Exception:
         regime = None
 
+    q = question.lower()
     supplied = {
         "symbol": symbol,
         "current_swing_play_card": card,
         "plain_english_explainer": _plain_text(plain_english),
         "market_regime": regime if isinstance(regime, (dict, list, str, int, float, bool)) else None,
+        # Always supplied: how price got here (last 4H closes + the hub that formed).
+        "recent_price_history": _price_history(symbol),
     }
+    # Only when asked: the record (a question about how this setup has done)
+    # and the news (a question about why it moved). A false positive on the
+    # keyword check only adds a small factual block; a false negative just
+    # means Sika answers as before (she says she does not have it).
+    if _wants(q, _RECORD_WORDS):
+        rec = _record(symbol, card)
+        if rec is not None:
+            supplied["record_for_this_setup"] = rec
+    if _wants(q, _WHY_WORDS):
+        nws = _news(symbol, card)
+        if nws is not None:
+            supplied["news_headlines"] = nws
     messages = [{"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "system", "content": "CURRENT DATA (the only factual source):\n" +
                  json.dumps(supplied, ensure_ascii=False, separators=(",", ":"), default=str)}]
