@@ -5459,7 +5459,7 @@ function briefHTML(sym, st, chart) {
     ${others.length ? row("bf-other", "Other setups", otherPrev, setupsHTML) : ""}
     <details class="vz-row" id="bf-walls" hidden ontoggle="this.dataset.touched=1"><summary><span class="vz-t">Options walls</span><span class="vz-p" id="vzWallPrev"></span></summary><div class="vz-b"><div id="bfGamma"></div></div></details>
     ${row("bf-news", live ? "Why it may be moving" : "News", `<span id="bfNewsSum">${newsSum(sym)}</span>`, `<div id="bfNews">${newsHTML(sym)}</div>`)}
-    ${row("bf-options", `Options swing <span class="ox-edu">Educational</span>`, "Calls or puts for this setup", `<div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div>`)}
+    <details class="vz-row bf-options-panel" id="bf-options" open><summary><span class="vz-t">Options swing <span class="ox-edu">Educational</span></span><span class="vz-p">Calls or puts for this setup</span></summary><div class="vz-b"><div id="bfOpt">${OPT_CACHE[sym] ? optionsHTML(OPT_CACHE[sym]) : loadingHTML("Pricing the option chain…")}</div></div></details>
     ${row("bf-history", "Track record", chart && chart.stats ? (chart.stats.n ? `${chart.stats.n} breakouts · ${chart.stats["follow-through"] ?? "–"}% reached the shelf` : "No past breakouts yet") : `Past hub breakouts on ${esc(sym)}`, `<div id="bfRec">${rec}</div>`)}
     </div><p class="bf-fine bf-legal">Based on past price behavior and NextShelf's hub rules. For education only, not financial advice.</p>`;
 }
