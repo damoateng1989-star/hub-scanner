@@ -134,6 +134,11 @@ def _record(symbol: str, card: dict) -> dict | None:
         fav = (card or {}).get("favored") or {}
         side = fav.get("side")
         if side not in ("calls", "puts"):
+            # A live C/D/? setup is watch-only, so the card has no favored
+            # side. Its deterministic message still states breakout/breakdown.
+            msg = str((card or {}).get("message") or "").lower()
+            side = "calls" if "breakout" in msg else "puts" if "breakdown" in msg else None
+        if side not in ("calls", "puts"):
             return None
         kind_by_name = {v: k for k, v in patterns.KINDS.items()}
         kind = kind_by_name.get((card or {}).get("setup"))
