@@ -322,7 +322,7 @@ def _board_grid(contracts: list, spot: float) -> dict | None:
         for wall_key in ("call_wall", "put_wall"):
             wall = wall_data.get(wall_key)
             hit = next((r for r in rows if wall is not None and abs(float(r["strike"]) - float(wall)) < 0.001), None)
-            if hit and "CEILING" not in hit["labels"]:
+            if hit and "CEILING" not in hit["labels"] and "Wall" not in hit["labels"]:
                 hit["labels"].append("Wall")
     ranked = sorted(rows, key=lambda r: r["total_gross"], reverse=True)
     selected = ranked[:_GRID_MAX_ROWS]
@@ -408,6 +408,7 @@ def snapshot_symbol(symbol: str, spot: float | None) -> bool:
         if not contracts:
             return False
         now = datetime.now(_NY)
+        now = now.replace(minute=now.minute - now.minute % 5, second=0, microsecond=0)
         hhmm = now.strftime("%H%M")
         grid_ = _board_grid(contracts, float(spot))
         if not grid_:
