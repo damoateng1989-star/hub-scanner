@@ -1516,6 +1516,15 @@ async def broker_portal(u: dict = Admin):
         _broker_error(e)
 
 
+@app.get("/api/broker/status")
+async def broker_status(u: dict = Admin):
+    """Safe owner-only status check; reports credential presence, never credential values."""
+    try:
+        return await run_in_threadpool(snaptrade.credential_status, u)
+    except Exception as e:
+        _broker_error(e)
+
+
 @app.get("/api/broker/accounts")
 async def broker_accounts(u: dict = Admin):
     try:
