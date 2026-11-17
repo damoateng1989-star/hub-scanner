@@ -491,7 +491,13 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         st["shelf_up"] = shelf_json(dict(up, level=up["low"])) if up else None
         st["shelf_down"] = shelf_json(dict(dn, level=dn["high"])) if dn else None
 
-    if h["active"]:
+    # Patch 145: an active hub's segment runs to the last candle, so the last
+    # close must sit inside [low, high]. If it is outside, the hub state is
+    # stale (the price already left the hub — GOOG, Mon Nov 16: last close
+    # $281.29 vs hub $290.67-$297.90) and "Inside the hub" would be a lie.
+    # Fall through to the ended-hub branches instead of showing the ghost
+    # long setup.
+    if h["active"] and h["low"] <= price <= h["high"]:
         from_hub()
         st.update(state="forming", label=f"Inside hub ({h['sessions']} sessions)", min_room_pct=s.min_room_pct)
         if s.window > 1 and atr_now == atr_now and atr_now > 0:      # the close that would actually end the hub (not just widen it)
