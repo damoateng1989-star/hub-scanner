@@ -1491,7 +1491,11 @@ def _broker_error(exc: Exception):
         raise HTTPException(400, str(exc))
     if isinstance(exc, RuntimeError) and "not configured" in str(exc):
         raise HTTPException(503, "broker trading not configured")
-    log.error("SnapTrade request failed (%s)", type(exc).__name__)
+    # Log only safe transport metadata; never log SnapTrade request/response bodies or credentials.
+    status = getattr(exc, "status", None) or getattr(exc, "status_code", None)
+    reason = getattr(exc, "reason", None)
+    log.error("SnapTrade request failed: exception=%s status=%s reason=%s",
+              type(exc).__name__, status, str(reason)[:160] if reason else "unavailable")
     raise HTTPException(502, "Brokerage service could not complete the request")
 
 
