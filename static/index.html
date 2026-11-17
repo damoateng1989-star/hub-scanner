@@ -1901,6 +1901,13 @@ html body .board-table td:nth-child(8) { white-space:normal; }
   html body .board-table .board-actions { flex-wrap:wrap; justify-content:flex-start; padding-right:0; }
 }
 .acct-sec { font:600 11px/1 "JetBrains Mono", monospace; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); margin:30px 2px 10px; }
+.bf-foot-actions { display:inline-flex; align-items:center; gap:8px; }
+.broker-trade-cta { background:#176B45 !important; border-color:#176B45 !important; color:#fff !important; font-weight:700 !important; }
+.broker-trade-cta:hover { background:#1B8053 !important; border-color:#1B8053 !important; }
+.shelf-trade-ticket { margin:0; }
+.shelf-trade-ticket .broker-copy { margin:8px 0 12px; }
+.shelf-trade-ticket .broker-ticket-actions { flex-wrap:wrap; }
+
 
 /* No italics anywhere: emphasised words keep the quieter colour, in the regular font */
 html body em, html body h1 em, html body h2 em, html body h3 em, html body section h2 em, html body .pitch h1 em, html body .g-head h2 em, html body .final h2 em, html body .mf-h span, html body .bp-h em {
@@ -2476,7 +2483,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
   </div>
   <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
-  <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><a id="bfChart" href="#">Open full chart →</a></div>
+  <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions">${ME && ME.is_admin ? '<button type="button" class="broker-trade-cta" onclick="openShelfTrade(BRIEF_SYM)">↗ Trade</button>' : ""}<a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
@@ -3320,6 +3327,44 @@ function tip(term) {
 }
 function explain(term) { const [t, d] = GLOSS[term]; showSheet(`<h3>${t}</h3><p>${d}</p><p style="margin-top:12px"><a href="#guide" onclick="closeSheet()">How it all fits together →</a></p>`); }
 function showSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; }
+function openShelfTrade(sym) {
+  if (!ME || !ME.is_admin) return;
+  const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus(sym) || {};
+  const hubLive = st.state === "breakout_up" || st.state === "breakdown";
+  const other = !hubLive && (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
+  const setup = other || st;
+  const side = setup.state === "breakdown" ? "SELL" : "BUY";
+  const price = Number(st.last_close || 0);
+  const trigger = other ? other.edge : (hubLive ? (side === "BUY" ? st.hub?.high : st.hub?.low) : (st.hub ? (side === "BUY" ? (st.trigger_up || st.hub.high) : (st.trigger_down || st.hub.low)) : null));
+  const target = other ? other.target : (st.target || (side === "BUY" ? st.shelf_up?.level : st.shelf_down?.level));
+  const fmt = v => v == null || !Number.isFinite(Number(v)) ? "—" : money(Number(v));
+  showSheet(`<div class="broker-ticket shelf-trade-ticket">
+    <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">PREVIEW ONLY</span></div>
+    <p class="broker-copy">Prefilled from this NextShelf shelf card. Review the setup before considering an order.</p>
+    <div class="broker-fields">
+      <div class="broker-field"><label>SYMBOL</label><input id="shelfTradeSymbol" value="${esc(sym)}" readonly></div>
+      <div class="broker-field"><label>QUANTITY · SHARES</label><input id="shelfTradeQty" type="number" min="1" max="10000" step="1" value="1" oninput="updateShelfTradeEstimate()"></div>
+      <div class="broker-field"><label>SIDE</label><div class="broker-side"><button type="button" class="${side === "BUY" ? "on buy" : ""}" disabled>Buy</button><button type="button" class="${side === "SELL" ? "on sell" : ""}" disabled>Sell</button></div></div>
+      <div class="broker-field"><label>ORDER TYPE</label><select id="shelfTradeType" onchange="updateShelfTradeEstimate()"><option value="market">Market</option><option value="limit">Limit</option></select></div>
+      <div class="broker-field" id="shelfTradeLimitWrap" hidden><label>LIMIT PRICE · USD</label><input id="shelfTradeLimit" type="number" min="0.01" step="0.01" value="${price > 0 ? price.toFixed(2) : ""}" oninput="updateShelfTradeEstimate()"></div>
+    </div>
+    <div class="broker-estimate"><div><small>Indicative value · last close, not a live quote</small><strong id="shelfTradeEstimate">${price > 0 ? money(price) : "—"}</strong></div><span class="broker-demo-tag">NOT BROKER DATA</span></div>
+    <div class="broker-subnote">Setup context · Trigger: ${fmt(trigger)} · Next target: ${fmt(target)}. A real order must receive a fresh brokerage impact preview before confirmation.</div>
+    <div class="broker-disclaimer">Broker connection and order execution are not enabled yet. This ticket cannot submit an order.</div>
+    <div class="broker-ticket-actions"><button type="button" class="disabled-submit" disabled>Confirm &amp; place order</button><button type="button" class="sec" onclick="closeSheet()">Close</button><a class="upsell" style="margin-left:auto" href="#account" onclick="closeSheet()">Manage brokerage →</a></div>
+  </div>`);
+  updateShelfTradeEstimate();
+}
+function updateShelfTradeEstimate() {
+  const qty = Math.max(0, Number($("shelfTradeQty")?.value || 0));
+  const type = $("shelfTradeType")?.value || "market";
+  const wrap = $("shelfTradeLimitWrap"), input = $("shelfTradeLimit");
+  if (wrap) wrap.hidden = type !== "limit";
+  const st = (BRIEF_CHART && BRIEF_CHART.status) || findStatus($("shelfTradeSymbol")?.value || "") || {};
+  const px = type === "limit" ? Number(input?.value || 0) : Number(st.last_close || 0);
+  const out = $("shelfTradeEstimate");
+  if (out) out.textContent = qty > 0 && px > 0 ? money(qty * px) : "—";
+}
 function closeSheet() { $("sheet").hidden = true; }
 $("sheet").addEventListener("click", (e) => { if (e.target.id === "sheet") closeSheet(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
