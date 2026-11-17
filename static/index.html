@@ -5911,11 +5911,8 @@ let GEX_BOARD_TIMER = null;
 function gxbStop() { if (GEX_BOARD_TIMER) clearInterval(GEX_BOARD_TIMER); GEX_BOARD_TIMER = null; }
 function gxbFmt(v) {
   if (v == null || !Number.isFinite(Number(v))) return "—";
-  const n = Number(v), a = Math.abs(n), p = n < 0 ? "−" : "";
-  if (a >= 1e9) return p + (a / 1e9).toFixed(2) + "B";
-  if (a >= 1e6) return p + (a / 1e6).toFixed(1) + "M";
-  if (a >= 1e3) return p + (a / 1e3).toFixed(1) + "K";
-  return p + a.toFixed(0);
+  const n = Number(v), p = n < 0 ? "−" : "";
+  return p + (Math.abs(n) / 1e6).toFixed(2) + "M";
 }
 function gxbMom(v) { return v == null ? "" : (v > 0 ? "+" : "") + Number(v).toFixed(1) + "%"; }
 function gxbTime(t) { return t ? fmtET(t.slice(0,2)+":"+t.slice(2)) + " ET" : "—"; }
