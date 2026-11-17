@@ -3228,13 +3228,13 @@ async function connectBroker() {
   }
 }
 async function loadBrokerAccounts() {
+  // Fetch account data even when the Account page is not mounted (e.g. from the ticker ticket).
   const host = $("brokerAccounts"), status = $("brokerStatus"), msg = $("brokerMessage");
-  if (!host) return;
   try {
     const data = await api("/api/broker/accounts");
     BROKER_ACCOUNTS = data.accounts || [];
     if (status) status.innerHTML = '<i></i> ' + (data.connected ? "Connected" : "Not connected");
-    host.innerHTML = BROKER_ACCOUNTS.length ? BROKER_ACCOUNTS.map(a => `
+    if (host) host.innerHTML = BROKER_ACCOUNTS.length ? BROKER_ACCOUNTS.map(a => `
       <div class="broker-account-row">
         <div><b>${esc(a.brokerage)}</b><div class="broker-copy">${esc(a.name)} ${a.number_masked ? "· " + esc(a.number_masked) : ""}</div></div>
         <div class="broker-account-value">${a.total_value == null ? "—" : esc(String(a.total_value))} ${esc(a.currency || "USD")}</div>
@@ -3245,7 +3245,7 @@ async function loadBrokerAccounts() {
   } catch (e) {
     BROKER_ACCOUNTS = [];
     if (status) status.innerHTML = '<i></i> Not connected';
-    host.innerHTML = '<p class="broker-copy">No connected account found yet. Use Connect Webull to authorize access.</p>';
+    if (host) host.innerHTML = '<p class="broker-copy">No connected account found yet. Use Connect Webull to authorize access.</p>';
     if (msg) msg.textContent = e.message || "Brokerage accounts are not available yet.";
     if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   }
