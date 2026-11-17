@@ -382,11 +382,17 @@ def _decorate_board(payload: dict, previous: dict | None, walls_: dict | None) -
     """Attach per-expiry and total momentum, plus descriptive labels based on total net GEX."""
     rows = payload.get("rows") or []
     prev_by_strike = {round(float(r["strike"]), 4): r for r in (previous or {}).get("rows", [])}
+    old_expiries = (previous or {}).get("expiries", [])
+    current_expiries = payload.get("expiries", [])
+    old_exp_index = {exp: i for i, exp in enumerate(old_expiries)}
     for row in rows:
         old = prev_by_strike.get(round(float(row["strike"]), 4))
         old_gex = old.get("gex", []) if old else []
-        row["mom"] = [_momentum(v, old_gex[i] if i < len(old_gex) else None)
-                      for i, v in enumerate(row.get("gex", []))]
+        row["mom"] = [
+            _momentum(v, old_gex[old_exp_index[exp]])
+            if old and exp in old_exp_index and old_exp_index[exp] < len(old_gex) else None
+            for exp, v in zip(current_expiries, row.get("gex", []))
+        ]
         row["total_mom"] = _momentum(float(row.get("total", 0)),
                                       float(old.get("total", 0)) if old else None)
         row.setdefault("labels", [])
