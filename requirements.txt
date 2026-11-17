@@ -7,3 +7,4 @@ numpy>=1.26
 python-dotenv>=1.0
 yfinance>=0.2.40
 pywebpush>=2.0
+snaptrade-python-sdk==11.0.35
