@@ -1022,17 +1022,6 @@ def board_data(u: dict | None = Maybe):
     return b
 
 
-@app.get("/api/public/pick")
-def public_pick():
-    """Homepage "Pick a ticker" board. Visitors see stocks resting in a hub (free members see those too) by name;
-    breakouts and hub edges stay counts only, the same paywall as the app. No levels, no plan."""
-    b = board.board()
-    rows = sorted(b["forming"], key=lambda r: -(universe.market_cap(r["symbol"]) or 0))[:16]
-    tiles = [dict(s=r["symbol"], sessions=(r.get("hub") or {}).get("sessions")) for r in rows]
-    return dict(updated=b.get("updated"), universe=b.get("universe"), tiles=tiles,
-                live=len(b["live"]), near=len(b["near"]), forming=len(b["forming"]))
-
-
 @app.get("/api/premarket")
 def premarket_data(u: dict | None = Maybe):
     if not u:

@@ -923,21 +923,24 @@ html[data-theme="light"] #how .alert-mini{background:#F3F4F6;border-color:#E4E3D
 .pk-head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
 .pk-head h2{font-size:28px;margin-top:6px;letter-spacing:-.02em}
 .pk-head p{color:var(--ink2);font-size:13.5px;max-width:46ch;margin:0}
-.pk-tiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:20px}
-.pk-t{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:3px;padding:12px;border-radius:12px;border:1px solid #252a35;background:#0d1118;min-height:68px;transition:border-color .15s,transform .15s}
-.pk-t:hover,.pk-t:focus-visible{border-color:#3B82F6;transform:translateY(-2px)}
-.pk-t b{font:700 15px var(--mono);color:var(--ink)}
-.pk-t small{font-size:11px;color:#8EA2FF}
-.pk-t.lk{border-style:dashed}.pk-t.lk b{color:var(--ink3);letter-spacing:.1em}.pk-t.lk small{color:var(--ink2)}
-.pk-t.up small{color:#3DD68C}.pk-t.edge small{color:#FBBF24}
-.pk-load{grid-column:1/-1;color:var(--ink3);font-size:13px;padding:20px 0;text-align:center}
-.pk-pop{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:min(420px,calc(100% - 32px));padding:18px 20px;border-radius:14px;border:1px solid #3B82F6;background:#0f1420;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:left;z-index:3}
+.hm-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:16px 0 10px;font-size:12px;color:var(--ink2)}
+.hm-lg{display:inline-flex;align-items:center;gap:6px}.hm-lg b{color:var(--ink);font-weight:600}.hm-lg i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.hm-box{position:relative;width:100%;height:440px;overflow:hidden;border-radius:10px}
+.hm-sec{position:absolute;box-sizing:border-box;padding:1px}
+.hm-sh{position:absolute;left:3px;top:1px;right:3px;height:14px;font:600 10px var(--sans,system-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hm-t{position:absolute;box-sizing:border-box;border:1px solid #0d0f13;border-radius:3px;padding:0;margin:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;transition:filter .12s}
+.hm-t:hover,.hm-t:focus-visible{filter:brightness(1.25);z-index:2;outline:1px solid rgba(255,255,255,.5)}
+.hm-t span{font-family:var(--mono);font-weight:700;color:rgba(255,255,255,.92);letter-spacing:-.01em;pointer-events:none}
+.hm-up{background:#1f9d63}.hm-down{background:#c2453b}.hm-edge{background:#c8961f}.hm-rest{background:#34407a}.hm-none{background:#24262c}.hm-none span{color:rgba(255,255,255,.45)}
+.hm-lock{background:repeating-linear-gradient(135deg,#2b2d34 0 5px,#24262c 5px 10px)}
+.hm-tip{position:absolute;z-index:5;pointer-events:none;opacity:0;background:#15171C;border:1px solid #292A2D;color:#F3F4F6;font-size:12px;padding:5px 9px;border-radius:8px;white-space:nowrap;box-shadow:0 6px 18px rgba(0,0,0,.3)}.hm-tip.on{opacity:1}
+.pk-load{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink3);font-size:13px}
+.pk-pop{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);width:min(420px,calc(100% - 32px));padding:18px 20px;border-radius:14px;border:1px solid #3B82F6;background:#0f1420;box-shadow:0 20px 60px rgba(0,0,0,.5);text-align:left;z-index:6}
 .pk-pop b{font:700 20px var(--mono)}.pk-pop p{color:var(--ink2);font-size:13.5px;margin:6px 0 14px}
 .pk-x{all:unset;cursor:pointer;position:absolute;top:8px;right:12px;font-size:22px;color:var(--ink3);width:32px;height:32px;text-align:center;line-height:32px}
 html[data-theme="light"] .hero-market.pick{background:#fff;border-color:#E4E3DC;box-shadow:0 20px 60px rgba(37,99,235,.08)}
-html[data-theme="light"] .pk-t{background:#F8F9FD;border-color:#E4E3DC}html[data-theme="light"] .pk-t small{color:#1D4ED8}html[data-theme="light"] .pk-t.up small{color:#0F7A4F}html[data-theme="light"] .pk-t.edge small{color:#B7791F}html[data-theme="light"] .pk-pop{background:#fff}
-@media(max-width:860px){.pk-tiles{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:520px){.pk-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}.pk-head h2{font-size:22px}}
+html[data-theme="light"] .hm-t{border-color:#fff}html[data-theme="light"] .hm-none{background:#e6e8ee}html[data-theme="light"] .hm-none span{color:#8a909c}html[data-theme="light"] .hm-rest{background:#8b93d6}html[data-theme="light"] .hm-lock{background:repeating-linear-gradient(135deg,#e3e5ea 0 5px,#eceef2 5px 10px)}html[data-theme="light"] .pk-pop{background:#fff}
+@media(max-width:640px){.hm-box{height:700px}.pk-head h2{font-size:22px}.hero-market.pick{padding:14px}}
 </style>
 </head>
 <body>
@@ -949,8 +952,8 @@ html[data-theme="light"] .pk-t{background:#F8F9FD;border-color:#E4E3DC}html[data
   <div class="navend"><a class="signin" href="/login" id="signInLink">Sign in</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l-1.6 1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><span id="navEnd" class="navend"><a class="btn sm blue" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
-<header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">WAIT</div><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We <span class="hx-2">find the setup</span>. You add it to your watchlist. We <span class="hx-2 hx-g">watch it</span>.</h1><p class="lede">Not a signal — a <span class="hx-2">tap on the shoulder</span> when something’s happening. One setup, the rules, and the record.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market pick" id="heroMarket"><div class="pk-head"><div><span class="kicker" id="pkWhen">The board</span><h2>Pick a ticker</h2></div><p>Every stock on the board, checked after each 4-hour close. Pick one to see its Shelf card: trigger, target and where it's wrong.</p></div>
-<div class="pk-tiles" id="pkTiles"><span class="pk-load">Loading the board…</span></div>
+<header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">WAIT</div><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We <span class="hx-2">find the setup</span>. You add it to your watchlist. We <span class="hx-2 hx-g">watch it</span>.</h1><p class="lede">Not a signal — a <span class="hx-2">tap on the shoulder</span> when something’s happening. One setup, the rules, and the record.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market pick" id="heroMarket"><div class="pk-head"><div><span class="kicker" id="pkWhen">The board</span><h2>Pick a ticker</h2></div><p>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands. Pick one to see its Shelf card.</p></div>
+<div class="hm-legend" id="pkLegend"></div><div class="hm-box" id="pkMap"><span class="pk-load">Loading the board…</span><div class="hm-tip" id="pkTip"></div></div>
 <div class="pk-pop" id="pkPop" hidden role="dialog" aria-live="polite"><b id="pkSym"></b><p id="pkMsg"></p><a class="btn blue" href="#join" data-cta id="pkCta">Join the waitlist</a><button type="button" class="pk-x" aria-label="Close" onclick="document.getElementById('pkPop').hidden=true">×</button></div>
 </div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
 
@@ -1389,24 +1392,68 @@ document.querySelectorAll(".lm").forEach(function (m) {
 <script>
 (function () {
   const $ = (id) => document.getElementById(id), esc = (v) => String(v).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
-  let member = false, open = false;
-  Promise.all([fetch("/api/public/pick").then(r => r.json()), fetch("/api/me").then(r => r.ok ? r.json() : null).catch(() => null),
-               fetch("/auth/config").then(r => r.json()).catch(() => ({}))]).then(([P, me, c]) => {
-    member = !!(me && !me.guest); open = c.signups_open === true;
-    if (P.updated) $("pkWhen").textContent = "The board · " + new Date(String(P.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) + " ET";
-    const lk = (n, word, cls) => n ? `<button type="button" class="pk-t lk ${cls}" data-lock="${esc(word)}" data-n="${n}"><b>••••</b><small>${n} ${esc(word)}</small></button>` : "";
-    const tiles = (P.tiles || []).map(t => `<button type="button" class="pk-t" data-s="${esc(t.s)}"><b>${esc(t.s)}</b><small>In a hub${t.sessions ? ` · ${t.sessions} sessions` : ""}</small></button>`);
-    tiles.splice(2, 0, lk(P.live, P.live === 1 ? "breaking out" : "breaking out", "up"));
-    tiles.splice(7, 0, lk(P.near, "at a hub edge", "edge"));
-    $("pkTiles").innerHTML = tiles.join("") || '<span class="pk-load">The board refreshes after the next 4-hour close.</span>';
-  }).catch(() => { $("pkTiles").innerHTML = '<span class="pk-load">The board is loading slowly. Try again in a minute.</span>'; });
-  $("pkTiles").addEventListener("click", (e) => {
-    const t = e.target.closest(".pk-t"); if (!t) return;
-    if (member) { location.href = t.dataset.s ? "/t/" + encodeURIComponent(t.dataset.s) : "/app#discover"; return; }
-    const cta = $("pkCta");
-    if (t.dataset.s) { $("pkSym").textContent = t.dataset.s; $("pkMsg").textContent = `${t.dataset.s} is resting in a hub. Its Shelf card, with the trigger, the target and where it's wrong, is for members.`; }
-    else { $("pkSym").textContent = `${t.dataset.n} ${t.dataset.lock}`; $("pkMsg").textContent = `The tickers ${t.dataset.lock} right now, each with its plan, are for members.`; }
-    cta.textContent = open ? "Start free" : "Join the waitlist"; cta.href = open ? "/login#signup" : "#join";
+  const ST = {up: ["Breaking out", "hm-up"], down: ["Breaking down", "hm-down"], edge: ["Close to the trigger", "hm-edge"], edge_dn: ["Resting in a hub", "hm-rest"],
+              resting: ["Resting in a hub", "hm-rest"], none: ["No setup", "hm-none"], locked: ["Members only: live state", "hm-lock"]};
+  const SHORT = {"Information Technology": "Tech", "Communication Services": "Comm.", "Consumer Discretionary": "Discretionary", "Consumer Staples": "Staples", "Health Care": "Health", "Real Estate": "Real estate"};
+  let HEAT = null, member = false, open = false, rt = 0;
+  function squarify(items, x, y, w, h) {
+    const out = [], total = items.reduce((a, b) => a + b.v, 0); if (!total || w <= 0 || h <= 0) return out;
+    let rest = items.map(it => ({...it, a: it.v / total * w * h})), X = x, Y = y, W = w, H = h;
+    const worst = (row, len) => { const s = row.reduce((a, b) => a + b.a, 0), mx = Math.max(...row.map(r => r.a)), mn = Math.min(...row.map(r => r.a));
+      return Math.max(len * len * mx / (s * s), s * s / (len * len * mn)); };
+    while (rest.length) {
+      const len = Math.min(W, H); let row = [rest[0]], i = 1;
+      while (i < rest.length && worst([...row, rest[i]], len) <= worst(row, len)) { row.push(rest[i]); i++; }
+      const s = row.reduce((a, b) => a + b.a, 0), thick = s / len; let off = 0;
+      for (const r of row) { const l = r.a / thick;
+        if (W >= H) out.push({...r, x: X, y: Y + off, w: thick, h: l}); else out.push({...r, x: X + off, y: Y, w: l, h: thick}); off += l; }
+      if (W >= H) { X += thick; W -= thick; } else { Y += thick; H -= thick; }
+      rest = rest.slice(i);
+    }
+    return out;
+  }
+  function paint() {
+    const box = $("pkMap"); if (!box || !HEAT || !HEAT.tiles || !HEAT.tiles.length) return;
+    const W = box.clientWidth, H = box.clientHeight, caps = HEAT.tiles.map(t => t.cap).filter(Boolean).sort((a, b) => a - b);
+    const med = caps.length ? caps[Math.floor(caps.length / 2)] : 1e10, bySec = {}, counts = {};
+    for (const t of HEAT.tiles) { (bySec[t.sec] = bySec[t.sec] || []).push({...t, v: Math.sqrt(t.cap || med)}); const k = t.st === "edge_dn" ? "resting" : t.st; counts[k] = (counts[k] || 0) + 1; }
+    const secs = Object.entries(bySec).map(([k, list]) => ({k, list: list.sort((a, b) => b.v - a.v), v: list.reduce((a, b) => a + b.v, 0)})).sort((a, b) => b.v - a.v);
+    let html = "";
+    for (const S of squarify(secs, 0, 0, W, H)) {
+      const hd = S.h > 40 && S.w > 50 ? 15 : 0;
+      html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(SHORT[S.k] || S.k)}</div>` : ""}`;
+      for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
+        const [lab, cls] = ST[t.st] || ST.none, fit = Math.min(t.w / (t.s.length * 0.62), t.h / 1.6), fs = Math.max(10, Math.min(15, fit));
+        html += `<button type="button" class="hm-t ${cls}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-st="${esc(t.st)}" data-tip="${esc(t.s)} · ${esc(SHORT[t.sec] || t.sec)} · ${lab}" aria-label="${esc(t.s)}, ${lab}">${fit >= 10 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
+      }
+      html += `</div>`;
+    }
+    box.innerHTML = html + '<div class="hm-tip" id="pkTip"></div>';
+    $("pkLegend").innerHTML = ["up", "edge", "resting", "down", "locked", "none"].filter(k => counts[k])
+      .map(k => `<span class="hm-lg"><i class="${ST[k][1]}"></i>${ST[k][0]} <b>${counts[k]}</b></span>`).join("");
+  }
+  Promise.all([fetch("/api/heatmap").then(r => r.json()), fetch("/api/me").then(r => r.ok ? r.json() : null).catch(() => null),
+               fetch("/auth/config").then(r => r.json()).catch(() => ({}))]).then(([h, me, c]) => {
+    HEAT = h; member = !!(me && !me.guest); open = c.signups_open === true;
+    if (h.updated) $("pkWhen").textContent = "The board · " + new Date(String(h.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) + " ET";
+    if (!h.tiles || !h.tiles.length) { $("pkMap").innerHTML = '<span class="pk-load">The board fills in after the next 4-hour close.</span>'; return; }
+    paint();
+  }).catch(() => { $("pkMap").innerHTML = '<span class="pk-load">The board is loading slowly. Try again in a minute.</span>'; });
+  addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(paint, 200); });
+  const box = $("pkMap");
+  box.addEventListener("pointermove", (e) => { const tip = $("pkTip"), b = e.target.closest(".hm-t"); if (!tip) return; if (!b) { tip.classList.remove("on"); return; }
+    const r = box.getBoundingClientRect(); tip.textContent = b.dataset.tip; tip.classList.add("on");
+    tip.style.left = Math.max(4, Math.min(e.clientX - r.left + 12, r.width - tip.offsetWidth - 4)) + "px"; tip.style.top = Math.max(4, e.clientY - r.top - 34) + "px"; });
+  box.addEventListener("pointerleave", () => { const tip = $("pkTip"); if (tip) tip.classList.remove("on"); });
+  box.addEventListener("click", (e) => {
+    const t = e.target.closest(".hm-t"); if (!t) return;
+    const s = t.dataset.s, st = t.dataset.st;
+    if (member) { location.href = "/t/" + encodeURIComponent(s); return; }
+    $("pkSym").textContent = s;
+    $("pkMsg").textContent = st === "resting" || st === "edge_dn" ? `${s} is resting in a hub. Its Shelf card, with the trigger, the target and where it's wrong, is for members.`
+      : st === "locked" ? `${s} has something happening right now. Its live state and Shelf card are for members.`
+      : `${s} has no setup right now. Members get an alert the moment it starts one.`;
+    const cta = $("pkCta"); cta.textContent = open ? "Start free" : "Join the waitlist"; cta.href = open ? "/login#signup" : "#join";
     $("pkPop").hidden = false;
   });
   $("pkCta").addEventListener("click", () => { $("pkPop").hidden = true; });
