@@ -1,8 +1,8 @@
 """Ask Sika to find setups: a deterministic list from the board rows.
 
 Reads board.board() (the latest stored rows — never triggers a fresh scan)
-and returns the tickers with the requested setup kind. No model call, no
-new DB table, no new scheduled job. Pro-gated by the endpoint (options_for).
+and returns live breakouts/breakdowns whose targets have Room >= 1.5.
+No model call, no new DB table, no new scheduled job. Pro-gated by the endpoint.
 """
 import os
 import time
@@ -16,6 +16,8 @@ import swing_card
 
 NY = ZoneInfo("America/New_York")
 
+# "all" is the conversational convenience for "find me a set up".
+# Specific requests remain restricted to their exact setup kind.
 _KINDS = {
     "all": ["hub", "double_top", "double_bottom", "gapfade"],
     "hub": ["hub"],
@@ -25,11 +27,12 @@ _KINDS = {
     "gapfade": ["gapfade"],
 }
 
-_GRADE_CACHE = {}
+_GRADE_CACHE = {}          # (symbol, kind, direction) -> (grade dict, expires_at monotonic)
 _GRADE_TTL_S = 3600
-GRADE_BUDGET_S = 5.0
+GRADE_BUDGET_S = 5.0       # total grade-compute time per request
 CAP = 8
 _GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "?": 4}
+_ROOM_MIN = 1.5             # retest-grade A-bar room threshold
 
 
 def _label(kind: str) -> str:
@@ -103,110 +106,129 @@ def _money(v):
     return round(float(v), 2) if v is not None else None
 
 
+def _room(edge, target, direction, width):
+    """Retest-grade risk/reward with entry at the trigger: 2*d*(target-edge)/width."""
+    if edge is None or target is None or width is None:
+        return None
+    try:
+        width = float(width)
+        edge = float(edge)
+        target = float(target)
+    except (TypeError, ValueError):
+        return None
+    if width <= 0:
+        return None
+    mid = edge - direction * width / 2
+    risk = direction * (edge - mid)
+    if risk <= 0:
+        return None
+    room = direction * (target - edge) / risk
+    if room != room:  # NaN guard
+        return None
+    return room
+
+
 def _hub_live(r, grade_fn):
+    """Build a hub row only after its target passes Room >= 1.5."""
     retest = r.get("retest") or {}
+    hub = r.get("hub") or {}
     edge = retest.get("edge")
     if edge is None:
-        hub = r.get("hub") or {}
         edge = hub.get("high") if r.get("state") == "breakout_up" else hub.get("low")
     if edge is None or r.get("target") is None:
         return None
-    d = 1 if r.get("state") == "breakout_up" else -1
-    g = grade_fn(r["symbol"], "hub", d)
+    direction = 1 if r.get("state") == "breakout_up" else -1
+    width = (hub.get("high") - hub.get("low")) if hub.get("high") is not None and hub.get("low") is not None else None
+    room = _room(edge, r["target"], direction, width)
+    if room is None or room < _ROOM_MIN:
+        return None
+    grade = grade_fn(r["symbol"], "hub", direction)
     return dict(symbol=r["symbol"], kind="hub", name=patterns.KINDS["hub"], state="live",
-                direction=d, grade=g.get("grade"), grade_word=g.get("word"),
-                trigger=_money(edge), target=_money(r["target"]), distance_pct=None,
+                direction=direction, grade=grade.get("grade"), grade_word=grade.get("word"),
+                trigger=_money(edge), target=_money(r["target"]), room=round(room, 1),
                 since=retest.get("candles_since"))
 
 
-def _hub_near(r):
-    side = r.get("near_edge")
-    if side not in ("up", "down"):
-        return None
-    trigger = r.get("trigger_up") if side == "up" else r.get("trigger_down")
-    dist = r.get("to_high_pct") if side == "up" else r.get("to_low_pct")
-    if trigger is None or dist is None:
-        return None
-    return dict(symbol=r["symbol"], kind="hub", name=patterns.KINDS["hub"], state="near",
-                direction=1 if side == "up" else -1, grade=None, grade_word=None,
-                trigger=_money(trigger), target=None,
-                distance_pct=round(abs(float(dist)), 1), since=None)
-
-
 def _pattern_live(x, grade_fn):
+    """Build a live pattern row only after its target passes Room >= 1.5."""
     if x.get("edge") is None or x.get("target") is None:
         return None
-    d = 1 if x.get("state") == "breakout_up" else -1
-    g = grade_fn(x["symbol"], x["kind"], d)
+    direction = 1 if x.get("state") == "breakout_up" else -1
+    if x["kind"] in ("double_top", "double_bottom"):
+        far = x.get("far")
+        try:
+            width = abs(float(x["edge"]) - float(far)) if far is not None else None
+        except (TypeError, ValueError):
+            width = None
+    elif x["kind"] == "gapfade":
+        stop = x.get("stop")
+        try:
+            width = float(x["edge"]) - float(stop) if stop is not None else None
+        except (TypeError, ValueError):
+            width = None
+    else:
+        return None
+    room = _room(x["edge"], x["target"], direction, width)
+    if room is None or room < _ROOM_MIN:
+        return None
+    grade = grade_fn(x["symbol"], x["kind"], direction)
     return dict(symbol=x["symbol"], kind=x["kind"], name=patterns.KINDS[x["kind"]], state="live",
-                direction=d, grade=g.get("grade"), grade_word=g.get("word"),
-                trigger=_money(x["edge"]), target=_money(x["target"]), distance_pct=None,
+                direction=direction, grade=grade.get("grade"), grade_word=grade.get("word"),
+                trigger=_money(x["edge"]), target=_money(x["target"]), room=round(room, 1),
                 since=x.get("since"))
 
 
-def _pattern_near(x):
-    if x.get("state") != "forming" or not x.get("near_edge"):
-        return None
-    if x["kind"] in ("double_top", "double_bottom"):
-        trigger = x.get("neck")
-    elif x["kind"] == "gapfade":
-        trigger = x.get("upper")
-    else:
-        return None
-    last = x.get("last_close")
-    if trigger is None or not last:
-        return None
-    return dict(symbol=x["symbol"], kind=x["kind"], name=patterns.KINDS[x["kind"]], state="near",
-                direction=1 if x.get("near_edge") == "up" else -1, grade=None, grade_word=None,
-                trigger=_money(trigger), target=None,
-                distance_pct=round(abs((float(trigger) / float(last) - 1) * 100), 1), since=None)
-
-
-def _recency_key(r):
-    s = r.get("since")
-    if isinstance(s, (int, float)):
-        return float(s)
-    if isinstance(s, str):
+def _recency_key(row):
+    """Fewer candles since a hub breakout is newer; later ISO timestamps are newer."""
+    since = row.get("since")
+    if isinstance(since, (int, float)):
+        return float(since)
+    if isinstance(since, str):
         try:
-            return -datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp()
+            return -datetime.fromisoformat(since.replace("Z", "+00:00")).timestamp()
         except Exception:
             return 0.0
     return 0.0
 
 
 def find(kind: str) -> dict:
+    """Return live breakouts/breakdowns only, each with computable Room >= 1.5.
+
+    Reads the latest stored board. No near/forming rows, no scan trigger, no writes.
+    Room is checked before the comparatively expensive grade lookup; uncomputable
+    room fails closed and the row is omitted.
+    """
     if kind not in _KINDS:
         raise ValueError(f"Unknown setup kind: {kind}")
     board_kinds = _KINDS[kind]
-    b = board.board()
-    as_of = _as_of_iso(b.get("updated"))
-    stale = _is_stale(b.get("updated"))
+    data = board.board()
+    updated = data.get("updated")
+    as_of = _as_of_iso(updated)
+    stale = _is_stale(updated)
     deadline = time.monotonic() + GRADE_BUDGET_S
-    grade_fn = lambda sym, k, d: _grade_for(sym, k, d, deadline)
-    live, near = [], []
+    grade_fn = lambda symbol, setup_kind, direction: _grade_for(symbol, setup_kind, direction, deadline)
+
+    live = []
     if "hub" in board_kinds:
-        for r in b.get("live") or []:
-            row = _hub_live(r, grade_fn)
-            if row:
-                live.append(row)
-        for r in b.get("near") or []:
-            row = _hub_near(r)
-            if row:
-                near.append(row)
-    if any(k != "hub" for k in board_kinds):
-        for x in b.get("setups") or []:
-            if x.get("kind") not in board_kinds:
+        for row in data.get("live") or []:
+            if row.get("state") not in ("breakout_up", "breakdown"):
                 continue
-            if x.get("state") in ("breakout_up", "breakdown"):
-                row = _pattern_live(x, grade_fn)
-                if row:
-                    live.append(row)
-            elif x.get("state") == "forming" and x.get("near_edge"):
-                row = _pattern_near(x)
-                if row:
-                    near.append(row)
-    live.sort(key=lambda r: (_GRADE_RANK.get(r["grade"], 4), _recency_key(r)))
-    near.sort(key=lambda r: (r["distance_pct"] if r["distance_pct"] is not None else 99))
-    rows = (live + near)[:CAP]
+            result = _hub_live(row, grade_fn)
+            if result:
+                live.append(result)
+
+    pattern_kinds = [k for k in board_kinds if k != "hub"]
+    if pattern_kinds:
+        for row in data.get("setups") or []:
+            if row.get("kind") not in pattern_kinds:
+                continue
+            if row.get("state") not in ("breakout_up", "breakdown"):
+                continue
+            result = _pattern_live(row, grade_fn)
+            if result:
+                live.append(result)
+
+    live.sort(key=lambda row: (_GRADE_RANK.get(row["grade"], 4), _recency_key(row)))
+    rows = live[:CAP]
     return dict(kind=kind, kinds=list(board_kinds), label=_label(kind), as_of=as_of,
-                stale=stale, total=len(live) + len(near), shown=len(rows), rows=rows)
+                stale=stale, total=len(live), shown=len(rows), rows=rows)
