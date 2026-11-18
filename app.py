@@ -1363,11 +1363,11 @@ def admin_lab_exits(u: dict = Admin):
 
 
 @app.post("/api/admin/lab/exits/run")
-def admin_lab_exits_run(years: int = 2, u: dict = Admin):
+def admin_lab_exits_run(years: int = 2, tests_only: bool = False, u: dict = Admin):
     import lab_exits
     if years not in lab_exits.YEARS_OK:
         raise HTTPException(400, "Pick 2, 3, 5 or 10 years")
-    return dict(started=lab_exits.start(years=years), years=years)
+    return dict(started=lab_exits.start(years=years, only_tests=tests_only), years=years, tests_only=tests_only)
 
 
 @app.post("/api/admin/lab/exits/stop")

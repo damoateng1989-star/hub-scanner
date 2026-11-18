@@ -305,12 +305,18 @@ def _retest_entry(close, low, high, atr, i0, d, edge):
     return None
 
 
-def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series | None) -> list[dict]:
+def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series | None, only_tests: bool = False) -> list[dict]:
     if c4 is None or len(c4) < 60:
         return []
     import board
     import patterns
     res = engine.analyze(c4, s)
+    if only_tests:                                            # a light run: just the test-only setups (floor bounce, hub edge)
+        atr = res["atr"].to_numpy(float)
+        day = c4.index.tz_convert(engine.NY).normalize()
+        dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum() if "Volume" in c4.columns else None
+        mc = universe.market_cap(sym)
+        return _floor_rows(sym, c4, res, s, atr, dvol, day, mc) + _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
     try:
         other = patterns.analyze_all(c4, res, s, live_only=False)["trades"]
     except Exception:
@@ -827,7 +833,10 @@ def _rss_mb() -> float:
         return 0.0
 
 
-def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None):
+TEST_KEYS = ("floor_", "edge_")      # graduation rows a tests-only run measures
+
+
+def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None, only_tests: bool = False):
     global DAYS
     if not _LOCK.acquire(blocking=False):
         return
@@ -874,13 +883,13 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 try:
                     b = bars.get(sym)
                     if b is not None and not b.empty:
-                        rows.extend(_compact(trades_for(sym, engine.to_4h(b), s, regime)))
+                        rows.extend(_compact(trades_for(sym, engine.to_4h(b), s, regime, only_tests)))
                 except Exception:
                     traceback.print_exc()
             bars = None
             gc.collect()
             # no checkpoint any more: runs don't resume (Patch 94), and rewriting every row to JSON each chunk was the biggest memory spike
-            _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len([r for r in rows if r.get("entry", "breakout") == "breakout"]),
+            _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len(rows) if only_tests else len([r for r in rows if r.get("entry", "breakout") == "breakout"]),
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
             rss = _rss_mb()
@@ -893,6 +902,17 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         if not rows:
             raise RuntimeError("no breakouts found: the market data download failed" + (f" ({failed_msg})" if failed_msg else ""))
         out = summarize(rows)
+        if only_tests:
+            # keep the last full run's tables and live-rule checks; replace only the test rows
+            prev = (json.loads(db.get_setting("lab_exits") or "{}").get("result") or {})
+            mine = [g for g in out["graduation"] if g["key"].startswith(TEST_KEYS)]
+            keep = [g for g in (prev.get("graduation") or []) if not g["key"].startswith(TEST_KEYS)]
+            out = dict(prev or out, graduation=keep + mine, tests_run=pd.Timestamp.now(tz="UTC").isoformat(),
+                       tests_symbols=len(syms), tests_days=DAYS)
+            _set(status="done", result=out, tests_only=True, finished=pd.Timestamp.now(tz="UTC").isoformat(),
+                 seconds=round(time.time() - started))
+            CKPT.unlink(missing_ok=True)
+            return
         brows = [r for r in rows if r.get("entry", "breakout") == "breakout"]
         span = sorted(r["t"] for r in brows)
         _set(status="done", result=out, trades=len(brows), days=DAYS, symbols=len(syms),
@@ -914,10 +934,10 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             start()
 
 
-def start(resume: bool = False, years: int | None = None) -> bool:
+def start(resume: bool = False, years: int | None = None, only_tests: bool = False) -> bool:
     if _LOCK.locked():
         return False
-    threading.Thread(target=run, kwargs=dict(resume=resume, years=years), daemon=True).start()
+    threading.Thread(target=run, kwargs=dict(resume=resume, years=years, only_tests=only_tests), daemon=True).start()
     return True
 
 
