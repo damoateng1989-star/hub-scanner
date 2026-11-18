@@ -17,6 +17,7 @@ import swing_card
 NY = ZoneInfo("America/New_York")
 
 _KINDS = {
+    "all": ["hub", "double_top", "double_bottom", "gapfade"],
     "hub": ["hub"],
     "double_top": ["double_top"],
     "double_bottom": ["double_bottom"],
@@ -32,6 +33,8 @@ _GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "?": 4}
 
 
 def _label(kind: str) -> str:
+    if kind == "all":
+        return "All setups"
     if kind == "double":
         return scanner.UNIVERSE_RECORD["double"]["label"]
     return patterns.KINDS[kind]
@@ -190,7 +193,7 @@ def find(kind: str) -> dict:
             row = _hub_near(r)
             if row:
                 near.append(row)
-    else:
+    if any(k != "hub" for k in board_kinds):
         for x in b.get("setups") or []:
             if x.get("kind") not in board_kinds:
                 continue
