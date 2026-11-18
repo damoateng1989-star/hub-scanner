@@ -1890,6 +1890,13 @@ html[data-theme="light"] body .sweep-btn { background: #fff !important; border-c
 html[data-theme="light"] body .sweep-btn::before { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
 
 /* the Shelf card stays out of the way when it's closed */
+/* phones: iPhone Safari shows the page under the status bar (whatever sits just above the screen). While the panel is
+   open, paint that strip in the panel's colour so the page behind it can't show through above the ticker. */
+@media (max-width: 899px) {
+  body.brief-open .brief { box-shadow: 0 -400px 0 0 #0E0F12 !important; }
+  html[data-theme="light"] body.brief-open .brief { box-shadow: 0 -400px 0 0 #f4f5f7 !important; }
+  html:has(body.brief-open) { background: #0E0F12; } html[data-theme="light"]:has(body.brief-open) { background: #f4f5f7; }
+}
 body:not(.brief-open) .brief { visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s .28s; }
 body.brief-open .brief { visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1); }
 /* calm cards */
