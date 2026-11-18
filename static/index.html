@@ -781,6 +781,8 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .ask-typing-dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes askType { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ask-typing-dots i { animation: none; opacity: .7; } }
+#askBody .ask-msg.ask-sika.ask-calls { background: #1E7A3C !important; color: #fff !important; } #askBody .ask-msg.ask-sika.ask-calls .sp-hint, #askBody .ask-msg.ask-sika.ask-calls b { color: #fff !important; }
+#askBody .ask-msg.ask-sika.ask-puts { background: #B42318 !important; color: #fff !important; } #askBody .ask-msg.ask-sika.ask-puts .sp-hint, #askBody .ask-msg.ask-sika.ask-puts b { color: #fff !important; }
 .ask-msg.ask-you { justify-self: end; text-align: left; background: #DCEBFF; color: #173653; border-bottom-right-radius: 6px; }
 .ask-msg.ask-you b { display: block; color: #173653; font: 600 14px/1.5 var(--sans); }
 .ask-row { display: flex; gap: 8px; margin-top: 12px; min-width: 0; }
@@ -7135,9 +7137,10 @@ async function askSikaProcess(raw, skipEcho) {
     askSikaHistory("user", `Let's discuss ${ticker}.`);
     if (ME && !ME.guest && (isPro() || ME.options)) {
       const c = await askSikaCard(ticker);
-      let reply = "";
+      let reply = "", tone = "";
       if (c && c.state === "live" && c.favored) {
         const f = c.favored;
+        tone = f.side === "calls" ? " ask-calls" : f.side === "puts" ? " ask-puts" : "";   // green bubble for calls, red for puts
         reply = `${ticker} — ${f.label || "Favored play"}.
 Trigger: ${f.trigger && f.trigger.text ? f.trigger.text : "See the trigger level on the setup card."}
 Target: ${Array.isArray(f.targets) ? f.targets.join(" · ") : "See the setup card."}
@@ -7158,7 +7161,7 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
       }
       if (reply) {
         askSikaHistory("sika", reply);
-        askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`);
+        askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`, "ask-sika" + tone);
         return;
       }
     }
