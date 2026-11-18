@@ -797,6 +797,9 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
   .ask-body { min-height: 0; overscroll-behavior: contain; }
   .ask-row input { font-size: 16px; }
 }
+@media (min-width: 1000px) {
+  .ask-pop { width: min(50vw, 720px); }
+}
 .sp-res:empty { display: none; }
 .sp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: #0E0F12; border: 0 !important;
   color: #E9EBEF !important; font: 600 14px var(--sans) !important; cursor: pointer; text-align: left; width: 100%; }
