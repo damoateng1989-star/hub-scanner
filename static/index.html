@@ -7159,17 +7159,25 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
   if (scanKind) {
     if (ME && !ME.guest && (isPro() || ME.options)) {
       askSikaHistory("user", raw);
-      const reading = askSikaSay('<p class="sp-hint">Sika is checking the board…</p>');
+      // Show the same typing bubble used for conversational replies while the scan runs.
+      const reading = askSikaSay('<span class="ask-typing-dots" aria-label="Sika is typing"><i></i><i></i><i></i></span>', "ask-typing");
+      const shownAt = Date.now();
+      const waitMin = async () => {
+        const wait = Math.max(0, 3000 - (Date.now() - shownAt));
+        if (wait) await new Promise(r => setTimeout(r, wait));
+      };
       try {
         const data = await api("/api/sika/find", {method: "POST", timeout: 30000, body: JSON.stringify({kind: scanKind})});
         const plain = askSikaScanText(data, scanKind);
         askSikaHistory("sika", plain);
         ASK_SCAN_SYMBOLS = new Set((data.rows || []).map(r => r.symbol));
-        if (reading) reading.innerHTML = askSikaScanHTML(data, scanKind);
+        await waitMin();
+        if (reading) { reading.className = "ask-msg ask-sika"; reading.innerHTML = askSikaScanHTML(data, scanKind); }
       } catch (e) {
         const fallback = "Sika couldn't answer that right now.";
         askSikaHistory("sika", fallback);
-        if (reading) reading.innerHTML = '<p class="sp-hint">' + fallback + '</p>';
+        await waitMin();
+        if (reading) { reading.className = "ask-msg ask-sika"; reading.innerHTML = '<p class="sp-hint">' + fallback + '</p>'; }
       }
       return;
     }
