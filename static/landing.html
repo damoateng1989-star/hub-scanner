@@ -974,13 +974,13 @@ html[data-theme="light"] .hx-c.up .w{color:#0F7A4F}html[data-theme="light"] .hx-
 .ns-logo span{font-weight:700 !important}
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
 
-/* "We watch it." — a slow blue→green gradient that drifts across the words */
-@property --hxs{syntax:"<percentage>";inherits:false;initial-value:0%}
-.hero.ns.hcx h1 .hx-2.hx-flow{background-image:repeating-linear-gradient(90deg,#8DBBFF calc(var(--hxs) - 100%),#5EEAD4 calc(var(--hxs) - 75%),#3DD68C calc(var(--hxs) - 50%),#5EEAD4 calc(var(--hxs) - 25%),#8DBBFF var(--hxs)) !important;background-size:100% 100% !important;
+/* "We watch it." — same blue as the line above, with a band of light that sweeps across it, then rests */
+@property --hxs{syntax:"<percentage>";inherits:false;initial-value:-40%}
+.hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-gradient(105deg,#8DBBFF calc(var(--hxs) - 26%),#FFFFFF calc(var(--hxs) - 6%),#FFFFFF calc(var(--hxs) + 6%),#8DBBFF calc(var(--hxs) + 26%)) !important;background-size:100% 100% !important;
  -webkit-background-clip:text !important;background-clip:text !important;color:transparent !important;-webkit-text-fill-color:transparent !important;
- text-shadow:none !important;filter:drop-shadow(0 0 18px rgba(61,214,140,.28)) drop-shadow(0 0 30px rgba(59,130,246,.22));animation:hxFlow 6s linear infinite}
-@keyframes hxFlow{to{--hxs:100%}}
-html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:repeating-linear-gradient(90deg,#1D4ED8 calc(var(--hxs) - 100%),#0E9F8F calc(var(--hxs) - 75%),#0F7A4F calc(var(--hxs) - 50%),#0E9F8F calc(var(--hxs) - 25%),#1D4ED8 var(--hxs)) !important;color:transparent !important;-webkit-text-fill-color:transparent !important;text-shadow:none !important;filter:none}
+ text-shadow:none !important;filter:drop-shadow(0 0 14px rgba(59,130,246,.45)) drop-shadow(0 0 30px rgba(59,130,246,.22));animation:hxSweep 4.5s cubic-bezier(.4,0,.2,1) infinite}
+@keyframes hxSweep{0%{--hxs:-40%}55%{--hxs:140%}100%{--hxs:140%}}
+html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-gradient(105deg,#1D4ED8 calc(var(--hxs) - 26%),#A9CBFF calc(var(--hxs) - 6%),#A9CBFF calc(var(--hxs) + 6%),#1D4ED8 calc(var(--hxs) + 26%)) !important;color:transparent !important;-webkit-text-fill-color:transparent !important;text-shadow:none !important;filter:none}
 @media(prefers-reduced-motion:reduce){.hero.ns.hcx h1 .hx-2.hx-flow{animation:none}}
 </style>
 </head>
