@@ -7067,10 +7067,20 @@ function askSikaBoardTime(iso) {
   if (isNaN(d)) return "";
   return d.toLocaleString("en-US", {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}) + " ET";
 }
+// Grade display for the find-setups scan rows (Patch 160). A graded setup
+// shows its grade and word as before. An ungraded setup shows what to wait
+// for instead of "? (Not enough history)"; it remains watch-only.
+function askSikaGradeText(r) {
+  if (!r.grade) return "";
+  if (r.grade !== "?") return r.grade + " (" + r.grade_word + ")";
+  if (r.state === "live") return "wait for a retest";
+  return r.direction === 1 ? "wait for a price breakout of a level" : "wait for a price breakdown below a level";
+}
 function askSikaScanRowText(r) {
   const short = {gapfade: "Gap fade & rip"}[r.kind] || r.name;
   const parts = [short];
-  if (r.grade) parts.push(r.grade + " (" + r.grade_word + ")");
+  const g = askSikaGradeText(r);
+  if (g) parts.push(g);
   if (r.grade && ["C", "D", "?"].includes(r.grade)) parts.push("watch only");
   parts.push(r.state === "live" ? (r.direction === 1 ? "Broke out" : "Broke down") : "Near the edge");
   parts.push("Trigger " + money(r.trigger));
@@ -7091,7 +7101,8 @@ function askSikaScanText(data, kind) {
 function askSikaScanRowHTML(r) {
   const short = {gapfade: "Gap fade & rip"}[r.kind] || r.name;
   const parts = [esc(short)];
-  if (r.grade) parts.push("<b>" + esc(r.grade) + " (" + esc(r.grade_word) + ")</b>");
+  const g = askSikaGradeText(r);
+  if (g) parts.push("<b>" + esc(g) + "</b>");
   if (r.grade && ["C", "D", "?"].includes(r.grade)) parts.push("watch only");
   parts.push(r.state === "live" ? (r.direction === 1 ? "Broke out" : "Broke down") : "Near the edge");
   parts.push("Trigger " + money(r.trigger));
