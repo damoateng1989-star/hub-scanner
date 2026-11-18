@@ -178,17 +178,26 @@ def _pattern_live(x, grade_fn):
                 since=x.get("since"))
 
 
-def _recency_key(row):
-    """Fewer candles since a hub breakout is newer; later ISO timestamps are newer."""
+def _recency_key(row, board_updated):
+    """Normalize board recency to age in seconds, including mixed 'all' scans.
+
+    Hub rows expose candles_since; pattern rows expose an ISO breakout time.
+    Convert both to an age relative to the same board update timestamp so an
+    all-kinds scan can rank same-grade rows by recency meaningfully.
+    """
     since = row.get("since")
     if isinstance(since, (int, float)):
-        return float(since)
+        return max(0.0, float(since) * 4 * 60 * 60)
     if isinstance(since, str):
         try:
-            return -datetime.fromisoformat(since.replace("Z", "+00:00")).timestamp()
+            stamp = datetime.fromisoformat(since.replace("Z", "+00:00"))
+            if stamp.tzinfo is None:
+                stamp = stamp.replace(tzinfo=timezone.utc)
+            reference = _parse_utc(board_updated) or datetime.now(timezone.utc)
+            return max(0.0, (reference - stamp.astimezone(timezone.utc)).total_seconds())
         except Exception:
-            return 0.0
-    return 0.0
+            return float("inf")
+    return float("inf")
 
 
 def find(kind: str) -> dict:
@@ -228,7 +237,7 @@ def find(kind: str) -> dict:
             if result:
                 live.append(result)
 
-    live.sort(key=lambda row: (_GRADE_RANK.get(row["grade"], 4), _recency_key(row)))
+    live.sort(key=lambda row: (_GRADE_RANK.get(row["grade"], 4), _recency_key(row, updated)))
     rows = live[:CAP]
     return dict(kind=kind, kinds=list(board_kinds), label=_label(kind), as_of=as_of,
                 stale=stale, total=len(live), shown=len(rows), rows=rows)
