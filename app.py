@@ -49,6 +49,7 @@ import scanner  # noqa: E402
 import snaptrade  # noqa: E402
 import swing_card  # noqa: E402
 import sika_chat  # noqa: E402
+import sika_find  # noqa: E402
 import telegram_bot  # noqa: E402
 import universe  # noqa: E402
 
@@ -255,6 +256,10 @@ class SikaChatBody(BaseModel):
     message: str
     history: list[dict] | None = None
     plain_english: str = ""
+
+
+class SikaFindBody(BaseModel):
+    kind: str
 
 
 class SignupBody(BaseModel):
@@ -1188,6 +1193,21 @@ async def sika_chat_endpoint(body: SikaChatBody, u: dict = User):
         raise HTTPException(400, str(e))
     except Exception as e:
         log.warning("Sika chat unavailable for %s: %s", body.symbol[:12], type(e).__name__)
+        raise HTTPException(503, "Sika couldn't answer that right now")
+
+
+@app.post("/api/sika/find")
+async def sika_find_endpoint(body: SikaFindBody, u: dict = User):
+    """Deterministic setup scan for the Sika dialogue: tickers with the requested setup kind, from board rows. Display only."""
+    if not options_for(u):
+        raise HTTPException(403, "Options plans are a Pro feature")
+    kind = (body.kind or "").strip().lower()
+    if kind not in ("hub", "double", "double_top", "double_bottom", "gapfade"):
+        raise HTTPException(400, "Unknown setup kind")
+    try:
+        return await run_in_threadpool(sika_find.find, kind)
+    except Exception as e:
+        log.warning("Sika find unavailable for %s: %s", kind, type(e).__name__)
         raise HTTPException(503, "Sika couldn't answer that right now")
 
 
