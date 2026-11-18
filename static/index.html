@@ -7009,7 +7009,7 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
       }
       if (reply) {
         askSikaHistory("sika", reply);
-        askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\\n/g, "<br>")}</p>`);
+        askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`);
         return;
       }
     }
