@@ -781,8 +781,63 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .ask-typing-dots i:nth-child(3) { animation-delay: .4s; }
 @keyframes askType { 0%, 60%, 100% { transform: translateY(0); opacity: .45; } 30% { transform: translateY(-4px); opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .ask-typing-dots i { animation: none; opacity: .7; } }
-#askBody .ask-msg.ask-sika.ask-calls { background: #1E7A3C !important; color: #fff !important; } #askBody .ask-msg.ask-sika.ask-calls .sp-hint, #askBody .ask-msg.ask-sika.ask-calls b { color: #fff !important; }
-#askBody .ask-msg.ask-sika.ask-puts { background: #B42318 !important; color: #fff !important; } #askBody .ask-msg.ask-sika.ask-puts .sp-hint, #askBody .ask-msg.ask-sika.ask-puts b { color: #fff !important; }
+/* Sika play card (Patch 162): the bare-ticker play renders as a structured
+   dark card, not a solid green/red bubble. Direction is a pill plus a thin
+   top accent; the old full-bleed .ask-sika.ask-calls/.ask-puts fills are
+   deleted. The .ask-calls/.ask-puts class names are kept — they now select
+   the card's accent colour, not a bubble fill. */
+#askBody { grid-auto-rows: max-content; }   /* rows take their message's full height: tall play cards never get squeezed */
+#askBody .ask-msg.ask-play { justify-self: stretch; width: 100%; max-width: 100%; padding: 0; overflow: visible; min-height: max-content; background: #171B21; color: #EEF1F5; border: 1px solid #262C35; border-radius: 18px; }
+#askBody .ask-msg.ask-play.ask-calls { border-top: 3px solid #3DD68C; }
+#askBody .ask-msg.ask-play.ask-puts { border-top: 3px solid #FF6B5E; }
+.ask-play-head { display: flex; align-items: flex-start; gap: 12px; padding: 18px 18px 0; }
+.ask-play-id { flex: 1; min-width: 0; }
+.ask-play-ticker { font: 800 27px/1 var(--sans); letter-spacing: -.02em; }
+.ask-play-grade { display: inline-block; margin-left: 10px; padding: 4px 9px; border-radius: 8px; background: rgba(242,193,78,.13); border: 1px solid rgba(242,193,78,.4); color: #F2C14E; font: 600 12px var(--mono); vertical-align: middle; }
+.ask-play-sub { margin-top: 7px; font: 600 13.5px var(--sans); color: #AEB7C2; display: flex; align-items: center; gap: 8px; }
+.ask-play-sub .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+.ask-play.ask-calls .ask-play-sub .dot { background: #3DD68C; }
+.ask-play.ask-puts .ask-play-sub .dot { background: #FF6B5E; }
+.ask-play-side { flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 9px 13px; border-radius: 999px; font: 800 13px var(--sans); white-space: nowrap; }
+.ask-play-side .fav { font-weight: 600; opacity: .75; font-size: 12px; }
+.ask-play.ask-calls .ask-play-side { color: #3DD68C; background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.38); }
+.ask-play.ask-puts .ask-play-side { color: #FF6B5E; background: rgba(255,107,94,.11); border: 1px solid rgba(255,107,94,.38); }
+.ask-play-ladder { padding: 18px 18px 2px; }
+.ask-play-track { height: 6px; border-radius: 99px; background: #262C35; overflow: hidden; }
+.ask-play-fill { height: 100%; border-radius: 99px; }
+.ask-play.ask-calls .ask-play-fill { background: linear-gradient(90deg, rgba(61,214,140,.35), #3DD68C); }
+.ask-play.ask-puts .ask-play-fill { background: linear-gradient(90deg, rgba(255,107,94,.35), #FF6B5E); }
+.ask-play-ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 9px; font: 500 12px var(--mono); color: #77828F; }
+#askBody .ask-play-ends b { color: #AEB7C2 !important; font-weight: 600; }
+.ask-play-room { margin-top: 10px; font: 700 13px var(--sans); }
+.ask-play.ask-calls .ask-play-room { color: #3DD68C; }
+.ask-play.ask-puts .ask-play-room { color: #FF6B5E; }
+.ask-play-room span { color: #77828F; font-weight: 600; }
+.ask-play-levels { padding: 14px 18px 4px; display: flex; flex-direction: column; }
+.ask-play-level { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 11px 0; border-top: 1px solid rgba(255,255,255,.055); }
+.ask-play-level:first-child { border-top: none; }
+.ask-play-level .k { font: 800 11px var(--sans); letter-spacing: .11em; text-transform: uppercase; color: #77828F; flex: none; }
+.ask-play-level .v { font: 600 16.5px var(--mono); text-align: right; }
+.ask-play-level .v small { display: block; font: 500 12px var(--sans); color: #77828F; margin-top: 2px; }
+.ask-play-level.wrong .v { color: #FF6B5E; }
+.ask-play-level.target .v { font-size: 19px; }
+.ask-play.ask-calls .ask-play-level.target .v { color: #3DD68C; }
+.ask-play.ask-puts .ask-play-level.target .v { color: #FF6B5E; }
+.ask-play-idea { margin: 12px 18px 0; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 13px; padding: 13px 15px; }
+.ask-play-idea .k { width: 100%; font: 800 11px var(--sans); letter-spacing: .11em; text-transform: uppercase; color: #77828F; }
+.ask-play-idea .contract { font: 800 16px var(--sans); letter-spacing: -.01em; }
+.ask-play-idea .contract .mono { font: 600 15px var(--mono); }
+.ask-play-idea .mid { margin-left: auto; padding: 6px 11px; border-radius: 9px; background: rgba(94,168,255,.12); color: #9CC6FF; border: 1px solid rgba(94,168,255,.32); font: 600 14px var(--mono); white-space: nowrap; }
+.ask-play-ask { padding: 16px 18px 18px; }
+.ask-play-ask .ask-label { font: 600 12.5px var(--sans); color: #77828F; margin-bottom: 9px; }
+.ask-play-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ask-play-chip { min-height: 38px; padding: 9px 13px; border-radius: 999px; border: 1px solid #262C35; background: rgba(255,255,255,.03); color: #EEF1F5; font: 700 13px var(--sans); cursor: pointer; display: inline-flex; align-items: center; }
+.ask-play-chip:hover { background: rgba(255,255,255,.07); }
+@media (max-width: 640px) {
+  .ask-play-ticker { font-size: 24px; }
+  .ask-play-level .v { font-size: 15px; }
+  .ask-play-level.target .v { font-size: 17px; }
+}
 .ask-msg.ask-you { justify-self: end; text-align: left; background: #DCEBFF; color: #173653; border-bottom-right-radius: 6px; }
 .ask-msg.ask-you b { display: block; color: #173653; font: 600 14px/1.5 var(--sans); }
 .ask-row { display: flex; gap: 8px; margin-top: 12px; min-width: 0; }
@@ -7129,6 +7184,65 @@ function askSikaTap(sym) {
   askSikaDrain();
 }
 
+// Patch 162: a follow-up chip tap sends the question exactly as if the member
+// typed it — same ASK_QUEUE / askSikaDrain path as askSikaSend, following the
+// askSikaTap pattern the scan rows already use. It does not touch #askInput,
+// so it never clobbers a draft the member is typing. The question is echoed
+// as the member's bubble by askSikaProcess (skipEcho is false), then handled
+// as a normal follow-up — the typing bubble, the model call, and the Pro gate
+// are all unchanged.
+function askSikaChip(q) {
+  ASK_QUEUE.push(q);
+  askSikaDrain();
+}
+
+// Patch 162: the bare-ticker play as a structured dark card (mockup
+// sika-chat-play-redesign). Same live card JSON the plain-text play already
+// reads (askSikaCard / SWING_CACHE / GET /api/swing-card) — only the
+// presentation changes. Returns the card's inner HTML (askSikaSay wraps it
+// in the .ask-msg.ask-play div), or null when a required number is missing —
+// the caller then falls back to the plain-text play. No ticker or level is
+// hardcoded; every value comes from the card.
+function askSikaPlayHTML(ticker, c) {
+  const f = c && c.favored;
+  if (!f || !f.trigger || !Array.isArray(f.targets) || !f.targets.length) return null;
+  const trig = Number(f.trigger.price);
+  const tgt = parseFloat(String(f.targets[0]).replace(/[^0-9.\-]/g, ""));
+  if (!Number.isFinite(trig) || !Number.isFinite(tgt) || trig <= 0) return null;
+  const isCalls = f.side === "calls";
+  const delta = tgt - trig;
+  const pct = delta / trig * 100;
+  const sign = delta >= 0 ? "+" : "−";
+  const room = `${sign}$${Math.abs(delta).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} to target <span>· ${sign}${Math.abs(pct).toFixed(1)}% from the trigger</span>`;
+  const arrow = isCalls
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19L19 4M19 4h-9M19 4v9" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+    : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 5l15 15M19 20h-9M19 20v-9" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  const grade = c.grade ? `<span class="ask-play-grade">GRADE ${esc(c.grade)}</span>` : "";
+  const sub = isCalls ? "Holding above the trigger — play is live" : "Holding below the trigger — play is live";
+  const idea = f.contract ? (() => {
+    const k = f.contract;
+    const mid = Number.isFinite(k.cost_mid) ? `$${Number(k.cost_mid).toFixed(2)} mid` : "mid price unavailable";
+    return `<div class="ask-play-idea"><div class="k">Options idea</div><div class="contract">${esc(k.expiry)} · <span class="mono">$${esc(k.strike)} ${esc(k.side)}s</span></div><div class="mid">${esc(mid)}</div></div>`;
+  })() : "";
+  // Chip labels are the mockup's short prompts; the question each chip sends
+  // is the full question (the data-q attribute carries it HTML-escaped, so
+  // any future wording with a quote cannot break the handler).
+  const chips = [
+    ["What's driving it?", "What is driving the setup?"],
+    ["Where does price sit in the hub?", "Where does price sit in the hub?"],
+    ["What would invalidate it?", "What could invalidate it?"],
+  ].map(([label, q]) => `<button class="ask-play-chip" type="button" data-q="${esc(q)}" onclick="askSikaChip(this.dataset.q)">${esc(label)}</button>`).join("");
+  return `<div class="ask-play-head"><div class="ask-play-id"><div><span class="ask-play-ticker">${esc(ticker)}</span>${grade}</div><div class="ask-play-sub"><span class="dot"></span>${esc(sub)}</div></div><div class="ask-play-side">${arrow}${isCalls ? "Calls" : "Puts"} <span class="fav">favored</span></div></div>`
+    + `<div class="ask-play-ladder"><div class="ask-play-track"><div class="ask-play-fill"></div></div><div class="ask-play-ends"><span>Trigger <b>${esc(money(trig))}</b></span><span>Target <b>${esc(f.targets[0])}</b></span></div><div class="ask-play-room">${room}</div></div>`
+    + `<div class="ask-play-levels">`
+    + `<div class="ask-play-level"><div class="k">Trigger</div><div class="v">${esc(money(trig))}<small>${isCalls ? "Holds above this level" : "Holds below this level"}</small></div></div>`
+    + `<div class="ask-play-level target"><div class="k">Target</div><div class="v">${esc(f.targets[0])}<small>${isCalls ? "Next shelf up" : "Next shelf down"}</small></div></div>`
+    + `<div class="ask-play-level wrong"><div class="k">Wrong if</div><div class="v">${esc(money(trig))}<small>${isCalls ? "4H close back below the trigger" : "4H close back above the trigger"}</small></div></div>`
+    + `</div>`
+    + idea
+    + `<div class="ask-play-ask"><div class="ask-label">Ask Sika about this setup</div><div class="ask-play-chips">${chips}</div></div>`;
+}
+
 async function askSikaProcess(raw, skipEcho) {
   if (!skipEcho) askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
   const ticker = raw.toUpperCase().replace(/\$/g, "").trim();
@@ -7161,7 +7275,16 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
       }
       if (reply) {
         askSikaHistory("sika", reply);
-        askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`, "ask-sika" + tone);
+        // Patch 162: a live A/B play renders as the structured card; every
+        // other state keeps the plain-text render. If the card cannot be
+        // built (a required number is missing), askSikaPlayHTML returns null
+        // and the plain-text play renders instead — same values, no colour.
+        const cardHtml = (c && c.state === "live" && c.favored) ? askSikaPlayHTML(ticker, c) : null;
+        if (cardHtml) {
+          askSikaSay(cardHtml, "ask-play " + (c.favored.side === "calls" ? "ask-calls" : "ask-puts"));
+        } else {
+          askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`, "ask-sika" + tone);
+        }
         return;
       }
     }
