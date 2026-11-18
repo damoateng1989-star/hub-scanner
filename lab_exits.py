@@ -202,6 +202,53 @@ def _floor_rows(sym, c4, res, s, atr, dvol, day, mc):
     return out
 
 
+# ---------------------------------------------------------------- hub edge close (test only, not alerted)
+# The AMZN question (Nov 17): go long on the first 4H close above a resting hub's top, even though the engine doesn't
+# count it as a breakout yet (the close only stretches the hub: it's below max(top, recent closes + k x ATR)).
+# Point in time: the hub top/bottom are the closes SO FAR, the trigger uses only closes before this candle.
+EDGE_EXITS = {
+    "ed_trig": "Target: the real breakout trigger · stop: a 4H close below the hub",
+    "ed_shelf": "Target: the next shelf above (else 1 ATR past the trigger) · stop: a 4H close below the hub",
+    "ed_tight": "Target: the next shelf above, hit intraday · stop: the hub bottom, hit intraday",
+}
+
+
+def _edge_rows(sym, c4, res, s, atr, dvol, day, mc):
+    import board
+    close = res["close"].to_numpy(float)
+    open_, high, low = (c4[k].to_numpy(float) for k in ("Open", "High", "Low"))
+    idx, out, W = c4.index, [], s.window
+    for h in res["hubs"]:
+        si = h["start_i"]
+        for j in range(max(h["formed_i"], si + W - 1, 1), h["end_i"] + 1):
+            lo, hi = float(close[si:j].min()), float(close[si:j].max())          # the hub so far, before this candle
+            A = atr[j - 1]
+            if not A or A != A or hi <= 0:
+                continue
+            prev = close[max(si, j - (W - 1)):j]
+            trig = max(hi, float(prev.min()) + s.k * A)                           # the close that would end the hub
+            c = float(close[j])
+            if not (hi < c < trig):
+                continue                                                          # not above the top, or already a real breakout
+            shelves = [x["low"] for x in res["hubs"] if x["end_i"] < si and x["low"] > c]
+            shelf = min(shelves) if shelves else trig + s.target_atr * A
+            dv = None
+            if dvol is not None:
+                prior = dvol[dvol.index < day[j]]
+                prior = prior[prior > 0].tail(20)
+                dv = float(prior.mean()) if len(prior) >= 5 else None
+            ex = {"ed_trig": _exit(close, j, 1, c, trig, lo - 1e-6, s.horizon),
+                  "ed_shelf": _exit(close, j, 1, c, shelf, lo - 1e-6, s.horizon),
+                  "ed_tight": _exit_intrabar(open_, high, low, close, j, c, shelf, lo, s.horizon)}
+            ex = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
+            if "ed_shelf" in ex:
+                out.append(dict(sym=sym, grp="edge", entry="edge", t=str(idx[j]), d=1, dv=dv,
+                                board_ok=board.quality_skip(sym, dv, mc) is None, sessions=(j - si + 1) // 2,
+                                width=(hi - lo) / A, tight=(hi - lo) < 0.5 * A, rr=(shelf - c) / max(c - lo, 1e-9), ex=ex))
+            break                                                                 # one entry per hub: the first such close
+    return out
+
+
 def _exit_half(close: np.ndarray, i0: int, d: int, entry: float, target: float, stop: float, r: float, horizon: int):
     """Half off at entry + 1R (or the target if that comes first); the rest is stopped at entry once half is off."""
     n, lvl, half = len(close), entry + d * r, None
@@ -282,6 +329,10 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     out = []
     try:
         out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc)
+    except Exception:
+        traceback.print_exc()
+    try:
+        out += _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
     except Exception:
         traceback.print_exc()
     for t in [dict(x, kind="hub") for x in res["trades"]] + other:
@@ -556,6 +607,17 @@ LIVE_RULES = [
      lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_ride"),
     ("floor_any", "Test · Hub floor bounce: stop on a close below the floor (any hub)",
      lambda r: r["grp"] == "floor" and r.get("first_any"), "fl_close"),
+    # test only (Nov 17, the AMZN question): long on the first close above a resting hub's top, before the real trigger
+    ("edge_trig", "Test · Close above a resting hub's top (not a breakout yet): target the real trigger",
+     lambda r: r["grp"] == "edge", "ed_trig"),
+    ("edge_shelf", "Test · Close above a resting hub's top (not a breakout yet): target the next shelf",
+     lambda r: r["grp"] == "edge", "ed_shelf"),
+    ("edge_tight", "Test · Close above a resting hub's top: next shelf, intraday stop at the hub bottom",
+     lambda r: r["grp"] == "edge", "ed_tight"),
+    ("edge_shelf_tighthub", "Test · Same, tight hubs only (under 0.5 ATR wide, like AMZN): target the next shelf",
+     lambda r: r["grp"] == "edge" and r.get("tight"), "ed_shelf"),
+    ("edge_tight_tighthub", "Test · Same, tight hubs only: next shelf, intraday stop at the hub bottom",
+     lambda r: r["grp"] == "edge" and r.get("tight"), "ed_tight"),
     # test only: hubs with no shelf above, A retest longs, three targets
     *[(f"noshelf_{k[3:]}", f"Test · No shelf above, retest after a 4+ session hub: {lbl.split(' · ')[0].replace('Target: ', 'target ')}",
        lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and r.get("no_shelf")
@@ -606,7 +668,7 @@ def graduation(rows: list[dict]) -> list[dict]:
         cut = (pd.Timestamp(got[-1]["t"]) - pd.Timedelta(days=182)).isoformat()
         recent = np.array([r["ex"][ek][0] for r in got if r["t"] >= cut])
         sp = _spread(x, syms)
-        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
+        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or EDGE_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
                    win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
                    pf=round(pf, 2) if pf is not None else None,
                    early=round(early, 2) if early is not None else None, late=round(late, 2) if late is not None else None,
@@ -696,7 +758,7 @@ class _Ex:
 
 
 _ROW_KEYS = ("sym", "grp", "entry", "t", "d", "dv", "board_ok", "rvol", "with_mkt", "with_trend", "chase", "margin", "rr",
-             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far")
+             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight")
 
 
 class _Row:
