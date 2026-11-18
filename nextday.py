@@ -29,6 +29,12 @@ with db._lock:
         rest_pct REAL, open_pct REAL, high_pct REAL, low_pct REAL, close_pct REAL,
         hit_stop INTEGER, hit_target INTEGER, checked_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
     db._conn.commit()
+    for _c, _d in [("kind", "TEXT DEFAULT 'setup'"), ("direction", "INTEGER DEFAULT 1"), ("fav_pct", "REAL")]:
+        try:   # added later: hub breakouts and breakdowns too (kind='breakout'), measured in the trade's direction
+            db._conn.execute(f"ALTER TABLE next_day ADD COLUMN {_c} {_d}")
+            db._conn.commit()
+        except Exception:
+            pass
 
 
 def _pct(x: float, e: float) -> float:
@@ -36,14 +42,18 @@ def _pct(x: float, e: float) -> float:
 
 
 def _pending() -> list[dict]:
-    """Confirmed setups (the live record) that have no next-day row yet."""
-    rows = db._run("""SELECT s.* FROM signals s LEFT JOIN next_day n ON n.signal_id = s.id
-                      WHERE s.pattern='rules' AND s.entry IS NOT NULL AND s.entry_time IS NOT NULL AND n.signal_id IS NULL
-                      ORDER BY s.entry_time""").fetchall()
+    """Confirmed setups (the live record) and hub breakouts/breakdowns (the breakout close) with no next-day row yet."""
+    rows = db._run("""SELECT s.*, CASE WHEN s.pattern='rules' THEN 'setup' ELSE 'breakout' END AS kind,
+                             COALESCE(s.entry_time, s.breakout_time) AS e_time
+                      FROM signals s LEFT JOIN next_day n ON n.signal_id = s.id
+                      WHERE COALESCE(s.pattern, 'hub') IN ('rules', 'hub') AND s.entry IS NOT NULL
+                        AND COALESCE(s.entry_time, s.breakout_time) IS NOT NULL AND n.signal_id IS NULL
+                      ORDER BY e_time""").fetchall()
     cut = pd.Timestamp.now(tz=engine.NY) - pd.Timedelta(days=LOOKBACK_DAYS)
     out = []
     for r in rows:
         r = dict(r)
+        r["entry_time"] = r.pop("e_time")
         try:
             if pd.Timestamp(r["entry_time"]).tz_convert(engine.NY) >= cut:
                 out.append(r)
@@ -65,17 +75,26 @@ def check(sig: dict, c4: pd.DataFrame) -> dict | None:
         return None
     i = after[0]
     o, h, lo, c = (float(d[k].iloc[i]) for k in ("Open", "High", "Low", "Close"))
+    if not float(sig["entry"]) > 0 or abs(o / float(sig["entry"]) - 1) > 0.4:
+        return None                                # a split or a bad print, not a real next-day move: skip it
     e, stop, tgt = float(sig["entry"]), sig.get("stop"), sig.get("target")
+    kind, dr = sig.get("kind") or "setup", int(sig.get("direction") or 1)
+    setup = sig.get("setup")
+    if kind == "breakout":                         # a hub break fails on a close back inside: "stop" = the hub edge
+        stop = sig.get("hub_high") if dr == 1 else sig.get("hub_low")
+        setup = "Breakout" if dr == 1 else "Breakdown"
     rest = None                                    # entered on the 1:30 close: what the rest of that day did
     if engine.candle_end(t).hour < 16:
         same = [k for k, x in enumerate(days) if x == entry_day]
         if same:
             rest = _pct(float(d["Close"].iloc[same[0]]), e)
-    return dict(signal_id=sig["id"], symbol=sig["symbol"], setup=sig.get("setup"), grade=sig.get("grade"),
+    hit_stop = stop is not None and (lo <= float(stop) if dr == 1 else h >= float(stop))
+    hit_tgt = tgt is not None and (h >= float(tgt) if dr == 1 else lo <= float(tgt))
+    return dict(signal_id=sig["id"], symbol=sig["symbol"], setup=setup, grade=sig.get("grade"), kind=kind, direction=dr,
                 entry=e, stop=stop, target=tgt, entry_time=sig["entry_time"], day=str(days[i].date()),
                 open=round(o, 2), high=round(h, 2), low=round(lo, 2), close=round(c, 2), rest_pct=rest,
                 open_pct=_pct(o, e), high_pct=_pct(h, e), low_pct=_pct(lo, e), close_pct=_pct(c, e),
-                hit_stop=int(stop is not None and lo <= float(stop)), hit_target=int(tgt is not None and h >= float(tgt)))
+                fav_pct=round(_pct(c, e) * dr, 2), hit_stop=int(hit_stop), hit_target=int(hit_tgt))
 
 
 def _save(r: dict):
@@ -123,18 +142,26 @@ def run(notify: bool = True) -> list[dict]:
 
 def _line(r: dict) -> str:
     sign = lambda x: f"{(0.0 if abs(x) < 0.005 else x):+.2f}%"
-    flag = " · 🎯 touched target" if r["hit_target"] else " · ⛔ touched stop" if r["hit_stop"] else ""
-    icon = "🟢" if r["close_pct"] > 0 else "🔴" if r["close_pct"] < 0 else "⚪"
+    back = "back inside the hub" if r.get("kind") == "breakout" else "stop"
+    flag = " · 🎯 touched target" if r["hit_target"] else f" · ⛔ touched {back}" if r["hit_stop"] else ""
+    fav = r.get("fav_pct") if r.get("fav_pct") is not None else r["close_pct"]
+    icon = "🟢" if fav > 0 else "🔴" if fav < 0 else "⚪"
     return (f"{icon} <b>{html.escape(r['symbol'])}</b> {html.escape(r['setup'] or '')} · entry ${r['entry']:,.2f}\n"
             f"   open {sign(r['open_pct'])} · high {sign(r['high_pct'])} · low {sign(r['low_pct'])} · close <b>{sign(r['close_pct'])}</b>{flag}")
 
 
 def text(rows: list[dict]) -> str:
-    s = stats()
-    head = "📋 <b>Next-day check</b> · how yesterday's confirmed setups did today"
-    foot = (f"\n\nAll {s['n']} checked: {s['green_pct']}% closed green the next day, avg {s['avg_close']:+.2f}%, "
-            f"{s['stop_pct']}% touched the stop, {s['target_pct']}% touched the target." if s["n"] else "")
-    return head + "\n\n" + "\n".join(_line(r) for r in rows) + foot
+    st = stats()
+    out = ["📋 <b>Next-day check</b> · how yesterday's setups and breakouts did today"]
+    for kind, title, stop_word in (("setup", "Confirmed setups", "the stop"), ("breakout", "Breakouts & breakdowns", "back inside the hub")):
+        rs, s = [r for r in rows if (r.get("kind") or "setup") == kind], st.get(kind) or {}
+        if not rs:
+            continue
+        out.append(f"\n<b>{title}</b>\n" + "\n".join(_line(r) for r in rs[:12]) + (f"\n…and {len(rs) - 12} more" if len(rs) > 12 else ""))
+        if s.get("n"):
+            out.append(f"<i>All {s['n']} so far: {s['green_pct']}% went their way by the next close, avg {s['avg_fav']:+.2f}%, "
+                       f"{s['stop_pct']}% touched {stop_word}, {s['target_pct']}% touched the target.</i>")
+    return "\n".join(out)
 
 
 def rows(limit: int = 200) -> list[dict]:
@@ -146,13 +173,18 @@ def _agg(rs: list[dict]) -> dict:
     if not n:
         return dict(n=0)
     f = lambda k: round(sum(r[k] for r in rs) / n, 2)
-    return dict(n=n, green_pct=round(100 * sum(r["close_pct"] > 0 for r in rs) / n), avg_close=f("close_pct"),
+    fav = [r["fav_pct"] if r.get("fav_pct") is not None else r["close_pct"] * (r.get("direction") or 1) for r in rs]
+    return dict(n=n, green_pct=round(100 * sum(x > 0 for x in fav) / n), avg_fav=round(sum(fav) / n, 2), avg_close=f("close_pct"),
                 avg_open=f("open_pct"), avg_high=f("high_pct"), avg_low=f("low_pct"),
                 stop_pct=round(100 * sum(r["hit_stop"] for r in rs) / n), target_pct=round(100 * sum(r["hit_target"] for r in rs) / n))
 
 
 def stats() -> dict:
-    rs = rows(5000)
-    out = _agg(rs)
-    out["by_setup"] = [dict(setup=k, **_agg([r for r in rs if (r["setup"] or "Other") == k])) for k in sorted({r["setup"] or "Other" for r in rs})]
+    """Totals per kind ('setup' = confirmed setups, 'breakout' = hub breakouts/breakdowns), each split by setup."""
+    out = {}
+    for kind in ("setup", "breakout"):
+        rs = [r for r in rows(20000) if (r.get("kind") or "setup") == kind]
+        out[kind] = _agg(rs)
+        out[kind]["by_setup"] = [dict(setup=k, **_agg([r for r in rs if (r["setup"] or "Other") == k]))
+                                 for k in sorted({r["setup"] or "Other" for r in rs})]
     return out
