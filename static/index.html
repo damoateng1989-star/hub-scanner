@@ -1246,6 +1246,43 @@ html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px
 .broker-ticket-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 .broker-ticket-actions .disabled-submit{opacity:.42;cursor:not-allowed}
 @media(max-width:520px){.broker-fields{grid-template-columns:1fr}.broker-head{display:block}.broker-status{margin-top:12px}}
+
+/* ---- setup journal (owner) ---- */
+.jr-wrap { display: grid; gap: 16px; }
+.jr-form { padding: 16px 18px; display: grid; gap: 10px; }
+.jr-row { display: grid; grid-template-columns: 140px 1fr 1fr; gap: 10px; }
+@media (max-width: 640px) { .jr-row { grid-template-columns: 1fr 1fr; } .jr-row .jr-sym { grid-column: 1 / -1; } }
+.jr-form input, .jr-form select, .jr-form textarea, .jr-filters input, .jr-filters select { width: 100%; box-sizing: border-box; background: var(--sunk); color: var(--ink); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; }
+.jr-form textarea { min-height: 120px; resize: vertical; line-height: 1.45; }
+.jr-form .jr-ctx { font-size: 12.5px; color: var(--muted); background: var(--sunk); border-radius: 8px; padding: 8px 10px; }
+.jr-drop { border: 1.5px dashed var(--line-2); border-radius: 12px; padding: 12px; text-align: center; color: var(--muted); font-size: 13.5px; cursor: pointer; }
+.jr-drop.over { border-color: var(--accent); color: var(--ink); }
+.jr-thumbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.jr-thumb { position: relative; width: 92px; height: 70px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line); background: var(--sunk); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--muted); text-align: center; padding: 2px; box-sizing: border-box; word-break: break-all; }
+.jr-thumb img { width: 100%; height: 100%; object-fit: cover; position: absolute; inset: 0; }
+.jr-thumb button { position: absolute; top: 3px; right: 3px; width: 22px; height: 22px; border-radius: 50%; border: 0; background: rgba(0,0,0,.65); color: #fff; font-size: 12px; cursor: pointer; padding: 0; z-index: 2; }
+.jr-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.jr-filters { display: flex; gap: 8px; padding: 12px 18px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+.jr-filters > * { flex: 1 1 130px; }
+.jr-sum { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px 18px; }
+.jr-sum span { font-size: 12.5px; background: var(--sunk); border-radius: 999px; padding: 5px 10px; color: var(--muted); }
+.jr-sum b { color: var(--ink); }
+.jr-e { padding: 14px 18px; border-top: 1px solid var(--line); }
+.jr-e:first-child { border-top: 0; }
+.jr-eh { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.jr-eh .jr-s { font-weight: 700; font-size: 16px; cursor: pointer; }
+.jr-tag { font-size: 11.5px; border-radius: 999px; padding: 3px 8px; background: var(--sunk); color: var(--muted); }
+.jr-tag.o-Worked { background: color-mix(in srgb, var(--up) 18%, transparent); color: var(--up); }
+.jr-tag.o-Failed, .jr-tag.o-Alert { background: color-mix(in srgb, var(--down) 18%, transparent); color: var(--down); }
+.jr-tag.o-Missed { background: color-mix(in srgb, var(--stall) 18%, transparent); color: var(--stall); }
+.jr-when { margin-left: auto; font-size: 12px; color: var(--faint); }
+.jr-note { white-space: pre-wrap; margin: 8px 0 0; font-size: 14.5px; line-height: 1.5; }
+.jr-e .jr-ctx { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.jr-e .jr-thumbs { margin-top: 10px; }
+.jr-e .jr-thumb { width: 120px; height: 86px; cursor: pointer; }
+.jr-eacts { display: flex; gap: 6px; margin-top: 10px; }
+.jr-lb { position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 16px; cursor: zoom-out; }
+.jr-lb img { max-width: 100%; max-height: 100%; border-radius: 8px; }
 </style>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
@@ -2468,7 +2505,7 @@ html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[d
   </div>
   <div class="sb-scroll">
     <div class="sb-label">Market</div>
-    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a>
+    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a><a class="sb-item" href="#journal" data-nav="journal" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z"/><path d="M6 3.5v17"/><path d="M9.5 8h5.5M9.5 11.5h5.5"/></svg><span>Journal</span></a>
     <div class="sb-label">Yours</div>
     <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>Watchlist</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#admin" data-nav="admin" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
     <a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a>
@@ -2618,6 +2655,10 @@ html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[d
 <section data-view="admin" hidden>
   <div class="vh"><h1>Admin <em>dashboard.</em></h1><p>Members, waitlist, invites and inbox. Only you can see this page.</p></div>
   <div id="admin"><div class="loading"><span class="spin"></span>Loading…</div></div>
+</section>
+<section data-view="journal" hidden>
+  <div class="vh"><h1>Setup <em>journal.</em></h1><p>Notes on stocks breaking out, with screenshots. Tag the setup and how it went, then use it to tune the setups. Only you can see this page.</p></div>
+  <div id="journal"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 <section data-view="lab" hidden>
   <div class="vh"><h1>The <em>lab.</em></h1><p>Testing <b>tightening hubs</b> (triangles) next to regular hubs. Only you can see this page; members get no alerts from it.</p></div>
@@ -3335,7 +3376,7 @@ async function loadAccount() {
 
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
-      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a>` : ""}</div></div>`;
+      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a><a class="btnx sm" href="#journal">Journal</a>` : ""}</div></div>`;
   if (m.is_admin) loadBrokerAccounts();
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -3542,14 +3583,14 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results" };
-const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide", "lab", "admin"];
-const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account", admin: "account" };
+const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide", "lab", "journal", "admin"];
+const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account", journal: "account", admin: "account" };
 let CUR = "today";
 function showTab() {
   let tab = (location.hash || "#today").slice(1);
   tab = ALIAS[tab] || tab;
   CUR = VIEWS.includes(tab) ? tab : "today";
-  if ((CUR === "paper" || CUR === "lab" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
+  if ((CUR === "paper" || CUR === "lab" || CUR === "journal" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
   document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== CUR);
   const navKey = CUR in NAV_FOR ? NAV_FOR[CUR] : CUR;
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
@@ -3561,6 +3602,7 @@ function showTab() {
   if (CUR === "account") loadAccount();
   if (CUR === "guide") renderGloss();
   if (CUR === "lab") loadLab();
+  if (CUR === "journal") loadJournal();
   if (CUR === "admin") loadAdmin();
   window.scrollTo(0, 0);
 }
@@ -3915,6 +3957,163 @@ function renderKpis() {
 }
 
 // ---------------------------------------------------------------- lab (admin)
+
+// ---------------------------------------------------------------- setup journal (owner only)
+let JR = null, JR_F = {symbol: "", setup: "", outcome: ""}, JR_EDIT = null, JR_NEW = [], JR_DROP = [], JR_PRE = null;
+const JR_OCLS = (o) => "o-" + String(o || "").split(" ")[0];
+function jrCtx(sym) {        // what NextShelf showed for this stock right now, saved with the note
+  try {
+    const st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || findStatus(sym);
+    if (!st) return "";
+    const L = LIVE[sym], px = LIVE_OPEN && L && L.price != null ? L.price : st.last_close, h = st.hub;
+    const bits = [`Price ${money(px)}`];
+    if (h && h.low != null) bits.push(`hub ${money(h.low)}–${money(h.high)}`);
+    if (h) bits.push(`trigger ↑ ${money(tUp(st))} · ↓ ${money(tDn(st))}`);
+    if (st.state) bits.push(String(st.state).replace(/_/g, " "));
+    return bits.join(" · ");
+  } catch (e) { return ""; }
+}
+function journalNew(sym) {
+  const st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || (typeof findStatus === "function" ? findStatus(sym) : null);
+  const k = st && st.state;
+  JR_PRE = {symbol: sym, context: jrCtx(sym), setup: k === "breakdown" ? "Hub breakdown" : k === "breakout_up" ? "Hub breakout" : ""};
+  JR_EDIT = null; JR_NEW = []; JR_DROP = [];
+  if (typeof closeBrief === "function") closeBrief();
+  if (location.hash === "#journal") renderJournal(); else location.hash = "#journal";
+}
+async function loadJournal() {
+  const el = $("journal"); if (!el) return;
+  if (!JR) el.innerHTML = loadingHTML("Loading your journal…");
+  const q = new URLSearchParams(Object.entries(JR_F).filter(([, v]) => v)).toString();
+  try { JR = await api("/api/admin/journal" + (q ? "?" + q : "")); }
+  catch (e) { el.innerHTML = failedHTML("the journal", e, "loadJournal()"); return; }
+  renderJournal();
+}
+function jrFormHTML() {
+  const e = JR_EDIT ? (JR.entries.find(x => x.id === JR_EDIT) || {}) : (JR_PRE || {});
+  const opt = (list, cur) => list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
+  const old = (e.files || []).filter(f => !JR_DROP.includes(f.file)).map(f => jrThumb(f, `jrDropOld('${f.file}')`)).join("");
+  const neu = JR_NEW.map((f, i) => `<div class="jr-thumb">${f.type.startsWith("image/") ? `<img src="${f.data}" alt="">` : esc(f.name)}<button type="button" onclick="jrDropNew(${i})" aria-label="Remove">✕</button></div>`).join("");
+  return `<div class="panel"><form class="jr-form" onsubmit="jrSave(event)">
+    <b>${JR_EDIT ? "Edit note" : "New note"}</b>
+    <div class="jr-row">
+      <input class="jr-sym" id="jrSym" placeholder="Ticker" value="${esc(e.symbol || "")}" autocapitalize="characters" autocomplete="off" maxlength="12">
+      <select id="jrSetup">${!e.setup ? `<option value="" disabled selected>Setup…</option>` : ""}${opt(JR.setups, e.setup)}</select>
+      <select id="jrOut">${opt(JR.outcomes, e.outcome || "Watching")}</select>
+    </div>
+    ${e.context ? `<div class="jr-ctx" id="jrCtxBox">NextShelf showed: ${esc(e.context)}</div>` : ""}
+    <textarea id="jrNote" placeholder="What did you see? Why did it work or fail? What should the setup do differently? (Paste a screenshot here too.)" onpaste="jrPaste(event)">${esc(e.note || "")}</textarea>
+    <label class="jr-drop" id="jrDrop" ondragover="event.preventDefault();this.classList.add('over')" ondragleave="this.classList.remove('over')" ondrop="jrDropFiles(event)">
+      📎 Add screenshots, charts or PDFs <small>(tap, drag or paste · up to ${JR.max_files})</small>
+      <input type="file" id="jrFile" multiple accept="image/*,application/pdf,text/plain,text/csv" hidden onchange="jrAddFiles(this.files);this.value=''">
+    </label>
+    ${old || neu ? `<div class="jr-thumbs">${old}${neu}</div>` : ""}
+    <div class="jr-actions">${JR_EDIT || JR_PRE ? `<button type="button" class="btnx sm" onclick="jrCancel()">Cancel</button>` : ""}<button class="btnx sm" id="jrSaveBtn" type="submit" style="background:var(--accent)!important;color:var(--accent-ink)!important;border:0!important">${JR_EDIT ? "Save changes" : "Save note"}</button></div>
+  </form></div>`;
+}
+function jrThumb(f, rm) {
+  const url = "/api/admin/journal/file/" + encodeURIComponent(f.file);
+  const inner = f.type.startsWith("image/") && f.type !== "image/heic" ? `<img src="${url}" alt="${esc(f.name)}" loading="lazy">` : `📄 ${esc(f.name)}`;
+  return `<div class="jr-thumb" onclick="jrOpen('${url}', '${esc(f.type)}')" title="${esc(f.name)}">${inner}${rm ? `<button type="button" onclick="event.stopPropagation();${rm}" aria-label="Remove">✕</button>` : ""}</div>`;
+}
+function jrOpen(url, type) {
+  if (!type.startsWith("image/") || type === "image/heic") { window.open(url, "_blank"); return; }
+  const d = document.createElement("div"); d.className = "jr-lb"; d.innerHTML = `<img src="${url}" alt="">`; d.onclick = () => d.remove(); document.body.appendChild(d);
+}
+function jrKeep() {       // keep what's typed when the form redraws
+  const g = (id) => $(id) ? $(id).value : undefined;
+  const cur = {symbol: g("jrSym"), setup: g("jrSetup"), outcome: g("jrOut"), note: g("jrNote")};
+  if (JR_EDIT) { const e = JR.entries.find(x => x.id === JR_EDIT); if (e) Object.assign(e, Object.fromEntries(Object.entries(cur).filter(([, v]) => v !== undefined))); }
+  else JR_PRE = {...(JR_PRE || {}), ...Object.fromEntries(Object.entries(cur).filter(([, v]) => v !== undefined))};
+}
+function renderJournal() {
+  const el = $("journal"); if (!el || !JR) return;
+  const sum = (JR.summary || []).map(x => `<span><b>${esc(x.setup)}</b> · ${Object.entries(x.counts).map(([o, n]) => `${n} ${esc(o.toLowerCase())}`).join(", ")}</span>`).join("");
+  const opt = (list, cur, all) => `<option value="">${all}</option>` + list.map(x => `<option${x === cur ? " selected" : ""}>${esc(x)}</option>`).join("");
+  const when = (t) => { const d = new Date(String(t).replace(" ", "T") + "Z"); return isNaN(d) ? "" : d.toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}); };
+  const list = JR.entries.map(e => `<div class="jr-e">
+      <div class="jr-eh">${e.symbol ? `<span class="jr-s" onclick="openBrief('${esc(e.symbol)}')" title="Open the shelf card">${esc(e.symbol)}</span>` : ""}
+        <span class="jr-tag">${esc(e.setup)}</span><span class="jr-tag ${JR_OCLS(e.outcome)}">${esc(e.outcome)}</span>
+        <span class="jr-when">${when(e.created_at)}</span></div>
+      ${e.note ? `<p class="jr-note">${esc(e.note)}</p>` : ""}
+      ${e.context ? `<div class="jr-ctx">NextShelf showed: ${esc(e.context)}</div>` : ""}
+      ${e.files.length ? `<div class="jr-thumbs">${e.files.map(f => jrThumb(f)).join("")}</div>` : ""}
+      <div class="jr-eacts"><button class="btnx sm" onclick="jrEdit(${e.id})">Edit</button><button class="btnx sm" style="color:var(--down)!important" onclick="jrDelete(${e.id})">Delete</button></div>
+    </div>`).join("");
+  el.innerHTML = `<div class="jr-wrap">${jrFormHTML()}
+    <div class="panel">
+      <div class="jr-filters">
+        <input placeholder="Filter by ticker" value="${esc(JR_F.symbol)}" onchange="JR_F.symbol=this.value.trim().toUpperCase();loadJournal()">
+        <select onchange="JR_F.setup=this.value;loadJournal()">${opt(JR.setups, JR_F.setup, "All setups")}</select>
+        <select onchange="JR_F.outcome=this.value;loadJournal()">${opt(JR.outcomes, JR_F.outcome, "All outcomes")}</select>
+      </div>
+      ${sum ? `<div class="jr-sum">${sum}</div>` : ""}
+      ${list || `<p class="note" style="padding:18px;margin:0">${JR_F.symbol || JR_F.setup || JR_F.outcome ? "No notes match these filters." : "No notes yet. Write your first one above, or tap ✎ Journal on any stock's shelf card."}</p>`}
+    </div></div>`;
+}
+const JR_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "application/pdf", "text/plain", "text/csv"];
+function jrShrink(file, ftype) {       // big screenshots → a JPEG under ~1 MB, so uploads stay quick on a phone
+  return new Promise((ok) => {
+    const rd = new FileReader();
+    rd.onload = () => {
+      if (!ftype.startsWith("image/") || ftype === "image/gif" || ftype === "image/heic") return ok({name: file.name, type: ftype, data: rd.result});
+      const im = new Image();
+      im.onload = () => {
+        const M = 2000, r = Math.min(1, M / Math.max(im.width, im.height));
+        if (r === 1 && file.size < 1.5e6) return ok({name: file.name, type: ftype, data: rd.result});
+        const c = document.createElement("canvas"); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r);
+        c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+        ok({name: file.name.replace(/\.\w+$/, "") + ".jpg", type: "image/jpeg", data: c.toDataURL("image/jpeg", 0.86)});
+      };
+      im.onerror = () => ok({name: file.name, type: ftype, data: rd.result});
+      im.src = rd.result;
+    };
+    rd.readAsDataURL(file);
+  });
+}
+async function jrAddFiles(files) {
+  jrKeep();
+  const e = JR_EDIT ? JR.entries.find(x => x.id === JR_EDIT) : null;
+  const have = JR_NEW.length + (e ? e.files.filter(f => !JR_DROP.includes(f.file)).length : 0);
+  let room = JR.max_files - have;
+  for (const f of files) {
+    const type = f.type || (/\.heic$/i.test(f.name) ? "image/heic" : "");
+    if (!JR_TYPES.includes(type)) { toast(`${f.name}: only images, PDFs and text files`); continue; }
+    if (f.size > 12e6) { toast(`${f.name} is too big`); continue; }
+    if (room-- <= 0) { toast(`Up to ${JR.max_files} attachments per note`); break; }
+    JR_NEW.push(await jrShrink(f, type));
+  }
+  renderJournal();
+}
+function jrPaste(ev) {
+  const files = [...(ev.clipboardData && ev.clipboardData.files || [])];
+  if (files.length) { ev.preventDefault(); jrAddFiles(files); }
+}
+function jrDropFiles(ev) { ev.preventDefault(); ev.currentTarget.classList.remove("over"); jrAddFiles(ev.dataTransfer.files); }
+function jrDropNew(i) { jrKeep(); JR_NEW.splice(i, 1); renderJournal(); }
+function jrDropOld(f) { jrKeep(); JR_DROP.push(f); renderJournal(); }
+function jrCancel() { JR_EDIT = null; JR_PRE = null; JR_NEW = []; JR_DROP = []; loadJournal(); }
+function jrEdit(id) { JR_EDIT = id; JR_PRE = null; JR_NEW = []; JR_DROP = []; renderJournal(); window.scrollTo(0, 0); }
+async function jrSave(ev) {
+  ev.preventDefault();
+  const btn = $("jrSaveBtn"); btn.disabled = true; btn.textContent = "Saving…";
+  const e = JR_EDIT ? JR.entries.find(x => x.id === JR_EDIT) : JR_PRE;
+  const body = {symbol: $("jrSym").value, setup: $("jrSetup").value || "Other", outcome: $("jrOut").value, note: $("jrNote").value,
+                context: (e && e.context) || "", files: JR_NEW.map(f => ({name: f.name, type: f.type, data: f.data}))};
+  if (JR_EDIT) body.remove = JR_DROP;
+  try { await api("/api/admin/journal" + (JR_EDIT ? "/" + JR_EDIT : ""), {method: JR_EDIT ? "PUT" : "POST", body: JSON.stringify(body), timeout: 90000}); }
+  catch (err) { btn.disabled = false; btn.textContent = "Try again"; toast("Couldn't save: " + err.message); return; }
+  toast(JR_EDIT ? "Note updated" : "Note saved");
+  JR_EDIT = null; JR_PRE = null; JR_NEW = []; JR_DROP = [];
+  loadJournal();
+}
+async function jrDelete(id) {
+  if (!confirm("Delete this note and its attachments?")) return;
+  try { await api("/api/admin/journal/" + id, {method: "DELETE"}); } catch (e) { toast("Couldn't delete: " + e.message); return; }
+  if (JR_EDIT === id) JR_EDIT = null;
+  loadJournal();
+}
+
 async function loadLab() {
   let L;
   $("lab").innerHTML = loadingHTML("Loading the Lab…");
@@ -5058,7 +5257,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>${EXN ? EXN.note : ""}
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "AFTER HOURS") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "AFTER HOURS") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${ME && ME.is_admin && !rp ? `<button class="mp-planbtn" onclick="journalNew('${esc(sym)}')" title="Write a journal note about this stock">✎ Journal</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>

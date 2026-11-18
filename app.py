@@ -1365,6 +1365,52 @@ async def chart_data(symbol: str, response: Response, tf: str = "4h", fresh: int
     return d
 
 
+# ---------------------------------------------------------------- setup journal (owner only)
+@app.get("/api/admin/journal")
+def admin_journal(symbol: str = "", setup: str = "", outcome: str = "", u: dict = Admin):
+    import journal
+    return dict(entries=journal.list_entries(u["id"], symbol, setup, outcome), summary=journal.summary(u["id"]),
+                setups=journal.SETUPS, outcomes=journal.OUTCOMES, max_files=journal.MAX_FILES)
+
+
+@app.post("/api/admin/journal")
+async def admin_journal_add(request: Request, u: dict = Admin):
+    import journal
+    body = await request.json()
+    try:
+        return await run_in_threadpool(journal.create, u["id"], body)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.put("/api/admin/journal/{eid}")
+async def admin_journal_edit(eid: int, request: Request, u: dict = Admin):
+    import journal
+    body = await request.json()
+    try:
+        return await run_in_threadpool(journal.update, u["id"], eid, body)
+    except KeyError:
+        raise HTTPException(404, "That note is gone")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.delete("/api/admin/journal/{eid}")
+def admin_journal_delete(eid: int, u: dict = Admin):
+    import journal
+    journal.delete(u["id"], eid)
+    return dict(ok=True)
+
+
+@app.get("/api/admin/journal/file/{name}")
+def admin_journal_file(name: str, u: dict = Admin):
+    import journal
+    p = journal.file_path(u["id"], name)
+    if not p:
+        raise HTTPException(404, "File not found")
+    return FileResponse(p, headers={"Cache-Control": "private, max-age=86400", "X-Content-Type-Options": "nosniff"})
+
+
 @app.get("/api/admin/lab")
 def admin_lab(u: dict = Admin):
     return board.lab()
