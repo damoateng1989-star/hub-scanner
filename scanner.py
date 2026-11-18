@@ -670,7 +670,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         last = c4.index[-1]
         early = db.get_alert(f"{sym}|early|{last.isoformat()}")
         if early and not any(e["time"] == last and e["type"] == early["type"] for e in res["events"]):
-            msg = (f"⚠️ {sym}: not confirmed after all\n" f"The full market data puts the {engine.candle_end(last).strftime('%-I:%M %p')} close back inside the hub"
+            msg = (f"⚠️ {sym}: not confirmed after all\n" f"The full market data puts the {engine.candle_end(last).strftime('%-I:%M %p')} close short of the trigger"
                    f" ({_money(float(c4['Close'].iloc[-1]))}). No breakout, so no trade. If you entered on the early read, the plan says exit.")
             if db.add_alert(f"{sym}|unconfirmed|{last.isoformat()}", sym, "unconfirmed", last.isoformat(), msg):
                 notify.symbol_alert(sym, "unconfirmed", msg, None, candle_start=last)
@@ -1009,13 +1009,13 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                 res = engine.analyze(c4, SETTINGS)
                 close = data.close_at(sym, end)
                 sig = engine.preclose_check(res, close, SETTINGS)
-                if not sig:
-                    continue
+                if not sig or sig.get("widens"):
+                    continue          # outside the hub but short of the trigger: the hub only widens, it isn't a break
                 up = sig["direction"] == 1
                 typ = "breakout" if up else "breakdown"
                 msg = (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if sig.get('shelf') else 'target'} (early read)\n"
                        f"1:30 PM close {'above' if up else 'below'} the hub\n"
-                       f"Close ≈ {_money(close)} · hub {_money(sig['low'])}–{_money(sig['high'])}\n"
+                       f"Close ≈ {_money(close)} · hub {_money(sig['low'])}–{_money(sig['high'])} · trigger {_money(sig['trigger'])}\n"
                        + plan_lines(close, sig["edge"], sig["target"], sig["direction"], sig["reached"], sig.get("shelf"))
                        + "\nFrom the real-time feed. The full market data confirms it, with the breakout volume, at about 1:47 PM; you'll get a note either way."
                        + earnings.alert_line(sym))

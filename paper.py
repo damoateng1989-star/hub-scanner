@@ -206,8 +206,8 @@ def _try_entry(b, sym: str, candle_start: pd.Timestamp) -> str | None:
     res = engine.analyze(c4, scanner.SETTINGS)
     price = data.latest_price(sym)
     sig = engine.preclose_check(res, price, scanner.SETTINGS, scanner.forming_volume(sym))
-    if not sig or sig["reached"]:
-        return None
+    if not sig or sig["reached"] or sig.get("widens"):
+        return None          # widens: outside the hub but short of the trigger, so not a breakout
     if sig.get("vol_ok") is False:
         log.info("%s: paper entry skipped (no volume on the break)", sym)
         return None
