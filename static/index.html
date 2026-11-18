@@ -789,6 +789,9 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .ask-send { flex: 0 0 auto; padding: 11px 14px; border-radius: 12px; font: 700 14px var(--sans); cursor: pointer; }
 .ask-foot { margin: 10px 0 0; color: #9AA0AC; font-size: 12px; text-align: center; }
 .ask-answer { color: #E9EBEF; font-size: 14px; line-height: 1.55; }
+.ask-scan-row { display: flex; gap: 8px; align-items: baseline; padding: 7px 0; border-top: 1px solid rgba(32,36,43,.12); font-size: 14px; line-height: 1.5; }
+.ask-scan-row:first-of-type { border-top: 0; }
+.ask-scan-sym { flex: 0 0 auto; padding: 2px 9px; border-radius: 999px; background: #20242B; color: #F2F1EC; font: 700 13px var(--sans); cursor: pointer; border: 0; }
 @media (max-width: 999px) {
   .ask-pop { left: 12px; right: 12px; width: auto; bottom: calc(152px + env(safe-area-inset-bottom)); max-height: calc(100vh - 152px - env(safe-area-inset-bottom) - 12px); }
   .ask-body { min-height: 0; overscroll-behavior: contain; }
@@ -6914,7 +6917,7 @@ function scoutRow(sym, kind, color) {
   return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
 }
 // Conversational Sika — ticker cards stay deterministic; only follow-up questions use the model.
-let ASK_SYMBOL = null, ASK_HISTORY = [], ASK_BUSY = false, ASK_QUEUE = [];
+let ASK_SYMBOL = null, ASK_HISTORY = [], ASK_BUSY = false, ASK_QUEUE = [], ASK_SCAN_SYMBOLS = new Set();
 function askSikaPlain(sym) {
   const panels = [...document.querySelectorAll(".plain-panel")];
   const panel = panels.find(p => (p.dataset.sym || "").toUpperCase() === sym);
@@ -6978,8 +6981,138 @@ async function askSikaCard(sym) {
     return null;
   }
 }
-async function askSikaProcess(raw) {
-  askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
+// Patch 159: ask Sika to find setups — scan-request detection + routing.
+const ASK_SCAN_KINDS = [
+  ["double tops and bottoms", "double"], ["double tops & bottoms", "double"],
+  ["post earnings gap fade", "gapfade"], ["post earnings gap", "gapfade"],
+  ["earnings gap fade", "gapfade"], ["gap fade & rip", "gapfade"],
+  ["gap and fade", "gapfade"], ["gap & fade", "gapfade"],
+  ["double bottoms", "double_bottom"], ["double bottom", "double_bottom"],
+  ["double tops", "double_top"], ["double top", "double_top"],
+  ["gap fades", "gapfade"], ["gap fade", "gapfade"], ["gapfade", "gapfade"],
+  ["gap rip", "gapfade"], ["doubles", "double"], ["double", "double"],
+  ["dt/db", "double"], ["dt / db", "double"], ["dt", "double"], ["db", "double"],
+  ["hubs", "hub"], ["hub", "hub"],
+];
+const ASK_SCAN_VERBS = ["find", "scan", "show", "list", "any", "give me", "got any", "looking for", "what's", "whats", "what are", "are there", "which"];
+const ASK_SCAN_STOP = new Set(["on", "it", "in", "is", "at", "to", "of", "be", "do", "go", "so", "no", "or", "an", "as", "by", "up", "us", "am", "if", "my", "me", "we", "he"]);
+const ASK_SCAN_NONE = {
+  hub: "No hubs breaking out or breaking down right now.",
+  double_top: "No double tops in play right now.",
+  double_bottom: "No double bottoms in play right now.",
+  double: "No double tops or double bottoms in play right now.",
+  gapfade: "No post-earnings gap fades in play right now.",
+};
+const ASK_SCAN_MORE = {hub: "hubs", double: "doubles", double_top: "double tops", double_bottom: "double bottoms", gapfade: "gap fades"};
+
+function askSikaNorm(s) {
+  return (s || "").toLowerCase().replace(/['’]/g, "'").replace(/[^a-z0-9/&' ]/g, " ").replace(/\s+/g, " ").trim();
+}
+function askSikaScanKind(raw) {
+  const hay = " " + askSikaNorm(raw) + " ";
+  for (const [phrase, kind] of ASK_SCAN_KINDS) {
+    if (hay.includes(" " + phrase + " ")) return {kind, phrase};
+  }
+  return null;
+}
+function askSikaStripKind(raw, phrase) {
+  const hay = " " + askSikaNorm(raw) + " ";
+  return hay.split(" " + phrase + " ").join(" ").trim();
+}
+function askSikaBoardSymbols() {
+  const out = new Set();
+  if (!BOARD) return out;
+  for (const g of ["live", "near", "forming", "recent", "setups"]) {
+    for (const r of BOARD[g] || []) if (r && r.symbol) out.add(String(r.symbol).toUpperCase());
+  }
+  return out;
+}
+function askSikaTickersIn(raw) {
+  const m = askSikaScanKind(raw);
+  const rest = m ? askSikaStripKind(raw, m.phrase) : askSikaNorm(raw);
+  const boardSyms = askSikaBoardSymbols();
+  const found = [];
+  for (let tok of rest.split(" ").filter(Boolean)) {
+    tok = tok.replace(/'s$/, "").toUpperCase();
+    if (!tok || found.includes(tok)) continue;
+    if (ASK_SCAN_SYMBOLS.has(tok)) { found.push(tok); continue; }
+    if (tok.length >= 2 && !ASK_SCAN_STOP.has(tok.toLowerCase()) && boardSyms.has(tok)) found.push(tok);
+  }
+  return found;
+}
+function askSikaIsScan(raw) {
+  const m = askSikaScanKind(raw);
+  if (!m) return null;
+  if (askSikaTickersIn(raw).length) return null;
+  const hay = " " + askSikaNorm(raw) + " ";
+  if (ASK_SCAN_VERBS.some(v => hay.includes(" " + v + " "))) return m.kind;
+  const rest = askSikaStripKind(raw, m.phrase).replace(/\b(any|please)\b/g, "").trim();
+  if (!rest) return m.kind;
+  return null;
+}
+function askSikaStripTicker(raw, sym) {
+  const toks = askSikaNorm(raw).split(" ").filter(Boolean);
+  return toks.filter(t => t.replace(/'s$/, "").toUpperCase() !== sym).join(" ").trim();
+}
+function askSikaIsFiller(rest) {
+  let r = " " + rest + " ";
+  for (const f of ["what about", "how about", "tell me about", "what's", "whats", " and ", " what ", " please "]) r = r.split(f).join(" ");
+  return !r.replace(/\s+/g, "").length;
+}
+function askSikaBoardTime(iso) {
+  if (!iso) return "";
+  const d = new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : iso + "Z");
+  if (isNaN(d)) return "";
+  return d.toLocaleString("en-US", {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}) + " ET";
+}
+function askSikaScanRowText(r) {
+  const short = {gapfade: "Gap fade & rip"}[r.kind] || r.name;
+  const parts = [short];
+  if (r.grade) parts.push(r.grade + " (" + r.grade_word + ")");
+  if (r.grade && ["C", "D", "?"].includes(r.grade)) parts.push("watch only");
+  parts.push(r.state === "live" ? (r.direction === 1 ? "Broke out" : "Broke down") : "Near the edge");
+  parts.push("Trigger " + money(r.trigger));
+  if (r.state === "live") parts.push("Target " + money(r.target));
+  else parts.push(r.distance_pct + "% away");
+  return r.symbol + " — " + parts.join(" · ");
+}
+function askSikaScanText(data, kind) {
+  const label = data.label || kind;
+  if (!data.rows || !data.rows.length) return ASK_SCAN_NONE[kind] || ("No " + label + " setups in play right now.");
+  const lines = [label + " — " + data.total + " in play · Board as of " + askSikaBoardTime(data.as_of)];
+  if (data.stale) lines[0] += " — the board hasn't updated since then, so this list may be stale.";
+  for (const r of data.rows) lines.push(askSikaScanRowText(r));
+  if (data.total > data.shown) lines.push(data.shown + " shown — " + (data.total - data.shown) + " more " + (ASK_SCAN_MORE[kind] || kind) + " in play right now.");
+  lines.push('Type a ticker from the list — or ask "what about ' + data.rows[0].symbol + '?" — for its play.');
+  return lines.join("\n");
+}
+function askSikaScanRowHTML(r) {
+  const short = {gapfade: "Gap fade & rip"}[r.kind] || r.name;
+  const parts = [esc(short)];
+  if (r.grade) parts.push("<b>" + esc(r.grade) + " (" + esc(r.grade_word) + ")</b>");
+  if (r.grade && ["C", "D", "?"].includes(r.grade)) parts.push("watch only");
+  parts.push(r.state === "live" ? (r.direction === 1 ? "Broke out" : "Broke down") : "Near the edge");
+  parts.push("Trigger " + money(r.trigger));
+  if (r.state === "live") parts.push("Target " + money(r.target));
+  else parts.push(r.distance_pct + "% away");
+  return '<div class="ask-scan-row"><button class="ask-scan-sym" type="button" onclick="askSikaTap(\'' + esc(r.symbol) + '\')">' + esc(r.symbol) + '</button><span>' + parts.join(" · ") + "</span></div>";
+}
+function askSikaScanHTML(data, kind) {
+  const label = data.label || kind;
+  if (!data.rows || !data.rows.length) return '<p class="sp-hint">' + esc(ASK_SCAN_NONE[kind] || ("No " + label + " setups in play right now.")) + "</p>";
+  let h = '<p class="sp-hint"><b>' + esc(label + " — " + data.total + " in play · Board as of " + askSikaBoardTime(data.as_of)) + "</b>" + (data.stale ? "<br>The board hasn't updated since then, so this list may be stale." : "") + "</p>";
+  for (const r of data.rows) h += askSikaScanRowHTML(r);
+  if (data.total > data.shown) h += '<p class="sp-hint">' + data.shown + " shown — " + (data.total - data.shown) + " more " + esc(ASK_SCAN_MORE[kind] || kind) + " in play right now.</p>";
+  h += '<p class="sp-hint">Type a ticker from the list — or ask "what about ' + esc(data.rows[0].symbol) + '?" — for its play.</p>';
+  return h;
+}
+function askSikaTap(sym) {
+  ASK_QUEUE.push(sym);
+  askSikaDrain();
+}
+
+async function askSikaProcess(raw, skipEcho) {
+  if (!skipEcho) askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
   const ticker = raw.toUpperCase().replace(/\$/g, "").trim();
   if (/^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
     if (ASK_SYMBOL !== ticker) { ASK_SYMBOL = ticker; ASK_HISTORY = []; }
@@ -7019,9 +7152,42 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
     return;
   }
 
+  // Patch 159: deterministic board scan — no model call for the list itself.
+  const scanKind = askSikaIsScan(raw);
+  if (scanKind) {
+    if (ME && !ME.guest && (isPro() || ME.options)) {
+      askSikaHistory("user", raw);
+      const reading = askSikaSay('<p class="sp-hint">Sika is checking the board…</p>');
+      try {
+        const data = await api("/api/sika/find", {method: "POST", timeout: 30000, body: JSON.stringify({kind: scanKind})});
+        const plain = askSikaScanText(data, scanKind);
+        askSikaHistory("sika", plain);
+        ASK_SCAN_SYMBOLS = new Set((data.rows || []).map(r => r.symbol));
+        if (reading) reading.innerHTML = askSikaScanHTML(data, scanKind);
+      } catch (e) {
+        const fallback = "Sika couldn't answer that right now.";
+        askSikaHistory("sika", fallback);
+        if (reading) reading.innerHTML = '<p class="sp-hint">' + fallback + '</p>';
+      }
+      return;
+    }
+    // Guest / non-Pro: fall through to the existing Pro gate.
+  }
+
   if (!ME || ME.guest || !(isPro() || ME.options)) {
     askSikaSay(`<div class="ox-lock"><b>Conversational Sika is a Pro feature.</b><p>Ask follow-up questions about a ticker's setup and the data behind it.</p><a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);
     return;
+  }
+
+  // Patch 159: follow-up naming a ticker from the last scan list (or the board).
+  const listed = askSikaTickersIn(raw);
+  if (listed.length) {
+    const sym = listed[0];
+    if (askSikaIsFiller(askSikaStripTicker(raw, sym))) {
+      await askSikaProcess(sym, true);
+      return;
+    }
+    ASK_SYMBOL = sym;
   }
 
   if (!ASK_SYMBOL) {
