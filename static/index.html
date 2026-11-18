@@ -4985,7 +4985,6 @@ function paintMap() {
       <div class="mp-right">
       <div class="mp-card mp-sika"><div class="mp-sh"><span class="sika-ava mp-ava" id="mpAva"></span><b>Sika</b><small>Plain English</small></div>
         <p class="mp-say">${MAP_Q ? mapAnswer(MAP_Q, P, st) : mapSummary(P, st)}</p>
-        <div id="mpSwing"></div>
         ${matchMedia("(max-width: 899px)").matches && !MAP_ASK && !MAP_Q ? `<div class="mp-qs"><button onclick="MAP_ASK=true;paintMap()">Ask Sika<span>›</span></button></div>`
           : `<div class="mp-qs">${qs.map(([k, t]) => `<button class="${MAP_Q === k ? "on" : ""}" onclick="mapQ('${k}')">${t}<span>›</span></button>`).join("")}</div>`}
         <p class="mp-fine">Based on NextShelf's rules and past prices. For education only, not financial advice.</p></div>
@@ -4996,7 +4995,6 @@ function paintMap() {
   const slot = $("mpBodySlot"), body = $("bfBody"); if (slot && body) slot.appendChild(body);   // Game plan etc. sit right under the grade
   initLightweightMapChart();
   mapWire();
-  if ($("mpSwing") && BRIEF_SYM) loadSwingCard(BRIEF_SYM, "mpSwing");
   if (MAP_HOVER) mapShowAt(MAP_HOVER.x, MAP_HOVER.yy, true);
 }
 // ---------------- replay ----------------
