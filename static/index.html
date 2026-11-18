@@ -640,25 +640,30 @@ body.brief-open .bf-scrim { display: block; }
 .bf-heat[hidden] { display: none !important; }
 body:not(.brief-open) .bf-heat { display: none; }
 .bf-heat { margin: 0 20px 16px; font-family: var(--sans); flex: none; }
-.bf-heat .bh-card { background: #000; border: 1px solid #262C35; border-radius: 16px; padding: 14px; color: #fff; }
+/* colours = the shelf-card chart's: its background, hub blue, the member's up/down candle colours (set in paintHeat), trigger yellow */
+.bf-heat { --bh-bg: #121418; --bh-line: rgba(255,255,255,.07); --bh-ink: #FFFFFF; --bh-mute: #9AA0AC; --bh-up: #3DD68C; --bh-down: #FF6B5E; --bh-hub: rgba(90,200,250,.16); --bh-hub-ink: #E6F6FE; --bh-trig: #F2C14E; --bh-ring: #FFFFFF; }
+html[data-theme="light"] .bf-heat { --bh-bg: #F8F9FD; --bh-line: rgba(13,17,23,.09); --bh-ink: #0d1117; --bh-mute: #5b6472; --bh-up: #16a34a; --bh-down: #dc2626; --bh-hub: rgba(90,200,250,.24); --bh-hub-ink: #0d1117; --bh-ring: #0d1117; }
+.bf-heat .bh-card { background: var(--bh-bg); border: 1px solid var(--bh-line); border-radius: 16px; padding: 14px; color: var(--bh-ink); }
 .bf-heat .bh-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
 .bf-heat .bh-head .t { font: 800 12px var(--sans); letter-spacing: .12em; }
-.bf-heat .bh-head .s { font: 500 11px var(--mono); color: #9AA0AC; text-align: right; }
+.bf-heat .bh-head .s { font: 500 11px var(--mono); color: var(--bh-mute); text-align: right; }
 .bf-heat .bh-scroll { overflow-x: auto; }
 .bf-heat table.bh { border-collapse: separate; border-spacing: 3px; width: 100%; min-width: 400px; }
 .bf-heat table.bh th, .bf-heat table.bh td { padding: 6px 8px; border-radius: 6px; font: 600 12.5px var(--mono); text-align: right; white-space: nowrap; }
-.bf-heat table.bh thead th { background: transparent; color: #fff; font: 700 11px var(--sans); letter-spacing: .08em; }
-.bf-heat table.bh tbody th { background: transparent; color: #fff; text-align: left; font-weight: 700; }
-.bf-heat td.bh-t { background: #29768A !important; color: #fff; }
-.bf-heat td.bh-g { background: #32A87B !important; color: #fff; }
-.bf-heat td.bh-p { background: #430E5A !important; color: #fff; }
-.bf-heat td.bh-max { background: #F2DE31 !important; color: #000; font-weight: 800; }
-.bf-heat tr.bh-next th, .bf-heat tr.bh-next td { box-shadow: inset 0 0 0 2px #fff; }
-.bf-heat .bh-tag { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 5px; background: #FFCF00; color: #000; font: 800 10px var(--sans); letter-spacing: .04em; vertical-align: middle; }
-.bf-heat table.bh th, .bf-heat table.bh td { color: #fff !important; border-bottom: 0 !important; letter-spacing: 0 !important; text-transform: none !important; }
+.bf-heat table.bh thead th { background: transparent; font: 700 11px var(--sans); letter-spacing: .08em; }
+.bf-heat table.bh tbody th { background: transparent; text-align: left; font-weight: 700; }
+.bf-heat td.bh-t { background: var(--bh-hub) !important; }
+.bf-heat td.bh-g { background: var(--bh-up) !important; }
+.bf-heat td.bh-p { background: var(--bh-down) !important; }
+.bf-heat td.bh-max { background: var(--bh-trig) !important; font-weight: 800; }
+.bf-heat tr.bh-next th, .bf-heat tr.bh-next td { box-shadow: inset 0 0 0 2px var(--bh-ring); }
+.bf-heat .bh-tag { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 5px; background: var(--bh-trig); color: #000; font: 800 10px var(--sans); letter-spacing: .04em; vertical-align: middle; }
+.bf-heat table.bh th, .bf-heat table.bh td { color: var(--bh-ink) !important; border-bottom: 0 !important; letter-spacing: 0 !important; text-transform: none !important; }
 .bf-heat table.bh tbody th, .bf-heat table.bh td { font-size: 12.5px !important; }
 .bf-heat table.bh thead th { font-size: 11px !important; letter-spacing: .08em !important; text-transform: uppercase !important; }
-.bf-heat table.bh td.bh-max { color: #000 !important; }
+.bf-heat table.bh td.bh-t { color: var(--bh-hub-ink) !important; }
+.bf-heat table.bh td.bh-max, .bf-heat table.bh td.bh-g, .bf-heat table.bh td.bh-p { color: #0B0C0E !important; }
+html[data-theme="light"] .bf-heat table.bh td.bh-g, html[data-theme="light"] .bf-heat table.bh td.bh-p { color: #FFFFFF !important; }
 .bf-heat table.bh tbody th, .bf-heat table.bh thead th:first-child { width: 1%; text-align: left; }
 @media (max-width: 899px) { .bf-heat { margin: 0 12px 14px; } .bf-heat .bh-card { padding: 10px; } .bf-heat table.bh { min-width: 0; border-spacing: 2px; }
   .bf-heat table.bh th, .bf-heat table.bh td { padding: 5px 5px; } .bf-heat table.bh tbody th, .bf-heat table.bh td { font-size: 11.5px !important; } .bf-heat .bh-tag { margin-left: 3px; padding: 1px 4px; } }
@@ -5872,6 +5877,8 @@ function paintHeat(sym) {
   if (BRIEF_SYM !== sym) return;
   const html = bfHeatHTML(GAMMA_GRID[sym]);
   if (!html) { hideHeat(); return; }             // fail-open: no gamma, no panel; the card renders as before
+  const cc = candleColors();                       // the chart's candle colours, the member's own if they set them
+  if (cc[0]) el.style.setProperty("--bh-up", cc[0]); if (cc[1]) el.style.setProperty("--bh-down", cc[1]);
   el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on");
 }
 function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); }
