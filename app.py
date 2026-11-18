@@ -208,6 +208,11 @@ async def lifespan(_app: FastAPI):
         bh, bm = map(int, brief.BRIEF_TIME.split(":"))
         sched.add_job(brief.send_all, CronTrigger(day_of_week="mon-fri", hour=bh, minute=bm, timezone="America/New_York"),
                       id="brief", replace_existing=True)
+    import nextday
+    if nextday.NEXTDAY_TIME:  # next-day check: how yesterday's confirmed setups did today
+        nh, nm = map(int, nextday.NEXTDAY_TIME.split(":"))
+        sched.add_job(nextday.run, CronTrigger(day_of_week="mon-fri", hour=nh, minute=nm, timezone="America/New_York"),
+                      id="nextday", replace_existing=True)
     if recap.RECAP_TIME:      # evening recap, weekdays after the close
         rh, rm = map(int, recap.RECAP_TIME.split(":"))
         sched.add_job(recap.send_all, CronTrigger(day_of_week="mon-fri", hour=rh, minute=rm, timezone="America/New_York"),
@@ -1363,6 +1368,20 @@ async def chart_data(symbol: str, response: Response, tf: str = "4h", fresh: int
     d["guest"] = not u
     d["exchange"] = data.exchange_for(symbol)
     return d
+
+
+# ---------------------------------------------------------------- next-day check (owner only)
+@app.get("/api/admin/nextday")
+def admin_nextday(u: dict = Admin):
+    import nextday
+    return dict(rows=nextday.rows(200), stats=nextday.stats(), time=nextday.NEXTDAY_TIME)
+
+
+@app.post("/api/admin/nextday/run")
+async def admin_nextday_run(u: dict = Admin):
+    import nextday
+    done = await run_in_threadpool(nextday.run, False)
+    return dict(added=len(done))
 
 
 # ---------------------------------------------------------------- setup journal (owner only)

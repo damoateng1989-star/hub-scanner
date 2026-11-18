@@ -4114,6 +4114,26 @@ async function jrDelete(id) {
   loadJournal();
 }
 
+async function loadNextDay() {
+  const el = $("labNextDay"); if (!el) return;
+  let N; try { N = await api("/api/admin/nextday"); } catch (e) { el.innerHTML = ""; return; }
+  const S = N.stats || {}, sg = (v) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%";
+  const col = (v) => v > 0 ? "color:var(--up)" : v < 0 ? "color:var(--down)" : "";
+  const agg = (name, x) => `<tr><td><b>${esc(name)}</b></td><td>${x.n}</td><td>${x.green_pct}%</td><td style="${col(x.avg_close)}">${sg(x.avg_close)}</td>
+      <td style="${col(x.avg_open)}">${sg(x.avg_open)}</td><td>${sg(x.avg_high)} / ${sg(x.avg_low)}</td><td>${x.stop_pct}%</td><td>${x.target_pct}%</td></tr>`;
+  const rows = (N.rows || []).slice(0, 40).map(r => `<tr><td>${esc(r.day.slice(5))}</td><td><b style="cursor:pointer" onclick="openBrief('${esc(r.symbol)}')">${esc(r.symbol)}</b></td>
+      <td>${esc(r.setup || "")}${r.grade ? " · " + esc(r.grade) : ""}</td><td>${money(r.entry)}</td>
+      ${r.rest_pct == null ? "<td>–</td>" : `<td style="${col(r.rest_pct)}">${sg(r.rest_pct)}</td>`}
+      <td style="${col(r.open_pct)}">${sg(r.open_pct)}</td><td>${sg(r.high_pct)} / ${sg(r.low_pct)}</td><td style="${col(r.close_pct)}"><b>${sg(r.close_pct)}</b></td>
+      <td>${r.hit_target ? "🎯 target" : r.hit_stop ? "⛔ stop" : ""}</td></tr>`).join("");
+  el.innerHTML = `<div class="panel"><div class="ph"><h2>Next-day check</h2><span class="note">every confirmed setup, the session after it confirmed · runs ${esc(N.time || "")} ET</span>
+      <button class="btnx sm" onclick="this.disabled=true;this.textContent='Checking…';api('/api/admin/nextday/run',{method:'POST',timeout:120000}).then(r=>{toast(r.added+' new');loadNextDay()}).catch(e=>{toast(e.message);loadNextDay()})">Check now</button></div>
+    ${S.n ? `<div class="tbl" style="padding:0 18px 10px"><table><tr><th>Setup</th><th>Checked</th><th>Closed green</th><th>Avg close</th><th>Avg open</th><th>Avg high / low</th><th>Touched stop</th><th>Touched target</th></tr>
+        ${agg("All", S)}${(S.by_setup || []).length > 1 ? S.by_setup.map(x => agg(x.setup, x)).join("") : ""}</table></div>
+      <div class="tbl" style="padding:0 18px 14px"><table><tr><th>Day</th><th>Stock</th><th>Setup</th><th>Entry</th><th>Rest of entry day</th><th>Next open</th><th>High / low</th><th>Next close</th><th></th></tr>${rows}</table></div>
+      <p class="note" style="padding:0 18px 16px;margin:0">Measured from the entry price. "Rest of entry day" is for entries on the 1:30 close: where that day closed at 4:00. "Touched" means during the day, not a close; the setups exit on closes. You get this on Telegram after each close.</p>`
+    : `<p class="note" style="padding:0 18px 16px;margin:0">No confirmed setups have had their next session yet. Each one is checked after the close of the day after it confirms.</p>`}</div>`;
+}
 async function loadLab() {
   let L;
   $("lab").innerHTML = loadingHTML("Loading the Lab…");
@@ -4127,7 +4147,9 @@ async function loadLab() {
       <td>${st.win_rate ?? "–"}${st.win_rate == null ? "" : "%"}</td><td style="${pc(st.avg_ret)}">${sign(st.avg_ret)}</td></tr>` : "";
   const kindName = { symmetric: "Symmetric ◇", ascending: "Ascending ◢", descending: "Descending ◥" };
   const live = (S.live || []);
+  setTimeout(loadNextDay, 0);
   $("lab").innerHTML = `
+    <div id="labNextDay"></div>
     <div id="labExits"></div>
     <div class="panel"><div class="ph"><h2>What's being tested</h2></div>
       <p class="note" style="padding:0 18px 16px;margin:0">A <b>tightening hub</b> is a range that narrows: highs falling and/or lows rising, so the end of the range is at most 60% as wide as the start. The rules are the same as for hubs: breakout = a 4-hour close outside the lines, target = next shelf, failed = close back inside.</p></div>
