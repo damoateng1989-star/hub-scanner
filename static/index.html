@@ -7116,10 +7116,28 @@ function askSikaStripTicker(raw, sym) {
   const toks = askSikaNorm(raw).split(" ").filter(Boolean);
   return toks.filter(t => t.replace(/'s$/, "").toUpperCase() !== sym).join(" ").trim();
 }
+function askSikaPlayAsk(raw) {
+  const board = askSikaBoardSymbols(), hits = [];
+  for (const t0 of String(raw || "").split(/\s+/)) {
+    const t = t0.replace(/[^A-Za-z0-9.\-']/g, "").replace(/'s$/i, "").replace(/^\$/, "");
+    if (!t) continue;
+    const up = t.toUpperCase();
+    if (!(ASK_SCAN_SYMBOLS.has(up) || board.has(up))) continue;
+    if (up.length < 2 && t !== up) continue;                       // "a" is a word; "A" typed in caps is Agilent
+    if (up.length >= 2 && t !== up && ASK_SCAN_STOP.has(t.toLowerCase())) continue;
+    if (!hits.includes(up)) hits.push(up);
+  }
+  if (hits.length !== 1) return null;
+  return askSikaIsFiller(askSikaStripTicker(raw, hits[0])) ? hits[0] : null;
+}
 function askSikaIsFiller(rest) {
   let r = " " + rest + " ";
   for (const f of ["what about", "how about", "tell me about", "what's", "whats", " and ", " what ", " please "]) r = r.split(f).join(" ");
-  return !r.replace(/\s+/g, "").length;
+  // "analyze BE", "check BE", "show me the BE play": words that only ask for the ticker's play
+  // (analyze typos too: anylze, analize, analyse) count as filler, so these get the play card.
+  const FILL = new Set(["analyze", "analyse", "analysis", "check", "show", "me", "the", "a", "on", "for", "of", "look", "at", "give", "is", "play", "setup", "set", "up", "trade", "chart", "ticker", "stock", "can", "you", "i", "want", "to", "see", "pull", "run", "do", "quick", "read", "your", "s", "it"]);
+  const fuzzy = (w) => /^an[a-z]{0,3}l[a-z]{0,3}[sz][a-z]{0,3}$/.test(w);   // analyze and its common typos
+  return r.toLowerCase().replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean).every(w => FILL.has(w) || fuzzy(w));
 }
 function askSikaBoardTime(iso) {
   if (!iso) return "";
@@ -7293,6 +7311,11 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
     askSikaSay(`<p class="sp-hint">I'm ready to discuss <b>${esc(ticker)}</b>. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.</p>`);
     return;
   }
+
+  // "analyze BE", "check BE", "BE setup?": one ticker plus only filler words is the same as typing the
+  // bare ticker, so it gets the play card (checked before the scan, which would read "setup" as a scan).
+  const one = askSikaPlayAsk(raw);
+  if (one) { await askSikaProcess(one, true); return; }
 
   // Patch 159: deterministic board scan — no model call for the list itself.
   const scanKind = askSikaIsScan(raw);
