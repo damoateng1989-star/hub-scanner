@@ -207,6 +207,39 @@ def _alpaca_snapshots(symbols: list[str], feed: str | None = None) -> dict[str, 
     return out
 
 
+_EXT: dict[str, tuple[float, dict]] = {}
+
+
+def extended_price(sym: str) -> dict:
+    """The latest pre-market (4:00-9:30 AM ET) or after-hours (4:00-8:00 PM ET) trade for one stock, from the
+    consolidated (SIP) feed. session=None outside those windows or when there's no trade in them yet.
+    Display only: NextShelf's rules act on regular-session 4-hour closes; this never triggers anything."""
+    sym = sym.upper()
+    now = time.time()
+    hit = _EXT.get(sym)
+    if hit and now - hit[0] < 60:
+        return hit[1]
+    out = dict(session=None, price=None, at=None)
+    et = pd.Timestamp.now(tz="America/New_York")
+    mins = et.hour * 60 + et.minute
+    window = "pre" if 240 <= mins < 570 else "post" if 960 <= mins < 1200 else None
+    if et.weekday() < 5 and window and provider() == "alpaca":
+        try:
+            snap = _alpaca_snapshots([sym], feed=os.getenv("ALPACA_EXT_FEED", "sip")).get(sym) or {}
+            t = snap.get("latestTrade") or {}
+            if t.get("p") and t.get("t"):
+                ts = pd.Timestamp(t["t"])
+                ts = (ts.tz_localize("UTC") if ts.tzinfo is None else ts).tz_convert("America/New_York")
+                tm = ts.hour * 60 + ts.minute
+                in_win = (240 <= tm < 570) if window == "pre" else (960 <= tm < 1200)
+                if ts.date() == et.date() and in_win:
+                    out = dict(session=window, price=round(float(t["p"]), 2), at=ts.isoformat())
+        except Exception as e:
+            logging.getLogger(__name__).warning("extended price unavailable for %s: %s", sym, e)
+    _EXT[sym] = (now, out)
+    return out
+
+
 def premarket_movers() -> dict:
     """Top premarket movers among names passing the board's liquidity filters."""
     global _PREMARKET, _PREMARKET_AT

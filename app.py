@@ -1030,6 +1030,12 @@ def board_data(u: dict | None = Maybe):
     return b
 
 
+@app.get("/api/extended/{symbol}")
+async def extended_price(symbol: str, u: dict = User):
+    """Pre-market / after-hours price for the shelf card header (display only; cached 60 s per stock)."""
+    return await run_in_threadpool(data.extended_price, symbol.strip().upper()[:12])
+
+
 @app.get("/api/premarket")
 def premarket_data(u: dict | None = Maybe):
     if not u:
