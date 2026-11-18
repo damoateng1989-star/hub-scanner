@@ -6305,7 +6305,7 @@ function optionsHTML(o) {
     <p class="bf-fine">Educational example, not a recommendation. Prices at the aim and on a failure are simulated with Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>`;
 }
 // ---------------------------------------------------------------- setups: trading styles, Discover tabs, track record
-const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"], ["gex", "GEX shelves"], ["gexboard", "GEX board"]];   // Patch 82: the measured setups only; Patch 135: GEX is watch-only, beta
+const SETUP_TABS = [["hub", "Hubs"], ["double", "Double tops & bottoms"], ["gapfade", "Post-earnings gap fade & rip"]];   // GEX shelves / GEX board tabs hidden (Nov 17); code kept: add ["gex", "GEX shelves"], ["gexboard", "GEX board"] back to show them   // Patch 82: the measured setups only; Patch 135: GEX is watch-only, beta
 const SETUP_ICON = {
   hub: '<rect x="3" y="9" width="18" height="7" rx="2"/><path d="M5 13l2-1.5 2 1.5 2-1.5 2 1.5 2-1.5 2 1.5 2-1"/>',
   triangle: '<path d="M3 6l18 6M3 18l18-6"/>',

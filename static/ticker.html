@@ -534,7 +534,7 @@ function render(d) {
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
     <div id="swingPlay" class="card"></div>
-    <div id="gexShelves" class="card gex-shelf-card"></div>
+    <div id="gexShelves" class="card gex-shelf-card" hidden></div>
     <div id="optionsSwing" class="card"></div>
     <h2>Past <em>results</em></h2>
     <p class="scope">This ticker only · 4H breakouts</p>
@@ -694,7 +694,7 @@ function render(d) {
   // start zoomed to the last ~120 candles
   const n = d.candles.length;
   chart.timeScale().setVisibleLogicalRange({ from: Math.max(0, n - (el.clientWidth < 600 ? 60 : 120)), to: n + 3 });
-  loadGexShelves();
+  // loadGexShelves();   // GEX shelves + heat map hidden (Nov 17); un-comment and drop `hidden` on #gexShelves to show it again
   loadOptionsPanel();
   loadSwingCard();
 
