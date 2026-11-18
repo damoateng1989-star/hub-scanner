@@ -747,8 +747,8 @@ async function loadSwingCard() {
   let me = null;
   try { me = await (await fetch("/api/me")).json(); } catch (e) {}
   if (!me || me.guest || !me.options) {
-    host.innerHTML = heading + \`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
-      <a class="btnx sm" href="\${!me || me.guest ? "/login#signup" : "#account"}">\${!me || me.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>\`;
+    host.innerHTML = heading + `<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
+      <a class="btnx sm" href="${!me || me.guest ? "/login#signup" : "#account"}">${!me || me.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`;
     return;
   }
   let c = null;
@@ -765,14 +765,14 @@ async function loadSwingCard() {
 
 function renderSwingCard(c) {
   if (!c) return '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
-  const head = \`<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>\${c.setup ? \`<span class="sw-setup">\${esc(c.setup)}</span>\` : ""}\${c.grade ? \`<span class="sw-grade">\${esc(c.grade)}</span>\` : ""}</div>\`;
-  const asof = c.as_of ? \`<p class="sw-foot">As of \${new Date(c.as_of).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}. For education only, not financial advice.</p>\` : \`<p class="sw-foot">For education only, not financial advice.</p>\`;
-  const ctx = (c.context || []).map(x => \`<p class="sw-ctx">\${esc(x)}</p>\`).join("");
+  const head = `<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>${c.setup ? `<span class="sw-setup">${esc(c.setup)}</span>` : ""}${c.grade ? `<span class="sw-grade">${esc(c.grade)}</span>` : ""}</div>`;
+  const asof = c.as_of ? `<p class="sw-foot">As of ${new Date(c.as_of).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}. For education only, not financial advice.</p>` : `<p class="sw-foot">For education only, not financial advice.</p>`;
+  const ctx = (c.context || []).map(x => `<p class="sw-ctx">${esc(x)}</p>`).join("");
   if (c.state === "in_between" && c.in_between) {
-    return head + \`<p class="sw-note">\${esc(c.in_between.text)}</p>\` + ctx + asof;
+    return head + `<p class="sw-note">${esc(c.in_between.text)}</p>` + ctx + asof;
   }
   if (c.state === "waiting" || !c.favored) {
-    return head + \`<p class="sw-note">\${esc(c.message || "No setup in play right now.")}</p>\` + ctx + asof;
+    return head + `<p class="sw-note">${esc(c.message || "No setup in play right now.")}</p>` + ctx + asof;
   }
   const side = (s, cls) => {
     const rows = [
@@ -782,10 +782,10 @@ function renderSwingCard(c) {
       ["Confirm", s.confirm.map(esc).join("<br>")],
       ["Wrong if", esc(s.wrong_if)],
     ];
-    const ct = s.contract ? \`<p class="sw-contract">\${esc(s.contract.expiry)} $\${s.contract.strike} \${s.contract.side}s · $\${s.contract.cost_mid.toFixed(2)} mid</p>\` : "";
-    return \`<div class="sw-side \${cls}"><h4>\${esc(s.label)}</h4><div class="sw-rows">\${rows.map(([l, v]) => \`<div><span>\${l}</span><b>\${v}</b></div>\`).join("")}</div>\${ct}</div>\`;
+    const ct = s.contract ? `<p class="sw-contract">${esc(s.contract.expiry)} $${s.contract.strike} ${s.contract.side}s · $${s.contract.cost_mid.toFixed(2)} mid</p>` : "";
+    return `<div class="sw-side ${cls}"><h4>${esc(s.label)}</h4><div class="sw-rows">${rows.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div>${ct}</div>`;
   };
-  return head + \`<div class="sw-sides">\${side(c.favored, "fav")}\${c.opposite ? side(c.opposite, "opp") : ""}</div>\` + ctx + asof;
+  return head + `<div class="sw-sides">${side(c.favored, "fav")}${c.opposite ? side(c.opposite, "opp") : ""}</div>` + ctx + asof;
 }
 
 // Patch 151 — options swing display on the dedicated ticker page. Display only.
@@ -827,151 +827,6 @@ function renderOptionsPanel(o) {
     const cs = p.contracts || [], primary = cs[0], alternates = cs.slice(1);
     const earn = o.earnings && o.earnings.date && p.expiry && o.earnings.date <= p.expiry ? '<p class="oc-earn">⚠ Earnings ' + esc(o.earnings.label || day(o.earnings.date)) + ', before this contract expires. Options usually lose value right after earnings, even when the stock moves your way.</p>' : "";
     return '<div class="ox2">' + contract(primary,p,up,cond,h) + earn + alternates.map(c => '<details class="oc-alt"><summary>Compare: $' + esc(c.strike) + " " + (up ? "call" : "put") + " · " + esc(String(c.label || "").toLowerCase()) + '</summary>' + contract(c,p,up,esc(c.label || ""),h) + '</details>').join("") + '</div>';
-  }).join("");
-  return (o.demo ? '<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>' : "") + closed + earnings + plans +
-    '<h3 class="ox-rules-title">Rules for the trade</h3><ol class="ox-rules"><li>Take profit when the stock reaches the <b>shelf</b>, not when the option "feels" high.</li><li>Exit on a 4-hour <b>close back inside</b> the pattern, whatever the option is worth.</li><li>Size small. The most you can lose is what you pay for the contract.</li></ol>' +
-    '<p class="ox-disclaimer">Educational example, not a recommendation. Prices at the aim and on a failure are simulated with Black-Scholes and assume implied volatility stays the same; real prices, spreads and fills will differ. Options can lose 100% of their value. See the <a href="/disclaimer" style="color:inherit;text-decoration:underline">risk disclaimer</a>.</p>';
-}
-// GEX shelves (Patch 135, watch-only): the top gamma shelves near the price, drawn as
-// shelves like the hub band. Fail-open: a failed fetch or empty shelves leaves the section blank.
-async function loadGexShelves() {
-  const host = document.getElementById("gexShelves");
-  if (!host) return;
-  let j = null, error = "";
-  try {
-    const r = await fetch(`/api/gamma/${encodeURIComponent(SYM)}`);
-    if (!r.ok) throw new Error(`Gamma request failed (${r.status})`);
-    j = await r.json();
-  } catch (e) {
-    error = "Gamma data could not be loaded. Check the connection and refresh.";
-  }
-  const sh = j && j.shelves;
-  const shelves = sh && Array.isArray(sh.shelves) ? sh.shelves : [];
-  let shelfHtml = `<p class="scope">Watch-only gamma levels · no Lab record or alert</p>`;
-  if (shelves.length) {
-    const spot = sh.spot, rows = shelves;
-    const money = v => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
-    const fmtM = v => (Math.abs(Number(v)) / 1e6).toFixed(2) + "M";
-    const pct = v => { const d = (v - spot) / spot * 100; return (d >= 0 ? "+" : "") + d.toFixed(1) + "%"; };
-    const near = rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a);
-    const above = rows.filter(r => r.strike > near.strike).sort((a, b) => a.strike - b.strike)[0];
-    const below = rows.filter(r => r.strike < near.strike).sort((a, b) => b.strike - a.strike)[0];
-    const shelf = r => {
-      const at = r.strike === near.strike;
-      const both = r.side === "both";
-      const lab = both ? "Both walls" : (r.side === "call" ? "Call wall" : "Put wall");
-      const desc = both ? "Call and put gamma cancel here — the biggest two-sided wall." : (r.side === "call" ? "ceiling shelf" : "floor shelf");
-      return `<div class="gex-shelf ${r.side}${at ? " at" : ""}"><span class="gex-bar"></span><span class="gex-mid"><b>${money(r.strike)}</b>${at ? ' <i class="gex-tag">PRICE HERE</i>' : ""}<small>${lab} &middot; ${desc}</small></span><span class="gex-right"><b>${r.gex >= 0 ? "+" : ""}${fmtM(r.gex)}</b><small>${at ? "at the price" : pct(r.strike) + (r.strike > spot ? " above" : " below")}</small></span></div>`;
-    };
-    const line = above && below
-      ? `${SYM} is sitting nearest to its gamma shelf at ${money(near.strike)}. Above it, ${money(above.strike)} is the next shelf up; below it, ${money(below.strike)} is the floor.`
-      : `${SYM} is sitting on its biggest gamma shelf at ${money(near.strike)}.`;
-    shelfHtml = `<p class="scope">Swing expiry (monthly when available, 7+ days out) &middot; net gamma &middot; ${esc(sh.expiry)} &middot; watch-only</p><div class="gex-ladder">${rows.map(shelf).join("")}</div><p class="gex-sika"><b>Sika:</b> ${esc(line)}</p>`;
-  } else {
-    shelfHtml += `<p class="scope">Gamma shelf levels are unavailable for this ticker right now.</p>`;
-  }
-  host.innerHTML = `<h2>GEX <em>shelves</em> + heat map</h2><div class="gex-shelf-layout"><section>${shelfHtml}</section><div id="gexHeatmap"></div></div>`;
-  renderGexHeatmap(j, error);
-}
-
-// GEX heat map (Patch 137, watch-only): net gamma by strike and near-term expiry.
-// White = positive gamma, red = negative gamma; stronger cells are brighter.
-function renderGexHeatmap(j, message) {
-  const host = document.getElementById("gexHeatmap");
-  if (!host) return;
-  const g = j && j.grid;
-  if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) {
-    host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">CONFLUENCE</span></div><div style="padding:18px 14px;color:#A3A3A3;font-size:12px;line-height:1.5">${esc(message || "Options-chain gamma data is not available for this ticker right now. The heatmap will appear when Cboe chain data is available.")}</div>`;
-    return;
-  }
-  const spot = g.spot;
-  const maxV = Math.max(...g.rows.flatMap(r => (r.gross || r.gex).map(v => Math.abs(v))), 1);
-  const nearStrike = g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike;
-  // TOTAL notional per strike and strongest pull: largest absolute summed net GEX.
-  // All expiries share the same spot multiplier, so the ranking is scale-invariant.
-  const totals = g.rows.map(r => r.gex.reduce((a, b) => a + b, 0));
-  const grossTotals = g.rows.map(r => (r.gross || []).reduce((a, b) => a + b, 0));
-  const maxTotal = Math.max(...grossTotals.map(v => Math.abs(v)), 1);
-  const strongestIdx = totals.reduce((bi, t, i) => Math.abs(t) > Math.abs(totals[bi]) ? i : bi, 0);
-  const strongestStrike = g.rows[strongestIdx].strike;
-  const fmt = v => (Math.abs(Number(v)) / 1e6).toFixed(2) + "M";
-  const cell = (v, gv) => {
-    const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
-    const a = Math.min(0.10 + 0.90 * mag / maxV, 1).toFixed(2);
-    // Balanced cell: large gross, near-zero net — a pin. White (stabilise).
-    if (Math.abs(v) < 0.25 * Math.abs(gv || 0) && Math.abs(gv || 0) > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
-    if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"}">${fmt(v)}</td>`;
-    if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"}">−${fmt(v)}</td>`;
-    return `<td style="color:#6B7280">0</td>`;
-  };
-  const totalCell = (v, gv) => {
-    const mag = Math.max(Math.abs(v), Math.abs(gv || 0));
-    const a = Math.min(0.10 + 0.90 * mag / maxTotal, 1).toFixed(2);
-    if (Math.abs(v) < 0.25 * Math.abs(gv || 0) && Math.abs(gv || 0) > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"};font-weight:700">${fmt(v)}</td>`;
-    if (v > 0) return `<td style="background:rgba(255,255,255,${a});color:${a > 0.55 ? "#0A0A0A" : "#F3F4F6"};font-weight:700">${fmt(v)}</td>`;
-    if (v < 0) return `<td style="background:rgba(220,38,38,${a});color:${a > 0.60 ? "#0A0A0A" : "#F87171"};font-weight:700">−${fmt(v)}</td>`;
-    return `<td style="color:#6B7280;font-weight:700">0</td>`;
-  };
-  const head = g.expiries.map(e => {
-    const d = new Date(e + "T12:00:00");
-    return `<th>${d.toLocaleDateString("en-US", {month:"short", day:"numeric"}).toUpperCase()}</th>`;
-  }).join("");
-  const rowsHtml = g.rows.map((r, ri) => {
-    const at = r.strike === nearStrike;
-    const isStrongest = r.strike === strongestStrike;
-    const cls = [at ? "spotrow" : "", isStrongest ? "strongest" : ""].filter(Boolean).join(" ");
-    return `<tr${cls ? ` class="${cls}"` : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}${isStrongest ? ' <span class="pulltag">STRONGEST PULL</span>' : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}${totalCell(totals[ri], grossTotals[ri])}</tr>`;
-  }).join("");
-  host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">M = $1,000,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])} · TOTAL = sum across expiries</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}<th>TOTAL</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span><i class="sw r"></i>Strongest pull</span><span>Brighter = more gamma</span></div>`;
-}
-load();
-</script>
-<script>
-// leave the chart: go back to wherever you came from in NextShelf, otherwise to Browse setups
-function goBack(e) {
-  if (e) e.preventDefault();
-  let ref = "";
-  try { ref = document.referrer ? new URL(document.referrer).origin : ""; } catch (_) {}
-  if (ref === location.origin && history.length > 1) history.back();
-  else location.href = "/app#discover";
-  return false;
-}
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") goBack(e); });
-</script>
-
-<script>
-/* the chart reads its colours when it draws: redraw after switching themes */
-(function () { var set = window.nsSetTheme; window.nsSetTheme = function (p) { set(p); location.reload(); }; })();
-</script>
-<script>
-// ---- early access: while sign-ups are closed, every "Sign up" link becomes "Join the waitlist"
-(function () {
-  const LAND = false;
-  const swap = (t) => {
-    const s = t.trim(), arrow = /→\s*$/.test(s) ? " →" : "";
-    if (/^(sign up|create)/i.test(s) || /free account|get started|free beta/i.test(s)) return (/^sign up$/i.test(s) ? "Join the waitlist" : "Join the waitlist") + arrow;
-    if (/^sign up free to/i.test(s)) return "Join the waitlist" + arrow;
-    return null;
-  };
-  function fix(root) {
-    (root.querySelectorAll ? root : document).querySelectorAll('a[href="/login#signup"]').forEach(a => {
-      if (a.dataset.wl) return; a.dataset.wl = 1;
-      if (LAND) a.href = "#join";
-      const n = [...a.childNodes].find(x => x.nodeType === 3 && x.textContent.trim());
-      const t = n ? swap(n.textContent) : null; if (t) n.textContent = t + (n.textContent.endsWith(" ") ? " " : "");
-    });
-  }
-  Promise.all([fetch("/auth/config").then(r => r.json()), fetch("/api/me").then(r => r.json()).catch(() => null)]).then(([c, me]) => {
-    if (c.signups_open !== false || (me && !me.guest)) return;
-    window.NS_WAITLIST = true; document.documentElement.classList.add("waitlist");
-    fix(document);
-    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(x => x.nodeType === 1 && fix(x.parentNode || x)))).observe(document.body, {childList: true, subtree: true});
-  }).catch(() => {});
-})();
-</script>
-</body>
-</html>
- + esc(c.strike) + " " + (up ? "call" : "put") + " · " + esc(String(c.label || "").toLowerCase()) + '</summary>' + contract(c, p, up, esc(c.label || ""), h) + '</details>').join("") + '</div>';
   }).join("");
   return (o.demo ? '<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>' : "") + closed + earnings + plans +
     '<h3 class="ox-rules-title">Rules for the trade</h3><ol class="ox-rules"><li>Take profit when the stock reaches the <b>shelf</b>, not when the option "feels" high.</li><li>Exit on a 4-hour <b>close back inside</b> the pattern, whatever the option is worth.</li><li>Size small. The most you can lose is what you pay for the contract.</li></ol>' +
