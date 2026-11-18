@@ -420,6 +420,8 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         return []
     import board
     import patterns
+    if only_tests == "gapgo":                                 # lightest run: only the gap-fade open test (daily candles, no hub scan)
+        return _gapgo_rows(sym, c4, s)
     res = engine.analyze(c4, s)
     if only_tests:                                            # a light run: just the test-only setups (floor bounce, hub edge)
         atr = res["atr"].to_numpy(float)
@@ -981,7 +983,7 @@ def _rss_mb() -> float:
 TEST_KEYS = ("floor_", "edge_", "gapgo_")      # graduation rows a tests-only run measures
 
 
-def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None, only_tests: bool = False):
+def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None, only_tests: bool | str = False):
     global DAYS
     if not _LOCK.acquire(blocking=False):
         return
@@ -1044,14 +1046,17 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 log.info("lab test: stopped at %d MB to stay under the memory limit", int(rss))
                 return
             time.sleep(0.2)                   # leave room for the site and the live scan
+        if not rows and only_tests == "gapgo" and failed < len(syms):
+            raise RuntimeError("no gap fade opened above its gap-day high in this period, so there is nothing to compare")
         if not rows:
             raise RuntimeError("no breakouts found: the market data download failed" + (f" ({failed_msg})" if failed_msg else ""))
         out = summarize(rows)
         if only_tests:
             # keep the last full run's tables and live-rule checks; replace only the test rows
             prev = (json.loads(db.get_setting("lab_exits") or "{}").get("result") or {})
-            mine = [g for g in out["graduation"] if g["key"].startswith(TEST_KEYS)]
-            keep = [g for g in (prev.get("graduation") or []) if not g["key"].startswith(TEST_KEYS)]
+            tk = ("gapgo_",) if only_tests == "gapgo" else TEST_KEYS
+            mine = [g for g in out["graduation"] if g["key"].startswith(tk)]
+            keep = [g for g in (prev.get("graduation") or []) if not g["key"].startswith(tk)]
             out = dict(prev or out, graduation=keep + mine, tests_run=pd.Timestamp.now(tz="UTC").isoformat(),
                        tests_symbols=len(syms), tests_days=DAYS)
             _set(status="done", result=out, tests_only=True, finished=pd.Timestamp.now(tz="UTC").isoformat(),
@@ -1079,7 +1084,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             start()
 
 
-def start(resume: bool = False, years: int | None = None, only_tests: bool = False) -> bool:
+def start(resume: bool = False, years: int | None = None, only_tests: bool | str = False) -> bool:
     if _LOCK.locked():
         return False
     threading.Thread(target=run, kwargs=dict(resume=resume, years=years, only_tests=only_tests), daemon=True).start()
