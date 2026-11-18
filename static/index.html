@@ -6983,6 +6983,7 @@ async function askSikaCard(sym) {
 }
 // Patch 159: ask Sika to find setups — scan-request detection + routing.
 const ASK_SCAN_KINDS = [
+  ["opportunities", "all"], ["opportunity", "all"], ["setups", "all"], ["setup", "all"],
   ["double tops and bottoms", "double"], ["double tops & bottoms", "double"],
   ["post earnings gap fade", "gapfade"], ["post earnings gap", "gapfade"],
   ["earnings gap fade", "gapfade"], ["gap fade & rip", "gapfade"],
@@ -6997,13 +6998,14 @@ const ASK_SCAN_KINDS = [
 const ASK_SCAN_VERBS = ["find", "scan", "show", "list", "any", "give me", "got any", "looking for", "what's", "whats", "what are", "are there", "which"];
 const ASK_SCAN_STOP = new Set(["on", "it", "in", "is", "at", "to", "of", "be", "do", "go", "so", "no", "or", "an", "as", "by", "up", "us", "am", "if", "my", "me", "we", "he"]);
 const ASK_SCAN_NONE = {
+  all: "No qualifying setups are in play on the board right now.",
   hub: "No hubs breaking out or breaking down right now.",
   double_top: "No double tops in play right now.",
   double_bottom: "No double bottoms in play right now.",
   double: "No double tops or double bottoms in play right now.",
   gapfade: "No post-earnings gap fades in play right now.",
 };
-const ASK_SCAN_MORE = {hub: "hubs", double: "doubles", double_top: "double tops", double_bottom: "double bottoms", gapfade: "gap fades"};
+const ASK_SCAN_MORE = {all: "setups", hub: "hubs", double: "doubles", double_top: "double tops", double_bottom: "double bottoms", gapfade: "gap fades"};
 
 function askSikaNorm(s) {
   return (s || "").toLowerCase().replace(/['’]/g, "'").replace(/[^a-z0-9/&' ]/g, " ").replace(/\s+/g, " ").trim();
