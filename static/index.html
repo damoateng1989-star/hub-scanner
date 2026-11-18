@@ -2811,11 +2811,13 @@ function plainEnglish(r, kind) {
   if (kind === "forming" && h.low != null && h.high != null && p) {
     const dHigh = Math.abs(h.high / p - 1) * 100, dLow = Math.abs(p / h.low - 1) * 100;
     const near = dHigh <= dLow ? ["top", dHigh] : ["bottom", dLow];
+    const tu = tUp(r), td = tDn(r), wide = tu > h.high + 0.005 || td < h.low - 0.005;
     return `${S} has been trading in a tight range between <b>${money(h.low)}</b> and <b>${money(h.high)}</b> for <b>${h.sessions} sessions</b>. ` +
       `That range is called a hub: buyers and sellers keep meeting at the same prices, so the stock moves sideways instead of trending.${grade} ` +
       `It's at <b>${money(p)}</b> right now, about ${near[1].toFixed(1)}% from the ${near[0]} of the range. There's no trade yet. ` +
-      `A 4-hour candle closing above <b>${money(h.high)}</b> would start an upward move${up ? `, heading for ${shelf(up)}` : ""}; ` +
-      `a close below <b>${money(h.low)}</b> would start a downward one${dn ? `, heading for ${shelf(dn)}` : ""}.`;
+      `A 4-hour candle closing above <b>${money(tu)}</b> would start an upward move${up ? `, heading for ${shelf(up)}` : ""}; ` +
+      `a close below <b>${money(td)}</b> would start a downward one${dn ? `, heading for ${shelf(dn)}` : ""}.` +
+      (wide ? ` (The range is so tight that a close just past its edge only stretches it; it takes a bigger move to break out.)` : "");
   }
   if (kind === "near" && h.low != null) {
     const isUp = r.near_edge === "up", edge = isUp ? h.high : h.low, sh = isUp ? up : dn;
@@ -2876,8 +2878,8 @@ function summary(sym, st, key) {
   switch (key) {
     case "forming":
       return `${sym} has held a tight range for <b>${h.sessions} sessions</b>. ` +
-        `If a 4H candle closes <b class="u-up">above ${money(h.high)}</b>, ${lvl(up, "up")}. ` +
-        `If it closes <b class="u-down">below ${money(h.low)}</b>, ${lvl(dn, "down")}.`;
+        `If a 4H candle closes <b class="u-up">above ${money(tUp(st))}</b>, ${lvl(up, "up")}. ` +
+        `If it closes <b class="u-down">below ${money(tDn(st))}</b>, ${lvl(dn, "down")}.`;
     case "watching":
       return `The range just ended without a breakout. A 4H close <b class="u-up">above ${money(h.high)}</b> or ` +
         `<b class="u-down">below ${money(h.low)}</b> in the next few candles would still count.`;
@@ -2927,7 +2929,7 @@ const OPEN = new Set();
 function oneLine(st, key) {
   const h = st.hub, up = st.shelf_up, dn = st.shelf_down;
   switch (key) {
-    case "forming": return `Watch for a close <b class="u-up">above ${money(h.high)}</b> or <b class="u-down">below ${money(h.low)}</b>`;
+    case "forming": return `Watch for a close <b class="u-up">above ${money(tUp(st))}</b> or <b class="u-down">below ${money(tDn(st))}</b>`;
     case "watching": return `A close above ${money(h.high)} or below ${money(h.low)} still counts`;
     case "breakout_up": return `Heading for <b class="u-up">${money(st.target)} (${pctFrom(st.target, st.last_close)})</b>`;
     case "breakdown": return `Heading for <b class="u-down">${money(st.target)} (${pctFrom(st.target, st.last_close)})</b>`;
@@ -2992,10 +2994,13 @@ function details(t) {
     <div class="bt" id="bt-${S}" hidden></div>`;
 }
 // Patch 98: watchlist urgency and mobile hub bar
-function wlDist(st){const h=st&&st.hub,p=Number(st&&st.last_close);if(!h||h.low==null||h.high==null||!Number.isFinite(p)||p<=0)return null;return Math.min(Math.abs(h.high-p),Math.abs(p-h.low))/p*100;}
+// The close that really breaks a resting hub: the engine's trigger (hub edge, or further out when the hub is very tight). Falls back to the edge.
+function tUp(st){const h=st&&st.hub,t=Number(st&&st.trigger_up);return Number.isFinite(t)&&t>0?t:(h?h.high:null);}
+function tDn(st){const h=st&&st.hub,t=Number(st&&st.trigger_down);return Number.isFinite(t)&&t>0?t:(h?h.low:null);}
+function wlDist(st){const h=st&&st.hub,p=Number(st&&st.last_close);if(!h||h.low==null||h.high==null||!Number.isFinite(p)||p<=0)return null;return Math.min(Math.abs(tUp(st)-p),Math.abs(p-tDn(st)))/p*100;}
 const WL_EDGE_PCT=1;
 function wlSection(t){const st=t.status||{};if(liveOther(st)||st.state==="breakout_up"||st.state==="breakdown")return"play";if(st.state==="forming"&&st.hub){const p=Number(st.last_close);if(Number.isFinite(p)&&(p<st.hub.low||p>st.hub.high))return"look";const d=wlDist(st);if(d!=null&&d<=WL_EDGE_PCT)return"edge";}return"rest";}
-function wlOneLine(st,sec){const h=st&&st.hub,p=Number(st&&st.last_close),live=liveOther(st);if(sec==="play"){const x=live||st,e=Number(x.edge),tar=Number(x.target),up=x.state!=="breakdown";let base=oneLine(st,live?"setup":st.state);if(Number.isFinite(e)&&Number.isFinite(tar)&&Number.isFinite(p)&&tar!==e){const raw=up?(p-e)/(tar-e):(e-p)/(e-tar);base+=" — "+Math.round(Math.max(0,Math.min(1,raw))*100)+"% there.";}return base;}if(!h||!Number.isFinite(p))return oneLine(st,st.state||"none");if(p<h.low)return"Closed below the lower trigger — the hub may be stale.";if(p>h.high)return"Closed above the upper trigger — the hub may be stale.";const top=(h.high-p)/p*100,bottom=(p-h.low)/p*100;if(Math.min(top,bottom)<=WL_EDGE_PCT)return top<=bottom?"One close above "+money(h.high)+" triggers the long.":"One close below "+money(h.low)+" triggers the short.";return"Inside the hub — "+top.toFixed(1)+"% to the top, "+bottom.toFixed(1)+"% to the bottom.";}
+function wlOneLine(st,sec){const h=st&&st.hub,p=Number(st&&st.last_close),live=liveOther(st);if(sec==="play"){const x=live||st,e=Number(x.edge),tar=Number(x.target),up=x.state!=="breakdown";let base=oneLine(st,live?"setup":st.state);if(Number.isFinite(e)&&Number.isFinite(tar)&&Number.isFinite(p)&&tar!==e){const raw=up?(p-e)/(tar-e):(e-p)/(e-tar);base+=" — "+Math.round(Math.max(0,Math.min(1,raw))*100)+"% there.";}return base;}if(!h||!Number.isFinite(p))return oneLine(st,st.state||"none");if(p<h.low)return"Closed below the lower trigger — the hub may be stale.";if(p>h.high)return"Closed above the upper trigger — the hub may be stale.";const top=(tUp(st)-p)/p*100,bottom=(p-tDn(st))/p*100;if(Math.min(top,bottom)<=WL_EDGE_PCT)return top<=bottom?"One close above "+money(tUp(st))+" triggers the long.":"One close below "+money(tDn(st))+" triggers the short.";return"Inside the hub — "+top.toFixed(1)+"% to the long trigger, "+bottom.toFixed(1)+"% to the short trigger.";}
 function wlGauge(st,sec,live){if(sec==="play"){const x=live||st;if(x.edge!=null&&x.target!=null)return boardGauge({hub:{low:x.edge,high:x.target},last_close:st.last_close},"live",x.state==="breakdown"?"down":"up");}if(!st.hub)return"";const p=Number(st.last_close),dir=p<st.hub.low?"down":p>st.hub.high?"up":null;return boardGauge({hub:st.hub,last_close:st.last_close},dir?"live":"forming",dir||undefined);}
 function listRow(t){const st=t.status||{},sec=wlSection(t),key=st.error?"error":(st.state||"none"),liveSetup=liveOther(st);const pair=liveSetup?[esc(liveSetup.name),liveSetup.state==="breakout_up"?"--up":"--down"]:(STATES[key]||[key,"--idle"]);const S=esc(t.symbol),forming=sec!=="play";return '<details class="lrow wl-'+sec+(forming?' wl-forming':'')+'" id="c-'+S+'"'+(OPEN.has(t.symbol)?' open':'')+' ontoggle="if(this.open){OPEN.add(\''+S+'\')}else{OPEN.delete(\''+S+'\')}"><summary><span class="s">'+S+'<small>'+money(st.last_close)+'</small></span><span class="one">'+wlOneLine(st,sec)+'</span><span class="wl-gauge">'+wlGauge(st,sec,liveSetup)+'</span><span class="badge" style="--c: var('+pair[1]+')">'+pair[0]+'</span><span class="chev">›</span></summary><div class="body">'+details(t)+'</div></details>';}
 function wlProgress(t){const st=t.status||{},x=liveOther(st)||((st.state==="breakout_up"||st.state==="breakdown")?st:null);if(!x)return-1;const p=Number(st.last_close),e=Number(x.edge),tar=Number(x.target);if(!Number.isFinite(p)||!Number.isFinite(e)||!Number.isFinite(tar)||tar===e)return-1;const raw=x.state==="breakdown"?(e-p)/(e-tar):(p-e)/(tar-e);return Math.max(0,Math.min(1,raw));}
@@ -5533,8 +5538,8 @@ function briefHTML(sym, st, chart) {
   const steps = [];
   if (key === "forming") {
     steps.push(["#9fb3ff", `It's been closing inside <b>${money(h.low)}–${money(h.high)}</b> for ${h.sessions} sessions${h.grade ? ` (hub grade: <b>${gradeWord(h)}</b>)` : ""}. Inside the hub there's <b>no trade</b>. Let it come to you.`]);
-    steps.push(["#3DD68C", `A 4-hour <b>close above ${money(h.high)}</b> starts a long setup${up ? `, aiming for the shelf at <b>${money(up.level)}</b>` : ""}.`]);
-    steps.push(["#FF6B5E", `A 4-hour <b>close below ${money(h.low)}</b> starts a short setup${dn ? `, aiming for the shelf at <b>${money(dn.level)}</b>` : ""}.`]);
+    steps.push(["#3DD68C", `A 4-hour <b>close above ${money(tUp(st))}</b> starts a long setup${up ? `, aiming for the shelf at <b>${money(up.level)}</b>` : ""}.`]);
+    steps.push(["#FF6B5E", `A 4-hour <b>close below ${money(tDn(st))}</b> starts a short setup${dn ? `, aiming for the shelf at <b>${money(dn.level)}</b>` : ""}.`]);
   } else if (live) {
     const edge = isUp ? h.high : h.low;
     steps.push([isUp ? "#3DD68C" : "#FF6B5E", `It closed <b>${isUp ? "above" : "below"} the hub at ${money(edge)}</b>.${(() => { const m = /(\d+)\/(\d+)/.exec(st.label || ""); return m ? ` This is candle ${m[1]} of the ${m[2]} it gets to reach the target.` : ""; })()}`]);

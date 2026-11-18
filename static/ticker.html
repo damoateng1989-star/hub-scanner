@@ -460,7 +460,7 @@ function summary(st) {
   const p = st.last_close, h = st.hub, up = st.shelf_up, dn = st.shelf_down;
   const lvl = (sh, w) => sh ? `the next shelf is <b class="u-${w}">${money(sh.level)}</b> (${pctFrom(sh.level, p)})` : `there's no shelf ${w === "up" ? "above" : "below"} yet`;
   switch (st.state) {
-    case "forming": return `${SYM} has held a tight range for <b>${h.sessions} sessions</b>. A 4H close <b class="u-up">above ${money(h.high)}</b>: ${lvl(up, "up")}. A 4H close <b class="u-down">below ${money(h.low)}</b>: ${lvl(dn, "down")}.`;
+    case "forming": return `${SYM} has held a tight range for <b>${h.sessions} sessions</b>. A 4H close <b class="u-up">above ${money(st.trigger_up || h.high)}</b>: ${lvl(up, "up")}. A 4H close <b class="u-down">below ${money(st.trigger_down || h.low)}</b>: ${lvl(dn, "down")}.`;
     case "watching": return `The range just ended without a breakout. A 4H close above ${money(h.high)} or below ${money(h.low)} in the next few candles would still count.`;
     case "breakout_up": case "breakdown": { const u = st.state === "breakout_up";
       const br = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
