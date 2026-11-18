@@ -1432,7 +1432,7 @@ document.querySelectorAll(".lm").forEach(function (m) {
     $("pkLegend").innerHTML = ["up", "edge", "resting", "down", "locked", "none"].filter(k => counts[k])
       .map(k => `<span class="hm-lg"><i class="${ST[k][1]}"></i>${ST[k][0]} <b>${counts[k]}</b></span>`).join("");
   }
-  Promise.all([fetch("/api/heatmap").then(r => r.json()), fetch("/api/me").then(r => r.ok ? r.json() : null).catch(() => null),
+  Promise.all([fetch("/api/public/heatmap").then(r => r.json()), fetch("/api/me").then(r => r.ok ? r.json() : null).catch(() => null),
                fetch("/auth/config").then(r => r.json()).catch(() => ({}))]).then(([h, me, c]) => {
     HEAT = h; member = !!(me && !me.guest); open = c.signups_open === true;
     if (h.updated) $("pkWhen").textContent = "The board · " + new Date(String(h.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) + " ET";
@@ -1451,6 +1451,9 @@ document.querySelectorAll(".lm").forEach(function (m) {
     if (member) { location.href = "/t/" + encodeURIComponent(s); return; }
     $("pkSym").textContent = s;
     $("pkMsg").textContent = st === "resting" || st === "edge_dn" ? `${s} is resting in a hub. Its Shelf card, with the trigger, the target and where it's wrong, is for members.`
+      : st === "up" ? `${s} is breaking out. Its Shelf card, with the retest entry, the target and where it's wrong, is for members.`
+      : st === "down" ? `${s} is breaking down. Its Shelf card, with the levels and where it's wrong, is for members.`
+      : st === "edge" ? `${s} is close to its trigger. Members get an alert the moment a 4-hour candle closes through it.`
       : st === "locked" ? `${s} has something happening right now. Its live state and Shelf card are for members.`
       : `${s} has no setup right now. Members get an alert the moment it starts one.`;
     const cta = $("pkCta"); cta.textContent = open ? "Start free" : "Join the waitlist"; cta.href = open ? "/login#signup" : "#join";

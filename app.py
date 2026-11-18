@@ -1029,11 +1029,21 @@ def premarket_data(u: dict | None = Maybe):
     return dict(data.premarket_movers(), locked=False)
 
 
+@app.get("/api/public/heatmap")
+def public_heatmap():
+    """Homepage market map: every tile in its real colour (breaking out, close to the trigger, breaking down) as a teaser.
+    States only: no prices, levels or plans."""
+    return _heatmap(None, True)
+
+
 @app.get("/api/heatmap")
 def heatmap(u: dict | None = Maybe):
     """Every stock on the board as a tile for the market map: sector, size (market cap) and where its setup stands."""
+    return _heatmap(u, board_for(u))
+
+
+def _heatmap(u: dict | None, full: bool):
     b = board.board()
-    full = board_for(u)
     state = {}
     for r in b["forming"]:
         # amber only when a close at the trigger is a small move away: within half a typical 4-hour move (1% if unknown)
