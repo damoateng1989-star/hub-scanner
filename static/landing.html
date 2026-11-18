@@ -200,9 +200,9 @@ footer nav[aria-label="Social"] a { display: inline-flex; opacity: .75; }
 footer nav[aria-label="Social"] a:hover { opacity: 1; }
 footer nav[aria-label="Social"] svg { width: 20px; height: 20px; display: block; }
 
-/* Footer giant wordmark: the brand as the stamp, flat soft grey — #C3CCD7 on dark, #3A4656 on light, faint by design — no glow, no shadow, no gradient. */
+/* Footer giant wordmark: the brand as the stamp, flat soft grey — #C3CCD7 on dark, #3A4656 on light, faint by design — with the blue glow behind it (the text itself stays flat). */
 footer { position: relative; overflow: hidden; }
-.ft-giant { text-align: center; white-space: nowrap; line-height: .84; letter-spacing: -.06em; font-size: min(18.5vw, 300px); font-family: "Manrope", Arial, sans-serif; font-weight: 800; color: #c3ccd7; opacity: .22; transform: translateY(17%); user-select: none; pointer-events: none; }
+.ft-giant { text-align: center; white-space: nowrap; line-height: .84; letter-spacing: -.06em; font-size: min(18.5vw, 300px); font-family: "Manrope", Arial, sans-serif; font-weight: 800; color: rgba(195,204,215,.22); background: radial-gradient(60% 95% at 50% 100%, rgba(47,84,235,.24), rgba(47,84,235,0) 70%); text-shadow: 0 0 55px rgba(37,99,235,.14); transform: translateY(17%); user-select: none; pointer-events: none; }
 
 
 @media (max-width: 860px) {
@@ -444,7 +444,7 @@ html[data-theme="light"] .hero.ns.hcx .hx-ghost{
  color:rgba(37,99,235,.16);
  text-shadow:0 0 70px rgba(37,99,235,.20);
 }
-html[data-theme="light"] footer .ft-giant{color:#3a4656;opacity:.09}
+html[data-theme="light"] footer .ft-giant{color:rgba(58,70,86,.10);background:radial-gradient(60% 95% at 50% 100%,rgba(37,99,235,.14),rgba(37,99,235,0) 70%);text-shadow:0 0 55px rgba(37,99,235,.12)}
 
 </style>
 <style>
@@ -984,7 +984,7 @@ html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[d
   <div class="navend"><a class="signin" href="/login" id="signInLink">Sign in</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l-1.6 1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><span id="navEnd" class="navend"><a class="btn sm blue" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
-<header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">WAIT</div><div class="hx-side l" id="hxSideL"></div><div class="hx-side r" id="hxSideR"></div><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We find the setup.<br><span class="hx-2">You add it to your watchlist.<br>We watch it.</span></h1><p class="lede">Not a signal — a <span class="hx-2">tap on the shoulder</span> when something’s happening. One setup, the rules, and the record.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market pick" id="heroMarket"><div class="pk-head"><div><span class="kicker" id="pkWhen">The board</span><h2>Pick a ticker</h2></div><p>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands. Pick one to see its Shelf card.</p></div>
+<header class="hero ns hcx"><div class="hx-side l" id="hxSideL"></div><div class="hx-side r" id="hxSideR"></div><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We find the setup.<br><span class="hx-2">You add it to your watchlist.<br>We watch it.</span></h1><p class="lede">Not a signal — a <span class="hx-2">tap on the shoulder</span> when something’s happening. One setup, the rules, and the record.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market pick" id="heroMarket"><div class="pk-head"><div><span class="kicker" id="pkWhen">The board</span><h2>Pick a ticker</h2></div><p>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands. Pick one to see its Shelf card.</p></div>
 <div class="hm-legend" id="pkLegend"></div><div class="hm-box" id="pkMap"><span class="pk-load">Loading the board…</span><div class="hm-tip" id="pkTip"></div></div>
 <div class="pk-pop" id="pkPop" hidden role="dialog" aria-live="polite"><b id="pkSym"></b><p id="pkMsg"></p><a class="btn blue" href="#join" data-cta id="pkCta">Join the waitlist</a><button type="button" class="pk-x" aria-label="Close" onclick="document.getElementById('pkPop').hidden=true">×</button></div>
 </div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
