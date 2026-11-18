@@ -7116,6 +7116,13 @@ function askSikaStripTicker(raw, sym) {
   const toks = askSikaNorm(raw).split(" ").filter(Boolean);
   return toks.filter(t => t.replace(/'s$/, "").toUpperCase() !== sym).join(" ").trim();
 }
+function askSikaSideAsk(raw) {
+  const t = " " + askSikaNorm(raw) + " ";
+  return /\b(calls?|puts?)\b.*\bor\b.*\b(calls?|puts?)\b/.test(t) || /\bwhich (side|way|direction)\b/.test(t)
+    || /\b(bull(ish)?|long)\b.*\bor\b.*\b(bear(ish)?|short)\b/.test(t) || /\bup or down\b/.test(t)
+    || /\bfavou?red (side|play|direction)\b/.test(t) || /\b(what|whats|what's) (is )?the (side|direction|play)\b/.test(t)
+    || /^\s*(calls?|puts?)\s*\?*\s*$/.test(t);
+}
 function askSikaPlayAsk(raw) {
   const board = askSikaBoardSymbols(), hits = [];
   for (const t0 of String(raw || "").split(/\s+/)) {
@@ -7366,6 +7373,20 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
   if (!ASK_SYMBOL) {
     askSikaSay(`<p class="sp-hint">First give me a ticker — for example <b>AMAT</b>. Then ask your question.</p>`);
     return;
+  }
+  // "Calls or puts?", "which side?", "bullish or bearish?": answer with the play card itself (green for calls,
+  // red for puts) when the ticker has a live favored play. Otherwise Sika answers in words as before.
+  if (askSikaSideAsk(raw)) {
+    const c = await askSikaCard(ASK_SYMBOL);
+    const html = c && c.state === "live" && c.favored ? askSikaPlayHTML(ASK_SYMBOL, c) : null;
+    if (html) {
+      const f = c.favored, other = c.opposite;
+      askSikaHistory("user", raw);
+      askSikaHistory("sika", `The favored side for ${ASK_SYMBOL} is ${f.side}: trigger ${f.trigger.text}, target ${(f.targets || []).join(" · ")}, wrong if ${f.wrong_if}.`
+        + (other && other.trigger ? ` The other side (${other.side}) is only on a break: ${other.trigger.text}.` : ""));
+      askSikaSay(html, "ask-play " + (f.side === "calls" ? "ask-calls" : "ask-puts"));
+      return;
+    }
   }
   // Typing bubble (Patch 155): keep it visible for at least three seconds.
   const reading = askSikaSay(`<span class="ask-typing-dots" aria-label="Sika is typing"><i></i><i></i><i></i></span>`, "ask-typing");
