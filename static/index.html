@@ -4992,8 +4992,9 @@ function extHTML(sym, P, st) {
   const ref = Number((st && st.last_close) ?? P.px), px = +x.price, pct = ref ? (px / ref - 1) * 100 : null;
   const word = x.session === "pre" ? "Pre-market" : "After hours";
   const at = new Date(x.at).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "America/New_York"});
+  const dl = x.delayed ? " (15-min delayed)" : "";
   const sign = pct == null ? "" : `<b class="${pct >= 0 ? "u" : "d"}">${pct >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(2)}%</b>`;
-  const pill = `<span class="mp-upd mp-ext" title="${word} trade at ${at} ET, vs the last regular close ${money(ref)}"><i class="ext"></i>${word} <b>${money(px)}</b> ${sign}</span>`;
+  const pill = `<span class="mp-upd mp-ext" title="${word} trade at ${at} ET${dl}, vs the last regular close ${money(ref)}"><i class="ext"></i>${word} <b>${money(px)}</b> ${sign}</span>`;
   // what the gap means for the plan, in one line
   const up = P.dir !== -1, t = P.trig != null ? +P.trig : null, s = P.stop != null ? +P.stop : null, tg = P.shelf != null ? +P.shelf : null;
   let note = "";
@@ -5002,7 +5003,7 @@ function extHTML(sym, P, st) {
   else if (s != null && (up ? px <= s : px >= s)) note = `${word} is ${up ? "below" : "above"} the stop level (${money(s)}). The plan only exits on a regular-session 4-hour close, so watch the 1:30 PM candle.`;
   else if (t != null && beyond(px, t)) note = `${word} is ${up ? "above" : "below"} the trigger (${money(t)}), but nothing counts until a regular-session 4-hour close confirms it.`;
   else if (t != null) note = `${word} is still on the near side of the trigger (${money(t)}). Thin ${x.session === "pre" ? "pre-market" : "after-hours"} trading often reverses at the open.`;
-  return {pill, note: note ? `<p class="mp-extnote"><i></i>${note} <span>Last ${word.toLowerCase()} trade ${at} ET.</span></p>` : ""};
+  return {pill, note: note ? `<p class="mp-extnote"><i></i>${note} <span>Last ${word.toLowerCase()} trade ${at} ET${dl}.</span></p>` : ""};
 }
 function paintMap() {
   const el = $("bfMap"); if (!el) return;

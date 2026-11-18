@@ -211,31 +211,47 @@ _EXT: dict[str, tuple[float, dict]] = {}
 
 
 def extended_price(sym: str) -> dict:
-    """The latest pre-market (4:00-9:30 AM ET) or after-hours (4:00-8:00 PM ET) trade for one stock, from the
-    consolidated (SIP) feed. session=None outside those windows or when there's no trade in them yet.
-    Display only: NextShelf's rules act on regular-session 4-hour closes; this never triggers anything."""
+    """The latest pre-market (4:00-9:30 AM ET) or after-hours (4:00-8:00 PM ET) trade for one stock.
+    Feeds, best first: full-market SIP (needs a paid Alpaca data plan for recent prices), then IEX (free, real time,
+    but IEX only trades about 8:00 AM-5:00 PM ET), then 15-minute-delayed SIP (free). session=None outside those
+    windows or with no trade yet; `why` says what happened. Display only: never triggers anything."""
     sym = sym.upper()
     now = time.time()
     hit = _EXT.get(sym)
     if hit and now - hit[0] < 60:
         return hit[1]
-    out = dict(session=None, price=None, at=None)
     et = pd.Timestamp.now(tz="America/New_York")
     mins = et.hour * 60 + et.minute
     window = "pre" if 240 <= mins < 570 else "post" if 960 <= mins < 1200 else None
-    if et.weekday() < 5 and window and provider() == "alpaca":
-        try:
-            snap = _alpaca_snapshots([sym], feed=os.getenv("ALPACA_EXT_FEED", "sip")).get(sym) or {}
+    out = dict(session=None, price=None, at=None, feed=None, delayed=False, why=None)
+    if et.weekday() >= 5 or not window:
+        out["why"] = "outside pre-market and after-hours"
+    elif provider() != "alpaca":
+        out["why"] = "no live data provider"
+    else:
+        errors = []
+        for feed in [f for f in dict.fromkeys([os.getenv("ALPACA_EXT_FEED", "sip"), "iex", "delayed_sip"]) if f]:
+            try:
+                snap = _alpaca_snapshots([sym], feed=feed).get(sym) or {}
+            except Exception as e:
+                errors.append(f"{feed}: {str(e)[:80]}")
+                continue
             t = snap.get("latestTrade") or {}
-            if t.get("p") and t.get("t"):
-                ts = pd.Timestamp(t["t"])
-                ts = (ts.tz_localize("UTC") if ts.tzinfo is None else ts).tz_convert("America/New_York")
-                tm = ts.hour * 60 + ts.minute
-                in_win = (240 <= tm < 570) if window == "pre" else (960 <= tm < 1200)
-                if ts.date() == et.date() and in_win:
-                    out = dict(session=window, price=round(float(t["p"]), 2), at=ts.isoformat())
-        except Exception as e:
-            logging.getLogger(__name__).warning("extended price unavailable for %s: %s", sym, e)
+            if not (t.get("p") and t.get("t")):
+                errors.append(f"{feed}: no trade")
+                continue
+            ts = pd.Timestamp(t["t"])
+            ts = (ts.tz_localize("UTC") if ts.tzinfo is None else ts).tz_convert("America/New_York")
+            tm = ts.hour * 60 + ts.minute
+            in_win = (240 <= tm < 570) if window == "pre" else (960 <= tm < 1200)
+            if ts.date() == et.date() and in_win:
+                out = dict(session=window, price=round(float(t["p"]), 2), at=ts.isoformat(), feed=feed,
+                           delayed=feed == "delayed_sip", why=None)
+                break
+            errors.append(f"{feed}: last trade {ts.strftime('%b %d %H:%M')} ET is not in this session")
+        if out["session"] is None:
+            out["why"] = "; ".join(errors) or "no trade"
+            logging.getLogger(__name__).info("extended price %s: %s", sym, out["why"])
     _EXT[sym] = (now, out)
     return out
 
