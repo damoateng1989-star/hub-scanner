@@ -3,431 +3,1166 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#0A0A0A">
-<title>NextShelf: Pick a setup, trade it for years · Hub-breakout alerts</title>
-<meta name="description" content="Built for swing traders with day jobs. NextShelf finds the setup, you add it to your watchlist, and it watches it: one setup, the rules, and the record.">
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
+<meta name="theme-color" content="#0A0A0A" id="themeColor">
+<title>NextShelf — Will your next trade also work?</title>
+<meta name="description" content="NextShelf scans stocks for tight ranges, warns before breakout candles close, and maps the next shelf target. Find, review and plan setups in one place.">
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="NextShelf">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <script>if ("serviceWorker" in navigator && location.protocol !== "file:") addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });</script>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <style>
-  @font-face { font-family: "Inter"; src: url("/fonts/Inter.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
-  @font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
-  * { box-sizing: border-box; }
-  body { margin: 0; background: #0A0A0A; color: #E9EBEF; font-family: Inter, system-ui, sans-serif; }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-  nav { position: sticky; top: 0; background: rgba(10,10,10,.92); backdrop-filter: blur(8px); border-bottom: 1px solid #1E2024; z-index: 10; }
-  nav .wrap { display: flex; align-items: center; gap: 28px; height: 60px; }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 17px; text-decoration: none; color: #fff; letter-spacing: -.01em; }
-  .logo { width: 30px; height: 30px; border-radius: 9px; background: #121418; color: #3DD68C; display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 800; }
-  .navlinks { display: flex; gap: 24px; margin-left: 8px; }
-  .navlinks a { text-decoration: none; color: #9AA0AC; font-size: 14px; font-weight: 600; }
-  .navlinks a.on { background: linear-gradient(90deg, #2F54EB, #8EA2FF, #C7D2FE); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .lm { position: relative; display: inline-flex; }
-  .lm-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; color: #9AA0AC; font-size: 14px; font-weight: 600; white-space: nowrap; }
-  .lm-btn:hover { color: #fff; }
-  .lm:hover .lm-btn svg { transform: rotate(180deg); }
-  .lm-panel { display: none; position: absolute; top: calc(100% + 14px); left: 50%; transform: translateX(-50%); z-index: 80; width: 340px; padding: 10px; text-align: left; background: #15171B; border: 1px solid #2A2D33; border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.5); }
-  .lm:hover .lm-panel, .lm:focus-within .lm-panel { display: block; }
-  .lm-panel a { display: block; padding: 8px 10px; border-radius: 10px; text-decoration: none; color: inherit; }
-  .lm-panel a:hover { background: rgba(124,147,255,.10); }
-  .lm-panel a b { display: block; font-size: 13.5px; font-weight: 600; color: #ECEDEF; letter-spacing: -0.01em; }
-  .lm-panel a b i { font: 600 9.5px "JetBrains Mono", monospace; font-style: normal; color: #FBBF24; letter-spacing: .08em; text-transform: uppercase; margin-left: 4px; vertical-align: 1px; }
-  .lm-panel a small { display: block; font-size: 12px; color: #9AA0AC; margin-top: 2px; line-height: 1.35; }
-  .navcta { margin-left: auto; display: flex; gap: 10px; align-items: center; }
-  .signin { text-decoration: none; color: #9AA0AC; font-size: 14px; font-weight: 600; }
-  .btn { display: inline-block; text-decoration: none; font-weight: 700; font-size: 14.5px; padding: 10px 18px; border-radius: 10px; }
-  .btn.blue { background: #2563EB; color: #fff; }
-  .btn.ghost { position: static; transform: none; opacity: 1; border: 1.5px solid #2B2C2F; color: #E9EBEF; background: transparent; }
-  .hero { padding: 64px 0 8px; position: relative; overflow: hidden; }
-  div.ghost { position: absolute; left: 50%; transform: translateX(-50%); top: 0; font-weight: 800; font-size: 200px; line-height: 1; letter-spacing: -.03em; color: #fff; opacity: .04; pointer-events: none; white-space: nowrap; }
-  .eyebrow { font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .14em; color: #60A5FA; margin: 0 0 16px; text-align: center; }
-  h1 { font-weight: 800; font-size: 54px; line-height: 1.04; letter-spacing: -.02em; margin: 0 auto 16px; max-width: 760px; color: #fff; text-align: center; }
-  .lede { font-size: 18px; line-height: 1.6; color: #9AA0AC; max-width: 640px; margin: 0 auto 28px; text-align: center; }
-  .lede b { color: #E9EBEF; }
-  .ctas { display: flex; gap: 12px; align-items: center; justify-content: center; flex-wrap: wrap; }
-  .micro { font-size: 13px; color: #6B7280; margin: 14px 0 0; text-align: center; }
-  .glow { color: #93C5FD; text-shadow: 0 0 10px rgba(59,130,246,.75), 0 0 28px rgba(59,130,246,.4); }
-  .glow-g { color: #3DD68C; text-shadow: 0 0 10px rgba(61,214,140,.75), 0 0 28px rgba(61,214,140,.4); }
-  /* ---------- ticker page (the hero capture) ---------- */
-  .ticker { background: #101214; border: 1px solid #1E2024; border-radius: 20px; padding: 20px; margin: 32px 0 12px; }
-  .tk-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-  .tk-head h2 { font-size: 30px; font-weight: 800; margin: 0; color: #fff; letter-spacing: -.01em; }
-  .tk-head .px { font-family: "JetBrains Mono", monospace; font-size: 22px; font-weight: 700; color: #E9EBEF; }
-  .tk-head .mkt { margin-left: auto; font-size: 13px; color: #9AA0AC; border: 1.5px solid #2B2C2F; border-radius: 20px; padding: 4px 12px; }
-  .chartcard { border: 1px solid #1E2024; border-radius: 16px; padding: 16px 16px 10px; margin-top: 16px; background: #121418; }
-  .chartcard .cc-head { display: flex; align-items: baseline; gap: 10px; }
-  .chartcard .cc-head h3 { font-size: 19px; margin: 0; color: #fff; }
-  .chartcard .cc-head .sub { font-family: "JetBrains Mono", monospace; font-size: 12px; color: #9AA0AC; }
-  .chartcard .cc-head .closed { margin-left: auto; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #9AA0AC; }
-  .chartbtns { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
-  .cbtn { border: 1.5px solid #2B2C2F; border-radius: 20px; padding: 6px 14px; font-size: 13.5px; font-weight: 600; background: transparent; color: #E9EBEF; }
-  .cbtn.green { background: #1E7A3C; border-color: #1E7A3C; color: #fff; font-weight: 700; }
-  .cbtn.on { background: #1E293B; border-color: #3B82F6; color: #93C5FD; }
-  .switchers { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
-  .switchers .seg { display: flex; border: 1.5px solid #1E2024; border-radius: 20px; overflow: hidden; }
-  .switchers .seg span { padding: 5px 12px; font-size: 13px; font-weight: 600; color: #9AA0AC; }
-  .switchers .seg span.on { background: #1E293B; color: #93C5FD; }
-  .chartnote { font-size: 12.5px; color: #6B7280; margin: 6px 0 0; }
-  .strip { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; margin-top: 14px; background: #101214; }
-  .strip .bar { border-left: 4px solid #22A35C; padding-left: 14px; margin-bottom: 16px; }
-  .strip .bar h3 { font-size: 19px; margin: 0 0 4px; color: #fff; }
-  .strip .bar p { font-size: 14.5px; color: #9AA0AC; margin: 0; }
-  .stripgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
-  .cell { padding: 14px 16px 14px 0; border-top: 1px solid #1E2024; }
-  .cell:nth-child(odd) { border-right: 1px solid #1E2024; padding-right: 16px; }
-  .cell:nth-child(even) { padding-left: 16px; }
-  .cell small { display: block; font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #9AA0AC; margin-bottom: 4px; }
-  .cell b { font-family: "JetBrains Mono", monospace; font-size: 24px; font-weight: 800; color: #fff; }
-  .cell b.blue { color: #818CF8; } .cell b.cool { color: #93C5FD; } .cell b.red { color: #F87171; } .cell b.green { color: #3DD68C; }
-  .cell i { display: block; font-style: normal; font-size: 13px; color: #9AA0AC; margin-top: 2px; }
-  .cell .pct { font-size: 14px; color: #9AA0AC; }
-  .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
-  .journey, .grade { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; background: #101214; }
-  .journey h4, .grade h4 { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: .1em; color: #9AA0AC; margin: 0 0 16px; }
-  .jsteps { display: flex; align-items: flex-start; }
-  .jstep { flex: 1; text-align: center; font-size: 13px; line-height: 1.35; color: #9AA0AC; }
-  .jstep .dot { width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; }
-  .jstep.done .dot { background: #2563EB; color: #fff; }
-  .jstep.now .dot { border: 2.5px solid #2563EB; color: #93C5FD; background: #101214; box-shadow: 0 0 0 5px #1E293B; }
-  .jstep.todo .dot { border: 2px solid #2B2C2F; color: #9AA0AC; background: #101214; }
-.jstep.next .dot { background: #3B82F6; border-color: #3B82F6; color: #fff; }
-  .jstep b { color: #fff; }
-  .jstep .nowtag { color: #93C5FD; font-weight: 700; }
-  .jline { flex: 0 0 40px; border-top: 2px solid #1E2024; margin-top: 22px; }
-  .grade { background: rgba(34,163,92,.07); border-color: #1E7A3C; }
-  .grade .g-top { display: flex; gap: 14px; align-items: flex-start; }
-  .grade .badge { flex: 0 0 44px; width: 44px; height: 44px; border-radius: 12px; background: #1E7A3C; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; }
-  .grade h3 { font-size: 18px; margin: 0 0 6px; color: #fff; }
-  .grade p { font-size: 14px; line-height: 1.6; color: #9AA0AC; margin: 0; }
-  .grade p b { color: #E9EBEF; }
-  .sika { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; margin-top: 14px; background: #101214; }
-  .sika .s-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .sika .avatar { width: 38px; height: 38px; border-radius: 50%; background: #fff; color: #0A0A0A; display: flex; align-items: center; justify-content: center; font-size: 18px; }
-  .sika .s-head h3 { font-size: 19px; margin: 0; color: #fff; }
-  .sika .s-head .pe { margin-left: auto; font-size: 13px; font-weight: 600; color: #3DD68C; border: 1.5px solid #1E7A3C; border-radius: 20px; padding: 4px 12px; }
-  .sika .bubble { background: #1E2024; border-radius: 14px; padding: 16px 18px; font-size: 15.5px; line-height: 1.65; color: #9AA0AC; margin: 0 0 12px; }
-  .sika .bubble b { color: #fff; }
-  .sika .bubble .grn { color: #3DD68C; font-weight: 700; }
-  .sika .ask { border: 1.5px solid #2B2C2F; border-radius: 12px; padding: 12px 16px; font-size: 15px; font-weight: 600; display: flex; justify-content: space-between; color: #E9EBEF; }
-  .sika .disc { font-size: 13px; color: #6B7280; margin: 12px 0 0; line-height: 1.5; }
-  .ctx { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; margin-top: 14px; background: #101214; }
-  .ctx h4 { font-family: "JetBrains Mono", monospace; font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #9AA0AC; margin: 0 0 4px; }
-  .ctx .row { display: flex; align-items: center; gap: 12px; padding: 13px 0; border-top: 1px solid #1E2024; font-size: 15px; color: #E9EBEF; }
-  .ctx .row:first-of-type { border-top: none; }
-  .ctx .row .ic { font-size: 18px; }
-  .ctx .row .arr { margin-left: auto; color: #6B7280; }
-  .ctx .row .amber { color: #FBBF24; }
-  .gameplan { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; margin-top: 14px; display: flex; align-items: center; gap: 10px; background: #101214; }
-  .gameplan h3 { font-size: 18px; margin: 0; color: #fff; }
-  .gameplan span { margin-left: auto; font-size: 14px; color: #9AA0AC; }
-  .boardstrip { background: #101214; border: 1px solid #1E2024; color: #E9EBEF; border-radius: 20px; padding: 20px; margin: 28px 0 12px; }
-  .boardstrip h2 { font-size: 21px; font-weight: 800; margin: 0 0 4px; color: #fff; letter-spacing: -.01em; }
-  .boardstrip .sub2 { color: #9AA0AC; font-size: 13.5px; margin: 0 0 14px; }
-  .counts { display: flex; gap: 24px; flex-wrap: wrap; margin: 0 0 14px; font-size: 13.5px; color: #9AA0AC; }
-  .counts b { color: #fff; font-family: "JetBrains Mono", monospace; font-size: 15px; }
-  .counts b.g { color: #3DD68C; }
-  .map { display: grid; grid-template-columns: repeat(12, 1fr); gap: 4px; margin: 0 0 14px; }
-  .tile { aspect-ratio: 1; border-radius: 4px; background: #1E2024; display: flex; align-items: center; justify-content: center; font-family: "JetBrains Mono", monospace; font-size: 9px; font-weight: 700; color: #9AA0AC; }
-  .tile.up { background: #123B28; color: #3DD68C; }
-  .tile.edge { background: #1E2024; border: 1.5px solid #8EA2FF; color: #C7D2FE; }
-  .tile.down { background: #3B1A1A; color: #F28B82; }
-  .mini-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .mc { background: #121418; border: 1px solid #1E2024; border-radius: 14px; padding: 14px 16px; font-size: 13.5px; line-height: 1.55; color: #9AA0AC; }
-  .mc b { color: #fff; font-family: "JetBrains Mono", monospace; }
-  .mc .t { font-size: 17px; font-weight: 800; color: #fff; }
-  section { padding: 64px 0; }
-  .band { background: #101214; border-top: 1px solid #1E2024; border-bottom: 1px solid #1E2024; }
-  .kicker { font-family: "JetBrains Mono", monospace; font-size: 11.5px; font-weight: 700; letter-spacing: .14em; color: #60A5FA; margin: 0 0 12px; }
-  h2.sec { font-weight: 800; font-size: 38px; line-height: 1.1; letter-spacing: -.02em; margin: 0 0 14px; max-width: 640px; color: #fff; }
-  .sec-sub { font-size: 16.5px; line-height: 1.55; color: #9AA0AC; max-width: 620px; margin: 0 0 28px; }
-  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-  .step { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; background: #101214; }
-  .step .n { font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 700; color: #60A5FA; }
-  .step h3 { font-size: 17px; margin: 8px 0 6px; color: #fff; }
-  .step p { font-size: 14px; line-height: 1.55; color: #9AA0AC; margin: 0; }
-  .step .illus { margin: 12px 0 4px; }
-  .step .illus svg { display: block; width: 100%; height: auto; }
-  .step .alert-mini { background: #121418; border: 1px solid #1E2024; border-radius: 12px; padding: 12px 14px; font-size: 12.5px; line-height: 1.6; color: #9AA0AC; margin: 12px 0 4px; }
-  .step .alert-mini b { color: #fff; font-family: "JetBrains Mono", monospace; }
-  .step .alert-mini .t { font-size: 15px; font-weight: 800; color: #fff; }
-  .setups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .setup { border: 1px solid #1E2024; border-radius: 16px; padding: 20px; background: #101214; }
-  .setup h3 { font-size: 19px; margin: 0 0 4px; color: #fff; }
-  .setup .lab { font-family: "JetBrains Mono", monospace; font-size: 13px; color: #9AA0AC; margin: 0 0 10px; }
-  .setup .lab b { color: #3DD68C; font-size: 16px; }
-  .setup p { font-size: 14px; line-height: 1.55; color: #9AA0AC; margin: 0; }
-  table.rec { width: 100%; border-collapse: collapse; font-size: 14.5px; }
-  table.rec th { text-align: left; font-family: "JetBrains Mono", monospace; font-size: 11px; letter-spacing: .1em; color: #9AA0AC; padding: 10px 12px; border-bottom: 2px solid #fff; }
-  table.rec td { padding: 12px; border-bottom: 1px solid #1E2024; color: #E9EBEF; }
-  table.rec td.num { font-family: "JetBrains Mono", monospace; }
-  table.rec td.pos { color: #3DD68C; font-weight: 700; }
-  table.rec td.neg { color: #F87171; font-weight: 700; }
-  .honest { font-size: 13.5px; line-height: 1.6; color: #9AA0AC; margin: 16px 0 0; max-width: 680px; }
-  .honest b { color: #fff; }
-  .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-  .rule { border: 1px solid #1E2024; border-radius: 16px; padding: 18px; background: #101214; }
-  .rule h3 { font-size: 16.5px; margin: 0 0 6px; color: #fff; }
-  .rule p { font-size: 14px; line-height: 1.55; color: #9AA0AC; margin: 0; }
-  .plans { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .plan { border: 1px solid #1E2024; border-radius: 16px; padding: 24px; background: #101214; }
-  .plan.pro { border: 2px solid #2563EB; }
-  .plan .nm { font-weight: 800; font-size: 16px; color: #fff; }
-  .plan .price { font-size: 44px; font-weight: 800; margin: 8px 0 2px; color: #fff; letter-spacing: -.02em; }
-  .plan .price small { font-size: 16px; font-weight: 600; color: #9AA0AC; }
-  .plan .per { font-size: 13.5px; color: #9AA0AC; margin: 0 0 16px; }
-  .plan ul { margin: 0 0 20px; padding-left: 18px; font-size: 14.5px; line-height: 1.9; color: #9AA0AC; }
-  .faq { max-width: 680px; }
-  .faq h3 { font-size: 17px; margin: 0 0 4px; color: #fff; }
-  .faq p { font-size: 14.5px; line-height: 1.6; color: #9AA0AC; margin: 0 0 22px; }
-  footer { background: #0A0A0A; border-top: 1px solid #1E2024; color: #E9EBEF; padding: 48px 0 0; overflow: hidden; }
-  footer .tag { font-weight: 800; font-size: 28px; letter-spacing: -.02em; margin: 0 0 8px; color: #fff; }
-  footer p { color: #9AA0AC; font-size: 14.5px; line-height: 1.6; max-width: 560px; margin: 0 0 32px; }
-  .ft-giant { font-weight: 800; font-size: 120px; line-height: .8; letter-spacing: -.03em; color: #141619; text-align: center; margin: 0; user-select: none; }
-  .note { max-width: 1080px; margin: 0 auto; padding: 18px 24px 28px; font-size: 12.5px; line-height: 1.7; color: #6B7280; background: #0A0A0A; }
-  .note b { color: #E9EBEF; }
-  .note code { font-family: "JetBrains Mono", monospace; font-size: 11.5px; background: #1E2024; padding: 1px 5px; border-radius: 5px; color: #E9EBEF; }
-  .join { display: flex; flex-wrap: wrap; gap: 10px; max-width: 520px; margin: 0 0 32px; }
-  .join input[type=email] { flex: 1 1 240px; background: #121418; border: 1.5px solid #2B2C2F; border-radius: 10px; padding: 11px 14px; color: #E9EBEF; font: 500 15px Inter, system-ui, sans-serif; }
-  .join input[type=email]:focus { outline: none; border-color: #3B82F6; }
-  .join button { border: 0; cursor: pointer; font-family: inherit; }
-  .join button:disabled { opacity: .6; }
-  .join .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
-  .jmsg { flex-basis: 100%; margin: 0; font-size: 13.5px; color: #9AA0AC; min-height: 1em; }
-  .jmsg.ok { color: #3DD68C; } .jmsg.err { color: #F87171; }
-  .ft-links { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; font-size: 13px; color: #6B7280; padding: 0 0 28px; }
-  .ft-links nav { display: flex; gap: 16px; flex-wrap: wrap; } .ft-links a { color: #9AA0AC; text-decoration: none; }
-  @media (max-width: 760px) {
-    h1 { font-size: 38px; } h2.sec { font-size: 28px; }
-    div.ghost { font-size: 110px; }
-    nav .wrap { gap: 12px; } .navcta .btn { padding: 9px 14px; font-size: 14px; } .btn, .signin { white-space: nowrap; }
-    .steps, .setups, .rules, .plans, .duo, .mini-cards { grid-template-columns: 1fr; }
-    .navlinks { display: none; }
-    .ft-giant { font-size: 64px; }
-  }
+.nav-toggle { display: none; }
+@media (max-width: 640px) { .bp-tabs { flex-wrap: wrap; overflow: visible; white-space: normal; } .bp-tabs span { margin-bottom: 6px; } }
+@font-face { font-family: "Inter"; src: url("/fonts/Inter.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
+:root {
+  --paper: #0A0A0A; --card: #101214; --sunk: #121418;
+  --ink: #E9EBEF; --ink2: #9AA0AC; --ink3: #6B7280;
+  --line: #1E2024; --blue: #2563EB; --blue-ink: #FFFFFF;
+  --up: #3DD68C; --down: #F87171; --warn: #FBBF24;
+  --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+body { background: var(--paper); color: var(--ink); font: 14px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+a { color: inherit; }
+em { font-style: normal; font-family: var(--sans); font-weight: inherit; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+/* nav */
+nav.top { position: sticky; top: 0; z-index: 20; background: rgba(10,10,10,.92); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+nav.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
+.wordmark { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; letter-spacing: -0.02em; font-size: 16px; text-decoration: none; color: var(--ink); }
+.wordmark img { width: 26px; height: 26px; border-radius: 7px; }
+.wordmark em { font-size: 17px; color: var(--ink2); }
+.navlinks { display: flex; gap: 26px; font-size: 12.5px; }
+.navlinks a { color: var(--ink2); text-decoration: none; white-space: nowrap; } .navlinks a:hover { color: var(--ink); }
+.navlinks a { position: relative; }
+.navlinks a.on { color: var(--ink); }
+ .navlinks a.on::after { /* Bright variant: full-width gradient bar */
+  content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, #2F54EB, #8EA2FF 55%, #C7D2FE);
+}
+.navlinks a.on::before { /* Matching blurred gradient halo */
+  content: ""; position: absolute; left: -6%; right: -6%; bottom: -14px; height: 9px; border-radius: 6px;
+  background: linear-gradient(90deg, #2F54EB, #8EA2FF 55%, #C7D2FE);
+  filter: blur(12px); opacity: .7;
+}
+.navend { display: flex; align-items: center; gap: 16px; font-size: 12.5px; }
+.navend .signin { color: var(--ink2); text-decoration: none; } .navend .signin:hover { color: var(--ink); }
+.btn { display: inline-block; font: 600 15px var(--sans); padding: 12px 22px; border-radius: 10px; text-decoration: none; border: 1px solid transparent; cursor: pointer; transition: transform .15s, opacity .15s; }
+.btn:hover { transform: translateY(-1px); } .btn:active { transform: none; }
+.btn.solid { background: var(--ink); color: var(--paper); }
+.btn.blue { background: var(--blue); color: var(--blue-ink); }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); } .btn.ghost:hover { border-color: var(--ink3); }
+.btn.sm { padding: 9px 16px; font-size: 12.5px; }
+
+/* hero */
+.hero { padding: 96px 0 64px; text-align: center; }
+.eyebrow, .kicker { font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+h1 { font-size: clamp(29px, 5vw, 48.5px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 600; margin: 20px auto 0; max-width: 20ch; }
+.lede { color: var(--ink2); font-size: 15.5px; max-width: 56ch; margin: 22px auto 0; }
+.ctas { display: flex; gap: 12px; justify-content: center; margin-top: 34px; flex-wrap: wrap; }
+.micro { font-size: 11.5px; color: var(--ink3); margin-top: 16px; }
+
+/* live strip */
+.live { margin: 48px auto 0; max-width: 880px; background: var(--ink); color: var(--paper); border-radius: 16px; padding: 22px 28px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; text-align: left; }
+.live .t { font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #B9B8B0; display: flex; align-items: center; }
+.live .n { font-size: 23.5px; font-weight: 700; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.live .n small { font-size: 11.5px; font-weight: 400; color: #B9B8B0; display: block; margin-top: 2px; letter-spacing: 0; }
+.live .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ink); margin-right: 8px; box-shadow: 0 0 0 0 rgba(255,255,255,.5); animation: ping 2.4s infinite; }
+@keyframes ping { 70% { box-shadow: 0 0 0 8px rgba(61,214,140,0); } 100% { box-shadow: 0 0 0 0 rgba(61,214,140,0); } }
+
+/* sections */
+section { padding: 88px 0; }
+section.band { background: var(--card); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+h2 { font-size: clamp(22.5px, 3.2vw, 30.5px); letter-spacing: -0.03em; line-height: 1.08; font-weight: 600; max-width: 20ch; }
+.kicker { margin-bottom: 14px; }
+.sub { color: var(--ink2); font-size: 14px; max-width: 60ch; margin-top: 14px; }
+
+/* comparison */
+.cmp { margin-top: 44px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--card); }
+.cmp-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; border-top: 1px solid var(--line); }
+.cmp-row:first-child { border-top: none; }
+.cmp-row.head { background: var(--sunk); font: 600 13px var(--sans); }
+.cmp-row > div { padding: 16px 18px; font-size: 12px; color: var(--ink2); }
+.cmp-row.head > div, .cmp-row > div:first-child { color: var(--ink); }
+.cmp-row > div:last-child { background: #F2F6FF; color: var(--ink); border-left: 1px solid var(--line); }
+.cmp-row.head > div:last-child { background: #E4EBFF; }
+.x { color: var(--down); font-weight: 700; margin-right: 6px; } .chk { color: var(--up); font-weight: 700; margin-right: 6px; }
+
+/* steps */
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+.step { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+.step .num { font: 500 12px var(--mono); color: var(--blue); letter-spacing: .1em; }
+.step h3 { font-size: 16px; letter-spacing: -0.02em; margin: 10px 0 8px; font-weight: 650; }
+.step p { font-size: 12px; color: var(--ink2); }
+.illus { margin: 12px 0 20px; border: 1px solid #1E2024; border-radius: 16px; background: #101214; padding: 14px 10px 6px; }
+.illus svg { display: block; }
+
+/* demo stage */
+.demo-copy { margin-top: 72px; max-width: 640px; }
+.demo-copy h3 { font-size: 20px; letter-spacing: -0.02em; margin-bottom: 12px; font-weight: 650; }
+.demo-copy p { color: var(--ink2); font-size: 13.5px; }
+.stage { display: grid; grid-template-columns: 1.9fr 1fr; gap: 20px; margin-top: 32px; align-items: center; }
+.chart-card { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+.chart-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.chart-top .tk2 { font-weight: 700; font-size: 13.5px; } .chart-top .tk2 span { font-weight: 400; color: var(--ink2); font-size: 11.5px; }
+.clockpill { font: 500 12px var(--mono); color: var(--up); border: 1px solid var(--up); border-radius: 99px; padding: 4px 12px; transition: color .3s, border-color .3s; }
+.clockpill.warn { color: var(--warn); border-color: var(--warn); } .clockpill.idle { color: var(--ink2); border-color: var(--line); }
+#stChart .brk, #stChart .tag, #stChart .arc { transition: opacity .5s; }
+.phone { width: 300px; margin: 0 auto; background: #101014; border-radius: 44px; padding: 14px; border: 1px solid #2A2A30; }
+.phone .scr { background: #17171C; border-radius: 32px; padding: 20px 16px 0; height: 440px; display: flex; flex-direction: column; overflow: hidden; }
+#stMsgs { flex: 1; min-height: 0; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent); mask-image: linear-gradient(to bottom, #000 78%, transparent); }
+.phone .clock { font-size: 30.5px; font-weight: 700; color: #fff; text-align: center; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.phone .clocksub { font-size: 11px; color: #8A8A94; text-align: center; margin-bottom: 14px; }
+.msg { background: #23232B; border-radius: 14px; padding: 12px 14px; font-size: 11.5px; color: #E8EAEE; margin-bottom: 10px; line-height: 1.5; transition: opacity .4s, transform .4s; }
+.msg[hidden] { display: block; opacity: 0; transform: translateY(-6px); height: 0; padding: 0 14px; margin: 0; overflow: hidden; }
+.msg b { color: #fff; } .msg .ts { float: right; font-size: 11px; color: #8A8A94; }
+.msg.alert { box-shadow: inset 0 0 0 1px #3DD68C; }
+.probadge { display: inline-block; font: 700 10px var(--sans); letter-spacing: .06em; border: 1px solid #646B78; color: #B9B8B0; border-radius: 5px; padding: 0 6px; margin-left: 6px; vertical-align: 1px; }
+.timeline { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 20px; }
+.tcard { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 16px; cursor: pointer; text-align: left; font: inherit; color: inherit; transition: border-color .3s, background .3s, box-shadow .3s; }
+.tcard.on { background: var(--card); border-color: var(--ink); box-shadow: 0 6px 20px rgba(20,20,18,.06); }
+.tcard .when { font: 500 11px var(--mono); letter-spacing: .08em; color: var(--ink2); text-transform: uppercase; }
+.tcard h4 { font-size: 13.5px; letter-spacing: -0.01em; margin: 8px 0 4px; }
+.tcard p { font-size: 11.5px; color: var(--ink2); line-height: 1.5; }
+.livebadge { display: inline-block; font: 700 10px var(--sans); letter-spacing: .06em; background: var(--up); color: #fff; border-radius: 99px; padding: 2px 9px; margin-left: 6px; vertical-align: middle; }
+.stage-note { margin-top: 14px; font-size: 11.5px; color: var(--ink3); }
+
+/* features */
+.feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; }
+.feat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 26px; }
+.feat .when { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--blue); }
+.feat h3 { font-size: 15.5px; letter-spacing: -0.02em; margin: 10px 0 6px; font-weight: 650; }
+.feat p { font-size: 12px; color: var(--ink2); }
+
+/* track record */
+.rec { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.rec .stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; text-align: center; }
+.rec .big { font-size: 32.5px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+@media (min-width: 761px) { .rec.two { grid-template-columns: repeat(2, 1fr); } }
+.rec-h { margin-top: 44px; text-align: center; } .rec-h b { display: block; font-size: 17px; letter-spacing: -.01em; } .rec-h span { display: block; margin-top: 4px; font-size: 12.5px; color: var(--ink2); }
+#recTest:not([hidden]) + #recLive { margin-top: 14px; }
+.rec .cap { font-size: 11.5px; color: var(--ink2); margin-top: 6px; }
+.honest { margin: 20px auto 0; font-size: 12.5px; color: var(--ink2); text-align: center; max-width: 64ch; }
+.honest a { color: var(--blue); font-weight: 600; text-decoration: none; }
+
+/* pricing */
+.plans { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 44px; max-width: 860px; }
+.plan { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; padding: 36px; display: flex; flex-direction: column; }
+.plan.pro { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.plan .nm { font: 500 12px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+.plan.pro .nm { color: #B9B8B0; }
+.plan .price { font-size: 36px; font-weight: 700; letter-spacing: -0.03em; margin: 12px 0 4px; }
+.plan .price small { font-size: 16px; font-weight: 400; letter-spacing: 0; }
+.plan .per { font-size: 12.5px; color: var(--ink2); } .plan.pro .per { color: #B9B8B0; }
+.plan ul { list-style: none; margin: 24px 0; flex: 1; }
+.plan li { font-size: 12.5px; padding: 9px 0; border-top: 1px solid var(--line); color: var(--ink2); }
+.plan.pro li { border-color: #2E2E33; color: #C9C8C2; }
+.plan li:first-child { border-top: none; }
+.plan .btn { text-align: center; }
+
+/* faq */
+.faq { max-width: 760px; margin-top: 36px; }
+details { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px 24px; margin-bottom: 10px; }
+summary { font-weight: 600; font-size: 13.5px; cursor: pointer; letter-spacing: -0.01em; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--ink3); font-weight: 400; font-size: 18px; line-height: 1; }
+details[open] summary::after { content: "–"; }
+details p { font-size: 12.5px; color: var(--ink2); margin-top: 10px; }
+
+/* final */
+.final { text-align: center; padding: 96px 0; }
+.final h2 { margin: 0 auto; }
+.join { display: flex; gap: 10px; justify-content: center; margin: 32px auto 0; max-width: 480px; flex-wrap: wrap; }
+.join input[type=email] { flex: 1; min-width: 220px; font: 500 15px var(--sans); padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+.join input[type=email]:focus { outline: 2px solid var(--blue); outline-offset: 1px; border-color: transparent; }
+.join .hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.jmsg { width: 100%; font-size: 12.5px; min-height: 1.4em; color: var(--ink2); }
+.jmsg.ok { color: var(--up); } .jmsg.err { color: var(--down); }
+.alt { font-size: 12.5px; color: var(--ink2); margin-top: 6px; } .alt a { color: var(--blue); font-weight: 600; text-decoration: none; }
+
+footer { border-top: 1px solid var(--line); padding: 32px 0; font-size: 11.5px; color: var(--ink3); }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+footer nav { display: flex; gap: 16px; flex-wrap: wrap; } footer a { color: var(--ink2); text-decoration: none; } footer a:hover { color: var(--ink); }
+footer nav span { color: var(--ink3); }
+footer nav[aria-label="Social"] { align-items: center; gap: 14px; }
+footer nav[aria-label="Social"] a { display: inline-flex; opacity: .75; }
+footer nav[aria-label="Social"] a:hover { opacity: 1; }
+footer nav[aria-label="Social"] svg { width: 20px; height: 20px; display: block; }
+
+/* Footer giant wordmark: the brand as the stamp, with the hero's blue glow behind it */
+footer { position: relative; overflow: hidden; }
+.ft-giant { text-align: center; white-space: nowrap; line-height: .78; letter-spacing: -0.045em; font-size: min(18.5vw, 300px); font-weight: 800; color: rgba(20,20,18,.055); background: radial-gradient(60% 95% at 50% 100%, rgba(47,84,235,.16), rgba(47,84,235,0) 70%); transform: translateY(22%); user-select: none; pointer-events: none; }
+
+
+@media (max-width: 860px) {
+  .nav-toggle { margin-left: auto; display: inline-grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; font-size: 18px; }
+  .navlinks { display: none; }
+  .top.open .navlinks { display: flex; position: absolute; top: 100%; left: 0; right: 0; flex-direction: column; align-items: flex-start; gap: 0; background: var(--paper); border-bottom: 1px solid var(--line); padding: 8px 22px 14px; z-index: 50; }
+  .top.open .navlinks a { padding: 10px 0; width: 100%; }
+  .cmp-row { grid-template-columns: 1fr 1.2fr; }
+  .cmp-row > div:nth-child(2), .cmp-row > div:nth-child(3) { display: none; }
+  .steps, .plans, .rec, .feats { grid-template-columns: 1fr; }
+  .stage { grid-template-columns: 1fr; }
+  .timeline { grid-template-columns: 1fr 1fr; } .timeline .tcard:last-child { grid-column: span 2; }
+  .live { grid-template-columns: 1fr; gap: 14px; }
+  section { padding: 64px 0; } .hero { padding: 64px 0 48px; }
+  .navend .signin { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .live .dot,  .btn:hover { transform: none; } }
+
+/* ---------- sample Shelf card ---------- */
+#card { padding-top: 40px; }
+.sc-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 56px; align-items: center; }
+.sc-list { list-style: none; margin-top: 24px; }
+.sc-list li { padding: 11px 0; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--ink2); }
+.sc-list li:first-child { border-top: 0; } .sc-list b { color: var(--ink); }
+.sc { --c0: #0E0F12; --c1: #15171C; --c2: #23262E; --t1: #E9EBEF; --t2: #9AA0AC; background: var(--c0); color: var(--t1); border-radius: 26px; padding: 14px; border: 1px solid #23262E;
+  box-shadow: 0 30px 80px rgba(20,20,18,.18); font-size: 12.5px; }
+.sc-hero, .sc-body { background: var(--c1); border: 1px solid var(--c2); border-radius: 20px; padding: 18px; }
+.sc-body { margin-top: 10px; min-height: 300px; }
+.sc-k { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--t2); display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.sc-hero .sc-k { margin-bottom: 6px; }
+.sc-sym { font-size: 27px; font-weight: 700; letter-spacing: -0.02em; }
+.sc-pill { display: inline-block; margin-top: 8px; padding: 5px 12px; border: 1px solid #2E323B; border-radius: 99px; color: #C3C7CF; font-size: 11.5px; }
+.sc-px { margin-top: 10px; font-size: 11.5px; color: var(--t2); } .sc-px b { color: var(--t1); }
+.sc-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.sc-stats small { display: block; font-size: 11px; color: var(--t2); }
+.sc-stats b { display: block; font-size: 18px; font-weight: 800; margin: 2px 0; font-variant-numeric: tabular-nums; }
+.sc-stats i { display: block; font-style: normal; font-size: 11px; color: #C3C7CF; line-height: 1.35; }
+.sc .up { color: #3DD68C !important; } .sc .dn { color: #FF7D72 !important; }
+.sc-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-top: 16px; padding: 4px; border-radius: 13px; background: var(--c0); border: 1px solid var(--c2); }
+.sc-tabs button { border: 0; background: none; color: var(--t2); font: 600 12.5px var(--sans); padding: 8px 2px; border-radius: 9px; cursor: pointer; white-space: nowrap; }
+.sc-tabs button.on { background: #F2F3F5; color: #0E0F12; }
+.sc-pane { display: none; } .sc-pane.on { display: block; animation: scIn .35s ease; }
+@keyframes scIn { from { opacity: 0; transform: translateY(4px); } }
+.sc-lm { border-radius: 14px; border: 1px solid var(--c2); overflow: hidden; background: var(--c0); }
+.sc-lm > div { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-top: 1px dashed #2A2D35; }
+.sc-lm > div:first-child { border-top: 0; }
+.sc-lm span { display: flex; flex-direction: column; } .sc-lm small { font-size: 11.5px; color: var(--t2); }
+.sc-lm b { font: 600 14px var(--mono); text-align: right; display: flex; flex-direction: column; } .sc-lm b small { font-family: var(--sans); }
+.sc-lm .up { background: linear-gradient(90deg, rgba(61,214,140,.10), transparent); } .sc-lm .up b, .sc-lm .up span { color: inherit; }
+.sc-lm .dn { background: linear-gradient(90deg, rgba(255,107,94,.10), transparent); }
+.sc-lm .hub { background: rgba(124,147,255,.06); } .sc-lm .hub b { color: #9FB3FF; }
+.sc-lm .now span { font-weight: 700; } .sc-lm .up span, .sc-lm .dn span { color: var(--t1) !important; }
+.sc-gp { list-style: none; counter-reset: g; display: grid; gap: 8px; }
+.sc-gp li { counter-increment: g; display: flex; gap: 12px; padding: 12px; border-radius: 12px; background: var(--c0); border: 1px solid var(--c2); color: #C3C7CF; line-height: 1.5; }
+.sc-gp li::before { content: counter(g); flex: none; width: 24px; height: 24px; border-radius: 7px; background: #1C1F26; color: var(--t1); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.sc-gp b { color: var(--t1); }
+.sc-edu { padding: 2px 8px; border-radius: 7px; border: 1px solid #8b7cf6; color: #a99bff; letter-spacing: .08em; }
+.sc-ct b { display: block; font-size: 15.5px; } .sc-ct small { display: block; color: var(--t2); font-size: 11.5px; margin: 2px 0 8px; }
+.sc-rows > div { display: flex; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--c2); }
+.sc-rows span { color: var(--t2); } .sc-rows b { font-variant-numeric: tabular-nums; } .sc-rows em { font-family: var(--sans); font-style: normal; font-weight: 700; letter-spacing: 0; margin-left: 4px; }
+.sc-note { margin-top: 8px; font-size: 11px; color: #7A808C; }
+.sc-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sc-tiles div { padding: 14px; border-radius: 12px; background: var(--c0); border: 1px solid var(--c2); }
+.sc-tiles b { display: block; font-size: 20px; } .sc-tiles small { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--t2); }
+.sc-trs { margin-top: 10px; } .sc-trs div { display: flex; justify-content: space-between; padding: 9px 2px; border-top: 1px solid var(--c2); color: #C3C7CF; }
+.sc-trs i { font-style: normal; color: var(--t2); }
+
+@media (max-width: 860px) { .sc-wrap { grid-template-columns: 1fr; gap: 32px; } .sc { max-width: 400px; width: 100%; margin: 0 auto; } }
+.sc { font-size: 11.5px; padding: 12px; border-radius: 22px; }
+.sc-hero, .sc-body { padding: 15px; border-radius: 17px; } .sc-body { min-height: 260px; margin-top: 8px; }
+.sc-sym { font-size: 23.5px; } .sc-stats b { font-size: 16px; } .sc-stats small, .sc-stats i { font-size: 11.5px; }
+.sc-tabs { margin-top: 13px; } .sc-tabs button { font-size: 11.5px; padding: 7px 2px; }
+.sc-lm > div { padding: 8px 12px; } .sc-lm b { font-size: 11.5px; } .sc-lm small { font-size: 11px; }
+.sc-rows > div { padding: 8px 0; } .sc-ct b { font-size: 14px; } .sc-gp li { padding: 10px; } .sc-tiles b { font-size: 17px; }
+@media (max-width: 420px) { .sc-stats b { font-size: 14.5px; } .sc-tabs button { font-size: 11.5px; } }
+
+/* centered sections: track record, pricing, FAQ */
+#record .wrap, #faq .wrap { text-align: center; }
+/* every section heading centered */
+#why > .wrap > .kicker, #why > .wrap > h2, #why > .wrap > .sub,
+#how > .wrap > .kicker, #how > .wrap > h2, #how > .wrap > .sub { text-align: center; margin-left: auto; margin-right: auto; }
+.demo-copy { margin-left: auto !important; margin-right: auto !important; text-align: center; }
+.step, .cmp, .feat { text-align: left; }
+.sc-copy .kicker, .sc-copy h2, .sc-copy .sub, .sc-copy > .micro { text-align: center; margin-left: auto; margin-right: auto; }
+.stage-note { text-align: center; }
+#day h2, #day .sub { margin-left: auto; margin-right: auto; } #day .feat { text-align: left; }
+#record h2, #faq h2, #record .sub, #faq .sub { margin-left: auto; margin-right: auto; }
+
+#faq .faq { margin-left: auto; margin-right: auto; text-align: left; }
+
+
+/* ---------- hero preview of Browse setups ---------- */
+.bp { margin: 48px auto 0; max-width: 960px; text-align: left; border-radius: 18px; overflow: hidden; background: #0E0F12; color: #E9EBEF; border: 1px solid #23262E; box-shadow: 0 30px 80px rgba(20,20,18,.18); }
+.bp-bar { display: flex; align-items: center; gap: 7px; padding: 11px 16px; background: #15171C; border-bottom: 1px solid #23262E; }
+.bp-bar i { width: 10px; height: 10px; border-radius: 50%; background: #2E323B; } .bp-bar span { margin-left: 10px; font: 500 12px var(--mono); color: #9AA0AC; letter-spacing: .04em; }
+.bp-in { padding: 22px 24px 18px; }
+.bp-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.bp-h { font-size: 25px; font-weight: 600; letter-spacing: -0.03em; } .bp-h em { color: #9AA0AC; }
+.bp-s { font-size: 11.5px; color: #9AA0AC; margin-top: 2px; }
+.bp-live { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 99px; border: 1px solid rgba(61,214,140,.55); background: #0E1512; color: #3DD68C; font: 700 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; box-shadow: 0 0 12px rgba(61,214,140,.28); flex: none; }
+.bp-live b { width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); animation: none; }
+
+
+.bp-scout { margin-top: 16px; padding: 12px 14px; border-radius: 12px; background: #15171C; border: 1px solid #23262E; font-size: 12.5px; color: #C3C7CF; }
+.bp-scout > b { color: #fff; margin-right: 4px; } .bp-scout span b { color: #fff; } .bp-scout .g { color: #3DD68C; } .bp-scout .y { color: #E5A13D; }
+.bp-next { color: #9AA0AC; }
+.bp-tabs { display: flex; gap: 8px; margin-top: 14px; overflow: hidden; white-space: nowrap; }
+.bp-tabs span { flex: none; padding: 7px 13px; border-radius: 99px; border: 1px solid #23262E; color: #9AA0AC; font-size: 11.5px; font-weight: 600; }
+.bp-tabs span.on { background: #F2F3F5; color: #0E0F12; border-color: #F2F3F5; }
+.bp-tabs small { margin-left: 4px; font-weight: 700; } .bp-tabs i { font-style: normal; margin-left: 5px; font: 700 9.5px var(--sans); color: #E5A13D; text-transform: uppercase; letter-spacing: .06em; }
+.bp-tbl { margin-top: 14px; border: 1px solid #23262E; border-radius: 12px; overflow: hidden; }
+.bp-row { display: grid; grid-template-columns: .7fr 1.5fr 1fr 1.2fr 1fr .8fr; gap: 10px; align-items: center; padding: 11px 14px; border-top: 1px solid #23262E; font-size: 12px; font-variant-numeric: tabular-nums; }
+.bp-row:first-child { border-top: 0; } .bp-row > span:last-child { text-align: right; }
+.bp-th { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #646B78; background: #15171C; }
+.bp .pill { display: inline-flex; flex-direction: column; font-family: var(--sans); letter-spacing: 0; font-style: normal; padding: 3px 10px; border-radius: 10px; border: 1px solid currentColor; font-weight: 700; font-size: 11px; line-height: 1.3; }
+.bp .pill small { font-weight: 500; font-size: 10.5px; opacity: .85; } .bp .pill.up { color: #3DD68C; } .bp .pill.dn { color: #FF7D72; } .bp .pill.hub { color: #7C93FF; border-radius: 99px; }
+.bp-an { display: inline-block; padding: 6px 12px; border-radius: 8px; border: 1px solid #2E323B; color: #E9EBEF; text-decoration: none; font-size: 11px; font-weight: 600; }
+.bp-an:hover { border-color: #9AA0AC; }
+.bp-note { margin-top: 12px; font-size: 11px; color: #646B78; }
+
+@media (max-width: 760px) {
+  .bp-in { padding: 16px 14px 14px; } .bp-h { font-size: 20px; } .bp-s { display: none; }
+  .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-row > :nth-child(3), .bp-row > :nth-child(4), .bp-row > :nth-child(5) { display: none; }
+}
+
+/* hero preview: board on the left, the Shelf card open on the right */
+.bp { max-width: 1120px; }
+.bp-split { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 16px; align-items: stretch; margin-top: 14px; }
+.bp-split .bp-tbl { margin-top: 0; display: flex; flex-direction: column; }
+.bp-split .bp-row:not(.bp-th) { flex: 1; }
+.bp-split .bp-row { grid-template-columns: .7fr 1.6fr 1fr auto; }
+.bp-row.sel { background: rgba(124,147,255,.08); box-shadow: inset 3px 0 0 #7C93FF; }
+.bp-an.on { background: #F2F3F5; color: #0E0F12; border-color: #F2F3F5; }
+.bp-split .sc { box-shadow: none; border: 0; padding: 0; background: transparent; border-radius: 0; }
+
+.sc-solo { grid-template-columns: 1fr !important; max-width: 760px; }
+.sc-solo .sc-list { max-width: 640px; margin-left: auto; margin-right: auto; }
+.bp-split { position: relative; }
+.bp-link { position: absolute; height: 2px; background: #7C93FF; pointer-events: none; z-index: 2; border-radius: 2px; }
+.bp-link::before { content: ""; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: #7C93FF; }
+.bp-link::after { content: ""; position: absolute; right: -2px; top: -5px; border: 6px solid transparent; border-left: 8px solid #7C93FF; border-right: 0; }
+.bp-split .sc.sc { border: 1px solid rgba(124,147,255,.6) !important; border-radius: 18px !important; padding: 8px !important; background: #0E0F12 !important; }
+.bp-split .sc .sc-hero { border-color: #23262E; }
+@media (max-width: 980px) { .bp-split .bp-row:nth-child(n+7) { display: none; } .bp-link { display: none; } .bp-split { grid-template-columns: 1fr; } .bp-split .sc { max-width: 420px; width: 100%; margin: 0 auto; } }
+@media (max-width: 760px) { .bp-split .bp-row { grid-template-columns: 1fr 1.6fr auto; } .bp-split .bp-row > :nth-child(3) { display: none; } .bp-split .bp-row > :nth-child(4) { display: block; } .bp-split .bp-row .pill small { display: none; } .bp-an { padding: 4px 7px !important; font-size: 10.5px !important; } }
+
+/* hero preview, compact */
+.sc-swap { margin: -2px 0 6px; padding: 7px 10px; border-radius: 9px; background: rgba(124,147,255,.10); color: #C3C7CF; font-size: 11.5px; line-height: 1.45; }
+.sc-swap b { color: #fff; } .sc-swap a { color: #8EA2FF; font-weight: 600; text-decoration: none; }
+.bp { max-width: 940px !important; }
+.bp-in { padding: 16px 18px 14px !important; }
+.bp-h { font-size: 20px !important; } .bp-s { font-size: 11px !important; }
+.bp-scout { margin-top: 12px !important; padding: 9px 12px !important; font-size: 11px !important; }
+.bp-tabs { margin-top: 10px !important; gap: 6px !important; } .bp-tabs span { padding: 5px 10px !important; font-size: 11.5px !important; }
+.bp-split { grid-template-columns: minmax(0, 1fr) 330px !important; gap: 12px !important; margin-top: 10px !important; }
+.bp-split .bp-row { padding: 7px 12px !important; font-size: 11px !important; }
+.bp-split .bp-row:nth-child(n+8) { display: none; }
+.bp .pill { font-size: 11px !important; padding: 2px 8px !important; } .bp .pill small { font-size: 9.5px !important; }
+.bp-an { padding: 4px 9px !important; font-size: 11px !important; }
+.bp-split .sc { font-size: 11px; }
+.bp-split .sc-hero, .bp-split .sc-body { padding: 12px !important; border-radius: 14px !important; }
+.bp-split .sc-body { margin-top: 8px !important; min-height: 0 !important; height: 272px; overflow-y: auto; scrollbar-width: thin; }
+.bp-split .sc-sym { font-size: 20px !important; } .bp-split .sc-pill { font-size: 11.5px; padding: 3px 10px; margin-top: 6px; }
+.bp-split .sc-px { margin-top: 6px; font-size: 11px; }
+.bp-split .sc-stats { margin-top: 10px; gap: 8px; } .bp-split .sc-stats b { font-size: 13.5px !important; } .bp-split .sc-stats small, .bp-split .sc-stats i { font-size: 10.5px !important; }
+.bp-split .sc-tabs { margin-top: 10px !important; } .bp-split .sc-tabs button { font-size: 10.5px !important; padding: 6px 2px !important; }
+.bp-split .sc-lm > div { padding: 6px 10px !important; } .bp-split .sc-lm b { font-size: 11px !important; } .bp-split .sc-lm small { font-size: 10px !important; }
+.bp-split .sc-rows > div { padding: 6px 0 !important; } .bp-split .sc-ct b { font-size: 12px !important; } .bp-split .sc-gp li { padding: 8px !important; }
+.bp-note { margin-top: 10px !important; font-size: 11px !important; }
+@media (max-width: 980px) { .bp-split { grid-template-columns: 1fr !important; } .bp-split .sc { max-width: 380px; } }
+
+/* hero preview: the Shelf card as one card, with a divider between the top and the tab content */
+.bp-split .sc.sc { background: #15171C !important; padding: 0 !important; overflow: hidden; }
+.bp-split .sc .sc-hero, .bp-split .sc .sc-body { background: transparent !important; border: 0 !important; border-radius: 0 !important; margin: 0 !important; }
+.bp-split .sc .sc-body { border-top: 0 !important; scrollbar-width: none; }
+.bp-split .sc .sc-hero { position: relative; } .bp-split .sc .sc-hero::after { content: ""; position: absolute; left: 14px; right: 14px; bottom: 0; height: 1px; background: #2E323B; }
+.bp-split .sc .sc-body::-webkit-scrollbar { display: none; }
+.bp-split .sc .sc-hero { padding: 14px 14px 12px !important; } .bp-split .sc .sc-body { padding: 12px 14px !important; }
+
+/* Hero: big left-aligned headline + staircase of shelves + example alert */
+.hero { text-align: left; padding: 72px 0 64px; }
+.hero h1 { font-size: clamp(40px, 8.6vw, 118px); line-height: .94; letter-spacing: -0.045em; margin: 22px 0 0; max-width: 13ch; }
+.hero h1 em { letter-spacing: -0.02em; }
+.h2-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 24px; margin-top: 34px; }
+.h2-row .lede { margin: 0; font-size: clamp(16px, 1.5vw, 19px); max-width: 44ch; }
+.h2-cta .ctas { justify-content: flex-start; margin-top: 0; }
+.h2-stairs { display: flex; align-items: flex-end; height: clamp(240px, 30vw, 380px); margin-top: 56px; border-bottom: 2px solid var(--ink); }
+.h2-stairs .st { flex: 1 1 0; min-width: 0; background: #141412; color: #F6F6F3; border-radius: 12px 0 0 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 3px; }
+.h2-stairs .st:last-child { border-radius: 12px 12px 0 0; }
+.h2-stairs .st span { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; opacity: .8; }
+.h2-stairs .st b { font: 700 clamp(14px, 1.9vw, 24px) var(--mono); }
+.h2-stairs .st small { font-size: 12.5px; opacity: .85; margin-top: 4px; max-width: 26ch; }
+.h2-stairs .st.hub { background: #23262E; }
+.h2-stairs .st.next { background: #2F54EB; color: #fff; }
+.h2-note { font-size: 11.5px; color: var(--ink2); margin-top: 10px; }
+
+
+
+
+
+.h2-alert { position: relative; margin: -62px 0 0 auto; max-width: 460px; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; box-shadow: 0 24px 60px rgba(20,20,18,.16); }
+.h2-ah { display: flex; justify-content: space-between; gap: 10px; font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink2); }
+.h2-alert b { display: block; font-size: 19px; letter-spacing: -0.02em; margin-top: 8px; }
+.h2-alert p { color: var(--ink2); font-size: 14px; margin-top: 4px; }
+@media (max-width: 640px) { .h2-stairs .st small { display: none; } .h2-alert { margin-top: 16px; max-width: none; } }
+
+/* Sections match the hero: left-aligned, larger headings */
+section:not(.final) > .wrap > .kicker, section:not(.final) > .wrap > h2, section:not(.final) > .wrap > .sub,
+.sc-copy .kicker, .sc-copy h2, .sc-copy .sub { text-align: center !important; margin-left: auto !important; margin-right: auto !important; }
+section:not(.final) > .wrap > h2, .sc-copy h2 { font-size: clamp(30px, 4.6vw, 58px); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; margin-top: 14px; }
+section:not(.final) > .wrap > .sub, .sc-copy .sub { font-size: clamp(15px, 1.3vw, 17px); margin-top: 18px; max-width: 56ch; }
+.final h2 { font-size: clamp(30px, 4.6vw, 58px); line-height: 1; letter-spacing: -0.04em; max-width: 16ch; margin-left: auto; margin-right: auto; }
+section { padding: 104px 0; }
+#board .bp { margin: 44px 0 0 !important; max-width: none !important; }
+.hero { padding-bottom: 96px; }
+@media (max-width: 640px) { section { padding: 72px 0; } }
+
+/* footer: brand + links on top, the fine print + socials below, each row lined up */
+footer .wrap { display: grid !important; grid-template-columns: 1fr auto; grid-template-areas: "brand links" "copy social"; align-items: center; gap: 14px 24px; }
+footer .wrap > .wordmark { grid-area: brand; }
+footer .wrap > span { grid-area: copy; }
+footer .wrap > nav[aria-label="Footer"] { grid-area: links; justify-content: flex-end; }
+footer .wrap > nav[aria-label="Social"] { grid-area: social; justify-content: flex-end; }
+@media (min-width: 761px) { footer .wrap { padding-right: 96px; } }   /* clear the Sika button */
+@media (max-width: 760px) {
+  footer .wrap { grid-template-columns: 1fr; grid-template-areas: "brand" "links" "social" "copy"; }
+  footer .wrap > nav[aria-label="Footer"], footer .wrap > nav[aria-label="Social"] { justify-content: flex-start; }
+}
+.hero.ns{position:relative;overflow:hidden;padding:78px 0 68px;background:radial-gradient(ellipse 70% 44% at 50% 0%,rgba(37,99,235,.20),transparent 72%)}.hero.ns .wrap{position:relative;z-index:1}.hero.ns h1{max-width:18ch;margin-left:auto;margin-right:auto;font-size:clamp(36px,6vw,64px)}.hero.ns .lede{max-width:62ch}.hero-market{max-width:940px;margin:48px auto 0;padding:22px;border:1px solid #252a35;border-radius:18px;background:linear-gradient(145deg,#11151d,#0d0f13);text-align:left;box-shadow:0 24px 80px rgba(37,99,235,.13)}.hero-market-head{display:flex;justify-content:space-between;align-items:center;gap:16px}.hero-market-head h2{font-size:24px;margin-top:5px}.hero-market-head h2 span{color:var(--ink2);font-size:14px;font-weight:500}.hero-quote{text-align:right;font-variant-numeric:tabular-nums}.hero-quote b{display:block;font:700 24px var(--mono)}.hero-quote small{color:var(--ink3)}.hero-chart{height:260px;margin-top:16px;position:relative;overflow:hidden}.hero-chart svg{width:100%;height:100%;display:block}.chart-loading{height:100%;display:grid;place-items:center;color:var(--ink3)}.hero-market-foot{display:flex;justify-content:space-between;gap:12px;color:var(--ink2);font:11px var(--mono);margin-top:10px;flex-wrap:wrap}.hero-board{max-width:940px;margin:14px auto 0;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}.hero-board div{padding:15px 12px;text-align:center;border-right:1px solid var(--line)}.hero-board div:last-child{border:0}.hero-board b{display:block;font:700 21px var(--mono)}.hero-board span{color:var(--ink2);font-size:11px}.steps{grid-template-columns:repeat(4,minmax(0,1fr))}.setup-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:36px}.setup-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;text-align:left}.setup-art{height:145px;position:relative;display:flex;align-items:end;background:#0d1118;border:1px solid #252a35;border-radius:12px;padding:10px;margin-bottom:18px}.setup-art svg{width:100%;height:100%}.setup-chip{position:absolute;top:10px;left:12px;color:#9AA0AC;font:10px var(--mono);letter-spacing:.08em}.setup-card h3{font-size:17px;margin-bottom:8px}.setup-card p{color:var(--ink2);font-size:12.5px;min-height:82px}.setup-card a{display:inline-block;color:#8EA2FF;text-decoration:none;font-size:12px;font-weight:600;margin-top:14px}#discipline{background:#0c1017;border-top:1px solid #202938;border-bottom:1px solid #202938}.discipline-wrap{text-align:center}.discipline-wrap h2,.discipline-wrap .sub{margin-left:auto;margin-right:auto}.discipline-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:34px;text-align:left}.discipline-item{padding:22px;border:1px solid #273244;border-radius:14px;background:#111722}.discipline-item b{display:block;margin-bottom:8px}.discipline-item span{color:var(--ink2);font-size:12.5px}.discipline-cta{display:flex;justify-content:center;align-items:center;gap:14px;flex-wrap:wrap;margin-top:28px}.discipline-cta span{color:var(--ink3);font-size:11.5px}@media(max-width:860px){.steps,.setup-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.discipline-grid{grid-template-columns:1fr}}@media(max-width:560px){.hero-market{padding:15px;margin-top:32px}.hero-chart{height:210px}.hero-board{grid-template-columns:repeat(2,1fr)}.hero-board div:nth-child(2){border-right:0}.hero-board div:nth-child(-n+2){border-bottom:1px solid var(--line)}.steps,.setup-grid{grid-template-columns:1fr}.setup-card p{min-height:0}.hero-market-head h2{font-size:20px}.hero-quote b{font-size:18px}}.record-list-wrap{margin:28px auto 0;max-width:900px;text-align:left}.record-list-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:10px}.record-list-head b{font-size:14px}.record-list-head span{font-size:11px;color:var(--ink3)}.record-rows{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--card)}.record-row{display:grid;grid-template-columns:1fr 1.2fr auto;gap:12px;align-items:center;padding:12px 16px;border-top:1px solid var(--line);font-size:12px}.record-row:first-child{border-top:0}.record-row .sym{font:700 12px var(--mono)}.record-row .setup{color:var(--ink2)}.record-outcome{font:600 11px var(--mono);white-space:nowrap}.record-outcome.win{color:var(--up)}.record-outcome.loss{color:var(--down)}.record-outcome.flat{color:var(--warn)}.record-empty{padding:16px;color:var(--ink3);font-size:12px}@media(max-width:560px){.record-list-head{display:block}.record-list-head span{display:block;margin-top:3px}.record-row{grid-template-columns:1fr auto;gap:4px 10px}.record-row .setup{grid-column:1/-1;grid-row:2}.record-outcome{grid-column:2;grid-row:1}}
+/* White theme: make the NextShelf blue accents clearly visible on white */
+html[data-theme="light"] .hero.ns.hcx h1 .hx-2,
+html[data-theme="light"] .hero.ns.hcx .lede .hx-2,
+html[data-theme="light"] .heading-glow{
+ color:#1D4ED8!important;
+ -webkit-text-fill-color:#1D4ED8!important;
+ text-shadow:0 0 1px rgba(29,78,216,.16),0 2px 14px rgba(37,99,235,.18)!important;
+}
+html[data-theme="light"] .hero.ns.hcx .hx-ghost{
+ color:rgba(37,99,235,.16);
+ text-shadow:0 0 70px rgba(37,99,235,.20);
+}
+html[data-theme="light"] footer .ft-giant{
+ color:rgba(37,99,235,.27);
+ text-shadow:0 0 55px rgba(37,99,235,.18);
+}
+
+</style>
+<style>
+/* the hub-to-alert animation (kept from the previous landing page) */
+.flow-sec { padding-top: 10px; }
+.flow { margin-top: 30px; padding: 18px; border-radius: 26px; border: 1px solid var(--fl-line); background: var(--fl-bg);
+  box-shadow: 0 30px 80px var(--fl-shadow); -webkit-backdrop-filter: blur(20px) saturate(1.3); backdrop-filter: blur(20px) saturate(1.3);
+  --fl-bg: rgba(14,20,29,.72); --fl-line: rgba(255,255,255,.08); --fl-shadow: rgba(0,0,0,.35); --fl-ink: #eef2f7; --fl-mut: #8a9aae; --fl-card: #0b1119;
+  --fl-grid: rgba(255,255,255,.05); --fl-up: #3DD68C; --fl-down: #FF6B5E; --fl-hub: #7C93FF; --fl-candle-up: #FFFFFF; --fl-candle-dn: #000000; }
+
+.fl-stage { display: grid; grid-template-columns: minmax(0, 1fr) 270px; gap: 18px; align-items: stretch; }
+.fl-chart { position: relative; padding: 14px 14px 6px; border-radius: 18px; background: var(--fl-card); border: 1px solid var(--fl-line); min-width: 0; }
+.fl-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--fl-mut); font-size: 13px; }
+.fl-sym b { color: var(--fl-ink); font-size: 16px; margin-right: 4px; }
+.fl-clock { display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 99px; border: 1px solid var(--fl-line);
+  font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fl-ink); font-variant-numeric: tabular-nums; transition: color .3s, border-color .3s; }
+.fl-clock i { width: 7px; height: 7px; border-radius: 50%; background: var(--fl-mut); }
+.flow[data-step="3"] .fl-clock { color: #F2C14E; border-color: rgba(242,193,78,.45); } .flow[data-step="3"] .fl-clock i { background: #F2C14E; animation: flBlink 1s steps(1) infinite; }
+.flow[data-step="4"] .fl-clock, .flow[data-step="5"] .fl-clock { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 45%, transparent); }
+.flow[data-step="4"] .fl-clock i, .flow[data-step="5"] .fl-clock i { background: var(--ink); }
+@keyframes flBlink { 50% { opacity: .2; } }
+.fl-chart svg { width: 100%; height: auto; display: block; margin-top: 6px; }
+@media (max-width: 560px) { .fl-chart { padding: 10px 8px 4px; } }
+.fl-chart svg text { font-family: var(--sans, "DM Sans", sans-serif); }
+/* scene layers: shown by step */
+.fl-l { opacity: 0; transition: opacity .6s ease, transform .6s ease; }
+.flow[data-step="1"] .s1, .flow[data-step="2"] .s1, .flow[data-step="3"] .s1, .flow[data-step="4"] .s1, .flow[data-step="5"] .s1,
+.flow[data-step="2"] .s2, .flow[data-step="3"] .s2, .flow[data-step="4"] .s2, .flow[data-step="5"] .s2,
+.flow[data-step="3"] .s3only, .flow[data-step="4"] .s4, .flow[data-step="5"] .s4, .flow[data-step="5"] .s5 { opacity: 1; }
+.flow[data-step="1"] .s1dim { opacity: .45; }
+.fl-scan { opacity: 0; }
+.flow[data-step="1"] .fl-scan { opacity: 1; animation: flSweep 2.6s ease-in-out infinite; }
+@keyframes flSweep { from { transform: translateX(0); } to { transform: translateX(520px); } }
+.fl-live { animation: flLive 1.2s ease-in-out infinite; }
+@keyframes flLive { 50% { opacity: .55; } }
+.fl-runc { opacity: 0; transition: opacity .35s ease; }
+.flow[data-step="5"] .fl-runc { opacity: 1; }
+/* phone */
+.fl-phone { position: relative; padding: 34px 12px 14px; border-radius: 34px; overflow: hidden; min-height: 330px;
+  background: radial-gradient(120% 70% at 50% 0%, #253a5a, #0b1220 70%); border: 6px solid #0a0f17; box-shadow: 0 8px 18px rgba(0,0,0,.18), inset 0 0 0 1px rgba(255,255,255,.06); }
+
+.fl-notch { position: absolute; top: 8px; left: 50%; width: 84px; height: 20px; margin-left: -42px; border-radius: 12px; background: #05080d; }
+.fl-time { text-align: center; color: #fff; font-size: 44px; font-weight: 600; letter-spacing: -.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.fl-date { text-align: center; color: rgba(255,255,255,.7); font-size: 12px; margin: 4px 0 14px; font-weight: 500; }
+ 
+.fl-stack { display: flex; flex-direction: column-reverse; gap: 8px; }
+.fl-note { padding: 10px 11px; border-radius: 16px; background: rgba(245,247,250,.9); color: #0d1117; box-shadow: 0 8px 20px rgba(0,0,0,.18);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); animation: flIn .5s cubic-bezier(.2,1.3,.4,1) both; transform-origin: top center; }
+.fl-note.old { opacity: .55; transform: scale(.97); transition: opacity .4s, transform .4s; }
+.fl-nh { display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; color: #6b7280; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.fl-nh span { display: inline-flex; align-items: center; gap: 5px; }
+.fl-nh span::before { content: ""; width: 14px; height: 14px; border-radius: 4px; background: #0d1117 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 11 7 7l2 2 4-5' fill='none' stroke='%233DD68C' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/11px no-repeat; }
+.fl-nt { margin-top: 4px; font-weight: 700; font-size: 13px; line-height: 1.3; }
+.fl-nb { margin-top: 2px; font-size: 12px; line-height: 1.4; color: #374151; }
+.fl-pro { font-style: normal; margin-left: 5px; padding: 1px 5px; border-radius: 4px; background: #0d1117; color: #fff; font-size: 9px; letter-spacing: .08em; vertical-align: 1px; }
+@keyframes flIn { from { opacity: 0; transform: translateY(-14px) scale(.94); } }
+/* alerts section: text + call — lock-screen phones in the demo's style (.fl-phone / .fl-note) */
+#alerts .kicker, #alerts h2, #alerts .sub { text-align: center; margin-left: auto; margin-right: auto; }
+#alerts h2 { max-width: 26ch; }
+.al-phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 44px; }
+.al-phones .fl-phone { height: 440px; }
+@media (max-width: 860px) { .al-phones .fl-phone { height: auto; min-height: 400px; } }
+.al-list { display: flex; flex-direction: column; gap: 8px; }
+.al-list .fl-note { animation: none; }
+.al-list .fl-note.old { opacity: .6; transform: scale(.97); }
+.al-call { text-align: center; padding-top: 6px; }
+.al-avatar { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto; background: #0d1117 url("/favicon.svg") center / 60% no-repeat; box-shadow: 0 0 0 5px rgba(61,214,140,.18), 0 0 0 10px rgba(61,214,140,.07); }
+.al-call-name { color: #fff; font-weight: 650; font-size: 20px; margin-top: 12px; letter-spacing: -0.01em; }
+.al-call-sub { color: rgba(255,255,255,.7); font-size: 12px; margin-top: 2px; font-weight: 500; }
+ 
+.al-call .fl-note { margin-top: 16px; text-align: left; }
+.al-call-btns { display: flex; justify-content: space-between; margin: 22px 22px 0; }
+.al-call-btns span { width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; }
+.al-call-btns small { display: block; text-align: center; color: rgba(255,255,255,.75); font-size: 11px; margin-top: 6px; }
+
+.al-decline { background: #D1352B; }
+.al-answer { background: #12805C; }
+.al-cap { margin-top: 18px; text-align: left; }
+.al-cap h3 { font-size: 16px; letter-spacing: -0.01em; font-weight: 650; }
+.al-tag { font: 600 10.5px var(--mono); letter-spacing: .06em; text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; color: var(--ink2); vertical-align: 2px; margin-left: 6px; }
+.al-tag.pro { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.al-cap p { color: var(--ink2); font-size: 13.5px; margin-top: 5px; max-width: 34ch; }
+.al-note { font-size: 11.5px; color: var(--ink3); margin-top: 36px; text-align: center; }
+@media (max-width: 860px) {
+  .al-phones { grid-template-columns: 1fr; max-width: 340px; margin-left: auto; margin-right: auto; }
+}
+/* steps */
+.fl-steps { list-style: none; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0 0; padding: 0; counter-reset: fl; }
+.fl-steps li { position: relative; padding: 12px 12px 14px; border-radius: 14px; border: 1px solid var(--fl-line); cursor: pointer; color: var(--fl-mut);
+  transition: background .25s, color .25s, border-color .25s; overflow: hidden; }
+.fl-steps li:hover { color: var(--fl-ink); }
+.fl-steps li small { display: block; font-size: 11px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.fl-steps li b { display: block; margin-top: 4px; font-size: 14.5px; line-height: 1.3; color: inherit; }
+.fl-steps li p { margin: 4px 0 0; font-size: 12.5px; line-height: 1.45; }
+.fl-steps li.on { color: var(--fl-ink); background: color-mix(in srgb, var(--fl-ink) 5%, transparent); border-color: color-mix(in srgb, var(--fl-ink) 18%, transparent); }
+.fl-steps li.on small { color: var(--ink); }
+.fl-steps li.on[data-n="3"] small { color: #F2C14E; }
+.fl-steps li i { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--ink); }
+.fl-steps li.on i { animation: flProg var(--fl-dur, 4s) linear forwards; }
+.flow.paused .fl-steps li.on i { animation-play-state: paused; }
+@keyframes flProg { to { width: 100%; } }
+@media (max-width: 860px) {
+  .flow { padding: 12px; border-radius: 22px; }
+  .fl-stage { grid-template-columns: 1fr; }
+  .fl-phone { min-height: 0; padding: 26px 12px 12px; border-radius: 26px; }
+  .fl-notch { display: none; } .fl-time { font-size: 30px; } .fl-date { margin-bottom: 10px; }
+  .fl-stack { min-height: 150px; }
+  .fl-steps { grid-template-columns: 1fr; }
+  .fl-steps li { padding: 10px 12px; } .fl-steps li:not(.on) p { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .flow *, .flow { animation: none !important; transition: none !important; } }
+.flow { margin-top: 32px; }
+.fl-pill { display: inline-block; margin-left: 6px; padding: 2px 9px; border-radius: 99px; background: var(--up); color: #fff; font: 700 10px var(--sans); letter-spacing: .06em; text-transform: uppercase; vertical-align: 2px; }
+</style>
+<style>
+/* Scout, the robot (kept from the previous landing page) */
+@property --sf-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.scout-fab { position: fixed; right: 22px; bottom: 22px; z-index: 60; width: 72px; height: 72px; padding: 0; border: 0; border-radius: 24px; cursor: pointer;
+  background: #0c141e; isolation: isolate; box-shadow: 0 16px 44px rgba(0,0,0,.45), 0 0 32px rgba(61,214,140,.28); transition: transform .18s, box-shadow .18s; }
+.scout-fab::before { content: ""; position: absolute; inset: -2px; z-index: -1; border-radius: 26px;
+  background: conic-gradient(from var(--sf-a, 0deg), #ffffff, #7C93FF, #9AA0AC, #ffffff); animation: sfSpin 4s linear infinite; }
+.scout-fab::after { content: ""; position: absolute; inset: 1px; z-index: -1; border-radius: 23px; background: radial-gradient(circle at 50% 28%, #1b2d40, #0b131c 70%); }
+@property --sf-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes sfSpin { to { --sf-a: 360deg; } }
+.sf-halo { position: absolute; inset: -10px; z-index: -2; border-radius: 32px; background: radial-gradient(circle, rgba(61,214,140,.35), transparent 70%);
+  animation: sfHalo 2.8s ease-in-out infinite; pointer-events: none; }
+@keyframes sfHalo { 50% { transform: scale(1.18); opacity: .45; } }
+.sf-bot { position: absolute; inset: 7px; display: block; animation: sfBob 3.2s ease-in-out infinite; }
+.sf-bot svg { width: 100%; height: 100%; display: block; }
+@keyframes sfBob { 50% { transform: translateY(-3px); } }
+.scout-fab .ag-eyes circle { fill: #ffffff; filter: drop-shadow(0 0 3px #ffffff); }
+.scout-fab .ag-ant { animation: sfPing 2.4s ease-in-out infinite; filter: drop-shadow(0 0 4px #fff); }
+@keyframes sfPing { 50% { opacity: .3; } }
+.scout-fab:hover { transform: translateY(-4px) scale(1.04); box-shadow: 0 20px 50px rgba(0,0,0,.5), 0 0 44px rgba(61,214,140,.45); }
+.scout-fab:hover .sf-bot { animation: sfWave .6s ease-in-out 2; }
+@keyframes sfWave { 25% { transform: rotate(-9deg); } 75% { transform: rotate(9deg); } }
+.sf-name { position: absolute; left: 50%; bottom: -9px; transform: translateX(-50%); padding: 2px 9px; border-radius: 99px; background: #3DD68C; color: #04140b;
+  font: 800 11px/1.4 var(--sans, "DM Sans", sans-serif); box-shadow: 0 4px 12px rgba(0,0,0,.3); pointer-events: none; }
+.sf-badge { position: absolute; top: -7px; right: -7px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #fff; color: #04140b;
+  font: 800 12px/22px var(--sans, "DM Sans", sans-serif); box-shadow: 0 0 0 2px #ffffff; }
+.scout-pop[hidden] { display: none !important; }
+@keyframes sfPop { from { opacity: 0; transform: translateY(8px) scale(.9); } }
+.scout-pop { position: fixed; right: 22px; bottom: 112px; z-index: 61; width: min(370px, calc(100vw - 24px)); max-height: calc(100vh - 140px); overflow-y: auto;
+  padding: 18px; border-radius: 20px; font-family: var(--sans, "DM Sans", sans-serif); animation: sfPop .22s ease both;
+  background: rgba(13,20,29,.94); color: #eef2f7; border: 1px solid #223042; box-shadow: 0 30px 80px rgba(0,0,0,.55);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+.sp-head { display: flex; justify-content: space-between; align-items: center; }
+.sp-head b { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.sp-head small { margin-left: 8px; padding: 2px 8px; border-radius: 7px; border: 1px solid rgba(255,255,255,.35); color: #fff; font-size: 11px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; vertical-align: 2px; }
+.sp-x { width: 32px; height: 32px; border-radius: 10px; border: 1px solid #2a3a50; background: transparent; color: inherit; cursor: pointer; font-size: 14px; }
+.sp-line { margin: 10px 0 0; color: #b9c6d6; font-size: 14.5px; line-height: 1.55; } .sp-line b { color: #fff; }
+.sp-ask { display: flex; gap: 8px; margin-top: 14px; }
+.sp-ask input { flex: 1; min-width: 0; padding: 11px 13px; border-radius: 12px !important; border: 1px solid #2a3a50; background: #0a1017; color: #fff;
+  font: 600 15px var(--sans, "DM Sans", sans-serif); text-transform: uppercase; outline: none; }
+.sp-ask input::placeholder { text-transform: none; font-weight: 400; color: #6d7d90; }
+.sp-ask input:focus { border-color: #fff; }
+.sp-ask button { width: 46px; border-radius: 12px; border: 0; background: #F4F6F9; color: #0E0F12; font: 800 18px var(--sans, sans-serif); cursor: pointer; }
+.sp-k { margin: 16px 0 6px; font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: #8a9aae; }
+.sp-res { display: grid; gap: 4px; } .sp-res:empty { display: none; }
+.sp-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 11px; text-decoration: none;
+  background: #0a1017; color: #eef2f7; font-weight: 700; font-size: 14.5px; transition: background .15s; }
+.sp-row:hover { background: #121c28; }
+.sp-row span { display: inline-flex; align-items: center; gap: 7px; color: #9fb0c3; font-weight: 500; font-size: 13px; font-variant-numeric: tabular-nums; }
+.sp-row span::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #7C93FF; box-shadow: 0 0 8px #7C93FF; }
+.sp-lock { margin: 12px 0 0; padding: 10px 12px; border-radius: 11px; border: 1px dashed #2a3a50; color: #b9c6d6; font-size: 13.5px; line-height: 1.45; }
+.sp-lock a { color: #fff; font-weight: 700; text-decoration: underline; }
+.sp-open { display: block; margin-top: 14px; padding: 11px; border-radius: 12px; border: 1px solid #2a3a50; text-align: center; color: #eef2f7; font-weight: 700;
+  font-size: 14px; text-decoration: none; }
+.sp-open:hover { background: rgba(255,255,255,.04); }
+
+ 
+ 
+
+ 
+
+
+ 
+ 
+@media (max-width: 640px) {
+  .scout-fab { right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); width: 62px; height: 62px; border-radius: 21px; }
+  .scout-fab::before { border-radius: 23px; } .scout-fab::after { border-radius: 20px; } .sf-halo { border-radius: 28px; }
+  .scout-pop { right: 12px; bottom: calc(94px + env(safe-area-inset-bottom)); }
+  footer { padding-bottom: 110px; }
+}
+@media (prefers-reduced-motion: reduce) { .scout-fab::before, .sf-halo, .sf-bot, .scout-fab .ag-ant { animation: none !important; } }
+/* ================= Scout status: animated live pill ================= */
+@keyframes nsPulse { 0% { box-shadow: 0 0 0 0 rgba(61,214,140,.6); } 70% { box-shadow: 0 0 0 7px rgba(61,214,140,0); } 100% { box-shadow: 0 0 0 0 rgba(61,214,140,0); } }
+@keyframes nsShine { from { transform: translateX(-120%); } to { transform: translateX(220%); } }
+html .live-pill { position: relative; display: inline-flex !important; align-items: center; gap: 7px; overflow: hidden; isolation: isolate; padding: 4px 11px 4px 9px !important; border-radius: 999px !important; vertical-align: 2px; font: 700 11px/1.3 var(--mono) !important; letter-spacing: .12em !important; text-transform: uppercase; color: #3DD68C !important; border: 1px solid rgba(61,214,140,.55) !important; background: #0E1512 !important; box-shadow: 0 0 12px rgba(61,214,140,.28) !important; }
+html .live-pill::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); animation: none; }
+html .live-pill::after { content: ""; position: absolute; inset: 0; z-index: -1; width: 45%; background: linear-gradient(90deg, transparent, rgba(18,128,92,.30), transparent); animation: none; opacity: 0; }
+@keyframes sikaScan { 0% { left: -34%; } 60%, 100% { left: 100%; } }
+html .run .live-pill, html .live-pill.run { color: #12805C !important; background: #F4F6F9 !important; border-color: rgba(18,128,92,.55) !important; box-shadow: 0 0 18px rgba(18,128,92,.30) !important; }
+html .run .live-pill::before, html .live-pill.run::before { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); animation: none; }
+html .run .live-pill::after, html .live-pill.run::after { opacity: 1; animation: sikaScan 1.2s ease-in-out infinite; }
+
+
+
+
+
+
+@media (prefers-reduced-motion: reduce) { .live-pill::before, .live-pill::after { animation: none !important; } .live-pill::after { display: none !important; } }
+
+
+@media (max-width: 640px) { .hero.hc { padding-top: 56px; } .hero.hc .trust { flex-direction: column; align-items: center; gap: 8px; } .hero.hc .ctas .btn { width: 100%; justify-content: center; } }
+
+/* NextShelf hero: copy left, live-style 4H chart right, close clock below */
+.hero.ns { text-align: left; padding: 76px 0 0; }
+.ns-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+.hero.ns h1 { font-size: clamp(40px, 5.6vw, 80px); line-height: .98; letter-spacing: -0.045em; margin: 20px 0 0; max-width: 12ch; }
+.hero.ns .lede { margin: 24px 0 0; max-width: 44ch; font-size: clamp(16px, 1.4vw, 18px); text-align: left; }
+.hero.ns .ctas { justify-content: flex-start; align-items: center; gap: 22px; margin-top: 30px; }
+.ns-link { font-weight: 600; font-size: 15px; color: var(--ink); text-decoration: none; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+.hero.ns .micro { margin-top: 16px; }
+.ns-card { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px 18px 14px; }
+.ns-card-h { display: flex; justify-content: space-between; align-items: baseline; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink2); }
+.ns-card-h b { font: 700 15px var(--sans); letter-spacing: -0.01em; text-transform: none; color: var(--ink); }
+.ns-chart { display: block; width: 100%; height: auto; margin-top: 8px; }
+.ns-chart .lb { font: 500 10.5px var(--mono); letter-spacing: .08em; fill: var(--ink2); }
+.ns-chart .lb.hb { fill: #2F54EB; }
+.ns-chart .shelf { stroke: var(--ink2); stroke-width: 1.2; stroke-dasharray: 5 5; }
+.ns-chart .hubbox { fill: rgba(47,84,235,.08); stroke: #2F54EB; stroke-width: 1.2; stroke-dasharray: 5 4; }
+.ns-chart .wk { stroke: #8A8A84; stroke-width: 1.4; } .ns-chart .wk.g { stroke: #007F61; }
+.ns-chart .cu { fill: #8A8A84; } .ns-chart .cd { fill: #141412; } .ns-chart .cg { fill: #007F61; }
+.ns-chart .trigline { stroke: #007F61; stroke-width: 1; stroke-dasharray: 2 3; }
+.ns-alert { display: flex; gap: 10px; align-items: flex-start; border-top: 1px solid var(--line); margin-top: 6px; padding-top: 12px; }
+.ns-alert b { display: block; font-size: 14px; } .ns-alert small { display: block; font-size: 12.5px; color: var(--ink2); margin-top: 2px; }
+.ns-dot { width: 8px; height: 8px; border-radius: 50%; background: #007F61; margin-top: 6px; flex: 0 0 auto; }
+.ns-clock { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); margin: 64px 0 0; padding: 0; border-top: 2px solid var(--ink); }
+.ns-clock li { padding: 16px 20px 0 0; display: flex; flex-direction: column; gap: 4px; }
+.ns-clock li + li { padding-left: 20px; border-left: 1px solid var(--line); }
+.ns-clock span { font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #2F54EB; }
+.ns-clock b { font-size: 17px; letter-spacing: -0.02em; } .ns-clock small { font-size: 13px; color: var(--ink2); }
+.hero.ns .bp { margin: 64px 0 0 !important; max-width: none !important; }
+
+
+ 
+
+
+
+
+@media (max-width: 900px) { .ns-grid { grid-template-columns: 1fr; gap: 36px; } .ns-clock { grid-template-columns: 1fr; } .ns-clock li + li { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); padding-top: 14px; margin-top: 14px; } }
+
+/* Hero background: blue glow with a dot grid that fades out toward the board preview */
+.hero.ns { position: relative; isolation: isolate; background: radial-gradient(70% 55% at 50% 0%, #F0F3FE 0%, #F4F5F9 45%, rgba(246,246,243,0) 100%); }
+.hero.ns::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(rgba(47,84,235,.13) 1px, transparent 1.3px) 0 0/20px 20px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); mask-image: linear-gradient(180deg, #000 0%, #000 45%, transparent 85%); }
+
+
+
+/* Ghost word behind the hero: the product's own line, as the wallpaper */
+.hx-ghost { position: absolute; left: 50%; top: 54%; transform: translate(-50%, -50%); font-family: "Inter", sans-serif; font-weight: 800; font-style: normal; font-size: clamp(150px, 36vw, 330px); line-height: 1; letter-spacing: -0.02em; color: rgba(233,235,239,.04); white-space: nowrap; pointer-events: none; user-select: none; }
+
+/* Learn menu: course + one entry per setup */
+.lm { position: relative; display: inline-flex; }
+.lm-btn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; color: var(--ink2, inherit); font: inherit; white-space: nowrap; }
+.lm-btn:hover, .lm.open .lm-btn { color: var(--ink, inherit); }
+.lm.open .lm-btn svg { transform: rotate(180deg); }
+.lm-panel { display: none; position: absolute; top: calc(100% + 14px); left: 50%; transform: translateX(-50%); z-index: 80; width: 620px;
+  grid-template-columns: 1fr 1.25fr; gap: 8px; padding: 10px; text-align: left;
+  background: var(--card, #fff); border: 1px solid var(--line, #e3e2dc); border-radius: 16px; box-shadow: 0 24px 60px rgba(20,20,18,.14); }
+.lm.open .lm-panel { display: grid; }
+.lm-panel.one { width: 340px; grid-template-columns: 1fr; }
+.lm-col + .lm-col { border-left: 1px solid var(--line, #e3e2dc); padding-left: 8px; }
+.lm-h { font: 500 10.5px "JetBrains Mono", ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; color: #2F54EB; padding: 8px 10px 4px; }
+.lm-panel a { display: block; padding: 8px 10px; border-radius: 10px; text-decoration: none; color: inherit; }
+.lm-panel a:hover { background: rgba(47,84,235,.07); }
+.lm-panel a b { display: block; font-size: 13.5px; font-weight: 600; color: var(--ink, #141412); letter-spacing: -0.01em; }
+.lm-panel a b i { font: 600 9.5px "JetBrains Mono", monospace; font-style: normal; color: #B7791F; letter-spacing: .08em; text-transform: uppercase; margin-left: 4px; vertical-align: 1px; }
+.lm-panel a small { display: block; font-size: 12px; color: var(--ink2, #5C5B55); margin-top: 2px; line-height: 1.35; }
+
+
+
+
+ 
+@media (max-width: 860px) {
+  .lm { display: block; width: 100%; }
+  .lm-btn { padding: 10px 0; width: 100%; }
+  .lm-panel { position: static; transform: none; width: auto; grid-template-columns: 1fr; box-shadow: none; margin: 4px 0 8px; }
+  .lm-col + .lm-col { border-left: 0; padding-left: 0; border-top: 1px solid var(--line, #e3e2dc); padding-top: 4px; }
+}
+
+/* Hero headline: no italic; second line in a quieter tone */
+.hero.ns h1 em { font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; display: block; color: #8A8984; }
+.hero.ns h1 { max-width: none; font-size: clamp(36px, 4.3vw, 64px); }
+@media (min-width: 901px) { .hero.ns h1 em { white-space: nowrap; } }
+
+
+/* Centred hero (like the original), live count pill, floating setup chips */
+.hero.hcx { text-align: center; padding-top: 72px; }
+.hero.hcx > .wrap { position: relative; }
+.hero.hcx h1 { margin: 26px auto 0; max-width: none; font-size: clamp(40px, 7vw, 96px); line-height: .98; letter-spacing: -0.045em; }
+.hero.hcx .lede { margin: 24px auto 0; max-width: 58ch; text-align: center; font-size: clamp(16px, 1.4vw, 18px); }
+.hero.hcx .ctas { justify-content: center; margin-top: 32px; gap: 12px; }
+.hero.hcx .micro { margin-top: 14px; }
+.hx-pill { display: inline-flex; align-items: center; gap: 10px; font-size: 14px; color: var(--ink2); padding: 5px 14px 5px 5px; border: 1px solid var(--line); border-radius: 99px; background: var(--card); }
+.hx-num { font: 600 13px var(--mono); color: #2F54EB; background: rgba(47,84,235,.08); border-radius: 99px; padding: 4px 10px; }
+
+.hx-chips { position: absolute; inset: 70px 0 auto; height: 300px; pointer-events: none; }
+.hx-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hx-lines path { fill: none; stroke: rgba(47,84,235,.28); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+
+.hx-chip { position: absolute; display: inline-flex; align-items: center; gap: 7px; font: 500 12px var(--mono); letter-spacing: .02em; color: var(--ink2); background: var(--card); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; white-space: nowrap; }
+.hx-chip i { width: 7px; height: 7px; border-radius: 50%; background: #2F54EB; } .hx-chip i.g { background: #007F61; }
+ 
+.hx-chip.l1 { left: 0; top: 26px; } .hx-chip.l2 { left: -2%; top: 196px; }
+.hx-chip.r1 { right: -2%; top: 26px; } .hx-chip.r2 { right: 0; top: 196px; }
+.hx-chip.l1, .hx-chip.l2 { transform: translateX(-30%); } .hx-chip.r1, .hx-chip.r2 { transform: translateX(30%); }
+@media (max-width: 1180px) { .hx-chips { display: none; } }
+@media (max-width: 640px) { .hx-pill { font-size: 12.5px; } }
+
+.hero.hcx .eyebrow { margin-top: 0; }
+.hx-sika { display: inline-flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 30px; font: 500 12.5px var(--mono); color: var(--ink2); padding-top: 18px; border-top: 1px solid var(--line); }
+.hx-sika > b { color: var(--ink); font-family: var(--sans); font-weight: 700; font-size: 13px; }
+.hx-sika b.g { color: #007F61; } 
+.hx-dot { width: 7px; height: 7px; border-radius: 50%; background: #007F61; box-shadow: 0 0 0 3px rgba(0,127,97,.15); }
+
+
+/* No italics anywhere: emphasised words keep the quieter colour, in the regular font */
+html body em, html body h1 em, html body h2 em, html body h3 em, html body section h2 em, html body .pitch h1 em, html body .g-head h2 em, html body .final h2 em, html body .mf-h span, html body .bp-h em {
+  font-family: inherit !important; font-style: normal !important; font-weight: inherit !important; letter-spacing: inherit !important; }
+html body i, html body cite, html body address { font-style: normal !important; }
+html body .wordmark em, html body .brand em { font-weight: 500 !important; font-size: .82em; }
+html body section h2 em, html body .final h2 em { color: var(--ink2) !important; }
+.hero .hx-2 { background: linear-gradient(90deg, #1A36C4 0%, #2F54EB 50%, #7A95FF 100%); -webkit-background-clip: text; background-clip: text; color: transparent; padding-bottom: .06em; }
+
+
+/* Hero background: price shelves instead of dots, and a tape of finished setups inside the hub band */
+.hero.ns::before { display: none !important; }
+.hero.ns { overflow: hidden; }
+.hx-text { position: relative; padding-top: 34px; }
+.hx-lv { position: absolute; left: -50vw; right: -50vw; height: 0; border-top: 1px dashed rgba(47,84,235,.32); pointer-events: none; }
+.hx-lv span { position: absolute; right: calc(50vw + 0px); top: -19px; font: 500 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: #2F54EB; opacity: .8; white-space: nowrap; }
+.hx-lv.nx { top: 0; border-top-color: rgba(0,127,97,.38); } .hx-lv.nx span { color: #007F61; }
+.hx-band { position: relative; margin-top: 46px; height: 46px; display: flex; align-items: center; }
+.hx-band::before { content: ""; position: absolute; left: -50vw; right: -50vw; top: 0; bottom: 0; background: rgba(47,84,235,.03); }
+.hx-lv.ht { top: 0; } .hx-lv.hb { bottom: 0; } .hx-lv.hb span { top: 6px; }
+.hx-tape { position: relative; width: 100%; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.hx-track { display: inline-flex; gap: 34px; white-space: nowrap; font: 500 12.5px var(--mono); color: var(--ink2); animation: hxTape 34s linear infinite; }
+.hx-track.static { animation: none; justify-content: center; width: 100%; }
+.hx-it b { color: var(--ink); font-weight: 600; margin-right: 6px; }
+.hx-it .ok { color: #007F61; } .hx-it .no { color: #D1352B; } .hx-it .to { color: var(--ink2); }
+@keyframes hxTape { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .hx-track { animation: none; } }
+ 
+ 
+
+ 
+.hero.hcx + * {}
+.hero.hcx .bp { margin-top: 56px !important; }
+@media (max-width: 640px) { .hx-lv span { font-size: 10px; } .hx-text { padding-top: 30px; } }
+
+/* Hero: light blue wash from the top, fading into the page colour (option A) */
+.hero.ns { background: linear-gradient(180deg, rgba(90,115,255,.16) 0px, rgba(90,115,255,.06) 300px, rgba(90,115,255,0) 640px) !important; }
+/* the wash continues behind the nav, so there is no hard edge under it */
+.hero.ns { margin-top: -65px; padding-top: 137px !important; }
+nav.top { background: rgba(10,10,10,.92); }
+@media (max-width: 640px) { .hero.ns { padding-top: 121px !important; } }
+
+/* light theme: white surfaces become a soft light gray (inputs and small chips stay white) */
+
+
+/* Approved landing mockup: responsive theme switch and centered day-job hero */
+.theme-toggle{width:38px;height:38px;display:inline-grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:transparent;color:var(--ink);cursor:pointer;line-height:1;padding:0;flex:none}
+.theme-toggle:hover{background:rgba(127,127,127,.12)}
+.theme-toggle .ic-moon{display:none}
+[data-theme="light"] .theme-toggle .ic-sun{display:none}
+[data-theme="light"] .theme-toggle .ic-moon{display:block}
+.navend{gap:14px}
+.hero.ns.hcx{padding-top:112px!important;padding-bottom:40px!important}
+.hero.ns.hcx .eyebrow{color:#60A5FA;font-weight:700;letter-spacing:.18em}
+.hero.ns.hcx h1{max-width:16ch;font-size:clamp(36px,7.2vw,76px);line-height:1.02;letter-spacing:-.045em}
+.hero.ns.hcx h1 .hx-2{color:#8DBBFF;background:none;-webkit-text-fill-color:initial;text-shadow:0 0 28px rgba(74,144,255,.38)}
+.hero.ns.hcx .lede{max-width:62ch;font-size:clamp(16px,2vw,20px);line-height:1.7;text-align:center}
+.hero.ns.hcx .lede strong{color:var(--ink);font-weight:700}
+.hero.ns.hcx .lede .lede-glow{font-weight:800!important;background:none;-webkit-text-fill-color:#60A5FA;color:#60A5FA;text-shadow:none;filter:none}
+.hero.ns.hcx .ctas{margin-top:34px}
+.hero.ns.hcx .micro{font-size:13px;margin-top:18px}
+.hero.ns .hero-market{margin-top:58px}
+html[data-theme="light"]{
+ --paper:#F5F6F8;--card:#FFFFFF;--sunk:#ECEFF3;
+ --ink:#171A20;--ink2:#626B78;--ink3:#87909D;
+ --line:#DCE1E8;--blue:#2563EB;--blue-ink:#FFFFFF;
+ --up:#168653;--down:#D74747;--warn:#A86B00;color-scheme:light;
+}
+html[data-theme="light"] body{background:var(--paper);color:var(--ink)}
+html[data-theme="light"] nav.top{background:rgba(245,246,248,.94);border-color:var(--line)}
+html[data-theme="light"] .hero.ns{background:radial-gradient(ellipse 70% 44% at 50% 0%,rgba(37,99,235,.13),transparent 72%)}
+html[data-theme="light"] .hero-market,html[data-theme="light"] .setup-card,html[data-theme="light"] .record-rows{background:#fff;border-color:#DCE1E8;box-shadow:0 14px 40px rgba(22,34,55,.06)}
+html[data-theme="light"] .hero-chart{background:#F8FAFC;border-radius:12px}
+html[data-theme="light"] .hero-board{background:#fff;border-color:#DCE1E8}
+html[data-theme="light"] .hero-board div{border-color:#DCE1E8}
+html[data-theme="light"] .setup-art{background:#F1F5F9;border-color:#DCE1E8}
+html[data-theme="light"] #discipline{background:#EDF2F8;border-color:#DCE1E8}
+html[data-theme="light"] .discipline-item{background:#fff;border-color:#DCE1E8}
+html[data-theme="light"] .flow{--fl-bg:rgba(255,255,255,.92);--fl-line:rgba(20,30,45,.12);--fl-shadow:rgba(20,30,45,.08);--fl-ink:#171A20;--fl-mut:#626B78;--fl-card:#F8FAFC;--fl-grid:rgba(20,30,45,.08)}
+html[data-theme="light"] .btn.ghost{border-color:var(--line);color:var(--ink)}
+@media(max-width:640px){
+ .hero.ns.hcx{padding-top:112px!important}
+ .hero.ns.hcx h1{font-size:clamp(34px,9vw,48px);max-width:16ch}
+ .hero.ns.hcx .lede{font-size:16px;line-height:1.7}
+ .navend{gap:8px}.theme-toggle{width:34px;height:34px}
+ .navend .signin{font-size:12px}
+}
+
+
+/* Landing hero heading: neutral text, no blue/green glow */
+.hero.ns.hcx .eyebrow{color:var(--ink2)!important;text-shadow:none!important}
+.hero.ns.hcx h1,.hero.ns.hcx h1 .hx-2{color:var(--ink)!important;background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;-webkit-text-fill-color:var(--ink)!important;text-shadow:none!important;filter:none!important}
+.hero.ns.hcx .lede,.hero.ns.hcx .lede .hx-2,.hero.ns.hcx .lede strong{color:var(--ink2)!important;background:none!important;-webkit-text-fill-color:var(--ink2)!important;text-shadow:none!important;filter:none!important}
+.hero.ns.hcx .lede strong{color:var(--ink)!important;font-weight:700}
+
+/* Gradient glow for the hero callout in both themes */
+.hero.ns.hcx .lede strong.lede-glow{
+ font-weight:600!important;
+ background:none!important;
+ -webkit-background-clip:border-box!important;
+ background-clip:border-box!important;
+ -webkit-text-fill-color:#65B5FF!important;
+ color:#65B5FF!important;
+ text-shadow:0 0 9px rgba(56,150,255,.48),0 0 22px rgba(37,99,235,.25)!important;
+ filter:none!important;
+}
+
+
+/* Selective hero emphasis: blue glow only on the key phrases */
+.hero.ns.hcx h1 .hx-2{
+ color:#8DBBFF!important;
+ -webkit-text-fill-color:#8DBBFF!important;
+ text-shadow:0 0 12px rgba(70,145,255,.58),0 0 30px rgba(37,99,235,.34)!important;
+ filter:none!important;
+}
+.hero.ns.hcx .lede .hx-2{
+ color:#65B5FF!important;
+ -webkit-text-fill-color:#65B5FF!important;
+ text-shadow:0 0 9px rgba(56,150,255,.48),0 0 22px rgba(37,99,235,.25)!important;
+ font-weight:600;
+}
+
+
+/* Consistent selective blue emphasis across section and card headings */
+.heading-glow{
+ color:#8DBBFF!important;
+ -webkit-text-fill-color:#8DBBFF!important;
+ text-shadow:0 0 10px rgba(70,145,255,.48),0 0 24px rgba(37,99,235,.28)!important;
+}
+
+
+/* Restore oversized background WAIT and make the footer brand stamp visible */
+.hero.ns.hcx{isolation:isolate}
+.hero.ns.hcx .hx-ghost{z-index:0;top:48%;color:rgba(141,187,255,.075);font-size:clamp(150px,34vw,360px);letter-spacing:-.055em;text-shadow:0 0 70px rgba(37,99,235,.12)}
+html[data-theme="light"] .hero.ns.hcx .hx-ghost{color:rgba(37,99,235,.09);text-shadow:0 0 70px rgba(37,99,235,.10)}
+footer .ft-giant{color:rgba(141,187,255,.16);background:radial-gradient(60% 95% at 50% 100%,rgba(47,84,235,.24),rgba(47,84,235,0) 70%);text-shadow:0 0 55px rgba(37,99,235,.12)}
+html[data-theme="light"] footer .ft-giant{color:rgba(37,99,235,.18)}
+@media(max-width:640px){.hero.ns.hcx .hx-ghost{font-size:clamp(116px,31vw,190px);top:43%}.ft-giant{font-size:20vw}}
+
 </style>
 </head>
 <body>
 
-<nav><div class="wrap">
-  <a class="brand" href="/"><span class="logo">↗</span> NextShelf</a>
-  <div class="navlinks">
-    <a href="#how" class="on">How it works</a>
-    <a href="#record">The record</a>
-    <div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div>
-    <div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div>
-    <a href="#faq">FAQ</a>
-  </div>
-  <div class="navcta" id="navEnd"><a class="signin" href="/login">Sign in</a><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div>
+<nav class="top"><div class="wrap">
+  <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
+  <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
+  <div class="navlinks"><a href="#how">How it works</a><a href="#setups">Setups</a><a href="#record">The record</a><a href="#discipline">Discipline</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="#faq">FAQ</a></div>
+  <div class="navend"><a class="signin" href="/login" id="signInLink">Sign in</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l-1.6 1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><span id="navEnd" class="navend"><a class="btn sm blue" href="#join" data-cta>Join the waitlist</a></span></div>
 </div></nav>
 
-<div class="wrap">
-<header class="hero">
-  <div class="ghost" aria-hidden="true">wait.</div>
-  <p class="eyebrow">PLAYBOOK FOR PEOPLE WITH DAY JOBS</p>
-  <h1>We <span class="glow">find the setup</span>. You add it to your watchlist. We <span class="glow-g">watch it</span>.</h1>
-  <p class="lede">Not a signal — a <span class="glow">tap on the shoulder</span> when something's happening. One setup, the rules, and the record.</p>
-  <div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><a class="btn ghost" href="#how">See how it works</a></div>
-  <p class="micro">We'll email you when your spot opens · Educational, not financial advice</p>
+<header class="hero ns hcx"><div class="hx-ghost" aria-hidden="true">WAIT</div><div class="wrap"><div class="eyebrow">Playbook for people with day jobs</div><h1>We <span class="hx-2">watch your setup</span><br>while you go do other things.</h1><p class="lede">NextShelf is not a signal, it’s a <span class="hx-2">tap on the shoulder</span> — <strong class="lede-glow">hey, check that setup, something is happening.</strong> One setup, the rules for it, and the record. Built for swing traders with day jobs.</p><div class="ctas"><a class="btn blue" href="#join" data-cta>Join the waitlist</a></div><div class="micro">We’ll email you when your spot opens · Educational, not financial advice</div><div class="hero-market" id="heroMarket"><div class="hero-market-head"><div><span class="kicker">AVGO · 4H · live chart</span><h2>AVGO <span>· 4H</span></h2></div><div class="hero-quote"><b id="heroPrice">Loading…</b><small id="heroUpdated">Market data loading</small></div></div><div class="hero-chart" id="heroChart" role="img" aria-label="AVGO four-hour candlestick chart"><div class="chart-loading">Loading AVGO price history…</div></div><div class="hero-market-foot"><span id="heroHub">Hub levels load with chart data</span><span id="heroTarget">Target shown when available</span></div></div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
 
-  <div class="ticker">
-    <div class="tk-head"><h2>COR</h2><span class="px">$359.05</span><span class="mkt">● Market closed</span></div>
 
-    <div class="chartcard">
-      <div class="cc-head"><h3>Chart</h3><span class="sub">COR · 4H · NextShelf</span><span class="closed">MARKET CLOSED</span></div>
-      <div class="chartbtns"><span class="cbtn">▶ Replay</span><span class="cbtn">✎ Plan my trade</span><span class="cbtn green">⚡︎ Trade this</span></div>
-      <div class="switchers"><span class="seg"><span class="on">4H</span><span>1D</span></span><span class="seg" style="margin-left:auto"><span>1W</span><span>2W</span><span class="on">1M</span><span>3M</span></span></div>
-      <svg viewBox="0 0 800 360" style="width:100%;display:block" role="img" aria-label="COR 4-hour candles, black and white, last 20 blocks, Nov 2 to Nov 13"><rect x="0" y="0" width="800" height="300" fill="#121418"/><line x1="0" y1="275.0" x2="728" y2="275.0" stroke="#232529" stroke-width="1"/><text x="738" y="279.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#9AA0AC">330.00</text><line x1="0" y1="225.0" x2="728" y2="225.0" stroke="#232529" stroke-width="1"/><text x="738" y="229.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#9AA0AC">340.00</text><line x1="0" y1="175.0" x2="728" y2="175.0" stroke="#232529" stroke-width="1"/><text x="738" y="179.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#9AA0AC">350.00</text><line x1="0" y1="125.0" x2="728" y2="125.0" stroke="#232529" stroke-width="1"/><text x="738" y="129.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#9AA0AC">360.00</text><line x1="0" y1="75.0" x2="728" y2="75.0" stroke="#232529" stroke-width="1"/><text x="738" y="79.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#9AA0AC">370.00</text><line x1="0" y1="25.0" x2="728" y2="25.0" stroke="#232529" stroke-width="1"/><text x="738" y="29.0" font-family="JetBrains Mono,monospace" font-size="11" fill="#9AA0AC">380.00</text><rect x="0" y="144.0" width="728" height="55.3" fill="#3B82F6" opacity="0.10"/><line x1="0" y1="144.0" x2="728" y2="144.0" stroke="#60A5FA" stroke-width="1" stroke-dasharray="5 4" opacity="0.6"/><line x1="0" y1="199.3" x2="728" y2="199.3" stroke="#60A5FA" stroke-width="1" stroke-dasharray="5 4" opacity="0.6"/><text x="8" y="139.0" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#60A5FA">HUB $345.15–$356.20</text><line x1="0" y1="25.0" x2="728" y2="25.0" stroke="#EAB308" stroke-width="1.5"/><text x="8" y="20.0" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#EAB308">CALL WALL $380.00</text><line x1="0" y1="110.8" x2="728" y2="110.8" stroke="#22A35C" stroke-width="1.5"/><text x="8" y="105.8" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#22A35C">TARGET $362.84</text><line x1="37.0" y1="245.9" x2="37.0" y2="279.3" stroke="#FFFFFF" stroke-width="1.5"/><rect x="26.0" y="249.3" width="22.0" height="9.4" fill="#FFFFFF" rx="1"/><line x1="72.5" y1="234.0" x2="72.5" y2="252.7" stroke="#FFFFFF" stroke-width="1.5"/><rect x="61.5" y="235.6" width="22.0" height="13.7" fill="#FFFFFF" rx="1"/><line x1="108.0" y1="214.6" x2="108.0" y2="253.5" stroke="#FFFFFF" stroke-width="1.5"/><rect x="97.0" y="228.3" width="22.0" height="17.2" fill="#FFFFFF" rx="1"/><line x1="143.5" y1="218.7" x2="143.5" y2="233.8" stroke="#FFFFFF" stroke-width="1.5"/><rect x="132.5" y="222.1" width="22.0" height="5.5" fill="#FFFFFF" rx="1"/><line x1="179.0" y1="154.7" x2="179.0" y2="241.4" stroke="#FFFFFF" stroke-width="1.5"/><rect x="168.0" y="170.5" width="22.0" height="43.5" fill="#FFFFFF" rx="1"/><line x1="214.5" y1="146.8" x2="214.5" y2="182.7" stroke="#FFFFFF" stroke-width="1.5"/><rect x="203.5" y="154.9" width="22.0" height="16.3" fill="#FFFFFF" rx="1"/><line x1="250.0" y1="105.3" x2="250.0" y2="218.6" stroke="#E9EBEF" stroke-width="1.5"/><rect x="239.0" y="125.7" width="22.0" height="87.4" fill="#000000" stroke="#E9EBEF" stroke-width="1" rx="1"/><line x1="285.5" y1="207.6" x2="285.5" y2="237.4" stroke="#E9EBEF" stroke-width="1.5"/><rect x="274.5" y="213.7" width="22.0" height="11.8" fill="#000000" stroke="#E9EBEF" stroke-width="1" rx="1"/><line x1="321.0" y1="232.3" x2="321.0" y2="261.6" stroke="#FFFFFF" stroke-width="1.5"/><rect x="310.0" y="244.1" width="22.0" height="12.9" fill="#FFFFFF" rx="1"/><line x1="356.5" y1="235.4" x2="356.5" y2="259.5" stroke="#E9EBEF" stroke-width="1.5"/><rect x="345.5" y="243.1" width="22.0" height="14.6" fill="#000000" stroke="#E9EBEF" stroke-width="1" rx="1"/><line x1="392.0" y1="187.9" x2="392.0" y2="242.3" stroke="#FFFFFF" stroke-width="1.5"/><rect x="381.0" y="189.7" width="22.0" height="42.4" fill="#FFFFFF" rx="1"/><line x1="427.5" y1="188.4" x2="427.5" y2="201.6" stroke="#E9EBEF" stroke-width="1.5"/><rect x="416.5" y="189.6" width="22.0" height="6.6" fill="#000000" stroke="#E9EBEF" stroke-width="1" rx="1"/><line x1="463.0" y1="180.4" x2="463.0" y2="212.0" stroke="#FFFFFF" stroke-width="1.5"/><rect x="452.0" y="180.8" width="22.0" height="9.2" fill="#FFFFFF" rx="1"/><line x1="498.5" y1="174.1" x2="498.5" y2="187.4" stroke="#E9EBEF" stroke-width="1.5"/><rect x="487.5" y="180.7" width="22.0" height="2.0" fill="#000000" stroke="#E9EBEF" stroke-width="1" rx="1"/><line x1="534.0" y1="181.8" x2="534.0" y2="202.5" stroke="#FFFFFF" stroke-width="1.5"/><rect x="523.0" y="189.1" width="22.0" height="7.5" fill="#FFFFFF" rx="1"/><line x1="569.5" y1="174.1" x2="569.5" y2="190.2" stroke="#FFFFFF" stroke-width="1.5"/><rect x="558.5" y="175.5" width="22.0" height="13.3" fill="#FFFFFF" rx="1"/><line x1="605.0" y1="150.8" x2="605.0" y2="181.6" stroke="#E9EBEF" stroke-width="1.5"/><rect x="594.0" y="160.3" width="22.0" height="20.1" fill="#000000" stroke="#E9EBEF" stroke-width="1" rx="1"/><line x1="640.5" y1="170.7" x2="640.5" y2="180.2" stroke="#FFFFFF" stroke-width="1.5"/><rect x="629.5" y="178.1" width="22.0" height="2.0" fill="#FFFFFF" rx="1"/><line x1="676.0" y1="141.5" x2="676.0" y2="174.5" stroke="#FFFFFF" stroke-width="1.5"/><rect x="665.0" y="144.0" width="22.0" height="25.4" fill="#FFFFFF" rx="1"/><line x1="711.5" y1="128.0" x2="711.5" y2="145.5" stroke="#FFFFFF" stroke-width="1.5"/><rect x="700.5" y="129.5" width="22.0" height="14.7" fill="#FFFFFF" rx="1"/><g><rect x="610" y="118" width="82" height="20" rx="10" fill="#3B82F6"/><text x="651" y="132" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#FFFFFF">↩ RETEST</text></g><rect x="732" y="118.7" width="62" height="22" rx="4" fill="#22A35C"/><text x="763" y="133.7" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="700" fill="#fff">359.05</text><g transform="translate(0,304)"><rect x="26.0" y="33.2" width="22.0" height="22.8" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="61.5" y="32.5" width="22.0" height="23.5" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="97.0" y="33.9" width="22.0" height="22.1" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="132.5" y="23.7" width="22.0" height="32.3" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="168.0" y="0.0" width="22.0" height="56.0" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="203.5" y="16.0" width="22.0" height="40.0" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="239.0" y="13.4" width="22.0" height="42.6" fill="#9AA0AC" opacity="0.55" rx="1"/><rect x="274.5" y="28.6" width="22.0" height="27.4" fill="#9AA0AC" opacity="0.55" rx="1"/><rect x="310.0" y="36.0" width="22.0" height="20.0" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="345.5" y="31.0" width="22.0" height="25.0" fill="#9AA0AC" opacity="0.55" rx="1"/><rect x="381.0" y="27.4" width="22.0" height="28.6" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="416.5" y="38.6" width="22.0" height="17.4" fill="#9AA0AC" opacity="0.55" rx="1"/><rect x="452.0" y="41.2" width="22.0" height="14.8" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="487.5" y="35.1" width="22.0" height="20.9" fill="#9AA0AC" opacity="0.55" rx="1"/><rect x="523.0" y="43.3" width="22.0" height="12.7" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="558.5" y="39.7" width="22.0" height="16.3" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="594.0" y="43.2" width="22.0" height="12.8" fill="#9AA0AC" opacity="0.55" rx="1"/><rect x="629.5" y="43.4" width="22.0" height="12.6" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="665.0" y="38.9" width="22.0" height="17.1" fill="#FFFFFF" opacity="0.55" rx="1"/><rect x="700.5" y="31.3" width="22.0" height="24.7" fill="#FFFFFF" opacity="0.55" rx="1"/></g></svg>
-      <p class="chartnote">Tap a candle or a line for details · pinch to zoom.</p>
-    </div>
-
-    <div class="strip">
-      <div class="bar"><h3>Broke out · waiting for the retest</h3><p>Entry comes on a pullback to $356.20 that holds (5 candles left).</p></div>
-      <div class="stripgrid">
-        <div class="cell"><small>LAST CLOSE</small><b class="blue">$359.05</b><i>4-hour close</i></div>
-        <div class="cell"><small>TRIGGER</small><b class="cool">⚡︎ $356.20</b><i>4H close above</i></div>
-        <div class="cell"><small>TARGET</small><b class="green">⚑ $362.84</b><i class="pct">no shelf above: 1 ATR past hub top</i></div>
-        <div class="cell"><small>HUB</small><b>$345.15–$356.20</b><i>14 sessions</i></div>
-        <div class="cell" style="border-right:none"><small>CALL WALL</small><b class="red">$380.00</b><i class="pct">+5.8% from here</i></div>
-      </div>
-    </div>
-
-    <div class="duo">
-      <div class="journey">
-        <h4>SETUP JOURNEY · HUB BREAKOUT</h4>
-        <div class="jsteps">
-          <div class="jstep done"><div class="dot">☰</div>Inside the hub</div>
-          <div class="jline"></div>
-          <div class="jstep now"><div class="dot">⚡︎</div><b>4H close above</b><br><span class="nowtag">Now</span></div>
-          <div class="jline"></div>
-          <div class="jstep next"><div class="dot">↩︎</div>Retest</div>
-          <div class="jline"></div>
-          <div class="jstep todo"><div class="dot">⚑</div>Next shelf</div>
-        </div>
-      </div>
-      <div class="grade">
-        <div class="g-top">
-          <div class="badge">A</div>
-          <div><h3>Setup grade: Strong</h3>
-          <p>Hub A retests made <b>+0.50%</b> per trade over two years (319 trades, 51.7% won). Only 1 on COR itself — too few to grade. Breakout-close entries on COR lost <b>0.12%</b> per trade. That's why we wait for the retest.</p></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="sika">
-      <div class="s-head"><div class="avatar">🤖</div><h3>Sika</h3><span class="pe">Plain English</span></div>
-      <p class="bubble">COR closed <span class="grn">above the hub at $356.20</span>. Aiming for <b>$362.84</b>. Entry on a pullback to <b>$356.20</b> that holds — 5 candles left. Wrong below <b>$356.20</b>.</p>
-      <div class="ask"><span>Ask Sika</span><span>›</span></div>
-      <p class="disc">Based on NextShelf's rules and past prices. For education only, not financial advice.</p>
-    </div>
-
-    <div class="ctx">
-      <h4>CONTEXT</h4>
-      <div class="row"><span class="ic">📅</span><span>Last earnings Nov 4</span><span class="arr">›</span></div>
-      <div class="row"><span class="ic">✓</span><span><b>6 of 8</b> past breakouts reached the shelf</span><span class="arr">›</span></div>
-      <div class="row"><span class="ic">📉</span><span><span class="amber">Market</span> <b>downtrend</b> · <span class="amber">Health: 2 breaking out</span></span><span class="arr">›</span></div>
-      <div class="row"><span class="ic">📰</span><span>Cencora (COR) — health care distribution <span style="color:#6B7280">Fri, Nov 13</span></span><span class="arr">›</span></div>
-      <div class="row"><span class="ic">🧱</span><span>Call wall <b>$380.00 (+5.8%)</b></span><span class="arr">›</span></div>
-    </div>
-
-    <div class="gameplan"><h3>Game plan</h3><span>4 steps, plus the order plan ⌄</span></div>
-  </div>
-
-  <div class="boardstrip">
-    <h2>The board, <span class="glow-g">right now.</span></h2>
-    <p class="sub2">COR is one setup. The board watches 543 stocks the same way, after every 4-hour close.</p>
-    <div class="counts">
-      <span><b id="cSwept">400</b> swept</span>
-      <span><b id="cLive">5</b> breakouts in play</span>
-      <span><b id="cNear">265</b> at a hub edge</span>
-      <span><b class="g">2</b> retesting now</span>
-    </div>
-    <div class="map" aria-hidden="true">
-      <span class="tile up">ADM</span><span class="tile"></span><span class="tile edge">COR</span><span class="tile"></span><span class="tile"></span><span class="tile up"></span><span class="tile"></span><span class="tile"></span><span class="tile edge"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span>
-      <span class="tile"></span><span class="tile"></span><span class="tile up">AMAT</span><span class="tile"></span><span class="tile"></span><span class="tile edge"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile up">AVGO</span><span class="tile"></span><span class="tile"></span>
-      <span class="tile"></span><span class="tile edge"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile up"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile edge"></span><span class="tile"></span>
-      <span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile down"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile edge"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile up"></span>
-    </div>
-    <div class="mini-cards">
-      <div class="mc"><span class="t">ADM</span> · Broke out · waiting for the retest<br>Trigger <b>$72.16</b> · Aim <b>$73.06</b> · Wrong if <b>$72.16</b> · 5 candles left · Grade <b>A</b></div>
-      <div class="mc"><span class="t">COR</span> · Broke out · waiting for the retest<br>Trigger <b>$356.20</b> · Aim <b>$362.84</b> · Wrong if <b>$356.20</b> · 5 candles left · Grade <b>A</b></div>
-    </div>
-  </div>
-  <p class="micro" style="margin-bottom:28px">A snapshot of the live board and the COR ticker page, Friday Nov 13 close. On the real page both are live — the same board and the same ticker page members use, not screenshots.</p>
-</header>
-</div>
-
-<section id="how"><div class="wrap">
-  <p class="kicker">FROM HUB TO ALERT</p>
-  <h2 class="sec">Four steps. One <span class="glow">clear plan.</span></h2>
-  <p class="sec-sub">A hub is where orders pile up. We watch it — and tap you only when the rules say so.</p>
+<section id="how" class="band"><div class="wrap">
+  <div class="kicker">How it works</div>
+  <h2>Three steps. <span class="heading-glow">One clear plan.</span></h2>
   <div class="steps">
-    <div class="step"><span class="n">01</span>
-      <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Candles closing inside a hub zone"><rect x="14" y="62" width="292" height="70" fill="#2563EB" opacity="0.12"/><line x1="14" y1="62" x2="306" y2="62" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/><line x1="14" y1="132" x2="306" y2="132" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/><text x="20" y="54" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#60A5FA">HUB</text><g stroke-width="2"><line x1="30" y1="88" x2="30" y2="118" stroke="#FFFFFF"/><rect x="23" y="95" width="14" height="15" fill="#FFFFFF"/><line x1="58" y1="90" x2="58" y2="115" stroke="#E9EBEF"/><rect x="51" y="95" width="14" height="13" fill="#000000" stroke="#E9EBEF"/><line x1="86" y1="95" x2="86" y2="112" stroke="#FFFFFF"/><rect x="79" y="100" width="14" height="8" fill="#FFFFFF"/><line x1="114" y1="96" x2="114" y2="120" stroke="#E9EBEF"/><rect x="107" y="100" width="14" height="12" fill="#000000" stroke="#E9EBEF"/><line x1="142" y1="98" x2="142" y2="116" stroke="#FFFFFF"/><rect x="135" y="104" width="14" height="8" fill="#FFFFFF"/><line x1="170" y1="100" x2="170" y2="122" stroke="#E9EBEF"/><rect x="163" y="104" width="14" height="12" fill="#000000" stroke="#E9EBEF"/><line x1="198" y1="100" x2="198" y2="120" stroke="#FFFFFF"/><rect x="191" y="106" width="14" height="10" fill="#FFFFFF"/><line x1="226" y1="102" x2="226" y2="124" stroke="#E9EBEF"/><rect x="219" y="106" width="14" height="12" fill="#000000" stroke="#E9EBEF"/><line x1="254" y1="102" x2="254" y2="122" stroke="#FFFFFF"/><rect x="247" y="108" width="14" height="10" fill="#FFFFFF"/><line x1="282" y1="104" x2="282" y2="118" stroke="#E9EBEF"/><rect x="275" y="108" width="14" height="6" fill="#000000" stroke="#E9EBEF"/></g><text x="160" y="172" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#9AA0AC">4+ candles · closes stay inside</text></svg></div>
-      <h3>A hub forms</h3><p>4-hour closes hold inside a tight range for at least 4 four-hour candles. The stock is coiling, and there's no trade yet.</p></div>
-    <div class="step"><span class="n">02</span>
-      <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A wick pokes above the hub but only a close counts as a breakout"><rect x="14" y="90" width="292" height="60" fill="#2563EB" opacity="0.12"/><line x1="14" y1="90" x2="306" y2="90" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/><line x1="14" y1="150" x2="306" y2="150" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/><text x="20" y="82" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#60A5FA">HUB</text><g stroke-width="2"><line x1="36" y1="110" x2="36" y2="130" stroke="#FFFFFF"/><rect x="29" y="115" width="14" height="10" fill="#FFFFFF"/><line x1="70" y1="112" x2="70" y2="132" stroke="#E9EBEF"/><rect x="63" y="115" width="14" height="13" fill="#000000" stroke="#E9EBEF"/><line x1="104" y1="116" x2="104" y2="132" stroke="#FFFFFF"/><rect x="97" y="120" width="14" height="8" fill="#FFFFFF"/><line x1="138" y1="118" x2="138" y2="134" stroke="#E9EBEF"/><rect x="131" y="120" width="14" height="10" fill="#000000" stroke="#E9EBEF"/><line x1="176" y1="66" x2="176" y2="136" stroke="#6B7280"/><rect x="169" y="118" width="14" height="12" fill="#6B7280" opacity="0.4"/><line x1="238" y1="66" x2="238" y2="102" stroke="#FFFFFF"/><rect x="231" y="72" width="14" height="24" fill="#FFFFFF"/></g><circle cx="238" cy="84" r="30" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="4 3"/><text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#6B7280">wick: not a setup</text><text x="238" y="186" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#FFFFFF">close: breakout</text></svg></div>
-      <h3>A candle closes outside</h3><p>The first 4-hour close beyond the hub is the breakout, never the wick. A wick through the edge is not a setup.</p></div>
-    <div class="step"><span class="n">03</span>
-      <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Price breaks out, pulls back to the hub edge, holds, then travels to the shelf"><rect x="14" y="140" width="110" height="38" fill="#2563EB" opacity="0.12"/><line x1="14" y1="140" x2="124" y2="140" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/><line x1="14" y1="178" x2="124" y2="178" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/><text x="18" y="132" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#60A5FA">HUB</text><rect x="196" y="34" width="110" height="34" fill="#3DD68C" opacity="0.10"/><line x1="196" y1="34" x2="306" y2="34" stroke="#3DD68C" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/><line x1="196" y1="68" x2="306" y2="68" stroke="#3DD68C" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/><text x="200" y="26" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#3DD68C">SHELF · TARGET</text><g stroke-width="2"><line x1="60" y1="146" x2="60" y2="172" stroke="#E9EBEF"/><rect x="53" y="150" width="14" height="12" fill="#000000" stroke="#E9EBEF"/><line x1="88" y1="140" x2="88" y2="166" stroke="#FFFFFF"/><rect x="81" y="146" width="14" height="12" fill="#FFFFFF"/><line x1="118" y1="118" x2="118" y2="152" stroke="#FFFFFF"/><rect x="111" y="124" width="14" height="22" fill="#FFFFFF"/><line x1="158" y1="118" x2="158" y2="140" stroke="#E9EBEF"/><rect x="151" y="120" width="14" height="8" fill="#000000" stroke="#E9EBEF"/><line x1="188" y1="76" x2="188" y2="104" stroke="#FFFFFF"/><rect x="181" y="82" width="14" height="16" fill="#FFFFFF"/><line x1="218" y1="50" x2="218" y2="72" stroke="#FFFFFF"/><rect x="211" y="54" width="14" height="12" fill="#FFFFFF"/></g><circle cx="158" cy="130" r="26" fill="none" stroke="#60A5FA" stroke-width="1.5" stroke-dasharray="4 3"/><path d="M168,122 C185,105 198,85 212,62" fill="none" stroke="#E9EBEF" stroke-width="1.5" stroke-dasharray="5 4"/><path d="M212,62 l-11,1 l7,8 z" fill="#E9EBEF"/><text x="158" y="186" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#60A5FA">RETEST</text></svg></div>
-      <h3>The retest is the entry</h3><p>Price pulls back to the hub edge within five 4-hour candles. If the close holds the edge, that's the entry — the shelf above is the target, and the edge is the kill price.</p></div>
-    <div class="step"><span class="n">04</span>
-      <div class="alert-mini"><span class="t">ADM</span> · Broke out · waiting for the retest<br>Trigger <b>$72.16</b> · Aim <b>$73.06</b> · Wrong if <b>$72.16</b> · Grade <b>A</b></div>
-      <h3>The alert carries the plan</h3><p>Trigger, target, stop, and the grade — in the message. You decide, you manage the trade, you own the exit.</p></div>
+    <div class="step"><div class="num">01</div>
+      <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Candles closing inside a hub zone">
+        <rect x="14" y="62" width="292" height="70" fill="#2F54EB" opacity="0.07"/>
+        <line x1="14" y1="62" x2="306" y2="62" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
+        <line x1="14" y1="132" x2="306" y2="132" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
+        <text x="20" y="54" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#2F54EB">HUB</text>
+        <g stroke-width="2">
+          <line x1="30" y1="88" x2="30" y2="118" stroke="#FFFFFF"/><rect x="23" y="95" width="14" height="15" fill="#FFFFFF"/>
+          <line x1="58" y1="90" x2="58" y2="115" stroke="#FFFFFF"/><rect x="51" y="95" width="14" height="13" fill="#000000"/>
+          <line x1="86" y1="95" x2="86" y2="112" stroke="#FFFFFF"/><rect x="79" y="100" width="14" height="8" fill="#FFFFFF"/>
+          <line x1="114" y1="96" x2="114" y2="120" stroke="#FFFFFF"/><rect x="107" y="100" width="14" height="12" fill="#000000"/>
+          <line x1="142" y1="98" x2="142" y2="116" stroke="#FFFFFF"/><rect x="135" y="104" width="14" height="8" fill="#FFFFFF"/>
+          <line x1="170" y1="100" x2="170" y2="122" stroke="#FFFFFF"/><rect x="163" y="104" width="14" height="12" fill="#000000"/>
+          <line x1="198" y1="100" x2="198" y2="120" stroke="#FFFFFF"/><rect x="191" y="106" width="14" height="10" fill="#FFFFFF"/>
+          <line x1="226" y1="102" x2="226" y2="124" stroke="#FFFFFF"/><rect x="219" y="106" width="14" height="12" fill="#000000"/>
+          <line x1="254" y1="102" x2="254" y2="122" stroke="#FFFFFF"/><rect x="247" y="108" width="14" height="10" fill="#FFFFFF"/>
+          <line x1="282" y1="104" x2="282" y2="118" stroke="#FFFFFF"/><rect x="275" y="108" width="14" height="6" fill="#000000"/>
+        </g>
+        <text x="160" y="172" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#5C5B55">4+ candles · closes stay inside</text>
+      </svg></div>
+      <h3>A hub <span class="heading-glow">forms</span></h3><p>4-hour closes hold inside a tight range for at least 4 four-hour candles. The stock is coiling, and there's no trade yet.</p></div>
+    <div class="step"><div class="num">02</div>
+      <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A wick pokes above the hub but only a close counts as a breakout">
+        <rect x="14" y="90" width="292" height="60" fill="#2F54EB" opacity="0.07"/>
+        <line x1="14" y1="90" x2="306" y2="90" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
+        <line x1="14" y1="150" x2="306" y2="150" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
+        <text x="20" y="82" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#2F54EB">HUB</text>
+        <g stroke-width="2">
+          <line x1="36" y1="110" x2="36" y2="130" stroke="#FFFFFF"/><rect x="29" y="115" width="14" height="10" fill="#FFFFFF"/>
+          <line x1="70" y1="112" x2="70" y2="132" stroke="#FFFFFF"/><rect x="63" y="115" width="14" height="13" fill="#000000"/>
+          <line x1="104" y1="116" x2="104" y2="132" stroke="#FFFFFF"/><rect x="97" y="120" width="14" height="8" fill="#FFFFFF"/>
+          <line x1="138" y1="118" x2="138" y2="134" stroke="#FFFFFF"/><rect x="131" y="120" width="14" height="10" fill="#000000"/>
+          <line x1="176" y1="66" x2="176" y2="136" stroke="#FFFFFF"/><rect x="169" y="118" width="14" height="12" fill="#000000" opacity="0.4"/>
+          <line x1="238" y1="66" x2="238" y2="102" stroke="#FFFFFF"/><rect x="231" y="72" width="14" height="24" fill="#FFFFFF"/>
+        </g>
+        <circle cx="238" cy="84" r="30" fill="none" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <text x="176" y="170" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" fill="#000000">wick: not a setup</text>
+        <text x="238" y="186" text-anchor="middle" font-family="Inter,sans-serif" font-size="12" font-weight="600" fill="#141412">close: breakout</text>
+      </svg></div>
+      <h3>A candle <span class="heading-glow">closes</span> outside</h3><p>The first 4-hour <b>close</b> beyond the hub is the breakout, never the wick. On Pro you're warned about 15 minutes before it prints.</p></div>
+    <div class="step"><div class="num">03</div>
+      <div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="Price breaks out of the hub and travels to the shelf target">
+        <rect x="14" y="140" width="110" height="38" fill="#2F54EB" opacity="0.07"/>
+        <line x1="14" y1="140" x2="124" y2="140" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.6"/>
+        <text x="18" y="132" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#2F54EB">HUB</text>
+        <rect x="196" y="34" width="110" height="34" fill="#FFFFFF" opacity="0.08"/>
+        <line x1="196" y1="34" x2="306" y2="34" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+        <line x1="196" y1="68" x2="306" y2="68" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="5 4" opacity="0.7"/>
+        <text x="200" y="26" font-family="JetBrains Mono,monospace" font-size="10" letter-spacing="2" fill="#FFFFFF">SHELF · TARGET</text>
+        <g stroke-width="2">
+          <line x1="60" y1="146" x2="60" y2="172" stroke="#FFFFFF"/><rect x="53" y="150" width="14" height="12" fill="#000000"/>
+          <line x1="88" y1="140" x2="88" y2="166" stroke="#FFFFFF"/><rect x="81" y="146" width="14" height="12" fill="#FFFFFF"/>
+          <line x1="118" y1="118" x2="118" y2="152" stroke="#FFFFFF"/><rect x="111" y="124" width="14" height="22" fill="#FFFFFF"/>
+          <line x1="158" y1="100" x2="158" y2="128" stroke="#FFFFFF"/><rect x="151" y="106" width="14" height="16" fill="#FFFFFF"/>
+          <line x1="188" y1="76" x2="188" y2="104" stroke="#FFFFFF"/><rect x="181" y="82" width="14" height="16" fill="#FFFFFF"/>
+        </g>
+        <path d="M132,124 C160,108 178,92 200,72" fill="none" stroke="#141412" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <path d="M200,72 l-11,1 l7,8 z" fill="#141412"/>
+      </svg></div>
+      <h3>It travels <span class="heading-glow">to the shelf</span></h3><p>Earlier hubs act as shelves. The nearest one is the target; a close back inside the hub means it failed. Entry, target and exit, set before you enter.</p></div>
+  <div class="step"><div class="num">04</div><div class="illus"><svg viewBox="0 0 320 190" width="100%" role="img" aria-label="A planned trade with target and invalidation"><rect x="28" y="28" width="264" height="134" rx="12" fill="#121820" stroke="#283344"/><line x1="48" y1="68" x2="272" y2="68" stroke="#3DD68C" stroke-width="2"/><line x1="48" y1="112" x2="272" y2="112" stroke="#F87171" stroke-width="2"/><line x1="48" y1="90" x2="272" y2="90" stroke="#8EA2FF" stroke-width="2"/><text x="56" y="58" fill="#3DD68C" font-size="11">TARGET</text><text x="56" y="83" fill="#8EA2FF" font-size="11">ENTRY PLAN</text><text x="56" y="132" fill="#F87171" font-size="11">INVALIDATION</text><path d="M220 108l18 -18 14 5 18 -31" fill="none" stroke="#E9EBEF" stroke-width="2.5"/></svg></div><h3>Make <span class="heading-glow">your decision</span></h3><p>Review the entry, next shelf and invalidation level. Set your own risk, place your order—or pass. The tool informs the decision; it never makes it for you.</p></div></div>
+
+  <div class="demo-copy">
+    <h3>From hub to alert, <span class="heading-glow">on your phone.</span></h3>
+    <p>Hubs, start to finish: the warning before the close, the confirmation on the close, the target when it hits. On Telegram, or on Pro by text or a phone call. Most days the scanner says nothing. That's the discipline, built in. Two more setups ride alongside: double tops and bottoms, and the post-earnings gap fade &amp; rip.</p>
   </div>
-</div></section>
 
-<section class="band" id="setups"><div class="wrap">
-  <p class="kicker">THREE SETUPS, NOT THIRTY</p>
-  <h2 class="sec">One playbook. Three <span class="glow">measured setups.</span></h2>
-  <p class="sec-sub">Everything else is watch-only until the Lab measures it. These three have a graded record behind them.</p>
-  <div class="setups">
-    <div class="setup"><h3>Hub breakout</h3><p class="lab">A retest · <b>+0.50%</b> a trade · 320 trades</p><p>The breakout is a heads-up. The retest is the entry. The shelf above is the target. Room 1.5× or more, long pattern, 1 ATR stop.</p></div>
-    <div class="setup"><h3>Double bottom</h3><p class="lab">A retest · <b>+0.30%</b> a trade · 239 trades</p><p>Two lows, a neckline, and a 4:00 PM retest close. The entry isn't taken past halfway to the target.</p></div>
-    <div class="setup"><h3>Gap fade &amp; rip</h3><p class="lab">Post-earnings · <b>+2.77%</b> a trade · 341 trades</p><p>A stock gaps after the print, fades, then rips through the gap-day high. The one breakout pattern that is positive on its own.</p></div>
+  <div class="flow" id="flowDemo" data-step="1">
+    <div class="fl-stage">
+      <div class="fl-chart">
+        <div class="fl-top"><span class="fl-sym"><b>AMD</b> 4-hour</span><span class="fl-clock" id="flClock"><i></i><span>After every 4H close</span></span></div>
+        <svg viewBox="0 10 600 305" preserveAspectRatio="xMidYMid meet" aria-hidden="true" id="flSvg"></svg>
+      </div>
+      <div class="fl-phone" aria-hidden="true">
+        <div class="fl-notch"></div>
+        <div class="fl-time" id="flPhoneTime">4:00</div>
+        <div class="fl-date">NextShelf alerts</div>
+        <div class="fl-stack" id="flStack"></div>
+      </div>
+    </div>
+    <ol class="fl-steps" id="flSteps"></ol>
   </div>
+  <p class="stage-note">Example setup, for illustration.</p>
 </div></section>
 
-<section id="record"><div class="wrap">
-  <p class="kicker">THE RECORD</p>
-  <h2 class="sec">An <span class="glow">honest</span> record.</h2>
-  <p class="sec-sub">A two-year test, Dec 2024 – Nov 2026, over the whole universe. Every setup logged with its result — <span class="glow">including the losing side.</span></p>
-  <table class="rec">
-    <tr><th>SETUP</th><th>AVG / TRADE</th><th>TRADES</th><th>WHAT IT IS</th></tr>
-    <tr><td>Hub A retest (long)</td><td class="num pos">+0.50%</td><td class="num">320</td><td>The A retest, room 1.5×+, 1 ATR stop</td></tr>
-    <tr><td>Double bottom A (long)</td><td class="num pos">+0.30%</td><td class="num">239</td><td>The A retest, 4:00 PM close, far-side stop</td></tr>
-    <tr><td>Gap fade &amp; rip (long)</td><td class="num pos">+2.77%</td><td class="num">341</td><td>Post-earnings gap, fade, rip through the high</td></tr>
-    <tr><td>Hub shorts</td><td class="num neg">−0.72%</td><td class="num">316</td><td>Watch-only — no entry plan</td></tr>
-    <tr><td>Double-top A (short)</td><td class="num neg">−0.93%</td><td class="num">—</td><td>Watch-only — no entry plan</td></tr>
-  </table>
-  <p class="honest"><b>What this is:</b> a replay over two years, not a promise. The plain hub breakout loses <b>−0.58%</b> a trade — that is why the breakout is a heads-up and the retest is the entry. The live retest log started Nov 13 and is just beginning, so the replay is the evidence and the live log is the proof still being written. Nothing is removed: the losing side is in the table.</p>
-</div></section>
 
-<section class="band"><div class="wrap">
-  <p class="kicker">THE DISCIPLINE</p>
-  <h2 class="sec">NextShelf actually forces you to <span class="glow-g">wait.</span></h2>
-  <p class="sec-sub">Most tools sell you speed. This one sells you the pause — because <span class="glow-g">the pause is where the edge is.</span></p>
-  <div class="rules">
-    <div class="rule"><h3>Two checks a day</h3><p>The 1:30 PM verdict candle and the 4:00 PM confirm. Nothing else needs your eyes. If nothing is setting up, the honest answer is to do nothing.</p></div>
-    <div class="rule"><h3>Never hold through the print</h3><p>Retail options traders lose 5–9% around earnings. The exit is written before the entry, and the print is a hard stop — after it is a separate trade.</p></div>
-    <div class="rule"><h3>The retest, not the breakout</h3><p>Buying the breakout is the old rule, and the Lab ruled it out. The entry comes on the pullback to the edge — and only if the close holds it.</p></div>
+
+
+
+
+
+<section id="setups" class="band"><div class="wrap"><div class="kicker">Three setup families</div><h2>Different patterns. <span class="heading-glow">One clear plan.</span></h2><p class="sub">Each setup has a defined trigger, target and point where the idea is wrong. No pattern is a promise.</p><div class="setup-grid"><article class="setup-card"><div class="setup-art"><span class="setup-chip">01 · CORE</span><svg viewBox="0 0 300 120" role="img" aria-label="Price consolidating then breaking above a hub"><rect x="18" y="40" width="170" height="48" rx="4" fill="#2563EB" opacity=".12"/><path d="M20 63 L48 56 L76 68 L104 57 L132 65 L160 58 L188 62 L218 34 L244 40 L278 16" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M18 40H188M18 88H188" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Hub <span class="heading-glow">breakout</span></h3><p>A stock coils inside a tight 4-hour range. A candle close outside the hub confirms the break; the next shelf becomes the target, or an ATR-based fallback when no shelf exists.</p><a href="/learn/what-is-a-hub">How hubs work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">02 · REVERSAL</span><svg viewBox="0 0 300 120" role="img" aria-label="Two tests of a high followed by a move below the neckline"><path d="M18 28 L55 24 L86 66 L122 26 L157 25 L194 66 L230 80 L278 104" fill="none" stroke="#F87171" stroke-width="2.5"/><path d="M55 24H157" stroke="#FBBF24" stroke-dasharray="4 4"/><path d="M86 66H194" stroke="#8EA2FF" stroke-dasharray="4 4"/></svg></div><h3>Double tops &amp; <span class="heading-glow">bottoms</span></h3><p>Two tests of a similar high or low create the pattern. A close through the neckline confirms the move; the setup is invalid if price reverses back through its defining level.</p><a href="/learn/double-tops-and-bottoms">How doubles work →</a></article><article class="setup-card"><div class="setup-art"><span class="setup-chip">03 · GAP RECLAIM</span><svg viewBox="0 0 300 120" role="img" aria-label="A gap up fades and price reclaims the gap-day high"><path d="M18 20 L52 16 L86 20 L116 74 L148 88 L178 82 L210 58 L242 42 L278 24" fill="none" stroke="#3DD68C" stroke-width="2.5"/><path d="M116 74H278" stroke="#FBBF24" stroke-dasharray="4 4"/></svg></div><h3>Post-earnings <span class="heading-glow">gap fade &amp; rip</span></h3><p>A gap-up fades, then price closes back above the gap-day high. The reclaim is the trigger; the gap structure defines the risk and target.</p><a href="/learn/gap-fade-and-rip">How gap fades work →</a></article></div></div></section><section id="record" class="band"><div class="wrap">
+  <div class="kicker">Track record</div>
+  <h2>An honest <span class="heading-glow">record.</span></h2>
+  <p class="sub">Two sets of numbers, kept apart: how today's rules tested over two years, and the live log of every breakout since launch. Nothing is removed.</p>
+  <div id="recTest" hidden>
+    <div class="rec-h"><b id="recTestH">Two-year test of today's rules</b><span id="recTestSub"></span></div>
+    <div class="rec" id="recTestRow" style="margin-top:14px"></div>
+    <p class="honest" style="margin-top:14px">A replay on past prices, not live trades. These rules were chosen from the same two years, so expect less going forward.</p>
+    <div class="rec-h" style="margin-top:40px"><b>Live record of today's rules</b><span id="recLiveSub">Every trade the current rules take, logged as it happens. The earlier breakout-close log is archived.</span></div>
   </div>
+  <div class="rec" id="recLive">
+    <div class="stat"><div class="big" id="recN">–</div><div class="cap" id="recNc">trades logged</div></div>
+    <div class="stat"><div class="big" id="recHit" style="color:var(--up)">–</div><div class="cap">reached the target</div></div>
+    <div class="stat"><div class="big" id="recAvg">–</div><div class="cap">average return per closed trade</div></div>
+  </div>
+
+  <p class="honest" id="recNote">These are the board's setups, not trading advice, and past setups don't promise future ones. The record exists so you can judge the setup with your own eyes. <a href="/board">See every setup →</a></p>
 </div></section>
 
-<section id="faq" class="band"><div class="wrap">
-  <p class="kicker">QUESTIONS</p>
-  <h2 class="sec">Questions, answered.</h2>
+
+
+<section id="discipline"><div class="wrap discipline-wrap"><div class="kicker">The discipline</div><h2>Most days, <span class="heading-glow">the right move is no move.</span></h2><p class="sub">A setup is not a signal to force a trade. Wait for the close, check the plan, define the risk, and be willing to do nothing.</p><div class="discipline-grid"><div class="discipline-item"><b>Wait for confirmation</b><span>Wicks can test a level. A completed candle close is what confirms the breakout.</span></div><div class="discipline-item"><b>Know the exit first</b><span>Identify the target and invalidation before deciding whether the trade is worth taking.</span></div><div class="discipline-item"><b>Respect the risk</b><span>Size the position around the amount you can afford to lose. Passing is a valid decision.</span></div></div><div class="discipline-cta"><a class="btn blue" href="#join" data-cta>Join the waitlist</a><span>Educational tools, not financial advice.</span></div></div></section><section id="faq" class="band"><div class="wrap">
+  <div class="kicker">FAQ</div>
+  <h2>Questions, <span class="heading-glow">answered.</span></h2>
   <div class="faq">
-    <h3>Is it a signal?</h3>
-    <p>No. It's a tap on the shoulder — hey, check that setup, something is happening. The card shows the plan; the trade stays yours.</p>
-    <h3>Do I need to watch the screen?</h3>
-    <p>No. Two checks a day: the 1:30 PM verdict candle and the 4:00 PM confirm. The alerts reach you by Telegram, text, or call.</p>
-    <h3>What if the breakout already happened?</h3>
-    <p>Then you wait for the retest. The breakout is a heads-up, not an entry — the entry comes on the pullback to the edge, and only if the close holds it.</p>
-    <h3>Can I hold through earnings?</h3>
-    <p>NextShelf won't let the alert fire into a print. The exit is before the earnings — holding through it is a separate bet, and retail loses 5–9% around earnings.</p>
+    <details open><summary>What is a hub?</summary><p>A stretch of at least 4 four-hour candles where every 4-hour candle closes inside a tight range, measured against the stock's own volatility (ATR). It's the stock coiling before a move, and while price is inside, there's no trade.</p></details>
+    <details><summary>What is a shelf?</summary><p>An earlier hub. When price breaks out of the current hub, the nearest earlier hub in that direction is where it often heads next, so it becomes the target.</p></details>
+    <details><summary>How does a trade play out after a breakout?</summary><p>The aim is the next shelf in the direction of the breakout. If there is no shelf ahead, the aim is one ATR beyond the hub. The trade ends when price reaches the aim, when a 4-hour candle closes back inside the hub, or after 10 candles, whichever comes first. NextShelf's paper trades follow the same rules, and also take profit early at a gamma wall that sits before the shelf.</p></details>
+    <details><summary>I have a job. Can I really use this?</summary><p>That's who it's for. The 4-hour candles close at 1:30 PM and 4:00 PM ET, so there are only two decision points a day. You get a morning brief before work, alerts on your phone only when a candle closes outside a hub, and an evening recap after the close.</p></details>
+    <details><summary>When do alerts arrive?</summary><p>Every alert goes to Telegram. On Pro you can also receive a text for every alert, and a phone call for pre-close warnings and breakouts. Pre-close warnings (Pro) come about 15 minutes before each 4-hour close, at 1:15 and 3:45 PM ET. For the 1:30 PM close you get an early read at about 1:31 PM from the real-time feed, confirmed (or corrected) at about 1:47 PM with the full market data, so you can still enter that afternoon. The 4:00 PM close is confirmed after the market shuts, and you can choose to skip those alerts in Settings. Regular trading hours only.</p></details>
+    <details><summary>Which setups does NextShelf find?</summary><p>Three: hubs (the core setup), double tops and bottoms, and the post-earnings gap fade &amp; rip. For hubs and doubles, the close outside the pattern is the heads-up and the entry is the retest; the gap fade enters on a daily close back above the gap-day high. Each was replayed over two years on 500+ stocks, and those results sit next to the live log below.</p></details>
+    <details><summary>Does NextShelf check gamma walls?</summary><p>Yes, on confirmed breakouts. NextShelf finds the strike with the most options gamma stacked near the price, from the Cboe delayed options chain, refreshed daily. If that wall sits between the breakout and the next shelf, the Shelf card and the alert flag it, because dealer hedging tends to slow price there. It is a flag, not a veto: the setup still counts.</p></details>
+    <details><summary>Does NextShelf trade its own setups?</summary><p>On paper only. NextShelf paper-trades one setup a day in a paper account, with no real money, to test its rules in real time. The public track record above counts every hub setup NextShelf logs, not just the paper trades. Members can open any setup in Webull or Robinhood straight from the setups list or the chart.</p></details>
+    <details><summary>Which stocks are covered?</summary><p>Every S&amp;P 500 and Nasdaq-100 stock plus major ETFs, 543 in all. You can also add any US-listed ticker to your own watchlist.</p></details>
+    <details><summary>Is this financial advice?</summary><p>No. NextShelf is an educational tool describing past price behavior. Setups fail. Do your own research and never risk money you can't afford to lose.</p></details>
   </div>
 </div></section>
 
-<footer id="join"><div class="wrap">
-  <p class="tag">Stop watching the screen. Start watching the setup.</p>
-  <p>NextShelf is a hub-breakout scanner and playbook for swing traders with day jobs. One setup, the rules for it, and the record. Educational, not financial advice.</p>
+<div class="final" id="join"><div class="wrap">
+  <div class="kicker">Get started</div>
+  <h2>Stop watching the screen. <span class="heading-glow">Start watching the setup.</span></h2>
+  <p class="sub" style="margin:14px auto 0" id="joinSub">NextShelf is in a private beta. Join the waitlist and get the free 5-day Hub Breakout Course by email. You'll get in as spots open.</p>
   <form class="join" data-source="footer" novalidate>
     <input type="email" name="email" placeholder="you@email.com" autocomplete="email" aria-label="Email address" required>
     <input type="text" name="website" tabindex="-1" autocomplete="off" class="hp" aria-hidden="true">
-    <button class="btn blue" type="submit">Join the waitlist</button>
+    <button class="btn blue">Join the waitlist</button>
     <p class="jmsg" role="status"></p>
   </form>
-  <div class="ft-links"><span>© <span id="yr">2026</span> NextShelf · Educational, not financial advice.</span><nav aria-label="Footer"><a href="/learn">Learn</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></nav></div>
-</div><p class="ft-giant" aria-hidden="true">NextShelf</p></footer>
+  <p class="alt">Want to learn the setup first? <a href="/learn">Read the lessons</a>.</p>
+</div></div>
 
+<footer><div class="wrap">
+  <a class="wordmark" href="/"><img src="/icon-192.png" alt="" width="26" height="26">NextShelf</a>
+  <span>© <span id="yr">2026</span> NextShelf · Educational, not financial advice. Past results don't guarantee future ones.</span>
+  <nav aria-label="Footer"><a href="/learn">Learn</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/disclaimer">Risk disclaimer</a><a href="/contact">Contact</a></nav>
+  <nav aria-label="Social"><span>Follow NextShelf</span><a href="https://x.com/trynextshelf" target="_blank" rel="noopener" aria-label="NextShelf on X"><svg fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>X</title><path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg></a><a href="https://www.instagram.com/nextshelfapp/" target="_blank" rel="noopener" aria-label="NextShelf on Instagram"><svg fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Instagram</title><path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg></a><a href="https://www.tiktok.com/@trynextshelf" target="_blank" rel="noopener" aria-label="NextShelf on TikTok"><svg fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>TikTok</title><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg></a><a href="https://www.youtube.com/@trynextshelf" target="_blank" rel="noopener" aria-label="NextShelf on YouTube"><svg fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>YouTube</title><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a><a href="https://www.reddit.com/user/trynextshelf/" target="_blank" rel="noopener" aria-label="NextShelf on Reddit"><svg fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Reddit</title><path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0Zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 1.105-.895 2-1.999 2-.946 0-1.739-.657-1.947-1.539v.002c-1.147.162-2.032 1.15-2.032 2.341v.007c1.776.067 3.4.567 4.686 1.363.473-.363 1.064-.58 1.707-.58 1.547 0 2.802 1.254 2.802 2.802 0 1.117-.655 2.081-1.601 2.531-.088 3.256-3.637 5.876-7.997 5.876-4.361 0-7.905-2.617-7.998-5.87-.954-.447-1.614-1.415-1.614-2.538 0-1.548 1.255-2.802 2.803-2.802.645 0 1.239.218 1.712.585 1.275-.79 2.881-1.291 4.64-1.365v-.01c0-1.663 1.263-3.034 2.88-3.207.188-.911.993-1.595 1.959-1.595Zm-8.085 8.376c-.784 0-1.459.78-1.506 1.797-.047 1.016.64 1.429 1.426 1.429.786 0 1.371-.369 1.418-1.385.047-1.017-.553-1.841-1.338-1.841Zm7.406 0c-.786 0-1.385.824-1.338 1.841.047 1.017.634 1.385 1.418 1.385.785 0 1.473-.413 1.426-1.429-.046-1.017-.721-1.797-1.506-1.797Zm-3.703 4.013c-.974 0-1.907.048-2.77.135-.147.015-.241.168-.183.305.483 1.154 1.622 1.964 2.953 1.964 1.33 0 2.47-.81 2.953-1.964.057-.137-.037-.29-.184-.305-.863-.087-1.795-.135-2.769-.135Z"/></svg></a></nav>
+</div><div class="ft-giant" aria-hidden="true">NextShelf</div></footer>
+
+<button class="scout-fab" id="scoutFab" aria-label="Ask Sika what's setting up" aria-expanded="false">
+  <span class="sf-halo"></span><span class="sf-bot"><svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="6" x2="32" y2="14" stroke="#4a5a70" stroke-width="2"/><circle class="ag-ant" cx="32" cy="5" r="3.4" fill="#fff"/>
+  <rect x="10" y="14" width="44" height="36" rx="11" fill="#141e2b" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="5" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/><rect x="54" y="26" width="5" height="12" rx="2.5" fill="#2a3a50"/>
+  <rect x="16" y="22" width="32" height="15" rx="7.5" fill="#05080d"/>
+  <g class="ag-eyes"><circle cx="25" cy="29.5" r="3.4"/><circle cx="39" cy="29.5" r="3.4"/></g>
+  <rect class="ag-beam" x="17" y="23" width="3" height="13" rx="1.5" fill="#fff" opacity=".75"/>
+  <rect x="24" y="42" width="16" height="3" rx="1.5" fill="#2a3a50"/></svg></span><span class="sf-name">Sika</span><span class="sf-badge" id="sfBadge" hidden></span>
+</button>
+<div class="scout-pop" id="scoutPop" hidden role="dialog" aria-label="Sika">
+  <div class="sp-head"><div><b>Sika</b><small id="spState" class="live-pill">Scanning</small></div><button class="sp-x" id="spX" aria-label="Close">✕</button></div>
+  <p class="sp-line" id="spLine">Checking the board…</p>
+  <form class="sp-ask" id="spAsk" autocomplete="off"><input id="spSym" placeholder="Ask me about a stock… NVDA" maxlength="10" autocapitalize="characters" spellcheck="false" aria-label="Ticker"><button aria-label="Ask Scout">→</button></form>
+  <p class="sp-k" id="spK" hidden>Resting in a hub right now</p>
+  <div class="sp-res" id="spRes"></div>
+  <p class="sp-lock" id="spLock" hidden></p>
+  <a class="sp-open" href="/board">See today's setups →</a>
+</div>
 
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const money = (x) => "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
   $("yr").textContent = new Date().getFullYear();
-  // members get "Open the app"; if sign-ups open, the waitlist buttons become sign-up buttons
+
+  // ---- who's here: members get "Open the app"; if sign-ups ever open, the waitlist buttons become sign-up buttons
   Promise.all([fetch("/auth/config").then(r => r.json()).catch(() => ({})), fetch("/api/me").then(r => r.ok ? r.json() : null).catch(() => null)]).then(([c, me]) => {
     const member = me && !me.guest;
     if (member) {
-      $("navEnd").innerHTML = '<a class="signin" href="#" id="so">Sign out</a><a class="btn blue" href="/app">Open the app →</a>';
+      const si = $("signInLink"); if (si) si.style.display = "none";
+      $("navEnd").innerHTML = `<a class="signin" href="#" id="so">Sign out</a><a class="btn sm solid" href="/app">Open the app →</a>`;
       $("so").onclick = async (e) => { e.preventDefault(); await fetch("/auth/logout", {method: "POST"}); location.reload(); };
     }
+    window.NS_SIGNUPS_OPEN = c.signups_open === true;
     if (member || c.signups_open === true) document.querySelectorAll("[data-cta]").forEach(a => {
       a.href = member ? "/app" : "/login#signup"; a.textContent = member ? "Open the app" : "Start free";
     });
   });
-  // the board counts are today's real ones
+
+  // ---- real numbers: today's board and the track record
   fetch("/api/public/summary").then(r => r.json()).then(s => {
+    window.NS_SUMMARY = s; document.dispatchEvent(new Event("ns-summary"));
     const n = (v) => Number(v || 0).toLocaleString();
-    if (s && s.universe) { $("cSwept").textContent = n(s.universe); $("cLive").textContent = n(s.live); $("cNear").textContent = n(s.near); }
+    if (s.universe) {
+      const inPlay = (s.forming || 0) + (s.live || 0);
+      if ($("hxTrack") && s.recent && s.recent.length) {
+        const it = s.recent.map(x => {
+          const o = x.outcome, cls = o === "follow-through" ? "ok" : (o === "failed" || o === "snap-back") ? "no" : "to";
+          const how = x.setup === "Hub breakdown" ? "broke down · " : x.setup === "Hub breakout" ? "broke out · " : "";
+          const word = how + (o === "follow-through" ? (how ? "reached its shelf ✓" : "reached its target ✓") : (o === "failed" || o === "snap-back") ? (how ? "closed back inside ✗" : "hit its stop ✗") : "ran out of time");
+          return `<span class="hx-it"><b>${x.symbol}</b><span class="${cls}">${word}</span></span>`; }).join("");
+        // the tape slides by half its width, so it needs two identical halves that are each wider than the screen
+        const reps = Math.max(1, Math.ceil(16 / s.recent.length));
+        const half = it.repeat(reps);
+        $("hxTrack").classList.remove("static");
+        $("hxTrack").innerHTML = half + half;
+        $("hxTrack").style.animationDuration = Math.max(24, s.recent.length * reps * 3.2) + "s";
+      } else if ($("hxTrack")) $("hxTrack").classList.add("static");
+      $("bpHubs").textContent = n(inPlay);
+      if ($("hxSika")) $("hxSika").innerHTML = `swept <b>${n(s.universe)}</b> stocks at the last 4-hour close · <b class="g">${n(s.live)}</b> breakouts · <b>${n(s.near)}</b> at a hub edge`;
+      $("bpLine").innerHTML = `Swept <b>${n(s.universe)}</b> stocks: <b class="g">${n(s.live)}</b> breaking out now, <b>${n(inPlay)}</b> hubs in play (${n(s.forming)} resting + ${n(s.live)} breaking out) · <b class="y">${n(s.near)}</b> of the resting ones at a hub edge.`;
+    }
+    if (s.next) {
+      const d = new Date(s.next), ny = {timeZone: "America/New_York"};
+      const day = d.toLocaleDateString("en-US", {...ny, weekday: "short"}) === new Date().toLocaleDateString("en-US", {...ny, weekday: "short"}) ? "today" : d.toLocaleDateString("en-US", {...ny, weekday: "long"});
+      $("bpNext").textContent = `Next board sweep ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
+    }
+    if (s.tested && s.tested.rows && s.tested.rows.length) {
+      const T = s.tested, mo = (t) => t ? new Date(t).toLocaleDateString("en-US", {month: "short", year: "numeric"}) : "";
+      if (T.period) $("recTestH").textContent = `${T.period} test of today's rules`;
+      $("recTestSub").textContent = `Every setup replayed on ${n(T.symbols)} stocks${T.first ? `, ${mo(T.first)} to ${mo(T.last)}` : ""}.`;
+      $("recTestRow").innerHTML = T.rows.map(r => `<div class="stat"><div class="big" style="color:var(${r.avg >= 0 ? "--up" : "--down"})">${r.avg > 0 ? "+" : ""}${Number(r.avg).toFixed(2)}%</div><div class="cap"><b>${r.label}</b><br>average per trade · ${n(r.n)} trades · ${Math.round(r.win)}% won</div></div>`).join("");
+      if (T.rows.length < 3) $("recTestRow").classList.add("two");
+      $("recTest").hidden = false;
+    }
+    if (s.signals) {
+      $("recN").textContent = n(s.signals);
+      $("recNc").textContent = `trades logged · ${n(s.open)} still open · ${n(s.reached)} of ${n(s.closed)} closed reached the target`;
+      if (s.updated) $("recNote").insertAdjacentHTML("afterbegin", `Updated ${new Date(String(s.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})} ET. `);
+      $("recHit").textContent = s.reached_pct == null ? "–" : s.reached_pct + "%";
+      $("recAvg").textContent = s.avg_ret == null ? "–" : (s.avg_ret > 0 ? "+" : "") + s.avg_ret + "%";
+      if (s.avg_ret != null) $("recAvg").style.color = s.avg_ret >= 0 ? "var(--up)" : "var(--down)";
+    } else {
+      $("recN").textContent = "0"; $("recNc").textContent = "trades logged so far";
+      $("recNote").insertAdjacentHTML("afterbegin", "This record started on " + (s.since ? new Date(s.since).toLocaleDateString("en-US", {month: "long", day: "numeric"}) : "launch") + " and fills in as trades close. Until it has 50 or more, the two-year test above is the better guide. ");
+    }
   }).catch(() => {});
-  // waitlist sign-up
+
+  // ---- waitlist sign-up
   document.querySelectorAll("form.join").forEach(f => f.addEventListener("submit", async (e) => {
     e.preventDefault();
     const msg = f.querySelector(".jmsg"), btn = f.querySelector("button"), email = f.email.value.trim();
@@ -443,9 +1178,224 @@
     } catch (err) { msg.textContent = err.message; msg.className = "jmsg err"; }
     btn.disabled = false;
   }));
-  // the CTAs scroll to the form and put the cursor in it
-  document.querySelectorAll('a[href="#join"]').forEach(a => a.addEventListener("click", () => setTimeout(() => { const i = document.querySelector("form.join input[type=email]"); if (i) i.focus({preventScroll: true}); }, 400)));
+
 })();
 </script>
+<script>
+(function () {
+  const root = document.getElementById("flowDemo"); if (!root) return;
+  const svg = document.getElementById("flSvg");
+  const STEPS = [
+    {t: "After every 4H close", k: "Sika sweeps", pill: true, p: "400 stocks swept about 20 minutes after each 4-hour close, from a 543-stock universe.", ph: "1:52"},
+    {t: "Day 1–2", k: "A hub forms", p: "Price coils in a tight range for 4+ four-hour candles.", ph: "4:22"},
+    {t: "3:45 PM", k: "15 minutes to the close", p: "Price is outside the hub. Pro members get a heads-up.", ph: "3:45"},
+    {t: "4:00 PM", k: "The candle closes", p: "Breakout confirmed, aiming for the next shelf.", ph: "4:00"},
+    {t: "Next sessions", k: "Next shelf", p: "Target reached, and logged in the track record.", ph: "11:31"},
+  ];
+  const NOTES = [
+    {h: "Sika", t: "Swept 400 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs.", live: true},
+    {h: "Telegram", t: "🟦 AMD: new hub", b: "4H closes held $176.80–$178.01 for 6 sessions. Watching for a close outside."},
+    {h: "Telegram", t: "⚠️ AMD: trading above hub, ~15 min before the 4H close", b: "Now $179.40. If the candle closes above $178.01, that's the breakout.", pro: true},
+    {h: "Telegram", t: "🚀 AMD: 4H close above hub", b: "Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01."},
+    {h: "Telegram", t: "✅ AMD: follow-through", b: "4H close $186.40 reached the next shelf $186.10, 3 candles after the breakout."},
+  ];
+  // the first notification uses today's real counts, so it matches the board line above
+  const liveNote = () => { const L = window.NS_SUMMARY; if (!L || !L.universe) return;
+    NOTES[0].t = `Swept ${Number(L.universe).toLocaleString()} stocks`;
+    NOTES[0].b = `${L.live} breakout${L.live === 1 ? "" : "s"} · ${L.near} at a hub edge · ${L.forming} resting in hubs.`; };
+  liveNote(); document.addEventListener("ns-summary", () => { liveNote(); try { show(cur); } catch (e) {} });
+  // ---- draw the chart once; layers fade in by step
+  const X0 = 40, DX = 21, Y = (p) => 282 - (p - 176) * 19.5;          // price → y
+  const C = (i, o, c, h, l, cls, extra) => { const x = X0 + i * DX, up = c >= o, top = Y(Math.max(o, c)), bot = Y(Math.min(o, c));
+    return `<g class="${cls}" ${extra || ""}><line x1="${x}" x2="${x}" y1="${Y(h)}" y2="${Y(l)}" stroke="'+ink+'" stroke-width="1.4"/>
+      <rect x="${x - 6}" y="${top}" width="12" height="${Math.max(2, bot - top)}" rx="1.5" fill="${up ? "var(--fl-candle-up)" : "var(--fl-candle-dn)"}"/></g>`; };
+  const pre = [[187.2,186.0,187.8,185.4],[186.0,186.4,187.0,185.2],[186.4,184.9,186.8,184.4],[184.9,183.1,185.3,182.6],[183.1,181.6,183.6,181.0],[181.6,179.6,182.0,179.1],[179.6,178.2,180.0,177.6]];
+  const hub = [[178.2,177.4,178.6,176.9],[177.4,177.9,178.3,176.8],[177.9,177.1,178.4,176.7],[177.1,177.8,178.2,176.9],[177.8,177.2,178.3,176.8],[177.2,177.7,178.1,176.9],[177.7,177.3,178.2,176.8],[177.3,177.9,178.3,177.0]];
+  const run = [[179.8,181.4,181.9,179.4],[181.4,183.0,183.5,180.9],[183.0,182.6,183.9,182.0],[182.6,184.5,185.0,182.3],[184.5,186.4,186.9,184.2]];
+  const hubL = 176.8, hubH = 178.01, shelf = 186.10, nH = pre.length, xs = X0 + nH * DX - 11, xe = X0 + (nH + hub.length - 1) * DX + 11;
+  const bi = nH + hub.length, bx = X0 + bi * DX;
+  let g = "";
+  for (let k = 0; k < 6; k++) g += `<line x1="20" x2="580" y1="${22 + k * 56}" y2="${22 + k * 56}" stroke="var(--fl-grid)"/>`;
+  // shelf zone (earlier hub up top)
+  g += `<g class="fl-l s1"><rect x="${X0 - 12}" y="${Y(187.8)}" width="${560 - X0}" height="${Y(185.4) - Y(187.8)}" fill="color-mix(in srgb, var(--fl-up) 9%, transparent)"/>
+    <line x1="${X0 - 12}" x2="548" y1="${Y(shelf)}" y2="${Y(shelf)}" stroke="var(--fl-up)" stroke-width="1.4" stroke-dasharray="5 5"/>
+    <text x="548" y="${Y(shelf) - 8}" text-anchor="end" font-size="11" font-weight="700" letter-spacing="1.4" fill="var(--fl-up)">NEXT SHELF $186.10</text></g>`;
+  // candles before + in hub
+  pre.forEach((q, i) => g += C(i, ...q, "fl-l s1"));
+  hub.forEach((q, i) => g += C(nH + i, ...q, "fl-l s1"));
+  // hub box
+  g += `<g class="fl-l s2"><rect x="${xs}" y="${Y(hubH)}" width="${xe - xs + 70}" height="${Y(hubL) - Y(hubH)}" rx="4" fill="color-mix(in srgb, var(--fl-hub) 14%, transparent)" stroke="var(--fl-hub)" stroke-width="1.3" stroke-dasharray="4 3"/>
+    <text x="${xs + 4}" y="${Y(hubL) + 16}" font-size="11" font-weight="700" letter-spacing="1.4" fill="var(--fl-hub)">HUB · 6 SESSIONS</text>
+    <text x="${xe + 66}" y="${Y(hubH) - 6}" text-anchor="end" font-size="10.5" font-weight="600" fill="var(--fl-hub)">$178.01</text></g>`;
+  // step 3: live candle (not closed yet)
+  g += `<g class="fl-l s3only"><g class="fl-live"><line x1="${bx}" x2="${bx}" y1="${Y(179.9)}" y2="${Y(177.6)}" stroke="#F2C14E" stroke-width="1.4"/>
+      <rect x="${bx - 6}" y="${Y(179.4)}" width="12" height="${Y(177.9) - Y(179.4)}" rx="1.5" fill="none" stroke="#F2C14E" stroke-width="1.6" stroke-dasharray="3 2"/></g>
+    <g transform="translate(${bx + 16} ${Y(179.4) - 30})"><rect width="146" height="24" rx="12" fill="#F2C14E"/><text x="73" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1a1405">⏳ 15 min to the close</text></g></g>`;
+  // step 4: closed breakout candle
+  g += `<g class="fl-l s4">${C(bi, 177.9, 179.76, 180.0, 177.6, "")}<circle cx="${bx}" cy="${Y(179.76)}" r="14" fill="var(--fl-up)" opacity=".18"/>
+    <g class="fl-tag4" transform="translate(${bx + 16} ${Y(179.76) - 30})"><rect width="148" height="24" rx="12" fill="var(--fl-up)"/><text x="74" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#04140b">🚀 Closed above the hub</text></g></g>`;
+  // step 5: run to the shelf
+  run.forEach((q, i) => g += C(bi + 1 + i, ...q, "fl-runc", `style="transition-delay:${.15 + i * .18}s"`));
+  g += `<g class="fl-l s5" style="transition-delay:1.1s"><circle cx="${X0 + (bi + 5) * DX}" cy="${Y(shelf)}" r="16" fill="var(--fl-up)" opacity=".2"/>
+    <g transform="translate(${X0 + (bi + 5) * DX - 170} ${Y(shelf) + 18})"><rect width="150" height="24" rx="12" fill="var(--fl-up)"/><text x="75" y="16" text-anchor="middle" font-size="11.5" font-weight="700" fill="#04140b">🎯 Shelf hit · +3.5%</text></g></g>`;
+  // step 1: scanning beam
+  g += `<g class="fl-scan"><rect x="20" y="20" width="3" height="290" rx="1.5" fill="var(--fl-up)" opacity=".7"/><rect x="-30" y="20" width="50" height="290" fill="url(#flBeam)"/></g>`;
+  svg.innerHTML = `<defs><linearGradient id="flBeam" x1="0" x2="1"><stop offset="0" stop-color="#3DD68C" stop-opacity="0"/><stop offset="1" stop-color="#3DD68C" stop-opacity=".18"/></linearGradient></defs>` + g;
+  // the step 4 tag overlaps step 5's run; hide it in step 5
+  const st = document.createElement("style"); st.textContent = `.flow[data-step="5"] .fl-tag4 { opacity: 0; transition: opacity .3s; }`; document.head.appendChild(st);
+
+  // ---- steps + phone
+  const list = document.getElementById("flSteps"), stack = document.getElementById("flStack");
+  list.innerHTML = STEPS.map((s, i) => `<li data-n="${i + 1}"><small>${s.t}</small><b>${s.k}${s.pill ? ' <span class="live-pill run fl-pill">Live</span>' : ""}</b><p>${s.p}</p><i></i></li>`).join("");
+  const DUR = 4200; root.style.setProperty("--fl-dur", DUR + "ms");
+  let cur = 1, timer = null, playing = false;
+  const esc = (t) => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+  function show(n) {
+    cur = n; root.dataset.step = n;
+    document.getElementById("flClock").lastElementChild.textContent = STEPS[n - 1].t;
+    document.getElementById("flPhoneTime").textContent = STEPS[n - 1].ph;
+    [...list.children].forEach((li, i) => { li.classList.remove("on"); void li.offsetWidth; li.classList.toggle("on", i === n - 1); });
+    stack.innerHTML = NOTES.slice(Math.max(0, n - 3), n).map((x, i, a) => `<div class="fl-note${i < a.length - 1 ? " old" : ""}">
+      <div class="fl-nh"><span>${x.h}${x.pro ? '<span class="fl-pro">PRO</span>' : ""}</span>now</div>
+      <div class="fl-nt">${esc(x.t)}</div><div class="fl-nb">${esc(x.b)}</div></div>`).join("");
+  }
+  function tick() { clearTimeout(timer); if (!playing) return; timer = setTimeout(() => { show(cur % 5 + 1); tick(); }, cur === 5 ? DUR + 1200 : DUR); }
+  list.addEventListener("click", (e) => { const li = e.target.closest("li"); if (!li) return; show(+li.dataset.n); tick(); });
+
+  let vis = false;
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  show(1);
+  if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach(e => {
+    vis = e.isIntersecting; if (vis) { if (!playing) { playing = true; tick(); } } else { playing = false; clearTimeout(timer); }
+  }), {threshold: .2}).observe(root);
+  else { playing = true; tick(); }
+})();
+</script>
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const shelf = (sym) => "/app?shelf=" + encodeURIComponent(sym) + "#discover";
+  let B = null, loaded = false, ME = null;
+  function render() {
+    if (!B || !B.universe) { $("spLine").innerHTML = "I check <b>400</b> stocks after every 4-hour close, from a 543-stock universe, for tight ranges that are about to break. Ask me about any stock."; return; }
+    const live = B.locked ? B.live_count : B.live.length, near = B.locked ? B.near_count : B.near.length, hubs = B.forming_count ?? B.forming.length;
+    const when = B.updated ? new Date(B.updated).toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) : "";
+    $("spLine").innerHTML = `I swept <b>${B.universe}</b> stocks${when ? " at the last 4-hour close (" + esc(when) + " ET)" : ""}: <b>${live}</b> breakout${live === 1 ? "" : "s"}, <b>${near}</b> at the edge of a hub, and <b>${hubs}</b> resting in hubs.`;
+    const rows = (B.locked ? B.forming.filter(r => !r.near_edge) : B.near.concat(B.forming.filter(r => !r.near_edge))).slice(0, 5);
+    $("spK").hidden = !rows.length; $("spK").textContent = B.locked ? "Resting in a hub right now" : "Closest to a breakout";
+    $("spRes").innerHTML = rows.map(r => { const h = r.hub || {}; return `<a class="sp-row" href="${shelf(r.symbol)}">${esc(r.symbol)}<span>${h.sessions ? h.sessions + " sessions in a hub" : "in a hub"}</span></a>`; }).join("");
+    const lockedN = (B.live_count || 0) + (B.near_count || 0);
+    $("spLock").hidden = !(B.locked && lockedN);
+    if (B.locked && lockedN) $("spLock").innerHTML = `🔒 ${B.live_count} breakout${B.live_count === 1 ? "" : "s"} and ${B.near_count} at the edge are ${ME && !ME.guest ? "on Pro" : "for members"}. ${ME && !ME.guest ? '<a href="/app#account">See Pro</a>' : (window.NS_SIGNUPS_OPEN ? '<a href="/login#signup">Sign up free</a>' : '<a href="#join" onclick="document.getElementById(\'scoutFab\').click()">Join the waitlist</a>')} to see them.`;
+    const n = live + near; $("sfBadge").hidden = !n || !ME || ME.guest; $("sfBadge").textContent = n; $("sfBadge").title = `${live} breaking out now, ${near} at a hub edge`; $("scoutFab").setAttribute("aria-label", `Sika: ${live} breaking out now, ${near} at a hub edge`);
+    const so = document.querySelector(".sp-open"); if (so && !(ME && !ME.guest)) { so.href = "/login"; so.textContent = "Sign in to browse every setup →"; }
+  }
+  async function load() {
+    if (loaded) return; loaded = true;
+    try { const [r, m] = await Promise.all([fetch("/api/board"), fetch("/api/me").catch(() => null)]);
+      if (r.ok) B = await r.json(); if (m && m.ok) ME = await m.json(); } catch (e) {}
+    render();
+  }
+  function toggle(open) {
+    const pop = $("scoutPop"); open = open ?? pop.hidden;
+    pop.hidden = !open; $("scoutFab").setAttribute("aria-expanded", String(open));
+    if (open) { load(); setTimeout(() => { if (innerWidth > 640) $("spSym").focus(); }, 60); }
+  }
+  $("scoutFab").onclick = () => toggle();
+  $("spX").onclick = () => toggle(false);
+  document.addEventListener("click", (e) => { const pop = $("scoutPop");
+    if (!pop.hidden && !pop.contains(e.target) && !$("scoutFab").contains(e.target)) toggle(false); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("scoutPop").hidden) toggle(false); });
+  $("spAsk").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const s = $("spSym").value.trim().toUpperCase().replace(/^\$/, "");
+    if (!/^[A-Z][A-Z.\-]{0,9}$/.test(s)) { $("spSym").placeholder = "Type a ticker like NVDA"; $("spSym").value = ""; $("spSym").focus(); return; }
+    if (!ME || ME.guest) { $("spLock").hidden = false; $("spLock").innerHTML = `🔒 ${esc(s)}'s Shelf card is for members. ${window.NS_SIGNUPS_OPEN ? '<a href="/login#signup">Sign up free</a>' : '<a href="#join">Join the waitlist</a>'} to see it.`; return; }
+    location.href = shelf(s);
+  });
+  load();      // Sika never pops up on her own: the button is the only way in
+})();
+</script>
+
+<script>
+(function () {
+  const card = document.getElementById("sampleCard"); if (!card) return;
+  const tabs = [...card.querySelectorAll(".sc-tabs button")], panes = [...card.querySelectorAll(".sc-pane")];
+  let i = 0, timer = null, user = false;
+  function show(k) { i = k; tabs.forEach((b, j) => b.classList.toggle("on", j === k)); panes.forEach((p, j) => p.classList.toggle("on", j === k)); }
+  tabs.forEach((b, k) => b.onclick = () => { user = true; clearInterval(timer); show(k); });
+  function play() { if (user) return; clearInterval(timer); timer = setInterval(() => show((i + 1) % tabs.length), 3500); }
+  if ("IntersectionObserver" in window) new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? play() : clearInterval(timer)), {threshold: .4}).observe(card);
+})();
+</script>
+
+<script>
+(function () {
+  // hero preview: an arrow from the open row's button to the Shelf card
+  const split = document.querySelector(".bp-split"); if (!split) return;
+  const card = document.getElementById("sampleCard"), link = document.createElement("div"); link.className = "bp-link"; split.appendChild(link);
+  function draw() {
+    const row = split.querySelector(".bp-row.sel"); if (!row || getComputedStyle(link).display === "none") return;
+    const btn = row.querySelector(".bp-an"), sb = split.getBoundingClientRect(), bb = btn.getBoundingClientRect(), cb = card.getBoundingClientRect();
+    const y = bb.top + bb.height / 2 - sb.top, x1 = bb.right - sb.left + 6, x2 = cb.left - sb.left - 4;
+    Object.assign(link.style, {top: y + "px", left: x1 + "px", width: Math.max(0, x2 - x1) + "px"});
+  }
+  // tapping Analyze on any example row selects it and points at the card (the example card itself is ADBE's)
+  split.querySelectorAll(".bp-row:not(.bp-th)").forEach(row => { const btn = row.querySelector(".bp-an"); if (!btn) return;
+    btn.style.cursor = "pointer"; btn.setAttribute("role", "button"); btn.tabIndex = 0;
+    const pick = () => {
+      split.querySelectorAll(".bp-row").forEach(r => r.classList.remove("sel"));
+      split.querySelectorAll(".bp-an").forEach(x => { x.classList.remove("on"); x.textContent = "Analyze"; });
+      row.classList.add("sel"); btn.classList.add("on"); btn.textContent = "Viewing";
+      const sym = row.querySelector("b").textContent, sw = document.getElementById("scSwap");
+      sw.hidden = sym === "ADBE"; sw.innerHTML = `This example is ADBE's card. Members get <b>${sym}</b>'s card, with its own levels. <a href="/login#signup">Sign up free</a>`;
+      if (window.NS_SIGNUPS_OPEN === false || !window.NS_SIGNUPS_OPEN) sw.querySelector("a").outerHTML = '<a href="#join">Join the waitlist</a>';
+      draw(); card.animate([{transform: "translateX(6px)"}, {transform: "none"}], {duration: 260});
+      if (getComputedStyle(link).display === "none") card.scrollIntoView({behavior: "smooth", block: "center"});
+    };
+    btn.addEventListener("click", pick); btn.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+  });
+  addEventListener("resize", draw); addEventListener("load", draw); setTimeout(draw, 300);
+})();
+</script>
+<script>
+(function () {
+  const btn = document.querySelector(".nav-toggle"), nav = document.querySelector("nav.top");
+  if (!btn || !nav) return;
+  btn.addEventListener("click", () => { const open = nav.classList.toggle("open"); btn.setAttribute("aria-expanded", String(open)); });
+  document.querySelectorAll(".navlinks a").forEach(a => a.addEventListener("click", () => { nav.classList.remove("open"); btn.setAttribute("aria-expanded", "false"); }));
+})();
+</script>
+<script>
+// Nav glow: active landing section (Patch 101).
+(function () {
+  const links = Array.from(document.querySelectorAll(".navlinks a[href^='#']"))
+     .filter(a => ["#how", "#setups", "#record", "#discipline", "#faq"].includes(a.getAttribute("href")));
+  if (!links.length) return;
+  const set = id => links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === id));
+  links.forEach(a => a.addEventListener("click", () => set(a.getAttribute("href"))));
+  const secs = links.map(a => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+  if ("IntersectionObserver" in window && secs.length) {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(en => { if (en.isIntersecting) set("#" + en.target.id); });
+    }, { rootMargin: "-30% 0px -60% 0px" });
+    secs.forEach(section => io.observe(section));
+  }
+})();
+</script>
+<script>
+document.querySelectorAll(".lm").forEach(function (m) {
+  var b = m.querySelector(".lm-btn"), hov = matchMedia("(hover: hover) and (min-width: 861px)").matches;
+  b.addEventListener("click", function (e) { e.stopPropagation(); var o = hov ? true : !m.classList.contains("open"); m.classList.toggle("open", o); b.setAttribute("aria-expanded", o); });
+  if (hov) {
+    var t; m.addEventListener("mouseenter", function () { clearTimeout(t); m.classList.add("open"); b.setAttribute("aria-expanded", true); });
+    m.addEventListener("mouseleave", function () { t = setTimeout(function () { m.classList.remove("open"); b.setAttribute("aria-expanded", false); }, 180); });
+  }
+  document.addEventListener("click", function (e) { if (!m.contains(e.target)) { m.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") { m.classList.remove("open"); b.setAttribute("aria-expanded", false); } });
+});
+</script>
+<script>(function(){const $=id=>document.getElementById(id),money=v=>Number(v).toLocaleString("en-US",{style:"currency",currency:"USD"});const loadHeroChart=()=>fetch("/api/public/hero-chart").then(r=>{if(!r.ok)throw Error();return r.json()}).then(d=>{const cs=(d.candles||[]).filter(x=>Number.isFinite(x.close)).slice(-71);const forming=d.forming;if(forming&&Number.isFinite(forming.close))cs.push(forming);if(!cs.length)throw Error();const lo=Math.min(...cs.map(x=>x.low)),hi=Math.max(...cs.map(x=>x.high)),span=Math.max(hi-lo,.01),w=900,h=250,px=22,py=18,step=(w-2*px)/cs.length,y=v=>py+(hi-v)/span*(h-2*py);let marks="";const light=document.documentElement.getAttribute("data-theme")==="light",ink=light?"#000000":"#FFFFFF",paper=light?"#FFFFFF":"#000000";cs.forEach((c,i)=>{const x=px+i*step+step/2,up=c.close>=c.open,col=up?ink:paper,top=Math.min(y(c.open),y(c.close)),bh=Math.max(2,Math.abs(y(c.open)-y(c.close)));marks+='<line x1="'+x+'" y1="'+y(c.high)+'" x2="'+x+'" y2="'+y(c.low)+'" stroke="'+ink+'" stroke-width="1.4"/><rect x="'+(x-step*.28)+'" y="'+top+'" width="'+Math.max(2,step*.56)+'" height="'+bh+'" rx="1" fill="'+col+'" stroke="'+ink+'" stroke-width=".8"/>'});const last=cs[cs.length-1],prev=cs.length>1?cs[cs.length-2].close:last.open,change=prev?(last.close/prev-1)*100:0;$("heroPrice").textContent=money(last.close);$("heroUpdated").textContent=(forming?"Forming 4H · ":"Latest 4H close · ")+(change>=0?"+":"")+change.toFixed(2)+"% vs prior 4H close";$("heroUpdated").style.color=change>=0?"#3DD68C":"#F87171";$("heroChart").innerHTML='<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" aria-label="AVGO recent four-hour candles"><path d="M'+px+" "+y(lo)+"H"+(w-px)+" M"+px+" "+y((lo+hi)/2)+"H"+(w-px)+" M"+px+" "+y(hi)+"H"+(w-px)+'" stroke="#28303d" stroke-dasharray="3 5"/>'+marks+'<line x1="'+px+'" x2="'+(w-px)+'" y1="'+y(last.close)+'" y2="'+y(last.close)+'" stroke="#8EA2FF" stroke-dasharray="5 4"/></svg>';const st=d.status||{},hub=st.hub;$("heroHub").textContent=hub?"Hub zone · "+money(hub.low)+"–"+money(hub.high):"No active hub";const target=st.target!=null?st.target:(st.direction==="down"?(st.shelf_down&&st.shelf_down.level):(st.shelf_up&&st.shelf_up.level));$("heroTarget").textContent=target!=null?"Next shelf · "+money(target):"No active target"}).catch(()=>{$("heroPrice").textContent="—";$("heroUpdated").textContent="Chart data unavailable";$("heroChart").innerHTML='<div class="chart-loading">AVGO chart data is temporarily unavailable.</div>'});loadHeroChart();setInterval(loadHeroChart,60000);try{new MutationObserver(()=>loadHeroChart()).observe(document.documentElement,{attributes:true,attributeFilter:["data-theme"]})}catch(e){}fetch("/api/public/summary").then(r=>r.json()).then(d=>{ $("heroUniverse").textContent=Number(d.universe||0).toLocaleString();$("heroForming").textContent=Number(d.forming||0).toLocaleString();$("heroNear").textContent=Number(d.near||0).toLocaleString();$("heroLive").textContent=Number(d.live||0).toLocaleString()}).catch(()=>{})})();</script><script>(function(){const root=document.documentElement,btn=document.getElementById("themeToggle"),meta=document.getElementById("themeColor");let saved="dark";try{var old=localStorage.getItem("ns-theme");if(old&&!localStorage.getItem("ns_theme"))localStorage.setItem("ns_theme",old);saved=localStorage.getItem("ns_theme")||"dark"}catch(e){}function apply(theme){const light=theme==="light";root.setAttribute("data-theme",light?"light":"dark");root.style.colorScheme=light?"light":"dark";if(btn){btn.setAttribute("aria-label",light?"Switch to dark theme":"Switch to light theme");btn.title=light?"Switch to dark theme":"Switch to light theme"}if(meta)meta.setAttribute("content",light?"#F5F6F8":"#0A0A0A")}apply(saved);if(btn)btn.addEventListener("click",function(){const next=root.getAttribute("data-theme")==="light"?"dark":"light";apply(next);try{localStorage.setItem("ns_theme",next)}catch(e){}})})();</script>
 </body>
 </html>
