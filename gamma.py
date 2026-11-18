@@ -24,6 +24,7 @@ import requests
 log = logging.getLogger("gamma")
 
 _CHAIN_CACHE: dict[tuple[str, str], list] = {}    # (symbol, YYYY-MM-DD) -> slim contracts (one fetch/day)
+_FETCHED_AT: dict[tuple[str, str], str] = {}      # (symbol, YYYY-MM-DD) -> when that chain was fetched (ISO, NY)
 _FAILED: dict[str, float] = {}                    # symbol -> time of last failed fetch (retry after an hour)
 _LOCK = threading.Lock()
 _URL = "https://cdn.cboe.com/api/global/delayed_quotes/options/{}.json"
@@ -126,8 +127,84 @@ def _fetch_contracts(symbol: str, force: bool = False) -> list:
     with _LOCK:
         for k in [k for k in _CHAIN_CACHE if k[1] != today]:     # yesterday's chains: drop them
             del _CHAIN_CACHE[k]
+        for k in [k for k in _FETCHED_AT if k[1] != today]:
+            del _FETCHED_AT[k]
         _CHAIN_CACHE[key] = contracts
+        _FETCHED_AT[key] = datetime.now(_NY).isoformat(timespec="seconds")
     return contracts
+
+
+def chain_as_of(symbol: str) -> str | None:
+    """When today's cached chain for this symbol was fetched (ISO, New York), or None."""
+    with _LOCK:
+        return _FETCHED_AT.get(((symbol or "").upper(), date.today().isoformat()))
+
+
+NEXT_LEVEL_SHARE = 0.25     # a node counts when its |net GEX| is at least this share of the expiry's largest
+
+
+def next_levels(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
+    """GEX next levels (spec Nov 18, PANW): on the NEAREST expiry with chain data (weeklies and 0DTE included),
+    the near-term call/put wall and flip (same math as _compute), the nearest significant node above and below
+    spot (a local max of |net GEX| that is >= 25% of that expiry's largest), and a regime label off the flip
+    (no flip: the sign of the expiry's total net GEX). Display only: never feeds attach(), alerts or the record.
+    None when the chain can't be read. Never raises."""
+    try:
+        sym = (symbol or "").upper()
+        if not spot or float(spot) <= 0:
+            return None
+        spot = float(spot)
+        if fetch:
+            contracts = _fetch_contracts(sym)
+        else:
+            with _LOCK:
+                contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            return None
+        today = datetime.now(_NY).date()
+        by_exp: dict[date, list] = {}
+        for exp, call, k, g, oi, v in _slim(contracts):
+            if exp < today or abs(k - spot) / spot > _BAND:
+                continue
+            by_exp.setdefault(exp, []).append((call, k, g, oi))
+        if not by_exp:
+            return None
+        exp = min(by_exp)
+        call_gex: dict[float, float] = {}
+        put_gex: dict[float, float] = {}
+        for call, k, g, oi in by_exp[exp]:
+            book = call_gex if call else put_gex
+            book[k] = book.get(k, 0.0) + g * oi * 100
+        call_gex = {k: v for k, v in call_gex.items() if v > 0}
+        put_gex = {k: v for k, v in put_gex.items() if v > 0}
+        if not call_gex and not put_gex:
+            return None
+        cw = max(call_gex, key=call_gex.get) if call_gex else None
+        pw = max(put_gex, key=put_gex.get) if put_gex else None
+        strikes = sorted(set(call_gex) | set(put_gex))
+        flip, cum = None, 0.0
+        for k in strikes:
+            prev, cum = cum, cum + call_gex.get(k, 0.0) - put_gex.get(k, 0.0)
+            if prev < 0 <= cum:
+                flip = k
+                break
+        net = [(k, (call_gex.get(k, 0.0) - put_gex.get(k, 0.0)) * spot) for k in strikes]   # dollar notional
+        total = sum(v for _, v in net)
+        top = max((abs(v) for _, v in net), default=0.0)
+        nodes = [(k, v) for i, (k, v) in enumerate(net)
+                 if 0 < i < len(net) - 1 and abs(v) > abs(net[i - 1][1]) and abs(v) > abs(net[i + 1][1])
+                 and top > 0 and abs(v) >= NEXT_LEVEL_SHARE * top]
+        lvl = lambda kv: None if kv is None else {"strike": kv[0], "gex": round(kv[1], 1),
+                                                  "distance_pct": round((kv[0] - spot) / spot * 100, 1)}
+        up = min((n for n in nodes if n[0] >= spot), key=lambda n: n[0], default=None)
+        down = max((n for n in nodes if n[0] < spot), key=lambda n: n[0], default=None)
+        regime = ("short" if spot < flip else "long") if flip is not None else ("short" if total < 0 else "long")
+        return {"expiry_nt": exp.isoformat(), "call_wall_nt": cw, "put_wall_nt": pw, "flip_nt": flip,
+                "total_net_nt": round(total, 1), "next_up": lvl(up), "next_down": lvl(down), "regime": regime,
+                "share": NEXT_LEVEL_SHARE}
+    except Exception as e:
+        log.warning("next levels failed for %s: %s", symbol, e)
+        return None
 
 
 def walls(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:

@@ -1257,7 +1257,10 @@ async def gamma_walls(symbol: str, u: dict = User):
     w = await run_in_threadpool(gamma.walls, sym, spot) if spot else None
     s = await run_in_threadpool(gamma.shelves, sym, spot) if spot else None
     g = await run_in_threadpool(gamma.grid, sym, spot) if spot else None
-    return dict(symbol=sym, walls=w, shelves=s, grid=g)
+    nl = await run_in_threadpool(gamma.next_levels, sym, spot, False) if spot else None    # display only (spec Nov 18)
+    return dict(symbol=sym, walls=w, shelves=s, grid=g, next_levels=nl, spot=spot,
+                as_of=pd.Timestamp.now(tz="America/New_York").isoformat(timespec="seconds"),
+                chain_as_of=gamma.chain_as_of(sym))
 
 
 

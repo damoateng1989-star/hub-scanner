@@ -5192,6 +5192,9 @@ function mapSideHTML(P, st, chart) {
     line("walls", "🧱", `${g.call_wall ? "Call" : "Put"} wall ${money(w)} (${pct(w)})`,
       (g.call_wall ? `Call wall ${money(g.call_wall)} (${pct(g.call_wall)}). ` : "") + (g.put_wall ? `Put wall ${money(g.put_wall)} (${pct(g.put_wall)}). ` : "") + "Strikes with the most open options; price often stalls near them.");
   }
+  const NLx = GAMMA_NL[sym];          // GEX next levels on the nearest expiry (display only)
+  if (NLx) line("gexnext", "🎯", `Next levels ${NLx.up.replace(/ \(no significant.*\)$/, "")} · ${NLx.dn.replace(/ \(no significant.*\)$/, "")} · ${NLx.reg}`,
+    `${NLx.text}. ${NLx.regLong}. The nearest strikes in each direction carrying at least ${Math.round((NLx.n.share || 0.25) * 100)}% of the ${NLx.exp} expiry's biggest gamma: where a move tends to stop, not which way it goes. ${NLx.when}.`);
   // flow at the breakout (Patch 112): the fact only — no "Confirms" pill until the Lab gate passes
   const br = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
   if (br && br.flow) {
@@ -5740,11 +5743,34 @@ function mapWire() {
 document.addEventListener("pointerdown", (e) => { if (MAP_HOVER && !e.target.closest("#mpCw")) mapHideTip(); });
 // ---------------------------------------------------------------- gamma walls on the Shelf card (Patch 23)
 let GAMMA_CTX = {d: 0}; const GAMMA = {}, GAMMA_AT = {};
+
+// GEX next levels (spec Nov 18): one display line from /api/gamma's next_levels. Never a forecast.
+function gexNextLine(j) {
+  const n = j && j.next_levels; if (!n) return null;
+  const m = (v) => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const pc = (v) => (v > 0 ? "+" : v < 0 ? "−" : "+") + Math.abs(v).toFixed(1) + "%";
+  const exp = new Date(n.expiry_nt + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+  const up = n.next_up ? `↑ ${m(n.next_up.strike)} (${pc(n.next_up.distance_pct)})` : `↑ — (no significant wall above on ${exp})`;
+  const dn = n.next_down ? `↓ ${m(n.next_down.strike)} (${pc(n.next_down.distance_pct)})` : `↓ — (no significant wall below on ${exp})`;
+  const reg = n.regime === "short" ? "SHORT γ" : "LONG γ";
+  const regLong = n.regime === "short" ? "SHORT γ — moves accelerate" : "LONG γ — moves dampen, price pins";
+  let when = "";
+  if (j.chain_as_of) {
+    const c = new Date(j.chain_as_of), ny = (d) => d.toLocaleString("en-US", {timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false});
+    const day = (d) => d.toLocaleDateString("en-US", {timeZone: "America/New_York"});
+    const now = new Date(), openPassed = ny(now) >= "09:30";
+    const stale = day(c) !== day(now) || (openPassed && ny(c) < "09:30");
+    when = `chain from ${ny(c)} ET${stale ? " — levels from before today's open" : ""} · Cboe, ~15 min delayed`;
+  }
+  return {text: `Next levels ${up} · ${dn} · ${exp} · ${reg}`, up, dn, exp, reg, regLong, when, n};
+}
+const GAMMA_NL = {};
 async function loadGamma(sym) {
   if (!ME || ME.guest) return;
   if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 600000)) {   // re-read every 10 min: walls follow the price
     if (!(sym in GAMMA)) { GAMMA[sym] = "loading"; paintGamma(sym); }
-    try { GAMMA[sym] = (await api(`/api/gamma/${encodeURIComponent(sym)}`)).walls || null; } catch (e) { GAMMA[sym] = null; }
+    try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); GAMMA[sym] = j.walls || null; GAMMA_NL[sym] = gexNextLine(j); }
+    catch (e) { GAMMA[sym] = null; GAMMA_NL[sym] = null; }
     GAMMA_AT[sym] = Date.now();
   }
   paintGamma(sym); if (BRIEF_SYM === sym) paintMap();
@@ -5775,7 +5801,9 @@ function paintGamma(sym) {
   if (capped && row && !row.dataset.touched) row.open = true;        // a wall that changes the plan opens itself
   const e = EARN[sym];
   if (capped && top && !(e && e.days <= 14)) top.innerHTML = `<div class="gw-row">🧱 ${main}</div>`;   // one warning on top: earnings wins
-  el.innerHTML = `<div class="gw-row">🧱 ${main}<small>Biggest options open interest by strike${exp}${flip}. Delayed data, context only.</small></div>`;
+  const NL = GAMMA_NL[sym];
+  el.innerHTML = `<div class="gw-row">🧱 ${main}<small>Biggest options open interest by strike${exp}${flip}. Delayed data, context only.</small></div>`
+    + (NL ? `<div class="gw-row">🎯 ${esc(NL.text)}<small>${esc(NL.regLong)}. ${esc(NL.when)}.</small></div>` : "");
   paintVizScale();
 }
 function paintBriefWatch(sym) {          // the watchlist button next to "Open full chart"

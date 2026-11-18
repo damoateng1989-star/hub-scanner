@@ -220,6 +220,11 @@ h1{letter-spacing:-.025em!important}.badge{font-size:11px!important}
   .gex-map .pricetag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; background: #FFFFFF; color: #000000; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: 1px; }
   table.gex-map tr.strongest th { color: #FFFFFF; }
   table.gex-map tr.strongest td { outline: 2px solid #FFFFFF; outline-offset: -1px; }
+  table.gex-map tr.nextrow th { color: #FFFFFF; }
+  table.gex-map tr.nextrow td { outline: 2px dashed #7C93FF; outline-offset: -1px; }
+  .gex-map .nexttag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; border: 1px solid #7C93FF; color: #A9B8FF; background: rgba(124,147,255,.14); border-radius: 3px; padding: 0 4px; margin-left: 4px; vertical-align: 1px; }
+  .gex-next { margin-top: 10px; font-size: 13px; line-height: 1.5; }
+  .gex-next small { display: block; color: var(--muted, #A3A3A3); font-size: 11.5px; margin-top: 3px; }
   .gex-map .pulltag { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: .06em; background: #DC2626; color: #FFFFFF; border-radius: 3px; padding: 1px 4px; margin-left: 4px; vertical-align: 1px; }
   .gex-map-legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 10px 14px 12px; border-top: 1px solid #262626; font-family: var(--mono); font-size: 11px; color: #A3A3A3; }
   .gex-map-legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
@@ -841,6 +846,27 @@ function renderOptionsPanel(o) {
 }
 // GEX shelves (Patch 135, watch-only): the top gamma shelves near the price, drawn as
 // shelves like the hub band. Fail-open: a failed fetch or empty shelves leaves the section blank.
+
+// GEX next levels (spec Nov 18): one display line from /api/gamma's next_levels. Never a forecast.
+function gexNextLine(j) {
+  const n = j && j.next_levels; if (!n) return null;
+  const m = (v) => "$" + Number(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  const pc = (v) => (v > 0 ? "+" : v < 0 ? "−" : "+") + Math.abs(v).toFixed(1) + "%";
+  const exp = new Date(n.expiry_nt + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+  const up = n.next_up ? `↑ ${m(n.next_up.strike)} (${pc(n.next_up.distance_pct)})` : `↑ — (no significant wall above on ${exp})`;
+  const dn = n.next_down ? `↓ ${m(n.next_down.strike)} (${pc(n.next_down.distance_pct)})` : `↓ — (no significant wall below on ${exp})`;
+  const reg = n.regime === "short" ? "SHORT γ" : "LONG γ";
+  const regLong = n.regime === "short" ? "SHORT γ — moves accelerate" : "LONG γ — moves dampen, price pins";
+  let when = "";
+  if (j.chain_as_of) {
+    const c = new Date(j.chain_as_of), ny = (d) => d.toLocaleString("en-US", {timeZone: "America/New_York", hour: "2-digit", minute: "2-digit", hour12: false});
+    const day = (d) => d.toLocaleDateString("en-US", {timeZone: "America/New_York"});
+    const now = new Date(), openPassed = ny(now) >= "09:30";
+    const stale = day(c) !== day(now) || (openPassed && ny(c) < "09:30");
+    when = `chain from ${ny(c)} ET${stale ? " — levels from before today's open" : ""} · Cboe, ~15 min delayed`;
+  }
+  return {text: `Next levels ${up} · ${dn} · ${exp} · ${reg}`, up, dn, exp, reg, regLong, when, n};
+}
 async function loadGexShelves() {
   const host = document.getElementById("gexShelves");
   if (!host) return;
@@ -877,6 +903,8 @@ async function loadGexShelves() {
   } else {
     shelfHtml += `<p class="scope">Gamma shelf levels are unavailable for this ticker right now.</p>`;
   }
+  const NL = gexNextLine(j);
+  if (NL) shelfHtml += `<p class="gex-next"><b>${esc(NL.text)}</b><small>${esc(NL.regLong)} · the nearest strikes in each direction carrying at least ${Math.round((NL.n.share || 0.25) * 100)}% of the ${esc(NL.exp)} expiry's biggest gamma. Where a move tends to stop, not which way it goes.${NL.when ? " " + esc(NL.when) + "." : ""}</small></p>`;
   host.innerHTML = `<h2>GEX <em>shelves</em> + heat map</h2><div class="gex-shelf-layout"><section>${shelfHtml}</section><div id="gexHeatmap"></div></div>`;
   renderGexHeatmap(j, error);
 }
@@ -923,11 +951,13 @@ function renderGexHeatmap(j, message) {
     const d = new Date(e + "T12:00:00");
     return `<th>${d.toLocaleDateString("en-US", {month:"short", day:"numeric"}).toUpperCase()}</th>`;
   }).join("");
+  const nl = j && j.next_levels, nUp = nl && nl.next_up ? nl.next_up.strike : null, nDn = nl && nl.next_down ? nl.next_down.strike : null;
   const rowsHtml = g.rows.map((r, ri) => {
     const at = r.strike === nearStrike;
     const isStrongest = r.strike === strongestStrike;
-    const cls = [at ? "spotrow" : "", isStrongest ? "strongest" : ""].filter(Boolean).join(" ");
-    return `<tr${cls ? ` class="${cls}"` : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}${isStrongest ? ' <span class="pulltag">STRONGEST PULL</span>' : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}${totalCell(totals[ri], grossTotals[ri])}</tr>`;
+    const nx = r.strike === nUp ? "↑" : r.strike === nDn ? "↓" : "";      // only marked when the row is already in the grid
+    const cls = [at ? "spotrow" : "", isStrongest ? "strongest" : "", nx ? "nextrow" : ""].filter(Boolean).join(" ");
+    return `<tr${cls ? ` class="${cls}"` : ""}><th>${r.strike}${at ? ' <span class="pricetag">PRICE</span>' : ""}${isStrongest ? ' <span class="pulltag">STRONGEST PULL</span>' : ""}${nx ? ` <span class="nexttag">NEXT ${nx}</span>` : ""}</th>${r.gex.map((v, i) => cell(v, (r.gross || [])[i])).join("")}${totalCell(totals[ri], grossTotals[ri])}</tr>`;
   }).join("");
   host.innerHTML = `<div class="gex-map-head"><span class="t">GEX HEAT MAP</span><span class="s">M = $1,000,000 · ${esc(g.expiries[0])} – ${esc(g.expiries[g.expiries.length - 1])} · TOTAL = sum across expiries</span></div><table class="gex-map"><thead><tr><th>STRIKE</th>${head}<th>TOTAL</th></tr></thead><tbody>${rowsHtml}</tbody></table><div class="gex-map-legend"><span><i class="sw w"></i>Positive — stabilise</span><span><i class="sw r"></i>Negative — chase</span><span><i class="sw r"></i>Strongest pull</span><span>Brighter = more gamma</span></div>`;
 }
