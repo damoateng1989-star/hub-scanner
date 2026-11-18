@@ -6965,12 +6965,56 @@ async function askSikaDrain() {
     const body = $("askBody"); if (body) body.scrollTop = body.scrollHeight;
   }
 }
+async function askSikaCard(sym) {
+  const cached = SWING_CACHE[sym];
+  if (cached && Date.now() - cached._t < 60000) return cached;
+  try {
+    const c = await api(`/api/swing-card/${encodeURIComponent(sym)}`, {timeout: 45000});
+    if (!c || typeof c !== "object") return null;
+    c._t = Date.now();
+    SWING_CACHE[sym] = c;
+    return c;
+  } catch (e) {
+    return null;
+  }
+}
 async function askSikaProcess(raw) {
   askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
   const ticker = raw.toUpperCase().replace(/\$/g, "").trim();
   if (/^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
     if (ASK_SYMBOL !== ticker) { ASK_SYMBOL = ticker; ASK_HISTORY = []; }
     askSikaHistory("user", `Let's discuss ${ticker}.`);
+    if (ME && !ME.guest && (isPro() || ME.options)) {
+      const c = await askSikaCard(ticker);
+      let reply = "";
+      if (c && c.state === "live" && c.favored) {
+        const f = c.favored;
+        reply = `${ticker} — ${f.label || "Favored play"}.
+Trigger: ${f.trigger && f.trigger.text ? f.trigger.text : "See the trigger level on the setup card."}
+Target: ${Array.isArray(f.targets) ? f.targets.join(" · ") : "See the setup card."}
+Wrong if: ${f.wrong_if || "See the invalidation level on the setup card."}`;
+        if (f.contract) {
+          const k = f.contract;
+          reply += `
+Options idea: ${[k.expiry, k.strike, k.side ? k.side + "s" : ""].filter(Boolean).join(" ")} · ${Number.isFinite(k.cost_mid) ? k.cost_mid.toFixed(2) + " mid" : "mid price unavailable"}.`;
+        }
+        reply += `
+Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.`;
+      } else if (c && c.state === "live" && !c.favored && c.message) {
+        reply = c.message;
+      } else if (c && c.state === "in_between" && c.in_between) {
+        reply = c.in_between.text || "Price is between setups right now.";
+      } else if (c && c.state === "waiting") {
+        reply = `There's no setup in play for ${ticker} right now — no hub, no breakout. Nothing to act on. When a hub forms or a level breaks, I'll flag it.`;
+      }
+      if (reply) {
+        askSikaHistory("sika", reply);
+        askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\\n/g, "<br>")}</p>`);
+        return;
+      }
+    }
+    const fallback = `I'm ready to discuss ${ticker}. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.`;
+    askSikaHistory("sika", fallback);
     askSikaSay(`<p class="sp-hint">I'm ready to discuss <b>${esc(ticker)}</b>. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.</p>`);
     return;
   }
