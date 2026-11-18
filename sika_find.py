@@ -28,8 +28,8 @@ _KINDS = {
 }
 
 _GRADE_CACHE = {}          # (symbol, kind, direction) -> (grade dict, expires_at monotonic)
-_GRADE_TTL_S = 3600
-GRADE_BUDGET_S = 5.0       # total grade-compute time per request
+_GRADE_TTL_S = 12 * 3600    # grades are 2-year records: they barely move between board sweeps (warmed after each sweep)
+GRADE_BUDGET_S = 12.0      # total grade-compute time per request (the cache is normally warm, so this rarely matters)
 CAP = 8
 _GRADE_RANK = {"A": 0, "B": 1, "C": 2, "D": 3, "?": 4}
 _ROOM_MIN = 1.5             # retest-grade A-bar room threshold
@@ -200,7 +200,23 @@ def _recency_key(row, board_updated):
     return float("inf")
 
 
-def find(kind: str) -> dict:
+_WARMING = {"on": False}
+
+
+def _warm_bg():
+    try:
+        warm()
+    finally:
+        _WARMING["on"] = False
+
+
+def warm() -> int:
+    """After a board sweep: compute every live row's grade into the cache, with no time budget, so the Sika list
+    shows real grades (never 'grade pending') and answers instantly."""
+    return find("all", limit=1000, budget_s=600.0)["total"]
+
+
+def find(kind: str, limit: int = CAP, budget_s: float = GRADE_BUDGET_S) -> dict:
     """Return live breakouts/breakdowns only, each with computable Room >= 1.5.
 
     Reads the latest stored board. No near/forming rows, no scan trigger, no writes.
@@ -214,7 +230,7 @@ def find(kind: str) -> dict:
     updated = data.get("updated")
     as_of = _as_of_iso(updated)
     stale = _is_stale(updated)
-    deadline = time.monotonic() + GRADE_BUDGET_S
+    deadline = time.monotonic() + budget_s
     grade_fn = lambda symbol, setup_kind, direction: _grade_for(symbol, setup_kind, direction, deadline)
 
     live = []
@@ -237,7 +253,12 @@ def find(kind: str) -> dict:
             if result:
                 live.append(result)
 
+    if budget_s < 600 and time.monotonic() > deadline and not _WARMING["on"]:
+        # ran out of time before every grade was cached (e.g. right after a deploy): finish them in the background
+        import threading
+        _WARMING["on"] = True
+        threading.Thread(target=_warm_bg, daemon=True).start()
     live.sort(key=lambda row: (_GRADE_RANK.get(row["grade"], 4), _recency_key(row, updated)))
-    rows = live[:CAP]
+    rows = live[:max(1, int(limit))]
     return dict(kind=kind, kinds=list(board_kinds), label=_label(kind), as_of=as_of,
                 stale=stale, total=len(live), shown=len(rows), rows=rows)

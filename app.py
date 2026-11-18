@@ -260,6 +260,7 @@ class SikaChatBody(BaseModel):
 
 class SikaFindBody(BaseModel):
     kind: str
+    limit: int = 8      # "show me all" asks for the whole list (capped at 60)
 
 
 class SignupBody(BaseModel):
@@ -1215,7 +1216,7 @@ async def sika_find_endpoint(body: SikaFindBody, u: dict = User):
     if kind not in ("all", "hub", "double", "double_top", "double_bottom", "gapfade"):
         raise HTTPException(400, "Unknown setup kind")
     try:
-        return await run_in_threadpool(sika_find.find, kind)
+        return await run_in_threadpool(sika_find.find, kind, max(1, min(60, body.limit or 8)))
     except Exception as e:
         log.warning("Sika find unavailable for %s: %s", kind, type(e).__name__)
         raise HTTPException(503, "Sika couldn't answer that right now")

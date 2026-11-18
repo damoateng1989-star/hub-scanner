@@ -431,6 +431,11 @@ def _scan_board() -> int:
         log.info("board scan done: %d/%d symbols (%d skipped: illiquid, %d skipped: small-cap)",
                  done, len(syms), skipped_illiquid, skipped_smallcap)
         threading.Thread(target=_warm_gamma, daemon=True).start()   # walls for the fresh breakouts, off the hot path
+        try:      # Sika's setup list: real grades ready before anyone asks
+            import sika_find
+            threading.Thread(target=sika_find.warm, daemon=True).start()
+        except Exception as ex:
+            log.warning("sika grade warm-up failed: %s", ex)
         if FRESH_A:
             import notify
             threading.Thread(target=notify.every_a_alert, args=(list(FRESH_A),), daemon=True).start()

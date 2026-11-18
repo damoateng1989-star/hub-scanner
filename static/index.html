@@ -846,7 +846,13 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .ask-send { flex: 0 0 auto; padding: 11px 14px; border-radius: 12px; font: 700 14px var(--sans); cursor: pointer; }
 .ask-foot { margin: 10px 0 0; color: #9AA0AC; font-size: 12px; text-align: center; }
 .ask-answer { color: #E9EBEF; font-size: 14px; line-height: 1.55; }
-.ask-scan-row { display: flex; gap: 8px; align-items: baseline; padding: 7px 0; border-top: 1px solid rgba(32,36,43,.12); font-size: 14px; line-height: 1.5; }
+.ask-scan-row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid rgba(32,36,43,.12); font-size: 14px; line-height: 1.4; }
+#askBody .ask-msg.ask-scanmsg { justify-self: stretch; width: 100%; max-width: 100%; } .ask-scan-row .ask-scan-sym { min-width: 64px; text-align: center; }
+.ask-scan-head { margin: 0 0 4px; font-size: 13.5px; } .ask-scan-sec { margin: 12px 0 2px; font: 700 11px var(--sans); letter-spacing: .08em; text-transform: uppercase; opacity: .6; }
+.ask-scan-mid { flex: 1; min-width: 0; } .ask-scan-mid small { display: block; font: 500 12.5px var(--mono); opacity: .75; margin-top: 1px; }
+.ask-scan-mid b.u { color: #0F7A4F; } .ask-scan-mid b.d { color: #B42318; }
+.ask-scan-g { flex: none; padding: 3px 9px; border-radius: 999px; font: 700 11.5px var(--sans); background: rgba(32,36,43,.08); white-space: nowrap; }
+.ask-scan-g.g-A { background: #1E7A3C; color: #fff; } .ask-scan-g.g-B { background: #D1F2DF; color: #0F5132; } .ask-scan-g.g-C { background: #FDF0C8; color: #7A5A00; } .ask-scan-g.g-D { background: #F6D5D1; color: #8A1F14; } .ask-scan-g.g-q { opacity: .7; }
 .ask-scan-row:first-of-type { border-top: 0; }
 .ask-scan-sym { flex: 0 0 auto; padding: 2px 9px; border-radius: 999px; background: #20242B; color: #F2F1EC; font: 700 13px var(--sans); cursor: pointer; border: 0; }
 @media (max-width: 999px) {
@@ -6980,7 +6986,7 @@ function scoutRow(sym, kind, color) {
   return `<button class="sp-row" onclick="toggleScout(false);openBrief('${esc(sym)}')">${esc(sym)}<span style="--c:${color}">${kind}</span></button>`;
 }
 // Conversational Sika — ticker cards stay deterministic; only follow-up questions use the model.
-let ASK_SYMBOL = null, ASK_HISTORY = [], ASK_BUSY = false, ASK_QUEUE = [], ASK_SCAN_SYMBOLS = new Set();
+let ASK_SYMBOL = null, ASK_HISTORY = [], ASK_BUSY = false, ASK_QUEUE = [], ASK_SCAN_SYMBOLS = new Set(); let ASK_LAST_SCAN = null;
 function askSikaPlain(sym) {
   const panels = [...document.querySelectorAll(".plain-panel")];
   const panel = panels.find(p => (p.dataset.sym || "").toUpperCase() === sym);
@@ -7165,15 +7171,13 @@ function askSikaBoardTime(iso) {
 function askSikaGradeText(r) {
   if (!r.grade) return "";
   if (r.grade !== "?") return r.grade + " (" + r.grade_word + ")";
-  if (r.state === "live") return "wait for a retest";
-  return r.direction === 1 ? "wait for a price breakout of a level" : "wait for a price breakdown below a level";
+  return "grade pending";
 }
 function askSikaScanRowText(r) {
   const short = {gapfade: "Gap fade & rip"}[r.kind] || r.name;
   const parts = [short];
   const g = askSikaGradeText(r);
   if (g) parts.push(g);
-  if (r.grade && ["C", "D", "?"].includes(r.grade)) parts.push("watch only");
   parts.push(r.state === "live" ? (r.direction === 1 ? "Broke out" : "Broke down") : "Near the edge");
   parts.push("Trigger " + money(r.trigger));
   if (r.state === "live") parts.push("Target " + money(r.target));
@@ -7185,30 +7189,34 @@ function askSikaScanText(data, kind) {
   if (!data.rows || !data.rows.length) return ASK_SCAN_NONE[kind] || ("No " + label + " setups in play right now.");
   const lines = [label + " — " + data.total + " in play · Board as of " + askSikaBoardTime(data.as_of)];
   if (data.stale) lines[0] += " — the board hasn't updated since then, so this list may be stale.";
-  for (const r of data.rows) lines.push(askSikaScanRowText(r));
-  if (data.total > data.shown) lines.push(data.shown + " shown — " + (data.total - data.shown) + " more " + (ASK_SCAN_MORE[kind] || kind) + " in play right now.");
+  const good = data.rows.filter(r => r.grade === "A" || r.grade === "B"), watch = data.rows.filter(r => !(r.grade === "A" || r.grade === "B"));
+  if (good.length) { lines.push("Tradeable now (A/B):"); for (const r of good) lines.push(askSikaScanRowText(r)); }
+  if (watch.length) { lines.push("Watch only:"); for (const r of watch) lines.push(askSikaScanRowText(r)); }
+  if (data.total > data.shown) lines.push(data.shown + " of " + data.total + " shown — say \"show me all\" for the rest.");
   lines.push('Type a ticker from the list — or ask "what about ' + data.rows[0].symbol + '?" — for its play.');
   return lines.join("\n");
 }
 function askSikaScanRowHTML(r) {
-  const short = {gapfade: "Gap fade & rip"}[r.kind] || r.name;
-  const parts = [esc(short)];
-  const g = askSikaGradeText(r);
-  if (g) parts.push("<b>" + esc(g) + "</b>");
-  if (r.grade && ["C", "D", "?"].includes(r.grade)) parts.push("watch only");
-  parts.push(r.state === "live" ? (r.direction === 1 ? "Broke out" : "Broke down") : "Near the edge");
-  parts.push("Trigger " + money(r.trigger));
-  if (r.state === "live") parts.push("Target " + money(r.target));
-  else parts.push(r.distance_pct + "% away");
-  return '<div class="ask-scan-row"><button class="ask-scan-sym" type="button" onclick="askSikaTap(\'' + esc(r.symbol) + '\')">' + esc(r.symbol) + '</button><span>' + parts.join(" · ") + "</span></div>";
+  const short = {gapfade: "Gap fade & rip", hub: "Hub", double_top: "Double top", double_bottom: "Double bottom"}[r.kind] || r.name;
+  const up = r.direction === 1, g = r.grade || "?";
+  const gl = g === "?" ? "grade pending" : g + " · " + (r.grade_word || "");
+  return '<div class="ask-scan-row"><button class="ask-scan-sym" type="button" onclick="askSikaTap(\'' + esc(r.symbol) + '\')">' + esc(r.symbol) + '</button>'
+    + '<span class="ask-scan-mid"><b class="' + (up ? "u" : "d") + '">' + (up ? "↑ Broke out" : "↓ Broke down") + '</b> · ' + esc(short)
+    + '<small>Trigger ' + money(r.trigger) + ' → target ' + money(r.target) + '</small></span>'
+    + '<span class="ask-scan-g g-' + (g === "?" ? "q" : g) + '">' + esc(gl) + '</span></div>';
 }
 function askSikaScanHTML(data, kind) {
   const label = data.label || kind;
   if (!data.rows || !data.rows.length) return '<p class="sp-hint">' + esc(ASK_SCAN_NONE[kind] || ("No " + label + " setups in play right now.")) + "</p>";
-  let h = '<p class="sp-hint"><b>' + esc(label + " — " + data.total + " in play · Board as of " + askSikaBoardTime(data.as_of)) + "</b>" + (data.stale ? "<br>The board hasn't updated since then, so this list may be stale." : "") + "</p>";
-  for (const r of data.rows) h += askSikaScanRowHTML(r);
-  if (data.total > data.shown) h += '<p class="sp-hint">' + data.shown + " shown — " + (data.total - data.shown) + " more " + esc(ASK_SCAN_MORE[kind] || kind) + " in play right now.</p>";
-  h += '<p class="sp-hint">Type a ticker from the list — or ask "what about ' + esc(data.rows[0].symbol) + '?" — for its play.</p>';
+  const RK = {A: 0, B: 1, C: 2, D: 3, "?": 4}, byG = (x, y) => (RK[x.grade] ?? 4) - (RK[y.grade] ?? 4);
+  const good = data.rows.filter(r => r.grade === "A" || r.grade === "B").sort(byG), watch = data.rows.filter(r => !(r.grade === "A" || r.grade === "B")).sort(byG);
+  let h = '<p class="ask-scan-head"><b>' + esc(label) + '</b> · ' + data.total + ' in play · board as of ' + esc(askSikaBoardTime(data.as_of))
+    + (data.stale ? '<br>The board hasn\'t updated since then, so this list may be stale.' : "") + '</p>';
+  if (good.length) h += '<p class="ask-scan-sec">Tradeable now · A and B grades</p>' + good.map(askSikaScanRowHTML).join("");
+  if (watch.length) h += '<p class="ask-scan-sec">Watch only · C, D or not graded yet</p>' + watch.map(askSikaScanRowHTML).join("");
+  if (!good.length) h += '<p class="sp-hint">Nothing graded A or B is in play right now: these are for watching, not trading.</p>';
+  if (data.total > data.shown) h += '<p class="sp-hint">' + data.shown + ' of ' + data.total + ' shown. Say <b>show me all</b> for the rest.</p>';
+  h += '<p class="sp-hint">Tap a ticker for its play.</p>';
   return h;
 }
 function askSikaTap(sym) {
@@ -7277,8 +7285,10 @@ function askSikaPlayHTML(ticker, c) {
 
 async function askSikaProcess(raw, skipEcho) {
   if (!skipEcho) askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
+  // "show me all", "give me all", "more", "the rest" right after a setups list: the whole list (and never Allstate's ticker ALL)
+  const more = !!ASK_LAST_SCAN && !/^\s*ALL\s*$/.test(raw) && /^\s*(please\s+)?((give|show|list)\s+(me\s+)?)?(them\s+)?(all|more|the rest|everything|all of them|the full list)(\s+(of them|setups|please))?\s*[.!?]*\s*$/i.test(raw);
   const ticker = raw.toUpperCase().replace(/\$/g, "").trim();
-  if (/^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
+  if (!more && /^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
     if (ASK_SYMBOL !== ticker) { ASK_SYMBOL = ticker; ASK_HISTORY = []; }
     askSikaHistory("user", `Let's discuss ${ticker}.`);
     if (ME && !ME.guest && (isPro() || ME.options)) {
@@ -7328,11 +7338,10 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
 
   // "analyze BE", "check BE", "BE setup?": one ticker plus only filler words is the same as typing the
   // bare ticker, so it gets the play card (checked before the scan, which would read "setup" as a scan).
-  const one = askSikaPlayAsk(raw);
+  const one = more ? null : askSikaPlayAsk(raw);
   if (one) { await askSikaProcess(one, true); return; }
 
-  // Patch 159: deterministic board scan — no model call for the list itself.
-  const scanKind = askSikaIsScan(raw);
+  const scanKind = more ? ASK_LAST_SCAN : askSikaIsScan(raw);
   if (scanKind) {
     if (ME && !ME.guest && (isPro() || ME.options)) {
       askSikaHistory("user", raw);
@@ -7344,12 +7353,13 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
         if (wait) await new Promise(r => setTimeout(r, wait));
       };
       try {
-        const data = await api("/api/sika/find", {method: "POST", timeout: 30000, body: JSON.stringify({kind: scanKind})});
+        const data = await api("/api/sika/find", {method: "POST", timeout: 30000, body: JSON.stringify({kind: scanKind, limit: more ? 60 : 8})});
+        ASK_LAST_SCAN = scanKind;
         const plain = askSikaScanText(data, scanKind);
         askSikaHistory("sika", plain);
         ASK_SCAN_SYMBOLS = new Set((data.rows || []).map(r => r.symbol));
         await waitMin();
-        if (reading) { reading.className = "ask-msg ask-sika"; reading.innerHTML = askSikaScanHTML(data, scanKind); }
+        if (reading) { reading.className = "ask-msg ask-sika ask-scanmsg"; reading.innerHTML = askSikaScanHTML(data, scanKind); }
       } catch (e) {
         const fallback = "Sika couldn't answer that right now.";
         askSikaHistory("sika", fallback);
