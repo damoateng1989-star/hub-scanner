@@ -7116,6 +7116,10 @@ function askSikaStripTicker(raw, sym) {
   const toks = askSikaNorm(raw).split(" ").filter(Boolean);
   return toks.filter(t => t.replace(/'s$/, "").toUpperCase() !== sym).join(" ").trim();
 }
+function askSikaWrongAsk(raw) {
+  const t = " " + askSikaNorm(raw) + " ";
+  return /invalidat|\bwrong\b|\bstop ?loss\b|\bstop\b|\bkill (price|level)\b|\bwhen (do|should) i (get out|exit|cut)|\bwhere (do|should) i (get out|exit|cut)|\bwhat (would|could) (break|kill|ruin)\b|\b(make|makes) it fail\b/.test(t);
+}
 function askSikaSideAsk(raw) {
   const t = " " + askSikaNorm(raw) + " ";
   return /\b(calls?|puts?)\b.*\bor\b.*\b(calls?|puts?)\b/.test(t) || /\bwhich (side|way|direction)\b/.test(t)
@@ -7385,6 +7389,22 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
       askSikaHistory("sika", `The favored side for ${ASK_SYMBOL} is ${f.side}: trigger ${f.trigger.text}, target ${(f.targets || []).join(" · ")}, wrong if ${f.wrong_if}.`
         + (other && other.trigger ? ` The other side (${other.side}) is only on a break: ${other.trigger.text}.` : ""));
       askSikaSay(html, "ask-play " + (f.side === "calls" ? "ask-calls" : "ask-puts"));
+      return;
+    }
+  }
+  // "What could invalidate it?", "where's the stop?", "when is it wrong?": the card already holds the answer
+  // (wrong-if and the other side's trigger), so answer straight from it — no model call that could fail or hedge.
+  if (askSikaWrongAsk(raw)) {
+    const c = await askSikaCard(ASK_SYMBOL);
+    const f = c && c.state === "live" && c.favored;
+    if (f && f.wrong_if) {
+      const o = c.opposite, side = f.side === "puts" ? "puts" : "calls";
+      const txt = `${ASK_SYMBOL}'s ${side} play is wrong on a ${f.wrong_if.replace(/^4H/, "4-hour")}. That close is the line: once it prints, the setup has failed and the plan says get out.`
+        + (o && o.trigger && o.trigger.text ? ` The ${o.side} side only comes into play if price ${o.trigger.text}.` : "")
+        + ` A wick through the level doesn't count; only the 4-hour close does.`;
+      askSikaHistory("user", raw);
+      askSikaHistory("sika", txt);
+      askSikaSay(`<p class="sp-hint">${esc(txt)}</p>`);
       return;
     }
   }
