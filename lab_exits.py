@@ -284,6 +284,81 @@ def _edge_rows(sym, c4, res, s, atr, dvol, day, mc):
     return out
 
 
+# ---------------------------------------------------------------- gap fade: buy the open vs wait for the close (test only)
+# The MU question (Nov 18): pre-market is already above the gap-day high, so why wait for the daily close?
+# Proxy for "pre-market above the trigger": the session OPENS above the gap-day high (the Lab has no pre-market bars).
+# Same gap events as the live rule. Open entry: stop = the lowest low known before the open, 2R target, the same
+# close-based walk as the live rule, but the entry day's own close counts (you're in from 9:30).
+GAPGO_EXITS = {
+    "gg_open": "Buy the open (opened above the gap-day high) · 2R target · stop on a close below the fade low",
+    "gg_close": "Wait for the daily close above the gap-day high (the live rule) · 2R target · same stop",
+}
+
+
+def _gg_walk(close, start, entry, stop, target, horizon):
+    n = len(close)
+    for j in range(start, min(start + horizon, n)):
+        if close[j] >= target:
+            return (close[j] / entry - 1) * 100, "target"
+        if close[j] <= stop:
+            return (close[j] / entry - 1) * 100, "stop"
+    end = start + horizon - 1
+    if end < n:
+        return (close[end] / entry - 1) * 100, "time"
+    return None
+
+
+def _gapgo_rows(sym, c4, s):
+    d = engine.complete_days(c4)
+    if len(d) < engine.PEG_MIN_DAILY:
+        return []
+    close, open_, high, low = (d[c].to_numpy(float) for c in ("Close", "Open", "High", "Low"))
+    n, out, i = len(d), [], 1
+    G, W, RW = engine.PEG_GAP, engine.PEG_FADE_WICK, engine.PEG_RECLAIM_MAX
+    isgap = lambda k: open_[k] >= close[k - 1] * (1 + G) and high[k] > low[k] and (high[k] - close[k]) >= W * (high[k] - low[k])
+    while i < n:
+        if not isgap(i):
+            i += 1
+            continue
+        g, gh, fade_low = i, float(high[i]), float(low[i])
+        k_open = k_close = None
+        nxt = None
+        for k in range(g + 1, min(g + RW, n - 1) + 1):
+            if k_open is None and open_[k] > gh:
+                k_open, stop_open = k, fade_low                     # stop known before the open; bought before we
+            if isgap(k):                                            # know this day turns into a new gap-and-fade
+                nxt = k
+                break
+            if close[k] < fade_low:
+                break                                               # dead
+            fade_low = min(fade_low, float(low[k]))
+            if close[k] > gh:
+                k_close = k
+                break
+        if k_open is not None:
+            ex = {}
+            e = float(open_[k_open])
+            R = e - stop_open
+            if R > 0:
+                r = _gg_walk(close, k_open, e, stop_open, e + engine.PEG_TARGET_R * R, s.horizon + 1)
+                if r:
+                    ex["gg_open"] = (round(r[0], 3), r[1])
+            if k_close is not None:
+                e2 = float(close[k_close])
+                st2 = float(low[g:k_close + 1].min())
+                R2 = e2 - st2
+                if R2 > 0:
+                    r = _gg_walk(close, k_close + 1, e2, st2, e2 + engine.PEG_TARGET_R * R2, s.horizon)
+                    if r:
+                        ex["gg_close"] = (round(r[0], 3), r[1])
+            held = bool(close[k_open] > gh)                         # that same day closed above too: the close rule fired
+            if "gg_open" in ex:
+                out.append(dict(sym=sym, grp="gapgo", entry="gapgo", t=str(d.index[k_open]), d=1, held=held,
+                                margin=(e - gh) / gh * 100, ex=ex))
+        i = (k_close + 1) if k_close is not None else (nxt if nxt is not None else g + 1)
+    return out
+
+
 def _exit_half(close: np.ndarray, i0: int, d: int, entry: float, target: float, stop: float, r: float, horizon: int):
     """Half off at entry + 1R (or the target if that comes first); the rest is stopped at entry once half is off."""
     n, lvl, half = len(close), entry + d * r, None
@@ -353,7 +428,8 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         mc = universe.market_cap(sym)
         dclose = res["close"].groupby(day).last()
         own = (dclose > dclose.rolling(50).mean()).where(dclose.rolling(50).count() >= 50)
-        return _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own) + _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
+        return (_floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own) + _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
+                + _gapgo_rows(sym, c4, s))
     try:
         other = patterns.analyze_all(c4, res, s, live_only=False)["trades"]
     except Exception:
@@ -376,6 +452,10 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         traceback.print_exc()
     try:
         out += _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
+    except Exception:
+        traceback.print_exc()
+    try:
+        out += _gapgo_rows(sym, c4, s)
     except Exception:
         traceback.print_exc()
     for t in [dict(x, kind="hub") for x in res["trades"]] + other:
@@ -678,6 +758,17 @@ LIVE_RULES = [
      lambda r: r["grp"] == "edge" and r.get("tight"), "ed_shelf"),
     ("edge_tight_tighthub", "Test · Same, tight hubs only: next shelf, intraday stop at the hub bottom",
      lambda r: r["grp"] == "edge" and r.get("tight"), "ed_tight"),
+    # test only (Nov 18, the MU question): gap fades where the session OPENS above the gap-day high. Buy the open, or wait for the close?
+    ("gapgo_open", "Test · Gap fade, opened above the gap-day high: buy the open",
+     lambda r: r["grp"] == "gapgo", "gg_open"),
+    ("gapgo_close", "Test · Same gaps: wait for the daily close (the live rule)",
+     lambda r: r["grp"] == "gapgo", "gg_close"),
+    ("gapgo_open_held", "Test · Opened above and also closed above that day: bought the open",
+     lambda r: r["grp"] == "gapgo" and r.get("held"), "gg_open"),
+    ("gapgo_close_held", "Test · Opened above and also closed above that day: waited for the close",
+     lambda r: r["grp"] == "gapgo" and r.get("held"), "gg_close"),
+    ("gapgo_open_faded", "Test · Opened above but closed back below that day: bought the open (the trades waiting skips)",
+     lambda r: r["grp"] == "gapgo" and not r.get("held"), "gg_open"),
     # test only: hubs with no shelf above, A retest longs, three targets
     *[(f"noshelf_{k[3:]}", f"Test · No shelf above, retest after a 4+ session hub: {lbl.split(' · ')[0].replace('Target: ', 'target ')}",
        lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and r.get("no_shelf")
@@ -728,7 +819,7 @@ def graduation(rows: list[dict]) -> list[dict]:
         cut = (pd.Timestamp(got[-1]["t"]) - pd.Timedelta(days=182)).isoformat()
         recent = np.array([r["ex"][ek][0] for r in got if r["t"] >= cut])
         sp = _spread(x, syms)
-        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or EDGE_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
+        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or EDGE_EXITS.get(ek) or GAPGO_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
                    win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
                    pf=round(pf, 2) if pf is not None else None,
                    early=round(early, 2) if early is not None else None, late=round(late, 2) if late is not None else None,
@@ -818,7 +909,7 @@ class _Ex:
 
 
 _ROW_KEYS = ("sym", "grp", "entry", "t", "d", "dv", "board_ok", "rvol", "with_mkt", "with_trend", "chase", "margin", "rr",
-             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight", "first_6", "support")
+             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight", "first_6", "support", "held")
 
 
 class _Row:
@@ -887,7 +978,7 @@ def _rss_mb() -> float:
         return 0.0
 
 
-TEST_KEYS = ("floor_", "edge_")      # graduation rows a tests-only run measures
+TEST_KEYS = ("floor_", "edge_", "gapgo_")      # graduation rows a tests-only run measures
 
 
 def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None, only_tests: bool = False):
