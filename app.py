@@ -1202,7 +1202,7 @@ async def sika_find_endpoint(body: SikaFindBody, u: dict = User):
     if not options_for(u):
         raise HTTPException(403, "Options plans are a Pro feature")
     kind = (body.kind or "").strip().lower()
-    if kind not in ("hub", "double", "double_top", "double_bottom", "gapfade"):
+    if kind not in ("all", "hub", "double", "double_top", "double_bottom", "gapfade"):
         raise HTTPException(400, "Unknown setup kind")
     try:
         return await run_in_threadpool(sika_find.find, kind)
