@@ -2450,7 +2450,7 @@ html[data-theme="light"] .sg-b { color: #fff; }
 .ns-logo span{font-weight:700 !important}
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
 </style>
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+<script src="/vendor/lightweight-charts-5.js"></script>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -4104,12 +4104,18 @@ async function openBrief(sym, focus) {
   renderShelfTradeCard(sym);
   BRIEF_SEC = "levels";
   $("brief").scrollTop = 0;
-  loadOptions(sym); loadSwingCard(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind);
+  // The chart goes first: options pricing, GEX, news and the grade wait until it's in (or 1.5 s), so on a small
+  // server they don't compete with it for CPU. (The swing card isn't in the panel any more: no fetch for it.)
+  let sideDone = false;
+  const side = () => { if (sideDone || BRIEF_SYM !== sym) return; sideDone = true; loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind); };
+  const sideT = setTimeout(side, 1500);
   if (ME && ME.is_admin) loadBrokerAccounts();
   try {
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadSwingCard(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
+    clearTimeout(sideT); side();
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
   } catch (e) {
+    clearTimeout(sideT); side();
     if (BRIEF_SYM !== sym) return;
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
     if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#9AA0AC;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
@@ -4549,7 +4555,7 @@ function mapChart(P, chart, W) {
 }
 
 
-let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null, MAP_LWC_COUNT = 0;
+let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null, MAP_LWC_COUNT = 0; let MAP_LWC_KEY = null, MAP_LWC_HOSTEL = null, MAP_LWC_FOOT = null;
 // On-chart map labels: the hub band + the Next shelf / Trigger / Stop cluster.
 const MAP_LABEL_GAP = 20;
 const MAP_LABEL_MIN_W = 560;
@@ -4628,16 +4634,40 @@ class MapLabelsPaneView {
     } };
   }
 }
+function mapLwcKey(D) {
+  // everything the chart draws: if none of it changed, a repaint of the panel can keep the chart as it is
+  if (!D || !D.cs || !D.cs.length) return null;
+  const P = D.P || {}, last = D.cs[D.cs.length - 1], g = GAMMA[P.sym];
+  return JSON.stringify([P.sym, !!D.daily, document.documentElement.dataset.theme, candleColors(), D.cs.length, D.cs[0].time,
+    [last.time, last.open, last.high, last.low, last.close, last.volume], P.trig, P.stop, P.shelf, P.atrTarget, P.oldHigh, P.dir,
+    P.hub && [P.hub.high, P.hub.low], P.obst && [P.obst.level, P.obst.name], P.retest && P.retest.edge,
+    g && g !== "loading" ? [g.call_wall, g.put_wall] : null, P.px]);
+}
 function initLightweightMapChart() {
   const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
   if (MAP_LWC_RO) { MAP_LWC_RO.disconnect(); MAP_LWC_RO = null; }
+  // Opening a stock repaints the panel 4-6 times as options, news, the grade and walls arrive. When nothing the
+  // chart draws has changed, move the existing chart into the new panel instead of rebuilding it (no flicker, no work).
+  const key = mapLwcKey(D);
+  if (host && MAP_LWC_CHART && key && key === MAP_LWC_KEY) {
+    try {
+      host.innerHTML = ""; host.appendChild(MAP_LWC_CHART.chartElement());
+      if (MAP_LWC_FOOT) host.after(MAP_LWC_FOOT);
+      MAP_LWC_HOSTEL = host;
+      MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390});
+      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); });
+      MAP_LWC_RO.observe(host);
+      return;
+    } catch (e) { /* fall through to a full rebuild */ }
+  }
+  MAP_LWC_KEY = key;
   // Keep the user's view: save the visible range before the rebuild, restore it after.
   // Read it live from the old chart so panning/zooming done since the last build is honoured.
   let prevRange = null;
   if (MAP_LWC_CHART) { try { prevRange = MAP_LWC_CHART.timeScale().getVisibleLogicalRange(); } catch (e) {} }
   const prevCount = MAP_LWC_COUNT;
   if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
-  document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove());
+  document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove()); MAP_LWC_FOOT = null;
   if (!host || !D || !L || !D.cs || !D.cs.length) {
     if (host) host.innerHTML = '<div class="mp-lwc-empty">Chart data is loading…</div>';
     return;
@@ -4760,8 +4790,8 @@ function initLightweightMapChart() {
           tip.innerHTML = '<b>Why wait for the retest?</b><div>Price broke above ' + money(edge) + '. A retest entry waits for it to come back and hold the edge — instead of chasing the breakout, you enter at the level, with a tighter stop, so a wrong trade costs less. If a 4H candle closes back below ' + money(edge) + ', the setup is dead — and you never entered.</div>';
           tip.classList.add("on");
           tip.style.left = Math.max(4, Math.min(param.point.x + 12, cw.clientWidth - 250)) + "px";
-          tip.style.top = Math.max(4, Math.min(param.point.y + 10, host.clientHeight - 140)) + "px";
-          if (xh) { xh.style.left = param.point.x + "px"; xh.style.top = "0"; xh.style.height = host.clientHeight + "px"; xh.classList.add("on"); }
+          tip.style.top = Math.max(4, Math.min(param.point.y + 10, (MAP_LWC_HOSTEL||host).clientHeight - 140)) + "px";
+          if (xh) { xh.style.left = param.point.x + "px"; xh.style.top = "0"; xh.style.height = (MAP_LWC_HOSTEL||host).clientHeight + "px"; xh.classList.add("on"); }
           return;
         }
       }
@@ -4771,13 +4801,13 @@ function initLightweightMapChart() {
       const when=date?date.toLocaleString("en-US",{month:"short",day:"numeric",hour:D.daily?undefined:"numeric",minute:D.daily?undefined:"2-digit",timeZone:"America/New_York"}):"";
       const chg=bar.close>=bar.open, volBar=param.seriesData.get(vol);
       tip.innerHTML='<b>'+when+'</b><div class="mp-ohlc"><span>O <b>'+money(bar.open)+'</b></span><span>H <b>'+money(bar.high)+'</b></span><span>L <b>'+money(bar.low)+'</b></span><span>C <b class="'+(chg?"u":"d")+'">'+money(bar.close)+'</b></span></div>'+(volBar?'<div>Volume <b>'+Number(volBar.value).toLocaleString()+'</b></div>':'');
-      tip.classList.add("on");tip.style.left=Math.max(4,Math.min(param.point.x+12,cw.clientWidth-190))+"px";tip.style.top=Math.max(4,Math.min(param.point.y+10,host.clientHeight-95))+"px";
-      if(xh){xh.style.left=param.point.x+"px";xh.style.top="0";xh.style.height=host.clientHeight+"px";xh.classList.add("on");}
+      tip.classList.add("on");tip.style.left=Math.max(4,Math.min(param.point.x+12,cw.clientWidth-190))+"px";tip.style.top=Math.max(4,Math.min(param.point.y+10,(MAP_LWC_HOSTEL||host).clientHeight-95))+"px";
+      if(xh){xh.style.left=param.point.x+"px";xh.style.top="0";xh.style.height=(MAP_LWC_HOSTEL||host).clientHeight+"px";xh.classList.add("on");}
     });
-    MAP_LWC_CHART=chart; MAP_LWC_CANDLE=candles; MAP_LWC_VOLUME=vol;
+    MAP_LWC_CHART=chart; MAP_LWC_CANDLE=candles; MAP_LWC_VOLUME=vol; MAP_LWC_HOSTEL=host;
     MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected)MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});});
     MAP_LWC_RO.observe(host);
-    const foot=document.createElement("div");foot.className="mp-lwc-foot";foot.innerHTML='TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc. · <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>';host.after(foot);
+    const foot=document.createElement("div");foot.className="mp-lwc-foot";foot.innerHTML='TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc. · <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>';host.after(foot);MAP_LWC_FOOT=foot;
   } catch(err) { console.error("NextShelf chart init failed",err); host.innerHTML='<div class="mp-lwc-empty">Chart unavailable. Please refresh.</div>'; }
 }
 
@@ -6208,6 +6238,7 @@ async function loadSwingCard(sym, host) {
     if (typeof host !== "object" && BRIEF_SYM !== sym) return;
     el.innerHTML = h;
   };
+  if (!host && !$("bfSwing")) return;     // nowhere to show it (removed from the panel): don't spend a backtest on it
   if (!ME || ME.guest || !(isPro() || ME.options)) {
     put(`<div class="ox-lock"><b>See how this breakout could be swung with options.</b><p>Calls or puts, the expiry that gives the move room, what the contract might be worth at the shelf, and what you'd lose if it fails.</p>
       <a class="btnx sm" href="${!ME || ME.guest ? "/login#signup" : "#account"}" onclick="closeBrief()">${!ME || ME.guest ? "Sign up free" : "Pro feature · see plans"}</a></div>`);

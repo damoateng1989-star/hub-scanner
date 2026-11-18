@@ -355,6 +355,13 @@ def lwc():
     return FileResponse(STATIC / "vendor" / "lightweight-charts.js", media_type="application/javascript")
 
 
+@app.get("/vendor/lightweight-charts-5.js")
+def lwc5():
+    """Lightweight Charts v5.3.0, self-hosted and pinned (the app's setup map). Was loaded from unpkg, unpinned."""
+    return FileResponse(STATIC / "vendor" / "lightweight-charts-5.js", media_type="application/javascript",
+                        headers={"Cache-Control": "public, max-age=604800"})
+
+
 _BROKER_LOGOS = {"robinhood.svg": "image/svg+xml", "webull-mark.png": "image/png"}
 
 
