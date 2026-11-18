@@ -214,11 +214,11 @@ def extended_price(sym: str) -> dict:
     """The latest pre-market (4:00-9:30 AM ET) or after-hours (4:00-8:00 PM ET) trade for one stock.
     Feeds, best first: full-market SIP (needs a paid Alpaca data plan for recent prices), then IEX (free, real time,
     but IEX only trades about 8:00 AM-5:00 PM ET), then 15-minute-delayed SIP (free). session=None outside those
-    windows or with no trade yet; `why` says what happened. Display only: never triggers anything."""
+    windows or with no trade yet; `why` says what happened. Display only: never triggers anything. Cached 15 s per stock."""
     sym = sym.upper()
     now = time.time()
     hit = _EXT.get(sym)
-    if hit and now - hit[0] < 60:
+    if hit and now - hit[0] < 15:
         return hit[1]
     et = pd.Timestamp.now(tz="America/New_York")
     mins = et.hour * 60 + et.minute

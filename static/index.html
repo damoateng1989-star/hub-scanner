@@ -4988,10 +4988,10 @@ function mapQ(q) { MAP_Q = MAP_Q === q ? null : q; paintMap(); }
 const EXT = {};
 async function loadExtended(sym) {
   if (!ME || ME.guest || LIVE_OPEN) return;
-  const hit = EXT[sym]; if (hit && Date.now() - hit._t < 60000) return;
-  try { const r = await api(`/api/extended/${encodeURIComponent(sym)}`); r._t = Date.now(); EXT[sym] = r; if (BRIEF_SYM === sym && r.session) paintMap(); } catch (e) {}
-  // keep it fresh while the panel stays open (pre-market moves): once a minute, same stock only
-  clearTimeout(EXT_T); EXT_T = setTimeout(() => { if (BRIEF_SYM === sym && document.visibilityState !== "hidden") loadExtended(sym); }, 61000);
+  const hit = EXT[sym]; if (hit && Date.now() - hit._t < 14000) return;
+  try { const r = await api(`/api/extended/${encodeURIComponent(sym)}`); r._t = Date.now(); const old = EXT[sym]; EXT[sym] = r; if (BRIEF_SYM === sym && r.session && (!old || old.price !== r.price || old.session !== r.session)) paintMap(); } catch (e) {}
+  // keep it fresh while the panel stays open: every 15 s, same stock only, paused while the app is in the background
+  clearTimeout(EXT_T); EXT_T = setTimeout(() => { if (BRIEF_SYM === sym) { if (document.visibilityState !== "hidden") loadExtended(sym); else EXT_T = setTimeout(() => loadExtended(sym), 15000); } }, 15000);
 }
 let EXT_T = null;
 function extHTML(sym, P, st) {
