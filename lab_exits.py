@@ -137,7 +137,31 @@ FLOOR_EXITS = {
     "fl_cush": "Stop: the floor minus 0.25 ATR, hit intraday · target: the hub top, hit intraday",
     "fl_tight": "Stop: right at the floor, hit intraday · target: the hub top, hit intraday",
     "fl_ride": "Stop: a 4H close below the floor · target: one hub-width above the top (20 candles)",
+    "fl_half": "Stop: right at the floor, intraday · half off at the hub middle, then the stop moves to breakeven · rest at the hub top",
 }
+
+
+def _exit_half_intrabar(open_, high, low, close, i0, entry, mid, target, stop, horizon):
+    """Long only. Half off at `mid` (hit intraday), the stop then moves to the entry; the rest goes to the target.
+    Same worst-case rule as _exit_intrabar: a candle that touches both the stop and a target counts the stop."""
+    n, half = len(close), False
+    for j in range(i0 + 1, min(i0 + 1 + horizon, n)):
+        st = entry if half else stop
+        if low[j] <= st:
+            px = min(open_[j], st)
+            r = (px / entry - 1) * 100
+            return ((mid / entry - 1) * 50 + r / 2, "stop") if half else (r, "stop")
+        if not half and high[j] >= mid:
+            half = True
+            if high[j] >= target:
+                return ((mid / entry - 1) * 50 + (max(open_[j], target) / entry - 1) * 50, "target")
+            continue
+        if half and high[j] >= target:
+            return ((mid / entry - 1) * 50 + (max(open_[j], target) / entry - 1) * 50, "target")
+    if i0 + horizon < n:
+        r = (close[i0 + horizon] / entry - 1) * 100
+        return ((mid / entry - 1) * 50 + r / 2, "time") if half else (r, "time")
+    return None
 
 
 # no shelf above a hub: which target works best? (A retest longs, stop 1 ATR under the retest entry)
@@ -164,16 +188,23 @@ def _exit_intrabar(open_, high, low, close, i0, entry, target, stop, horizon):
     return None
 
 
-def _floor_rows(sym, c4, res, s, atr, dvol, day, mc):
+def _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime=None, own=None):
     import board
     close = res["close"].to_numpy(float)
+
+    def as_of(series, on_day):            # yesterday's value: no peeking at today's close
+        if series is None:
+            return None
+        past = series[series.index < on_day].dropna()
+        return bool(past.iloc[-1]) if len(past) else None
     open_, high, low = (c4[k].to_numpy(float) for k in ("Open", "High", "Low"))
     idx, out = c4.index, []
     for h in res["hubs"]:
-        si, got_any, got_4 = h["start_i"], False, False
+        si, got_any, got_4, got_6 = h["start_i"], False, False, False
+        older = [x for x in res["hubs"] if x["end_i"] < si]
         for j in range(h["formed_i"], h["end_i"] + 1):
             sess = (j - si + 1) // 2
-            if got_any and (got_4 or sess < 4):
+            if got_any and (got_4 or sess < 4) and (got_6 or sess < 6):
                 continue
             lo, hi = float(close[si:j].min()), float(close[si:j + 1].max())    # floor set BEFORE this candle
             if hi <= lo or close[j] < lo or close[j] > lo + FLOOR_ZONE * (hi - lo):
@@ -190,15 +221,19 @@ def _floor_rows(sym, c4, res, s, atr, dvol, day, mc):
             ex = {"fl_close": _exit(close, j, 1, entry, hi, lo - 1e-6, s.horizon),
                   "fl_cush": _exit_intrabar(open_, high, low, close, j, entry, hi, lo - 0.25 * A, s.horizon),
                   "fl_tight": _exit_intrabar(open_, high, low, close, j, entry, hi, lo, s.horizon),
-                  "fl_ride": _exit(close, j, 1, entry, hi + w, lo - 1e-6, 20)}
+                  "fl_ride": _exit(close, j, 1, entry, hi + w, lo - 1e-6, 20),
+                  "fl_half": _exit_half_intrabar(open_, high, low, close, j, entry, (lo + hi) / 2, hi, lo, s.horizon)}
             ex = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
             # one entry per hub for each rule: the first time it reaches the floor (any age), and the first time at 4+ sessions
-            first_any, first_4 = not got_any, sess >= 4 and not got_4
-            got_any, got_4 = True, got_4 or sess >= 4
+            first_any, first_4, first_6 = not got_any, sess >= 4 and not got_4, sess >= 6 and not got_6
+            got_any, got_4, got_6 = True, got_4 or sess >= 4, got_6 or sess >= 6
+            # old support: an earlier hub's top or bottom within 0.5 ATR of this floor (two reasons for buyers to show up)
+            support = any(abs(x["high"] - lo) <= 0.5 * A or abs(x["low"] - lo) <= 0.5 * A for x in older)
             if "fl_close" in ex:
                 out.append(dict(sym=sym, grp="floor", entry="floor", t=str(idx[j]), d=1, dv=dv,
-                                board_ok=board.quality_skip(sym, dv, mc) is None, first_any=first_any, first_4=first_4,
-                                sessions=sess, width=w / A, rr=(hi - entry) / max(entry - lo, 1e-9), ex=ex))
+                                board_ok=board.quality_skip(sym, dv, mc) is None, first_any=first_any, first_4=first_4, first_6=first_6,
+                                sessions=sess, width=w / A, rr=(hi - entry) / max(entry - lo, 1e-9), support=support,
+                                with_mkt=as_of(regime, day[j]), with_trend=as_of(own, day[j]), ex=ex))
     return out
 
 
@@ -316,7 +351,9 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         day = c4.index.tz_convert(engine.NY).normalize()
         dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum() if "Volume" in c4.columns else None
         mc = universe.market_cap(sym)
-        return _floor_rows(sym, c4, res, s, atr, dvol, day, mc) + _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
+        dclose = res["close"].groupby(day).last()
+        own = (dclose > dclose.rolling(50).mean()).where(dclose.rolling(50).count() >= 50)
+        return _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own) + _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
     try:
         other = patterns.analyze_all(c4, res, s, live_only=False)["trades"]
     except Exception:
@@ -334,7 +371,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     mc = universe.market_cap(sym)
     out = []
     try:
-        out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc)
+        out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own)
     except Exception:
         traceback.print_exc()
     try:
@@ -613,6 +650,23 @@ LIVE_RULES = [
      lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_ride"),
     ("floor_any", "Test · Hub floor bounce: stop on a close below the floor (any hub)",
      lambda r: r["grp"] == "floor" and r.get("first_any"), "fl_close"),
+    # test only (Nov 18): floor bounce with a few filters picked BEFORE looking (uptrend, old support, mature hub, room),
+    # all on the intraday stop at the floor (the best exit above), plus the half-off exit
+    ("floor_trend", "Test · Floor bounce, uptrends only (stock and market above their 50-day)",
+     lambda r: r["grp"] == "floor" and r.get("first_4") and r.get("with_trend") is True and r.get("with_mkt") is True, "fl_tight"),
+    ("floor_support", "Test · Floor bounce, floor is also old support (an earlier hub level within 0.5 ATR)",
+     lambda r: r["grp"] == "floor" and r.get("first_4") and r.get("support"), "fl_tight"),
+    ("floor_mature", "Test · Floor bounce, mature hubs only (6+ sessions)",
+     lambda r: r["grp"] == "floor" and r.get("first_6"), "fl_tight"),
+    ("floor_room", "Test · Floor bounce, room to the top of 1 ATR or more",
+     lambda r: r["grp"] == "floor" and r.get("first_4") and (r.get("width") or 0) >= 1, "fl_tight"),
+    ("floor_all", "Test · Floor bounce, all four together (uptrend, support, 6+ sessions, room)",
+     lambda r: r["grp"] == "floor" and r.get("first_6") and r.get("with_trend") is True and r.get("with_mkt") is True
+     and r.get("support") and (r.get("width") or 0) >= 1, "fl_tight"),
+    ("floor_half", "Test · Floor bounce: half off at the hub middle, then stop to breakeven",
+     lambda r: r["grp"] == "floor" and r.get("first_4"), "fl_half"),
+    ("floor_trend_half", "Test · Floor bounce, uptrends only, with the half-off exit",
+     lambda r: r["grp"] == "floor" and r.get("first_4") and r.get("with_trend") is True and r.get("with_mkt") is True, "fl_half"),
     # test only (Nov 17, the AMZN question): long on the first close above a resting hub's top, before the real trigger
     ("edge_trig", "Test · Close above a resting hub's top (not a breakout yet): target the real trigger",
      lambda r: r["grp"] == "edge", "ed_trig"),
@@ -764,7 +818,7 @@ class _Ex:
 
 
 _ROW_KEYS = ("sym", "grp", "entry", "t", "d", "dv", "board_ok", "rvol", "with_mkt", "with_trend", "chase", "margin", "rr",
-             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight")
+             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight", "first_6", "support")
 
 
 class _Row:
