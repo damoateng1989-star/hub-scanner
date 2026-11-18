@@ -1836,7 +1836,7 @@ html[data-theme="light"] .oc-earn { color: #6d28d9; } html[data-theme="light"] .
 html[data-theme="light"] .bf-foot { background: #f4f5f7; border-top-color: #e5e7eb !important; }
 /* computers: a panel half the screen wide */
 @media (min-width: 900px) {
-  .brief { top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important; width: max(50vw, 620px) !important; max-width: 100vw !important;
+  .brief { top: 0 !important; bottom: 0 !important; right: 0 !important; left: auto !important; width: max(58vw, 680px) !important; max-width: 100vw !important;
     border-radius: 0 !important; border: 0 !important; border-left: 1px solid #292A2D !important; }
   html[data-theme="light"] .brief { border-left-color: #e5e7eb !important; }
   .bf-hero { margin: 20px 20px 14px; } .bf-body { padding: 0 20px 20px !important; } .bf-foot { padding: 14px 28px !important; }
@@ -2645,7 +2645,6 @@ html[data-theme="light"] .sg-b { color: #fff; }
     <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button>
   </div>
   </div>
-  <div id="bfSwing"></div>
   <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
@@ -7891,7 +7890,7 @@ html[data-theme="light"] body .panel, html[data-theme="light"] body .tbl, html[d
 /* ---------------- setup map (stock panel). body.map-v2 = on; Account → Stock panel → Classic turns it off */
 body.map-v2 #brief .bf-hero { display: none !important; }
 body:not(.map-v2) #bfMap { display: none; }
-@media (min-width: 1100px) { body.map-v2 .brief { width: min(1240px, 100vw) !important; } }
+@media (min-width: 1100px) { body.map-v2 .brief { width: min(1440px, 100vw) !important; } }   /* a little wider: was 1240px */
 #bfMap { --mp-card: #15171C; --mp-line: #292A2D; --mp-ink: #F3F4F6; --mp-mut: #9AA0AC; --mp-hub: #5B7BFF; --mp-trig: #F2C14E; --mp-obst: #FF6B5E; --mp-shelf: #3DD68C; --mp-stop: #9AA0AC;
   padding: 14px 16px 4px; color: var(--mp-ink); }
 html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-ink: #0d1117; --mp-mut: #5b6472; --mp-hub: #4f46e5; --mp-trig: #b7791f; --mp-obst: #dc2626; --mp-shelf: #15803d; --mp-stop: #6b7280; }
