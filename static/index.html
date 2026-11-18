@@ -636,6 +636,32 @@ footer{color:#718397!important;border-color:#292A2D!important}
 body.brief-open .brief { transform: none; }
 .bf-scrim { position: fixed; inset: 0; z-index: 34; background: rgba(3,6,10,.5); backdrop-filter: blur(2px); }
 body.brief-open .bf-scrim { display: block; }
+/* ---------- GEX heat map beside the shelf card (Patch 166) ---------- */
+.bf-heat[hidden] { display: none !important; }
+body:not(.brief-open) .bf-heat { display: none; }
+.bf-heat { margin: 0 20px 16px; font-family: var(--sans); flex: none; }
+.bf-heat .bh-card { background: #000; border: 1px solid #262C35; border-radius: 16px; padding: 14px; color: #fff; }
+.bf-heat .bh-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.bf-heat .bh-head .t { font: 800 12px var(--sans); letter-spacing: .12em; }
+.bf-heat .bh-head .s { font: 500 11px var(--mono); color: #9AA0AC; text-align: right; }
+.bf-heat .bh-scroll { overflow-x: auto; }
+.bf-heat table.bh { border-collapse: separate; border-spacing: 3px; width: 100%; min-width: 400px; }
+.bf-heat table.bh th, .bf-heat table.bh td { padding: 6px 8px; border-radius: 6px; font: 600 12.5px var(--mono); text-align: right; white-space: nowrap; }
+.bf-heat table.bh thead th { background: transparent; color: #fff; font: 700 11px var(--sans); letter-spacing: .08em; }
+.bf-heat table.bh tbody th { background: transparent; color: #fff; text-align: left; font-weight: 700; }
+.bf-heat td.bh-t { background: #29768A !important; color: #fff; }
+.bf-heat td.bh-g { background: #32A87B !important; color: #fff; }
+.bf-heat td.bh-p { background: #430E5A !important; color: #fff; }
+.bf-heat td.bh-max { background: #F2DE31 !important; color: #000; font-weight: 800; }
+.bf-heat tr.bh-next th, .bf-heat tr.bh-next td { box-shadow: inset 0 0 0 2px #fff; }
+.bf-heat .bh-tag { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 5px; background: #FFCF00; color: #000; font: 800 10px var(--sans); letter-spacing: .04em; vertical-align: middle; }
+.bf-heat table.bh th, .bf-heat table.bh td { color: #fff !important; border-bottom: 0 !important; letter-spacing: 0 !important; text-transform: none !important; }
+.bf-heat table.bh tbody th, .bf-heat table.bh td { font-size: 12.5px !important; }
+.bf-heat table.bh thead th { font-size: 11px !important; letter-spacing: .08em !important; text-transform: uppercase !important; }
+.bf-heat table.bh td.bh-max { color: #000 !important; }
+.bf-heat table.bh tbody th, .bf-heat table.bh thead th:first-child { width: 1%; text-align: left; }
+@media (max-width: 899px) { .bf-heat { margin: 0 12px 14px; } .bf-heat .bh-card { padding: 10px; } .bf-heat table.bh { min-width: 0; border-spacing: 2px; }
+  .bf-heat table.bh th, .bf-heat table.bh td { padding: 5px 5px; } .bf-heat table.bh tbody th, .bf-heat table.bh td { font-size: 11.5px !important; } .bf-heat .bh-tag { margin-left: 3px; padding: 1px 4px; } }
 .bf-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 20px 20px 14px; }
 .bf-head h3 { margin: 0; font: 800 28px var(--sans); letter-spacing: -.02em; }
 .bf-head p { margin: 4px 0 0; color: var(--t-mut); font-size: 14px; }
@@ -2706,6 +2732,7 @@ html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[d
   </div>
   <div id="bfMap"></div>
   <div class="bf-body" id="bfBody"></div>
+  <div class="bf-heat" id="bfHeat" hidden></div>
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
@@ -4331,6 +4358,7 @@ function openShelfFromUrl() {
 async function openBrief(sym, focus) {
   BRIEF_FOCUS = focus || null;
   BRIEF_SYM = sym; BRIEF_SEC = "levels"; BRIEF_CHART = null; MAP_Q = null; MAP_DCH = null; MAP_ASK = false; MAP_CTX = new Set();
+  hideHeat();
   if ($("bfTrade")) $("bfTrade").hidden = !(ME && ME.is_admin);
   renderStrip(); briefHead(sym, findStatus(sym)); if (!LIVE[sym]) pollLive(); else paintLive();
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
@@ -4358,7 +4386,7 @@ async function openBrief(sym, focus) {
     if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#9AA0AC;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
   }
 }
-function closeBrief() { clearTimeout(MAP_FT); if (typeof MAP_POP !== "undefined" && MAP_POP) mapPopClose(); if (typeof MAP_TK !== "undefined" && MAP_TK) mapTicketClose(); if (typeof mapReplayStop === "function" && MAP_RP) mapReplayStop(true); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
+function closeBrief() { hideHeat(); clearTimeout(MAP_FT); if (typeof MAP_POP !== "undefined" && MAP_POP) mapPopClose(); if (typeof MAP_TK !== "undefined" && MAP_TK) mapTicketClose(); if (typeof mapReplayStop === "function" && MAP_RP) mapReplayStop(true); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
   renderStrip(); }
 // one-line summary for the top of the sheet (Patch 77); the long version lives in summary()
 function vizSummary(st) {
@@ -5765,15 +5793,16 @@ function gexNextLine(j) {
   return {text: `Next levels ${up} · ${dn} · ${exp} · ${reg}`, up, dn, exp, reg, regLong, when, n};
 }
 const GAMMA_NL = {};
+const GAMMA_GRID = {};   // Patch 166: the full /api/gamma payload per symbol, for the heat-map panel
 async function loadGamma(sym) {
   if (!ME || ME.guest) return;
   if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 600000)) {   // re-read every 10 min: walls follow the price
     if (!(sym in GAMMA)) { GAMMA[sym] = "loading"; paintGamma(sym); }
-    try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); GAMMA[sym] = j.walls || null; GAMMA_NL[sym] = gexNextLine(j); }
-    catch (e) { GAMMA[sym] = null; GAMMA_NL[sym] = null; }
+    try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); GAMMA[sym] = j.walls || null; GAMMA_NL[sym] = gexNextLine(j); GAMMA_GRID[sym] = j; }
+    catch (e) { GAMMA[sym] = null; GAMMA_NL[sym] = null; GAMMA_GRID[sym] = null; }
     GAMMA_AT[sym] = Date.now();
   }
-  paintGamma(sym); if (BRIEF_SYM === sym) paintMap();
+  paintGamma(sym); paintHeat(sym); if (BRIEF_SYM === sym) paintMap();
 }
 function paintGamma(sym) {
   const el = $("bfGamma"); if (!el || BRIEF_SYM !== sym) return;
@@ -5806,6 +5835,46 @@ function paintGamma(sym) {
     + (NL ? `<div class="gw-row">🎯 ${esc(NL.text)}<small>${esc(NL.regLong)}. ${esc(NL.when)}.</small></div>` : "");
   paintVizScale();
 }
+// ---------------------------------------------------------------- GEX heat map panel beside the Shelf card (Patch 166)
+// Renders j.grid from the SAME /api/gamma payload loadGamma already fetches (no second request). Mockup tiles:
+// teal; green = the nearest expiry's biggest positive; purple = its big negatives (>= 50% of its largest);
+// yellow + pull arrow = the grid's biggest cell. NEXT rows = j.next_levels (server-side 25% rule). Fail-open.
+function bfHeatHTML(j) {
+  const g = j && j.grid;
+  if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) return null;
+  const spot = Number(g.spot) || 0;
+  const K = (v) => { const k = Number(v) / 1000, a = Math.abs(k).toLocaleString("en-US", {minimumFractionDigits: 1, maximumFractionDigits: 1}); return k < 0 ? "−" + a : a; };
+  let greenStrike = null, greenVal = 0, negMax = 0;
+  g.rows.forEach(r => { const v = Number((r.gex || [])[0]) || 0; if (v > greenVal) { greenVal = v; greenStrike = r.strike; } if (v < 0 && Math.abs(v) > negMax) negMax = Math.abs(v); });
+  let maxStrike = null, maxExp = -1, maxVal = 0;
+  g.rows.forEach(r => (r.gex || []).forEach((v, i) => { v = Number(v) || 0; if (Math.abs(v) > Math.abs(maxVal)) { maxVal = v; maxStrike = r.strike; maxExp = i; } }));
+  const nl = j.next_levels, nUp = nl && nl.next_up ? nl.next_up.strike : null, nDn = nl && nl.next_down ? nl.next_down.strike : null;
+  const md = (e) => new Date(e + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
+  const head = g.expiries.map(e => `<th>${md(e).toUpperCase()}</th>`).join("");
+  const rows = g.rows.map(r => {
+    const nx = r.strike === nUp ? "up" : r.strike === nDn ? "dn" : "";
+    const cells = (r.gex || []).map((v, i) => {
+      v = Number(v) || 0;
+      if (r.strike === maxStrike && i === maxExp) {
+        const near = spot > 0 && Math.abs(r.strike - spot) / spot <= 0.005;
+        return `<td class="bh-max">${K(v)}${near ? "" : (r.strike < spot ? " ↓" : " ↑")}</td>`;
+      }
+      if (i === 0 && v > 0 && r.strike === greenStrike) return `<td class="bh-g">${K(v)}</td>`;
+      if (i === 0 && v < 0 && negMax > 0 && Math.abs(v) >= 0.5 * negMax) return `<td class="bh-p">${K(v)}</td>`;
+      return `<td class="bh-t">${K(v)}</td>`;
+    }).join("");
+    return `<tr${nx ? ` class="bh-next"` : ""}><th>${r.strike}${nx ? ` <span class="bh-tag">NEXT ${nx === "up" ? "↑" : "↓"}</span>` : ""}</th>${cells}</tr>`;
+  }).join("");
+  return `<div class="bh-card"><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · K = $1,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+}
+function paintHeat(sym) {
+  const el = $("bfHeat"); if (!el) return;
+  if (BRIEF_SYM !== sym) return;
+  const html = bfHeatHTML(GAMMA_GRID[sym]);
+  if (!html) { hideHeat(); return; }             // fail-open: no gamma, no panel; the card renders as before
+  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on");
+}
+function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); }
 function paintBriefWatch(sym) {          // the watchlist button next to "Open full chart"
   const b = $("bfWatch"); if (!b) return;
   const on = (TICKERS || []).some(t => t.symbol === sym);
@@ -8546,6 +8615,17 @@ html[data-theme="light"] #mpPop .pop-card { background: #F8F9FD; color: #0d1117;
 
 /* Patch 98 */
 .wl-section{margin:18px 0}.wl-section-head{font-size:13px;font-weight:700;color:var(--muted);margin:0 0 8px}.wl-gauge{display:none}@media(max-width:760px){.lrows{padding-bottom:64px}.lrow .wl-gauge{display:block;grid-column:1/-1;margin-top:8px}.lrow.wl-forming .badge{display:none}.lrow .one{grid-column:2/-1}}
+
+/* Patch 166, side by side (>= 1280px): the heat map takes the space left of the card. The card is now up to
+   1440px wide (map-v2), which leaves no room on most screens, so while the panel shows the card gives up
+   460px; below 1280px the panel stacks under the card's content instead. */
+@media (min-width: 1280px) {
+  body.heat-on.map-v2 .brief { width: min(1440px, calc(100vw - 460px)) !important; }
+  body.heat-on .brief { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }   /* a backdrop filter would trap the fixed panel inside the card (its background is solid anyway) */
+  body.heat-on .bf-heat { position: fixed; top: 0; bottom: 0; left: 0; right: max(58vw, 680px); margin: 0; padding: 20px; overflow-y: auto; overscroll-behavior: contain; background: transparent; }
+  body.heat-on.map-v2 .bf-heat { right: min(1440px, calc(100vw - 460px)); }
+  body.heat-on .bf-heat .bh-card { max-width: 640px; margin: 0 auto; }
+}
 </style>
 </body>
 </html>
