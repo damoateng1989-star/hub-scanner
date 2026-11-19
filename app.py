@@ -1207,6 +1207,19 @@ async def swing_card_endpoint(symbol: str, u: dict = User):
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/levels/{symbol}")
+async def levels_endpoint(symbol: str, u: dict = User):
+    """Levels to watch: the strongest stacked levels near price. Everyone signed in gets the price levels;
+    the options-based ones (walls, gamma) are Pro, the same gate as the options plan."""
+    import levels
+    pro = bool(options_for(u))
+    try:
+        out = await run_in_threadpool(levels.compute, symbol, pro)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    return {**out, "gamma_locked": not pro}
+
+
 @app.post("/api/sika/chat")
 async def sika_chat_endpoint(body: SikaChatBody, u: dict = User):
     """Grounded conversational follow-up about the current Swing Play Card. Display only."""

@@ -1,0 +1,126 @@
+"""Levels to watch: the strongest stacked price levels near the current price, for the shelf card and Sika.
+
+Every kind of level NextShelf knows is gathered — the hub's edges and triggers, options walls (monthly and
+weekly), gamma shelves of real size, gamma added up across the nearest 8 expiries, old highs and lows, 4H/daily
+moving averages and round numbers — then levels that sit within a quarter of the stock's 4H ATR of each other
+are merged into one stack. The stacks with the most distinct kinds of level win: up to 3 above price and 3
+below. Information only: it changes no trigger, target, stop, grade or alert, and makes no claim that a stack
+will hold (the Lab's Confluence check measures that).
+"""
+from __future__ import annotations
+
+import logging
+import threading
+import time
+
+import engine
+import gamma
+import swing_card
+
+log = logging.getLogger("levels")
+BAND = 0.08            # look within ±8% of price
+_CACHE: dict = {}
+_LOCK = threading.Lock()
+TTL = 300
+
+GROUP = {"hub": "the hub", "wall": "options wall", "shelf": "gamma", "summed": "gamma", "high": "old high/low",
+         "ma": "moving averages", "round": "round number"}
+
+
+def _cands(sym, c4, res, st, last, with_gamma):
+    out = []
+    add = lambda p, what, grp: out.append(dict(price=float(p), what=what, group=grp)) if p else None
+    h = res["hubs"][-1] if res.get("hubs") else None
+    if h and h.get("active", True):
+        add(h["low"], "hub low", "hub")
+        add(h["high"], "hub high", "hub")
+    if st.get("trigger_up"):
+        add(st["trigger_up"], "long trigger", "hub")
+    if st.get("trigger_down"):
+        add(st["trigger_down"], "short trigger", "hub")
+    for x in swing_card.price_levels(c4):
+        add(x["price"], x["what"], "ma" if x.get("kind") == "ma" else "high")
+    step = swing_card._round_step(last)
+    k0 = int(last * (1 - BAND) // step)
+    for k in range(k0, k0 + int(2 * BAND * last / step) + 3):
+        add(k * step, f"${k * step:,.0f} round number", "round")
+    if with_gamma:
+        try:
+            w = gamma.walls(sym, last)
+            if w:
+                add(w.get("call_wall"), "call wall", "wall")
+                add(w.get("put_wall"), "put wall", "wall")
+            nl = gamma.next_levels(sym, last, fetch=False)
+            if nl:
+                add(nl.get("call_wall_nt"), "weekly call wall", "wall")
+                add(nl.get("put_wall_nt"), "weekly put wall", "wall")
+            sh = gamma.shelves(sym, last, fetch=False, n=swing_card.GAMMA_LADDER_N)
+            rows = (sh or {}).get("shelves") or []
+            big = max((abs(r["gex"]) for r in rows), default=0.0)
+            for r in rows:
+                if big and abs(r["gex"]) >= 0.25 * big:
+                    add(r["strike"], f"gamma shelf {abs(r['gex']) / 1e6:.2f}M", "shelf")
+            sm = gamma.summed(sym, last, fetch=False)
+            for n in (sm or {}).get("nodes") or []:
+                add(n["strike"], f"gamma node {abs(n['gex']) / 1e6:.2f}M (all expiries)", "summed")
+        except Exception as e:
+            log.warning("levels gamma %s: %s", sym, e)
+    return [c for c in out if abs(c["price"] - last) <= BAND * last]
+
+
+def _stacks(cands, last, tol):
+    cands = sorted(cands, key=lambda c: c["price"])
+    stacks, cur = [], []
+    for c in cands:
+        if cur and c["price"] - cur[0]["price"] > 2 * tol:
+            stacks.append(cur)
+            cur = []
+        cur.append(c)
+    if cur:
+        stacks.append(cur)
+    out = []
+    for s in stacks:
+        groups = {c["group"] for c in s}
+        if groups == {"round"} or (len(groups) == 1 and len(s) == 1 and groups <= {"ma", "high"}):
+            continue                                  # a lone round number or a single MA is not a level to watch
+        anchor = next((c for g in ("wall", "summed", "hub", "shelf", "high") for c in s if c["group"] == g), None)
+        price = anchor["price"] if anchor else sum(c["price"] for c in s) / len(s)
+        kinds = len({("gamma" if c["group"] in ("shelf", "summed") else c["group"]) for c in s})
+        score = kinds + (1 if groups & {"wall", "summed"} else 0) + (0.5 if "hub" in groups else 0)
+        seen, items = set(), []
+        for c in sorted(s, key=lambda c: ("wall", "summed", "shelf", "hub", "high", "ma", "round").index(c["group"])):
+            label = c["what"] if c["group"] != "round" else "round number"
+            if label in seen:
+                continue
+            seen.add(label)
+            items.append(dict(what=label, price=round(c["price"], 2), group=c["group"]))
+        out.append(dict(price=round(price, 2), side="above" if price > last else "below",
+                        distance_pct=round((price / last - 1) * 100, 2), kinds=kinds, score=score,
+                        gamma=bool(groups & {"wall", "shelf", "summed"}), items=items))
+    return out
+
+
+def compute(sym: str, with_gamma: bool = True) -> dict:
+    import scanner
+    sym = scanner.clean_symbol(sym)
+    key = (sym, with_gamma)
+    with _LOCK:
+        hit = _CACHE.get(key)
+        if hit and time.time() - hit[0] < TTL:
+            return hit[1]
+    c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
+    if len(c4) < 40:
+        raise ValueError("not enough price history")
+    res = engine.analyze(c4, scanner.SETTINGS)
+    st = engine.current_status(c4, res, scanner.SETTINGS)
+    last = float(res["close"].iloc[-1])
+    atr = float(res["atr"].iloc[-1])
+    tol = swing_card._tol(last, atr)
+    stacks = _stacks(_cands(sym, c4, res, st, last, with_gamma), last, tol)
+    pick = lambda side: sorted(sorted([s for s in stacks if s["side"] == side], key=lambda s: (-s["score"], abs(s["distance_pct"])))[:3],
+                               key=lambda s: -s["price"])
+    out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma,
+               above=pick("above"), below=pick("below"))
+    with _LOCK:
+        _CACHE[key] = (time.time(), out)
+    return out

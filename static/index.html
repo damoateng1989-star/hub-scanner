@@ -4463,7 +4463,7 @@ async function openBrief(sym, focus) {
   // The chart goes first: options pricing, GEX, news and the grade wait until it's in (or 1.5 s), so on a small
   // server they don't compete with it for CPU. (The swing card isn't in the panel any more: no fetch for it.)
   let sideDone = false;
-  const side = () => { if (sideDone || BRIEF_SYM !== sym) return; sideDone = true; loadOptions(sym); loadGamma(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind); loadExtended(sym); };
+  const side = () => { if (sideDone || BRIEF_SYM !== sym) return; sideDone = true; loadOptions(sym); loadGamma(sym); loadLevels(sym); loadNews(sym, st); loadGrade(sym, shownSetup(st).kind); loadExtended(sym); };
   const sideT = setTimeout(side, 1500);
   if (ME && ME.is_admin) loadBrokerAccounts();
   try {
@@ -5325,8 +5325,34 @@ function mapSideHTML(P, st, chart) {
     line("flow", "📊", `Flow at the breakout: ${side}.`,
       `Measured on ${when}, from the options chain. A past fact, not a live reading.`, "");
   }
-  if (!lines.length) return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div><p class="mp-scn">Checking earnings, news and the market…</p></div>`;
-  return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div>${lines.join("")}</div>`;
+  if (!lines.length) return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div><p class="mp-scn">Checking earnings, news and the market…</p></div>` + levelsCardHTML(sym);
+  return `<div class="mp-card mp-sc"><div class="mp-sct">Context</div>${lines.join("")}</div>` + levelsCardHTML(sym);
+}
+// ---------------------------------------------------------------- Levels to watch (stacked levels near price)
+const LEVELS = {};
+async function loadLevels(sym) {
+  if (!ME || ME.guest) return;
+  const c = LEVELS[sym];
+  if (c && Date.now() - c.t < 5 * 60e3) return;
+  try { LEVELS[sym] = {t: Date.now(), d: await api(`/api/levels/${encodeURIComponent(sym)}`)}; }
+  catch (e) { LEVELS[sym] = {t: Date.now(), d: null}; }
+  if (BRIEF_SYM === sym) { const el = $("mpSide"); if (el) { const old = el.querySelector(".mp-lv"); if (old) old.outerHTML = levelsCardHTML(sym); } }
+}
+function levelsCardHTML(sym) {
+  const c = LEVELS[sym];
+  if (!ME || ME.guest) return "";
+  if (!c) return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div><p class="mp-scn">Stacking the levels…</p></div>`;
+  const d = c.d;
+  if (!d || (!d.above.length && !d.below.length)) return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div><p class="mp-scn">No stacked levels within 8% of the price.</p></div>`;
+  const row = (L) => {
+    const up = L.side === "above", tag = L.kinds >= 2 ? `<span class="lv-x">${L.kinds}×</span>` : "";
+    const what = L.items.map(i => esc(i.what) + (Math.abs(i.price - L.price) >= 0.01 && !/round number/.test(i.what) ? ` <i>${esc(money(i.price))}</i>` : "")).join(" · ");
+    return `<div class="lv-row"><div class="lv-p"><b>${esc(money(L.price))}</b><span class="${up ? "u" : "d"}">${up ? "↑" : "↓"} ${Math.abs(L.distance_pct).toFixed(1)}%</span></div>
+      <div class="lv-w">${tag}${what}</div></div>`;
+  };
+  const now = `<div class="lv-now">Price ${esc(money(d.price))}</div>`;
+  return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div>${d.above.map(row).join("")}${now}${d.below.map(row).join("")}
+    <p class="lv-note">${d.gamma_locked ? "Options walls and gamma levels are on Pro. " : ""}Levels within ${esc(money(d.tolerance))} of each other are stacked; ${"N×"} = how many kinds agree. Where price may react, not a prediction.</p></div>`;
 }
 function mapSidePaint() {
   const el = $("mpSide"); if (!el || !BRIEF_SYM || !MAP_ON()) return;
@@ -8864,6 +8890,19 @@ html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
    as context, never as part of the plan. */
 .ask-play-gamma{margin-top:10px;padding-top:9px;border-top:1px solid rgba(128,128,128,.28);font-size:12.5px;line-height:1.5;opacity:.82}
 .ask-play-gamma div+div{margin-top:3px}
+
+/* Levels to watch */
+.mp-lv .lv-row { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--mp-line); align-items: start; }
+.mp-lv .lv-row:first-of-type { border-top: 0; }
+.mp-lv .lv-p b { display: block; font: 700 14px var(--mono); color: var(--mp-ink, #E9EBEF); }
+.mp-lv .lv-p span { font: 600 11.5px var(--mono); } .mp-lv .lv-p .u { color: #3DD68C; } .mp-lv .lv-p .d { color: #FF6B5E; }
+.mp-lv .lv-w { font-size: 12.5px; line-height: 1.45; color: var(--mp-mut); }
+.mp-lv .lv-w i { font-style: normal; opacity: .7; font-family: var(--mono); font-size: 11.5px; }
+.mp-lv .lv-x { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px; background: rgba(61,214,140,.14); color: #3DD68C; font: 800 11px var(--mono); }
+.mp-lv .lv-now { margin: 4px 0; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,.06); font: 600 11.5px var(--mono); color: var(--mp-mut); text-align: center; }
+.mp-lv .lv-note { margin: 4px 0 0; font-size: 11px; color: var(--mp-mut); opacity: .8; }
+html[data-theme="light"] .mp-lv .lv-p b { color: #0d1117; } html[data-theme="light"] .mp-lv .lv-now { background: rgba(13,17,23,.05); }
+html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x { color: #15803d; } html[data-theme="light"] .mp-lv .lv-p .d { color: #dc2626; }
 </style>
 </body>
 </html>
