@@ -7792,6 +7792,10 @@ function askSikaPlayHTML(ticker, c) {
   // Chip labels are the mockup's short prompts; the question each chip sends
   // is the full question (the data-q attribute carries it HTML-escaped, so
   // any future wording with a quote cannot break the handler).
+  // Patch 173: gamma context lines, composed server-side on the card (c.gamma.lines) — rendered verbatim,
+  // never computed here. Absent or empty renders nothing; the play card is unchanged without gamma.
+  const gammaBlock = (c.gamma && Array.isArray(c.gamma.lines) && c.gamma.lines.length)
+    ? `<div class="ask-play-gamma">${c.gamma.lines.map(t => `<div>${esc(t)}</div>`).join("")}</div>` : "";
   const chips = [
     ["What's driving it?", "What is driving the setup?"],
     ["Where does price sit in the hub?", "Where does price sit in the hub?"],
@@ -7805,6 +7809,7 @@ function askSikaPlayHTML(ticker, c) {
     + `<div class="ask-play-level wrong"><div class="k">Wrong if</div><div class="v">${esc(money(trig))}<small>${isCalls ? "4H close back below the trigger" : "4H close back above the trigger"}</small></div></div>`
     + `</div>`
     + idea
+    + gammaBlock
     + `<div class="ask-play-ask"><div class="ask-label">Ask Sika about this setup</div><div class="ask-play-chips">${chips}</div></div>`;
 }
 
@@ -8840,6 +8845,11 @@ html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-p
 html:not([data-theme="light"]) .ask-row input { background: rgba(0,0,0,.45) !important; border: 1px solid rgba(255,255,255,.20) !important; border-radius: 999px !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
 html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
+
+/* Patch 173: gamma context lines on the play card — server-composed text, rendered verbatim; muted so they read
+   as context, never as part of the plan. */
+.ask-play-gamma{margin-top:10px;padding-top:9px;border-top:1px solid rgba(128,128,128,.28);font-size:12.5px;line-height:1.5;opacity:.82}
+.ask-play-gamma div+div{margin-top:3px}
 </style>
 </body>
 </html>

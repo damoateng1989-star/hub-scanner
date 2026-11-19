@@ -51,8 +51,8 @@ You are answering a member's follow-up about the one ticker in this thread.
 GROUNDING RULES — follow every rule:
 1. Use ONLY the supplied data: the current Swing Play Card JSON, the supplied
    Plain-English paragraph, the supplied regime, the supplied recent 4H price
-   history, supplied record figures, news headlines, and sector/market
-   performance when they are present. Do not use training knowledge, outside market facts, other
+   history, supplied record figures, news headlines, sector/market
+   performance, and the gamma figures when they are present. Do not use training knowledge, outside market facts, other
    tickers, news, or assumptions. Conversation history is context for the
    question only; it is NOT a source of facts.
 2. Never invent a number: no trigger, target, stop, price, grade, percentage,
@@ -90,6 +90,20 @@ GROUNDING RULES — follow every rule:
     headlines are supplied, say there is no headline in the supplied data.
     If a supplied headline is labelled as a demo sample, never present it as
     real news.
+11. Gamma: gamma figures, when supplied, are context only. They never
+    change the card's trigger, target, stop, grade, or contract, and they are
+    never a reason to take or skip a trade. State gamma facts plainly — where
+    the call wall, put wall, and flip sit relative to the card's levels, and
+    which regime the supplied data shows. When the supplied data shows a gamma
+    wall or shelf at the same price as the card's trigger or target, you may
+    call that confluence — the two level systems pointing at the same price —
+    stated as a fact about the levels, never as evidence the setup is more
+    likely to work. Do not call gamma bullish or bearish, do not say it
+    confirms, weakens, or supports the setup, and do not present pinning or
+    acceleration as a certainty — describe what the map shows. Never call a
+    gamma level "next". If no gamma figures are supplied and the member asks
+    about gamma, walls, or the flip, say exactly: "I don't have gamma data for
+    this one right now." Then stop.
 
 Return only the answer text, without quotation marks or a JSON wrapper.
 """
@@ -323,6 +337,17 @@ def _news(symbol: str, card: dict) -> dict | None:
                                tag_label=x.get("tag_label")) for x in picked])
 
 
+def _gamma(card: dict) -> dict | None:
+    """The gamma facts the swing card already computed (Patch 173): the card's own gamma object, returned
+    unchanged, so chat and the card can never disagree. None when the card carries none (rule 11 gives the
+    exact fallback sentence for that case)."""
+    try:
+        gx = (card or {}).get("gamma")
+        return gx if isinstance(gx, dict) and gx else None
+    except Exception:
+        return None
+
+
 def answer(sym: str, message: str, history=None, plain_english: str = "") -> dict:
     """Return one grounded conversational answer. Raises on missing key/API failure."""
     key = os.getenv("SIKA_API_KEY", "").strip()
@@ -352,6 +377,11 @@ def answer(sym: str, message: str, history=None, plain_english: str = "") -> dic
         # Always supplied: how price got here (last 4H closes + the hub that formed).
         "recent_price_history": _price_history(symbol),
     }
+    # Always supplied when the card carries it: the gamma context (Patch 173).
+    gx = _gamma(card)
+    if gx is not None:
+        supplied["gamma_context"] = gx
+
     # Only when asked: the record (a question about how this setup has done)
     # and the news (a question about why it moved). A false positive on the
     # keyword check only adds a small factual block; a false negative just

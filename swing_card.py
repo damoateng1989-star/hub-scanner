@@ -56,6 +56,168 @@ def _grade(sym, kind, d):
     return engine.setup_grade(tr, d)
 
 
+_GAMMA_PATH_SHARE = 0.25      # an in-path shelf counts when its |gex| reaches
+                              # this share of the largest supplied shelf (spec
+                              # §5; the same 0.25 NEXT_LEVEL_SHARE uses — here
+                              # it is only a wording threshold, never a label)
+_GAMMA_CONFLUENCE_PCT = 0.01  # a gamma strike within 1% of the trigger or the
+                              # target counts as at that price (spec §5; the
+                              # same 1% the GEX Lab triggers T3/T4 use)
+
+
+def _gex_size(v):
+    """A gamma size the way the app shows it (Patch 167's M format)."""
+    return f"${abs(v) / 1e6:.2f}M"
+
+
+def _gamma_facts(sym, spot, sh):
+    """Monthly-basis gamma facts for the card (Patch 173; fail-open -> None).
+
+    From gamma.walls() (call wall / put wall / flip on the monthly >=7 DTE
+    basis) and the gamma.shelves() ladder card() already fetched — the chain
+    is cached per symbol per day, so the walls call is a cache hit, not a
+    second download. Facts only: no line is composed here, and nothing here
+    can change the card's trigger, target, stop, or grade. The nearest-
+    expiry next_levels() data is deliberately NOT used (intraday horizon),
+    and no level is ever labelled "next" (Patch 169 stands)."""
+    try:
+        w = gamma.walls(sym, spot)
+    except Exception:
+        w = None
+    if not w and not sh:
+        return None
+    flip = (w or {}).get("flip")
+    regime = None
+    if flip is not None:
+        regime = "long" if spot >= flip else "short"
+    shelves = []
+    for r in (sh or {}).get("shelves") or []:
+        try:
+            shelves.append(dict(strike=float(r["strike"]), gex=float(r["gex"]),
+                                side=r.get("side")))
+        except Exception:
+            continue
+    try:
+        as_of = gamma.chain_as_of(sym)
+    except Exception:
+        as_of = None
+    return dict(expiry=(w or {}).get("expiry") or (sh or {}).get("expiry"),
+                as_of=as_of, spot=spot,
+                call_wall=(w or {}).get("call_wall"),
+                put_wall=(w or {}).get("put_wall"),
+                flip=flip, regime=regime, shelves=shelves,
+                path=None, confluence=[], lines=[])
+
+
+def _near(strike, price):
+    """Within the confluence tolerance (1%) of the play's price."""
+    return bool(price) and abs(strike - price) <= _GAMMA_CONFLUENCE_PCT * price
+
+
+def _gamma_confluence(gx, d, trigger, target):
+    """Gamma strikes that land on the play's own prices (spec §5).
+
+    For each of the target and the trigger: the directional wall if it is
+    within tolerance, else the nearest shelf strike within tolerance.
+    Returns a list of {at, strike, what, price}, target first. A strike
+    named here is agreement with the plan's own levels — it is never also
+    counted as an obstacle or an in-path shelf (see _gamma_lines)."""
+    out = []
+    wall = gx.get("call_wall") if d == 1 else gx.get("put_wall")
+    wall_word = "call wall" if d == 1 else "put wall"
+    shelves = gx.get("shelves") or []
+    for at, price in (("target", target), ("trigger", trigger)):
+        hit = None
+        if wall is not None and _near(wall, price):
+            hit = dict(at=at, strike=wall, what=wall_word, price=price)
+        else:
+            near = [s for s in shelves if _near(s["strike"], price)]
+            if near:
+                s = min(near, key=lambda s: abs(s["strike"] - price))
+                hit = dict(at=at, strike=s["strike"], what="gamma shelf", price=price)
+        if hit:
+            out.append(hit)
+    return out
+
+
+def _gamma_path(gx, d, trigger, target, skip=frozenset()):
+    """Classify the gamma path between the trigger and the target (spec §5).
+
+    Returns (kind, strike, gex): "obstacle" — the directional wall strictly
+    between trigger and target; "shelf" — the largest in-path shelf at or
+    above the share threshold; "air_pocket" — shelves exist but none sits in
+    the path; None — no shelves to judge by, or an in-path shelf exists but
+    none reaches the threshold (no line is composed for that case). Strikes
+    in `skip` (the confluent ones) are excluded throughout."""
+    lo, hi = (target, trigger) if d == -1 else (trigger, target)
+    wall = gx.get("call_wall") if d == 1 else gx.get("put_wall")
+    if wall is not None and wall not in skip and lo < wall < hi:
+        return ("obstacle", wall, None)
+    shelves = gx.get("shelves") or []
+    if not shelves:
+        return (None, None, None)
+    in_path = [s for s in shelves
+               if lo < s["strike"] < hi and s["strike"] not in skip]
+    if not in_path:
+        return ("air_pocket", None, None)
+    biggest = max(abs(s["gex"]) for s in shelves)
+    strong = [s for s in in_path
+              if biggest and abs(s["gex"]) >= _GAMMA_PATH_SHARE * biggest]
+    if not strong:
+        return (None, None, None)
+    s = max(strong, key=lambda s: abs(s["gex"]))
+    return ("shelf", s["strike"], s["gex"])
+
+
+def _gamma_lines(gx, d, trigger, target):
+    """The card's gamma context lines for the favored play (spec §5).
+
+    At most two lines, composed here in code — never by the model — in this
+    priority order: the confluence line (a gamma strike on the play's own
+    trigger or target), one path line (obstacle > in-path shelf > air
+    pocket), and, only when the name is short gamma, the regime line. The
+    wording is fixed; the only variables are the card's own prices. Also
+    records the confluence and path readings on the facts dict, so chat
+    answers from the same numbers."""
+    if not gx:
+        return []
+    conf = _gamma_confluence(gx, d, trigger, target)
+    gx["confluence"] = conf
+    kind, strike, gex = _gamma_path(gx, d, trigger, target,
+                                    {c["strike"] for c in conf})
+    gx["path"] = kind
+    out = []
+    if len(conf) == 2:
+        t = next(c for c in conf if c["at"] == "trigger")
+        g = next(c for c in conf if c["at"] == "target")
+        out.append(f"Confluence: gamma sits at both ends of this play — the "
+                   f"{_money(t['strike'])} {t['what']} at the {_money(trigger)} trigger "
+                   f"and the {_money(g['strike'])} {g['what']} at the {_money(target)} target.")
+    elif conf:
+        c = conf[0]
+        out.append(f"Confluence: the {_money(c['strike'])} {c['what']} sits at the "
+                   f"{_money(c['price'])} {c['at']} — gamma and the price levels "
+                   f"point at the same place.")
+    if kind == "obstacle":
+        word = "call wall" if d == 1 else "put wall"
+        out.append(f"Gamma: the {_money(strike)} {word} sits between the "
+                   f"{_money(trigger)} trigger and the {_money(target)} target "
+                   f"— the move has to clear that shelf to get there.")
+    elif kind == "shelf":
+        out.append(f"Gamma: the biggest shelf in the path is {_money(strike)} "
+                   f"at {_gex_size(gex)} of gamma — expect the move to slow "
+                   f"or stick there.")
+    elif kind == "air_pocket":
+        out.append(f"Gamma: no shelf of size between the {_money(trigger)} trigger "
+                   f"and the {_money(target)} target — thin air in between, so the "
+                   f"path can move fast either way once it goes.")
+    if gx.get("regime") == "short" and gx.get("flip") is not None:
+        out.append(f"Gamma: spot is below the {_money(gx['flip'])} flip — short "
+                   f"gamma, so breaks tend to accelerate once they go; the levels "
+                   f"matter more, not less.")
+    return out[:2]
+
+
 def _wall_beyond(sh, d, level):
     """Next GEX wall beyond `level` in direction d, from gamma.shelves() (fail-open)."""
     if not sh:
@@ -178,6 +340,9 @@ def card(sym):
     regime = _regime_line()
     out = dict(symbol=sym, as_of=as_of, setup=None, grade=None, state="waiting",
                favored=None, opposite=None, in_between=None, context=[], message=None)
+    # Gamma context (Patch 173): facts ride on every card state; the composed
+    # lines are added only for a live favored play, in the live branch below.
+    out["gamma"] = _gamma_facts(sym, last, sh)
 
     # --- the live setup: hub first, then patterns (the same order options._plan uses)
     live = None  # (direction, edge, target, setup_name, kind, trade_hub)
@@ -207,6 +372,8 @@ def card(sym):
         if g.get("grade") in ("A", "B"):
             out["favored"] = _side(d, edge, target, res, hub, S, atr, sh, op, regime, "favored")
             out["opposite"] = _opposite(d, edge, target, st, th, res, hub, S, atr, sh, op, regime)
+            if out["gamma"]:
+                out["gamma"]["lines"] = _gamma_lines(out["gamma"], d, edge, target)
         else:
             # Spec §4.2: the favored side is only set for a live setup graded A or B.
             # A live setup graded C, D or "?" is watch only — the card says so instead of
