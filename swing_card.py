@@ -102,46 +102,144 @@ def _gamma_facts(sym, spot, sh):
         as_of = gamma.chain_as_of(sym)
     except Exception:
         as_of = None
+    weekly = None
+    try:       # the nearest expiry's walls (weeklies included), for confluence only; never labelled "next"
+        nl = gamma.next_levels(sym, spot, fetch=False)
+        mexp = (w or {}).get("expiry") or (sh or {}).get("expiry")
+        if nl and nl.get("expiry_nt") and nl.get("expiry_nt") != (str(mexp) if mexp else None):
+            weekly = dict(expiry=nl["expiry_nt"], call_wall=nl.get("call_wall_nt"), put_wall=nl.get("put_wall_nt"))
+    except Exception:
+        weekly = None
     return dict(expiry=(w or {}).get("expiry") or (sh or {}).get("expiry"),
-                as_of=as_of, spot=spot,
+                as_of=as_of, spot=spot, weekly=weekly,
                 call_wall=(w or {}).get("call_wall"),
                 put_wall=(w or {}).get("put_wall"),
                 flip=flip, regime=regime, shelves=shelves,
                 path=None, confluence=[], lines=[])
 
 
-def _near(strike, price):
-    """Within the confluence tolerance (1%) of the play's price."""
-    return bool(price) and abs(strike - price) <= _GAMMA_CONFLUENCE_PCT * price
+def _tol(price, atr=None):
+    """How close counts as 'at' a price: a quarter of the stock's 4-hour ATR, kept between 0.4% and 1.5% of price,
+    so a quiet KO and a jumpy SMCI are judged fairly. Without an ATR it falls back to the flat 1%."""
+    if not price:
+        return 0.0
+    if not atr or atr <= 0:
+        return _GAMMA_CONFLUENCE_PCT * price
+    return min(max(0.25 * atr, 0.004 * price), 0.015 * price)
 
 
-def _gamma_confluence(gx, d, trigger, target):
-    """Gamma strikes that land on the play's own prices (spec §5).
+def _near(strike, price, tol=None):
+    """Within the confluence tolerance of the play's price."""
+    if not price:
+        return False
+    return abs(strike - price) <= (tol if tol is not None else _GAMMA_CONFLUENCE_PCT * price)
 
-    For each of the target and the trigger: the directional wall if it is
-    within tolerance, else the nearest shelf strike within tolerance.
-    Returns a list of {at, strike, what, price}, target first. A strike
-    named here is agreement with the plan's own levels — it is never also
-    counted as an obstacle or an in-path shelf (see _gamma_lines)."""
+
+def _round_step(p):
+    return 1 if p < 20 else 5 if p < 100 else 10 if p < 500 else 50 if p < 2000 else 100
+
+
+def price_levels(c4):
+    """Non-gamma levels price tends to react at, from the card's own candles: old highs and lows (daily swing
+    pivots, last ~6 months), and the 50- and 200-day averages. Round numbers are matched on the fly."""
+    try:
+        d = engine.complete_days(c4)
+    except Exception:
+        return []
+    if d is None or len(d) < 30:
+        return []
+    out = []
+    h, l, c = d["High"].to_numpy(float), d["Low"].to_numpy(float), d["Close"].to_numpy(float)
+    n, k = len(d), 3
+    for i in range(max(k, n - 126), n - k):
+        if h[i] == max(h[i - k:i + k + 1]):
+            out.append(dict(price=float(h[i]), what="old high"))
+        if l[i] == min(l[i - k:i + k + 1]):
+            out.append(dict(price=float(l[i]), what="old low"))
+    if n >= 50:
+        out.append(dict(price=float(c[-50:].mean()), what="50-day average"))
+    if n >= 200:
+        out.append(dict(price=float(c[-200:].mean()), what="200-day average"))
+    return out
+
+
+def _gamma_confluence(gx, d, trigger, target, atr=None, levels=None):
+    """Levels that land on the play's own trigger or target (spec §5, widened Nov 19).
+
+    For each of the target and the trigger, every kind of level within tolerance (_tol): the monthly directional
+    wall, the weekly (nearest-expiry) wall, the nearest gamma shelf of real size (25%+ of the biggest), an old
+    high or low, the 50/200-day average, and a round number. Returns a flat list of
+    {at, price, strike, what, kind} (kind 'gamma' or 'price'), target first. A strike named here is agreement
+    with the plan's own levels — never also counted as an obstacle or an in-path shelf (see _gamma_lines)."""
+    gx = gx or {}
     out = []
     wall = gx.get("call_wall") if d == 1 else gx.get("put_wall")
     wall_word = "call wall" if d == 1 else "put wall"
+    wk = gx.get("weekly") or {}
+    wwall = wk.get("call_wall") if d == 1 else wk.get("put_wall")
     shelves = gx.get("shelves") or []
-    # only real piles count: a shelf must reach the same 25% size bar the path check uses (walls always count)
     biggest = max((abs(s["gex"]) for s in shelves), default=0.0)
     shelves = [s for s in shelves if biggest and abs(s["gex"]) >= _GAMMA_PATH_SHARE * biggest]
     for at, price in (("target", target), ("trigger", trigger)):
-        hit = None
-        if wall is not None and _near(wall, price):
-            hit = dict(at=at, strike=wall, what=wall_word, price=price)
-        else:
-            near = [s for s in shelves if _near(s["strike"], price)]
-            if near:
-                s = min(near, key=lambda s: abs(s["strike"] - price))
-                hit = dict(at=at, strike=s["strike"], what="gamma shelf", price=price)
-        if hit:
-            out.append(hit)
+        if not price:
+            continue
+        tol = _tol(price, atr)
+        hits, used = [], set()
+        def add(strike, what, kind):
+            key = round(float(strike), 2)
+            if key in used:
+                return
+            used.add(key)
+            hits.append(dict(at=at, price=price, strike=float(strike), what=what, kind=kind))
+        if wall is not None and _near(wall, price, tol):
+            add(wall, wall_word, "gamma")
+        if wwall is not None and _near(wwall, price, tol):
+            add(wwall, f"weekly {wall_word}", "gamma")
+        near = [s for s in shelves if _near(s["strike"], price, tol)]
+        if near:
+            sv = min(near, key=lambda s: abs(s["strike"] - price))
+            add(sv["strike"], "gamma shelf", "gamma")
+        for kind_word in ("old high", "old low", "50-day average", "200-day average"):
+            cands = [x for x in (levels or []) if x["what"] == kind_word and _near(x["price"], price, tol)]
+            if cands:
+                x = min(cands, key=lambda x: abs(x["price"] - price))
+                add(x["price"], kind_word, "price")
+        step = _round_step(price)
+        r = round(price / step) * step
+        if _near(r, price, tol):
+            add(r, "round number", "price")
+        out.extend(hits)
     return out
+
+
+def _level_phrase(c):
+    w = c["what"]
+    if w == "round number":
+        return f"the ${c['strike']:,.0f} round number"
+    if w in ("old high", "old low"):
+        return f"an {w} at {_money(c['strike'])}"
+    if w.endswith("average"):
+        return f"the {w} at {_money(c['strike'])}"
+    return f"the {_money(c['strike'])} {w}"
+
+
+def _join(xs):
+    return xs[0] if len(xs) == 1 else ", ".join(xs[:-1]) + " and " + xs[-1]
+
+
+def _confluence_line(conf, trigger, target):
+    if not conf:
+        return None
+    by = {at: [c for c in conf if c["at"] == at] for at in ("trigger", "target")}
+    if by["trigger"] and by["target"]:
+        return (f"Confluence at both ends — the {_money(trigger)} trigger: {_join([_level_phrase(c) for c in by['trigger']])}; "
+                f"the {_money(target)} target: {_join([_level_phrase(c) for c in by['target']])}.")
+    at = "target" if by["target"] else "trigger"
+    hits, price = by[at], (target if at == "target" else trigger)
+    if len(hits) == 1:
+        return (f"Confluence: {_level_phrase(hits[0])} sits at the {_money(price)} {at} — two kinds of level point "
+                f"at the same place.")
+    return f"Confluence: {len(hits)} levels agree at the {_money(price)} {at} — {_join([_level_phrase(c) for c in hits])}."
 
 
 def _gamma_path(gx, d, trigger, target, skip=frozenset()):
@@ -173,7 +271,7 @@ def _gamma_path(gx, d, trigger, target, skip=frozenset()):
     return ("shelf", s["strike"], s["gex"])
 
 
-def _gamma_lines(gx, d, trigger, target):
+def _gamma_lines(gx, d, trigger, target, atr=None, levels=None):
     """The card's gamma context lines for the favored play (spec §5).
 
     At most two lines, composed here in code — never by the model — in this
@@ -185,23 +283,15 @@ def _gamma_lines(gx, d, trigger, target):
     answers from the same numbers."""
     if not gx:
         return []
-    conf = _gamma_confluence(gx, d, trigger, target)
+    conf = _gamma_confluence(gx, d, trigger, target, atr, levels)
     gx["confluence"] = conf
     kind, strike, gex = _gamma_path(gx, d, trigger, target,
-                                    {c["strike"] for c in conf})
+                                    {c["strike"] for c in conf if c["kind"] == "gamma"})
     gx["path"] = kind
     out = []
-    if len(conf) == 2:
-        t = next(c for c in conf if c["at"] == "trigger")
-        g = next(c for c in conf if c["at"] == "target")
-        out.append(f"Confluence: gamma sits at both ends of this play — the "
-                   f"{_money(t['strike'])} {t['what']} at the {_money(trigger)} trigger "
-                   f"and the {_money(g['strike'])} {g['what']} at the {_money(target)} target.")
-    elif conf:
-        c = conf[0]
-        out.append(f"Confluence: the {_money(c['strike'])} {c['what']} sits at the "
-                   f"{_money(c['price'])} {c['at']} — gamma and the price levels "
-                   f"point at the same place.")
+    line = _confluence_line(conf, trigger, target)
+    if line:
+        out.append(line)
     if kind == "obstacle":
         word = "call wall" if d == 1 else "put wall"
         out.append(f"Gamma: the {_money(strike)} {word} sits between the "
@@ -382,8 +472,13 @@ def card(sym):
         if g.get("grade") in ("A", "B"):
             out["favored"] = _side(d, edge, target, res, hub, S, atr, sh, op, regime, "favored")
             out["opposite"] = _opposite(d, edge, target, st, th, res, hub, S, atr, sh, op, regime)
+            lv = price_levels(c4)
             if out["gamma"]:
-                out["gamma"]["lines"] = _gamma_lines(out["gamma"], d, edge, target)
+                out["gamma"]["lines"] = _gamma_lines(out["gamma"], d, edge, target, atr, lv)
+            else:      # no options chain: price-level confluence still counts
+                conf = _gamma_confluence({}, d, edge, target, atr, lv)
+                line = _confluence_line(conf, edge, target)
+                out["levels"] = dict(confluence=conf, lines=[line] if line else [])
         else:
             # Spec §4.2: the favored side is only set for a live setup graded A or B.
             # A live setup graded C, D or "?" is watch only — the card says so instead of

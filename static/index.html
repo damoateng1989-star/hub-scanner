@@ -4224,11 +4224,12 @@ async function loadConfluence() {
   let R; try { R = await api("/api/admin/confluence"); } catch (e) { el.innerHTML = ""; return; }
   const rows = R.rows || [], sg = (v) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%", pc = (v) => v == null ? "–" : v + "%";
   const tagged = rows.reduce((a, r) => a + r.tagged, 0);
-  const tr = (r) => `<tr><td><b>${r.kind === "setup" ? "Confirmed setups" : "Breakouts"}</b> · ${r.confluence ? "with confluence" : "without"}</td><td>${r.tagged}</td><td>${r.resolved}</td><td>${pc(r.hit_pct)}</td><td>${sg(r.avg_ret)}</td><td>${pc(r.next_day_green)}</td><td>${sg(r.next_day_avg)}</td></tr>`;
+  const GL = {any: "with confluence", none: "without", gamma: "of which gamma at a level", multi: "of which 2+ levels agree"};
+  const tr = (r) => `<tr><td><b>${r.kind === "setup" ? "Confirmed setups" : "Breakouts"}</b> · ${GL[r.group] || r.group}</td><td>${r.tagged}</td><td>${r.resolved}</td><td>${pc(r.hit_pct)}</td><td>${sg(r.avg_ret)}</td><td>${pc(r.next_day_green)}</td><td>${sg(r.next_day_avg)}</td></tr>`;
   el.innerHTML = `<div class="panel"><div class="ph"><h2>Confluence check</h2><span class="note">does a gamma level on the trigger or target help? tagged when each signal fires</span>
       <button class="btnx sm" onclick="this.disabled=true;this.textContent='Tagging…';api('/api/admin/confluence/run',{method:'POST',timeout:180000}).then(r=>{toast(r.tagged+' tagged');loadConfluence()}).catch(e=>{toast(e.message);loadConfluence()})">Tag now</button></div>
     ${tagged ? `<div class="tbl" style="padding:0 18px 10px"><table><tr><th></th><th>Tagged</th><th>Resolved</th><th>Reached target</th><th>Avg result</th><th>Next day went its way</th><th>Avg next close</th></tr>${rows.map(tr).join("")}</table></div>` : ""}
-    <p class="note" style="padding:0 18px 16px;margin:0">${tagged ? "" : "Nothing tagged yet. "}Each confirmed setup and hub breakout is tagged yes/no at the moment it fires: yes when a call or put wall, or a gamma shelf of real size (25%+ of the biggest), sits within 1% of its trigger or target, on that day's options chain. Option chains aren't kept historically, so this starts from now. Give it 40–50 resolved trades a side before reading anything into the gap.</p></div>`;
+    <p class="note" style="padding:0 18px 16px;margin:0">${tagged ? "" : "Nothing tagged yet. "}Each confirmed setup and hub breakout is tagged at the moment it fires: confluence when another kind of level sits on its trigger or target — a monthly or weekly call/put wall, a gamma shelf of real size (25%+ of the biggest), an old high or low, the 50/200-day average, or a round number. "On it" means within a quarter of the stock's 4-hour ATR (0.4%–1.5% of price). Option chains aren't kept historically, so this starts from now. Give it 40–50 resolved trades a side before reading anything into the gap.</p></div>`;
 }
 async function loadNextDay() {
   const el = $("labNextDay"); if (!el) return;
@@ -7806,8 +7807,9 @@ function askSikaPlayHTML(ticker, c) {
   // any future wording with a quote cannot break the handler).
   // Patch 173: gamma context lines, composed server-side on the card (c.gamma.lines) — rendered verbatim,
   // never computed here. Absent or empty renders nothing; the play card is unchanged without gamma.
-  const gammaBlock = (c.gamma && Array.isArray(c.gamma.lines) && c.gamma.lines.length)
-    ? `<div class="ask-play-gamma">${c.gamma.lines.map(t => `<div>${esc(t)}</div>`).join("")}</div>` : "";
+  const gLines = (c.gamma && Array.isArray(c.gamma.lines) && c.gamma.lines.length) ? c.gamma.lines
+    : (c.levels && Array.isArray(c.levels.lines) ? c.levels.lines : []);      // no options chain: price-level confluence only
+  const gammaBlock = gLines.length ? `<div class="ask-play-gamma">${gLines.map(t => `<div>${esc(t)}</div>`).join("")}</div>` : "";
   const chips = [
     ["What's driving it?", "What is driving the setup?"],
     ["Where does price sit in the hub?", "Where does price sit in the hub?"],

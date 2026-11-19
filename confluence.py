@@ -24,6 +24,12 @@ with db._lock:
         signal_id TEXT PRIMARY KEY, symbol TEXT, kind TEXT, confluence INTEGER, detail TEXT,
         trigger REAL, target REAL, logged_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
     db._conn.commit()
+    for _c, _d in (("n_levels", "INTEGER"), ("gamma_conf", "INTEGER")):
+        try:
+            db._conn.execute(f"ALTER TABLE confluence_log ADD COLUMN {_c} {_d}")
+            db._conn.commit()
+        except Exception:
+            pass
 
 
 def _pending() -> list[dict]:
@@ -50,14 +56,19 @@ def check(sig: dict) -> dict | None:
     target, spot = sig.get("target"), sig.get("entry")
     if not (trigger and target and spot):
         return None
+    import scanner
     sh = gamma.shelves(sig["symbol"], spot, n=swing_card.GAMMA_LADDER_N)
     gx = swing_card._gamma_facts(sig["symbol"], spot, sh)
     if not gx:
-        return None
-    conf = swing_card._gamma_confluence(gx, d, float(trigger), float(target))
+        return None                       # no chain yet: leave untagged and retry, so both groups use the same inputs
+    c4 = scanner.load_4h(sig["symbol"], scanner.SCAN_DAYS)
+    tr = pd.concat([c4["High"] - c4["Low"], (c4["High"] - c4["Close"].shift()).abs(), (c4["Low"] - c4["Close"].shift()).abs()], axis=1).max(axis=1)
+    atr = float(tr.rolling(14).mean().iloc[-1]) if len(c4) > 15 else None
+    conf = swing_card._gamma_confluence(gx, d, float(trigger), float(target), atr, swing_card.price_levels(c4))
     detail = "; ".join(f"{c['what']} {c['strike']:g} at the {c['at']}" for c in conf)
     return dict(signal_id=sig["id"], symbol=sig["symbol"], kind="setup" if sig.get("pattern") == "rules" else "breakout",
-                confluence=int(bool(conf)), detail=detail or None, trigger=float(trigger), target=float(target))
+                confluence=int(bool(conf)), detail=detail or None, trigger=float(trigger), target=float(target),
+                n_levels=len(conf), gamma_conf=int(any(c["kind"] == "gamma" for c in conf)))
 
 
 def tag_recent() -> int:
@@ -79,18 +90,19 @@ def tag_recent() -> int:
 def stats() -> list[dict]:
     """Results split by confluence, per kind: resolved record outcomes and next-day closes."""
     out = []
+    groups = (("any", "c.confluence = 1"), ("none", "c.confluence = 0"), ("gamma", "c.gamma_conf = 1"), ("multi", "c.n_levels >= 2"))
     for kind in ("setup", "breakout"):
-        for flag in (1, 0):
+        for flag, where in groups:
             rows = [dict(r) for r in db._run(
-                """SELECT s.outcome, s.ret_pct, s.direction, n.fav_pct, n.close_pct FROM confluence_log c
+                f"""SELECT s.outcome, s.ret_pct, s.direction, n.fav_pct, n.close_pct FROM confluence_log c
                    JOIN signals s ON s.id = c.signal_id LEFT JOIN next_day n ON n.signal_id = c.signal_id
-                   WHERE c.kind = ? AND c.confluence = ?""", (kind, flag)).fetchall()]
+                   WHERE c.kind = ? AND {where}""", (kind,)).fetchall()]
             done = [r for r in rows if r["outcome"] in ("follow-through", "snap-back", "stalled", "hit", "miss", "target", "stop")]
             hits = [r for r in done if r["outcome"] in ("follow-through", "hit", "target")]
             rets = [r["ret_pct"] for r in done if r["ret_pct"] is not None]
             nd = [r["fav_pct"] if r["fav_pct"] is not None else (r["close_pct"] * (r["direction"] or 1) if r["close_pct"] is not None else None) for r in rows]
             nd = [x for x in nd if x is not None]
-            out.append(dict(kind=kind, confluence=bool(flag), tagged=len(rows), resolved=len(done),
+            out.append(dict(kind=kind, group=flag, tagged=len(rows), resolved=len(done),
                             hit_pct=round(100 * len(hits) / len(done)) if done else None,
                             avg_ret=round(sum(rets) / len(rets), 2) if rets else None,
                             next_day_n=len(nd), next_day_green=round(100 * sum(x > 0 for x in nd) / len(nd)) if nd else None,
