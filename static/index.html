@@ -4997,7 +4997,8 @@ function mapLwcKey(D) {
   return JSON.stringify([P.sym, !!D.daily, document.documentElement.dataset.theme, candleColors(), D.cs.length, D.cs[0].time,
     [last.time, last.open, last.high, last.low, last.close, last.volume], P.trig, P.stop, P.shelf, P.atrTarget, P.oldHigh, P.dir,
     P.hub && [P.hub.high, P.hub.low], P.obst && [P.obst.level, P.obst.name], P.retest && P.retest.edge,
-    g && g !== "loading" ? [g.call_wall, g.put_wall] : null, P.px]);
+    g && g !== "loading" ? [g.call_wall, g.put_wall] : null, P.px,
+    LEVELS[P.sym] && LEVELS[P.sym].d ? LEVELS[P.sym].t : null]);
 }
 function initLightweightMapChart() {
   const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
@@ -5054,7 +5055,10 @@ function initLightweightMapChart() {
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
     const mapPriceLines = [];
-    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const pl=candles.createPriceLine({price:+price,title,color:color,lineWidth:1,lineStyle:style||L.LineStyle.Solid,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
+    // Levels to watch: a line that sits on a stack of 2+ kinds of level gets an "N×" tag on its label
+    const LVd = LEVELS[D.P.sym] && LEVELS[D.P.sym].d, LVs = LVd ? [...LVd.above, ...LVd.below].filter(x => x.kinds >= 2) : [], LVtol = LVd ? LVd.tolerance : 0, LVused = new Set();
+    const stackAt = (p) => LVs.filter(x => Math.abs(x.price - p) <= LVtol).sort((a, b) => b.kinds - a.kinds)[0];
+    const line=(price,title,color,style)=>{if(price==null||!Number.isFinite(+price))return; const st=stackAt(+price); if(st){LVused.add(st); title=`${title} ${st.kinds}×`;} const pl=candles.createPriceLine({price:+price,title,color:color,lineWidth:1,lineStyle:style||L.LineStyle.Solid,axisLabelVisible:true,axisLabelColor:color}); mapPriceLines.push(pl); return pl;};
     const css = getComputedStyle(document.documentElement);
     const signal = name => css.getPropertyValue(name).trim();
     const hubColor = "#5AC8FA";
@@ -5085,6 +5089,11 @@ function initLightweightMapChart() {
     if(D.P.obst && !(D.P.oldHigh != null && Math.abs(+D.P.obst.level-+D.P.oldHigh)<0.000001) &&
        !((callWall != null && Math.abs(+D.P.obst.level-+callWall)<0.000001) || (putWall != null && Math.abs(+D.P.obst.level-+putWall)<0.000001)))
       line(D.P.obst.level,D.P.obst.name || "OBSTACLE","#B48CFF",L.LineStyle.Solid);
+    // the strongest stack above and below that no plotted line already covers: its own dotted line
+    for (const side of ["above", "below"]) {
+      const best = LVs.filter(x => x.side === side && !LVused.has(x)).sort((a, b) => b.score - a.score || Math.abs(a.distance_pct) - Math.abs(b.distance_pct))[0];
+      if (best && best.kinds >= 2) { LVused.add(best); const pl = candles.createPriceLine({price: +best.price, title: `${best.kinds}× LEVELS`, color: "#9AA0AC", lineWidth: 1, lineStyle: L.LineStyle.Dotted, axisLabelVisible: true, axisLabelColor: "#6B7280"}); mapPriceLines.push(pl); }
+    }
     // Stretch the price scale to the plotted levels (only expands, +4% pad) so the
     // next shelf / walls are on screen, not just the candles. Uses the supported
     // autoscaleInfoProvider (LWC v5), not a price-scale range API.
@@ -5336,7 +5345,7 @@ async function loadLevels(sym) {
   if (c && Date.now() - c.t < 5 * 60e3) return;
   try { LEVELS[sym] = {t: Date.now(), d: await api(`/api/levels/${encodeURIComponent(sym)}`)}; }
   catch (e) { LEVELS[sym] = {t: Date.now(), d: null}; }
-  if (BRIEF_SYM === sym) { const el = $("mpSide"); if (el) { const old = el.querySelector(".mp-lv"); if (old) old.outerHTML = levelsCardHTML(sym); } }
+  if (BRIEF_SYM === sym) { if (typeof paintMap === "function") paintMap(); else { const el = $("mpSide"); const old = el && el.querySelector(".mp-lv"); if (old) old.outerHTML = levelsCardHTML(sym); } }
 }
 function levelsCardHTML(sym) {
   const c = LEVELS[sym];
@@ -5347,8 +5356,9 @@ function levelsCardHTML(sym) {
   const row = (L) => {
     const up = L.side === "above", tag = L.kinds >= 2 ? `<span class="lv-x">${L.kinds}×</span>` : "";
     const what = L.items.map(i => esc(i.what) + (Math.abs(i.price - L.price) >= 0.01 && !/round number/.test(i.what) ? ` <i>${esc(money(i.price))}</i>` : "")).join(" · ");
+    const plan = L.plan ? `<div class="lv-plan">${esc(L.plan)}</div>` : "";
     return `<div class="lv-row"><div class="lv-p"><b>${esc(money(L.price))}</b><span class="${up ? "u" : "d"}">${up ? "↑" : "↓"} ${Math.abs(L.distance_pct).toFixed(1)}%</span></div>
-      <div class="lv-w">${tag}${what}</div></div>`;
+      <div class="lv-w">${tag}${what}${plan}</div></div>`;
   };
   const now = `<div class="lv-now">Price ${esc(money(d.price))}</div>`;
   return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div>${d.above.map(row).join("")}${now}${d.below.map(row).join("")}
@@ -8900,6 +8910,7 @@ html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
 .mp-lv .lv-w i { font-style: normal; opacity: .7; font-family: var(--mono); font-size: 11.5px; }
 .mp-lv .lv-x { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px; background: rgba(61,214,140,.14); color: #3DD68C; font: 800 11px var(--mono); }
 .mp-lv .lv-now { margin: 4px 0; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,.06); font: 600 11.5px var(--mono); color: var(--mp-mut); text-align: center; }
+.mp-lv .lv-plan { margin-top: 4px; font-size: 11.5px; color: var(--mp-mut); border-left: 2px solid rgba(242,193,78,.6); padding-left: 7px; }
 .mp-lv .lv-note { margin: 4px 0 0; font-size: 11px; color: var(--mp-mut); opacity: .8; }
 html[data-theme="light"] .mp-lv .lv-p b { color: #0d1117; } html[data-theme="light"] .mp-lv .lv-now { background: rgba(13,17,23,.05); }
 html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x { color: #15803d; } html[data-theme="light"] .mp-lv .lv-p .d { color: #dc2626; }

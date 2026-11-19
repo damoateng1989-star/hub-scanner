@@ -94,7 +94,12 @@ def _stacks(cands, last, tol):
                 continue
             seen.add(label)
             items.append(dict(what=label, price=round(c["price"], 2), group=c["group"]))
-        out.append(dict(price=round(price, 2), side="above" if price > last else "below",
+        plan = None
+        if groups & {"wall", "summed"}:      # a plan for each big gamma zone: where it counts as cleared or as holding
+            hi, lo = round(price + tol, 2), round(price - tol, 2)
+            plan = (f"Clears on a 4H close above ${hi:,.2f} · rejected while closes stay under ${lo:,.2f}" if price > last
+                    else f"Breaks on a 4H close below ${lo:,.2f} · holds while closes stay above ${hi:,.2f}")
+        out.append(dict(plan=plan, price=round(price, 2), side="above" if price > last else "below",
                         distance_pct=round((price / last - 1) * 100, 2), kinds=kinds, score=score,
                         gamma=bool(groups & {"wall", "shelf", "summed"}), items=items))
     return out
