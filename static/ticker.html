@@ -420,6 +420,26 @@ html[data-theme="light"] body .card { background: #F8F9FD !important; }
 .ns-logo span{font-weight:700 !important;margin:0 !important;padding:0 !important}
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
 </style>
+<style>
+/* ================= Motion pass (Patch 170) =================
+   Same tokens as the app (static/index.html). Transform and opacity only; nothing over 450ms; disabled under
+   prefers-reduced-motion. Content settles use fill-mode backwards so nothing keeps a leftover transform. */
+:root {
+  --dur-fast: 180ms; --dur-med: 300ms; --dur-slow: 450ms;
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-snap: cubic-bezier(0.34, 1.25, 0.4, 1);
+}
+@keyframes mpRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+#main > * { animation: mpRise var(--dur-med) var(--ease-spring) backwards; }
+#swingPlay > *, #optionsSwing > *, #gexShelves > * { animation: mpRise var(--dur-fast) var(--ease-spring) backwards; }
+.seg button, #watch, .btnx, .tvbtn, button.sec { transition: transform var(--dur-fast) var(--ease-spring); }
+.seg button:active, #watch:active, .btnx:active, .tvbtn:active, button.sec:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce) {
+  #main > *, #swingPlay > *, #optionsSwing > *, #gexShelves > * { animation: none !important; }
+  .seg button, #watch, .btnx, .tvbtn, button.sec { transition: none !important; }
+  .seg button:active, #watch:active, .btnx:active, .tvbtn:active, button.sec:active { transform: none !important; }
+}
+</style>
 </head>
 <body>
 <nav><div class="wrap">

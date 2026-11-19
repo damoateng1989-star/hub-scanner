@@ -632,10 +632,10 @@ footer{color:#718397!important;border-color:#292A2D!important}
 /* ---------- shelf card (slide-over) ---------- */
 .brief { position: fixed; top: 12px; right: 12px; bottom: 12px; width: min(460px, calc(100% - 24px)); z-index: 35; display: flex; flex-direction: column;
   background: #15171C; border: 1px solid #353639; border-radius: 20px; box-shadow: 0 30px 90px rgba(0,0,0,.55);
-  transform: translateX(calc(100% + 24px)); transition: transform .28s cubic-bezier(.2,.8,.2,1); font-family: var(--sans); color: var(--t-ink); overflow: hidden; }
-body.brief-open .brief { transform: none; }
+  transform: translateX(calc(100% + 24px)); opacity: 0; transition: transform var(--dur-med) var(--ease-spring), opacity var(--dur-med) var(--ease-spring); font-family: var(--sans); color: var(--t-ink); overflow: hidden; }
+body.brief-open .brief { transform: none; opacity: 1; }
 .bf-scrim { position: fixed; inset: 0; z-index: 34; background: rgba(3,6,10,.5); backdrop-filter: blur(2px); }
-body.brief-open .bf-scrim { display: block; }
+body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ease-out both; }
 /* ---------- GEX heat map beside the shelf card (Patch 166) ---------- */
 .bf-heat[hidden] { display: none !important; }
 body:not(.brief-open) .bf-heat { display: none; }
@@ -791,7 +791,7 @@ html[data-theme="light"] .bf-heat .bh-spot { background: #0d1117; color: #FFFFFF
   font: 800 12px/22px var(--sans); box-shadow: 0 0 0 3px var(--t-bg, #0E0F12); }
 body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .scout-pop { position: fixed; right: 22px; bottom: 100px; z-index: 31; width: min(360px, calc(100vw - 24px)); padding: 16px; border-radius: 18px;
-  background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); animation: agIn .2s ease both; }
+  background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); transform-origin: 100% 100%; animation: mpIn var(--dur-med) var(--ease-snap) both; }
 .scout-pop[hidden] { display: none !important; }
 .sp-head { display: flex; justify-content: space-between; align-items: center; }
 .sp-head b { font: 800 18px var(--sans); } .sp-head small { margin-left: 8px; padding: 2px 8px; border-radius: 7px; border: 1px solid #353639; color: #9AA0AC; font: 600 12px var(--sans); }
@@ -810,11 +810,11 @@ body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
 .sp-hint { margin: 0; color: #9AA0AC; font-size: 13px; line-height: 1.45; }
 .sp-res { display: grid; gap: 4px; margin-top: 12px; max-height: 260px; overflow-y: auto; }
 /* Ask Sika — Talon-style dialogue. */
-.ask-backdrop { position: fixed; inset: 0; z-index: 31; background: rgba(5,7,11,.48); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); animation: askBackdropIn .2s ease both; }
+.ask-backdrop { position: fixed; inset: 0; z-index: 31; background: rgba(5,7,11,.48); -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); animation: askBackdropIn var(--dur-fast) ease-out both; }
 .ask-backdrop[hidden] { display: none !important; }
 @keyframes askBackdropIn { from { opacity: 0; } to { opacity: 1; } }
 .ask-pop { position: fixed; right: 22px; bottom: 100px; z-index: 32; width: min(380px, calc(100vw - 24px)); max-height: calc(100vh - 140px); display: flex; flex-direction: column; padding: 16px; border-radius: 18px;
-  background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); animation: agIn .2s ease both; }
+  background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); transform-origin: 100% 100%; animation: mpIn var(--dur-med) var(--ease-snap) both; }
 .ask-pop[hidden] { display: none !important; }
 .ask-body { flex: 1 1 auto; overflow-y: auto; margin-top: 12px; display: grid; gap: 12px; min-height: 120px; align-content: start; }
 .ask-msg { max-width: 88%; width: fit-content; padding: 10px 13px; border-radius: 18px; overflow-wrap: anywhere; }
@@ -1983,8 +1983,8 @@ html[data-theme="light"] body .sweep-btn::before { background: #12805C; box-shad
   html[data-theme="light"] body.brief-open .brief { box-shadow: 0 -400px 0 0 #f4f5f7 !important; }
   html:has(body.brief-open) { background: #0E0F12; } html[data-theme="light"]:has(body.brief-open) { background: #f4f5f7; }
 }
-body:not(.brief-open) .brief { visibility: hidden; transition: transform .28s cubic-bezier(.2,.8,.2,1), visibility 0s .28s; }
-body.brief-open .brief { visibility: visible; transition: transform .28s cubic-bezier(.2,.8,.2,1); }
+body:not(.brief-open) .brief { visibility: hidden; transition: transform var(--dur-fast) var(--ease-spring), opacity var(--dur-fast) var(--ease-spring), visibility 0s var(--dur-fast); }
+body.brief-open .brief { visibility: visible; transition: transform var(--dur-med) var(--ease-spring), opacity var(--dur-med) var(--ease-spring); }
 /* calm cards */
 .rule1 { background: #15171C !important; border: 1px solid #23262E !important; }
 html[data-theme="light"] .rule1 { background: #F8F9FD !important; border-color: #E4E3DC !important; }
@@ -2545,6 +2545,41 @@ html[data-theme="light"] .sg-b { color: #fff; }
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
 </style>
 <script src="/vendor/lightweight-charts-5.js"></script>
+<style>
+/* ================= Motion pass (Patch 170) =================
+   One token system for the app's motion. Animate transform and opacity
+   only; nothing over 450ms; exits faster than entrances; everything in
+   this block is disabled under prefers-reduced-motion (bottom).
+   Content settles use fill-mode backwards (not both): once they finish, no transform is left on the element. A
+   lingering transform (even an identity one) would trap position:fixed children such as chart tooltips. */
+:root {
+  --dur-fast: 180ms; --dur-med: 300ms; --dur-slow: 450ms;
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-snap: cubic-bezier(0.34, 1.25, 0.4, 1);
+}
+@keyframes mpIn { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes mpRise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes mpFade { from { opacity: 0; } to { opacity: 1; } }
+
+#bfBody > * { animation: mpRise var(--dur-fast) var(--ease-spring) backwards; }
+.ask-msg { animation: mpFade var(--dur-fast) ease-out both; }
+#bfHeat { animation: mpRise var(--dur-slow) var(--ease-spring) backwards; }
+
+.btnx, .sp-row, .ask-scan-sym, .ask-send, .sp-go, .sp-alt, .chip, .board-filter, .sb-item, .kpi {
+  transition: transform var(--dur-fast) var(--ease-spring), background .15s ease, border-color .15s ease, color .15s ease !important; }
+.hm-t { transition: filter .12s ease, transform var(--dur-fast) var(--ease-spring) !important; }
+.btnx:active, .sp-row:active, .ask-scan-sym:active, .ask-send:active, .sp-go:active, .sp-alt:active, .chip:active, .board-filter:active { transform: scale(.97); }
+.sb-item:active, .kpi:active, .hm-t:active { transform: scale(.98); }
+.scout-fab:active { transform: scale(.93); }
+@media (hover: hover) and (pointer: fine) { .kpi:hover { transform: translateY(-2px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .brief, body.brief-open .brief, body:not(.brief-open) .brief { transition: none !important; }
+  body.brief-open .bf-scrim, .ask-backdrop, .ask-pop, .scout-pop, #bfBody > *, .ask-msg, #bfHeat { animation: none !important; }
+  .btnx, .sp-row, .ask-scan-sym, .ask-send, .sp-go, .sp-alt, .chip, .board-filter, .sb-item, .kpi, .hm-t { transition: none !important; }
+  .btnx:active, .sp-row:active, .ask-scan-sym:active, .ask-send:active, .sp-go:active, .sp-alt:active, .chip:active, .board-filter:active, .sb-item:active, .kpi:active, .hm-t:active, .scout-fab:active, .kpi:hover { transform: none !important; }
+}
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
