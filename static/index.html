@@ -7719,7 +7719,7 @@ function askSikaTickersIn(raw) {
   for (let tok of rest.split(" ").filter(Boolean)) {
     tok = tok.replace(/'s$/, "").toUpperCase();
     if (!tok || found.includes(tok)) continue;
-    if (askSikaShout(raw) && (tok.length < 2 || ASK_SCAN_STOP.has(tok.toLowerCase()))) continue;   // "GIVE ME A SET UP": A and ME are words
+    if (tok.length < 2 || ASK_SCAN_STOP.has(tok.toLowerCase())) continue;   // "give me a set up": a, me, on are words here, not Agilent etc.
     if (ASK_SCAN_SYMBOLS.has(tok)) { found.push(tok); continue; }
     if (tok.length >= 2 && !ASK_SCAN_STOP.has(tok.toLowerCase()) && boardSyms.has(tok)) found.push(tok);
   }
