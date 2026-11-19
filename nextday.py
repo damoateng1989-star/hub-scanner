@@ -35,6 +35,11 @@ with db._lock:
             db._conn.commit()
         except Exception:
             pass
+    try:   # Nov 19: rows where the target was already behind the entry were wrongly marked "touched target"
+        db._conn.execute("UPDATE next_day SET hit_target=0 WHERE target IS NOT NULL AND (target - entry) * COALESCE(direction, 1) <= 0")
+        db._conn.commit()
+    except Exception:
+        pass
 
 
 def _pct(x: float, e: float) -> float:
@@ -89,7 +94,8 @@ def check(sig: dict, c4: pd.DataFrame) -> dict | None:
         if same:
             rest = _pct(float(d["Close"].iloc[same[0]]), e)
     hit_stop = stop is not None and (lo <= float(stop) if dr == 1 else h >= float(stop))
-    hit_tgt = tgt is not None and (h >= float(tgt) if dr == 1 else lo <= float(tgt))
+    # the target only counts if it was still ahead of the entry: a breakout close past the shelf already reached it
+    hit_tgt = tgt is not None and (float(tgt) - e) * dr > 0 and (h >= float(tgt) if dr == 1 else lo <= float(tgt))
     return dict(signal_id=sig["id"], symbol=sig["symbol"], setup=setup, grade=sig.get("grade"), kind=kind, direction=dr,
                 entry=e, stop=stop, target=tgt, entry_time=sig["entry_time"], day=str(days[i].date()),
                 open=round(o, 2), high=round(h, 2), low=round(lo, 2), close=round(c, 2), rest_pct=rest,
@@ -134,7 +140,7 @@ def run(notify: bool = True) -> list[dict]:
             msg = text(today)
             for u in db.all_users():
                 if u.get("is_admin") and u.get("telegram_chat"):
-                    telegram_bot.send(msg, chat_id=u["telegram_chat"], silent=True)
+                    telegram_bot.send(msg, chat_id=u["telegram_chat"], silent=True, html=True)
         except Exception as e:
             log.warning("next-day message failed: %s", e)
     return done
@@ -143,7 +149,9 @@ def run(notify: bool = True) -> list[dict]:
 def _line(r: dict) -> str:
     sign = lambda x: f"{(0.0 if abs(x) < 0.005 else x):+.2f}%"
     back = "back inside the hub" if r.get("kind") == "breakout" else "stop"
-    flag = " · 🎯 touched target" if r["hit_target"] else f" · ⛔ touched {back}" if r["hit_stop"] else ""
+    passed = r.get("target") is not None and (float(r["target"]) - float(r["entry"])) * int(r.get("direction") or 1) <= 0
+    flag = (" · 🎯 touched target" if r["hit_target"] else f" · ⛔ touched {back}" if r["hit_stop"]
+            else " · target already reached at entry" if passed else "")
     fav = r.get("fav_pct") if r.get("fav_pct") is not None else r["close_pct"]
     icon = "🟢" if fav > 0 else "🔴" if fav < 0 else "⚪"
     return (f"{icon} <b>{html.escape(r['symbol'])}</b> {html.escape(r['setup'] or '')} · entry ${r['entry']:,.2f}\n"
