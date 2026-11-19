@@ -22,8 +22,9 @@
 @font-face { font-family: "Inter"; src: url("/fonts/Inter.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
-/* Patch 172: the wordmark's glyphs as static 800/700 instances with overlapping contours merged, so the glass edge
-   (-webkit-text-stroke) traces only the outline — on the variable font it also drew the inner seams (e, t, h crossbars). */
+/* Patch 172 (first version) added the static 800/700 "Manrope Logo" instances below so the glass edge would trace
+   only the outline. The revised 172 renders the wordmark thin (200/300) from the variable "Manrope" above, so this
+   family is no longer referenced by the wordmark — the faces and files stay in place, unreferenced, never downloaded. */
 @font-face { font-family: "Manrope Logo"; src: url("/fonts/ManropeLogo-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
 @font-face { font-family: "Manrope Logo"; src: url("/fonts/ManropeLogo-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 :root {
@@ -204,7 +205,7 @@ footer nav[aria-label="Social"] a { display: inline-flex; opacity: .75; }
 footer nav[aria-label="Social"] a:hover { opacity: 1; }
 footer nav[aria-label="Social"] svg { width: 20px; height: 20px; display: block; }
 
-/* Footer giant wordmark: the brand as the stamp — on dark, glass (Patch 172: translucent white at the stamp's .22 strength, 1px bright edge); on light, flat #3A4656; faint by design — with the blue glow behind it. */
+/* Footer giant wordmark: the brand as the stamp — NEXTSHELF in all caps, ExtraLight 200 (Patch 172, revised); on dark, delicate glass at the stamp's .21 effective strength with a hairline edge; on light, flat #3A4656; faint by design — with the blue glow behind it. */
 footer { position: relative; overflow: hidden; }
 .ft-giant { text-align: center; white-space: nowrap; line-height: .84; letter-spacing: -.06em; font-size: min(18.5vw, 300px); font-family: "Manrope", Arial, sans-serif; font-weight: 800; color: rgba(195,204,215,.22); background: radial-gradient(60% 95% at 50% 100%, rgba(47,84,235,.24), rgba(47,84,235,0) 70%); text-shadow: 0 0 55px rgba(37,99,235,.14); transform: translateY(17%); user-select: none; pointer-events: none; }
 
@@ -978,12 +979,28 @@ html[data-theme="light"] .hx-c.up .w{color:#0F7A4F}html[data-theme="light"] .hx-
 .ns-logo{gap:0 !important;column-gap:0 !important;word-spacing:0 !important;white-space:nowrap !important}
 .ns-logo span{font-weight:700 !important;margin:0 !important;padding:0 !important}
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
-/* Glass wordmark (Patch 172) — dark theme only, Treatment B (glass-lite): translucent white fill with a 1px bright edge,
-   the iOS clock treatment at working size. Light theme keeps Patch 164's flat #3A4656. */
-html:not([data-theme="light"]) .ns-logo{font-family:"Manrope Logo","Manrope",Arial,sans-serif !important;color:rgba(255,255,255,.80) !important;-webkit-text-stroke:1px rgba(255,255,255,.35)}
-/* The footer giant (Patch 172) — the one Treatment A instance: full glass at the stamp's own .22 strength, 1px bright edge.
-   Size, tracking, the blue glow and its text-shadow are untouched; the light rule is untouched. */
-html:not([data-theme="light"]) .ft-giant{font-family:"Manrope Logo","Manrope",Arial,sans-serif;color:rgba(255,255,255,.22);-webkit-text-stroke:1px rgba(255,255,255,.65)}
+/* Wordmark (Patch 172, revised) — NEXTSHELF in all caps, thin, in iOS clock glass.
+   The caps, the one uniform Light-300 weight and the +.02em tracking are the logo
+   itself and apply in BOTH themes (the structure rules below are unscoped — the
+   html prefix is for specificity only); only the glass fill is dark-only, and on
+   light the same caps/thin wordmark renders in Patch 164's flat #3A4656. Thin
+   caps need air, so tracking goes from -.055em to +.02em; the wordmark's own
+   width grows with the caps and tracking, and nothing else moves. */
+html .ns-logo{text-transform:uppercase !important;font-weight:300 !important;letter-spacing:.02em !important}
+html .ns-logo span{font-weight:300 !important}
+/* Dark only: the study's thin-soft glass — fill white .48, hairline edge .5px
+   white .60. No font-family here on purpose: Patch 164's base rule already gives
+   the variable "Manrope" (200-800), which is where weight 300 lives. The applied
+   172's static "Manrope Logo" 800/700 instances have no thin weights and are no
+   longer referenced by the wordmark (see §3). */
+html:not([data-theme="light"]) .ns-logo{color:rgba(255,255,255,.48) !important;-webkit-text-stroke:.5px rgba(255,255,255,.60)}
+/* The footer giant (Patch 172, revised) — NEXTSHELF in all caps, ExtraLight 200,
+   the study's delicate glass. The caps, weight and tracking are the logo itself
+   (both themes — the unscoped rule below); the glass is dark-only. */
+html .ft-giant{text-transform:uppercase;font-weight:200;letter-spacing:.01em}
+/* Dark glass at the same presence as today: the study's thin treatment seen through opacity .55 (fill ≈ .21, edge ≈ .47),
+   folded into the alphas so the giant's own blue glow and text-shadow stay at full strength. */
+html:not([data-theme="light"]) .ft-giant{color:rgba(255,255,255,.21);-webkit-text-stroke:.5px rgba(255,255,255,.47)}
 
 /* "We watch it." — same blue as the line above, with a band of light that sweeps across it, then rests */
 @property --hxs{syntax:"<percentage>";inherits:false;initial-value:-40%}
