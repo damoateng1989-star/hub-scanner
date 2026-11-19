@@ -993,14 +993,14 @@ html .ns-logo span{font-weight:300 !important}
    the variable "Manrope" (200-800), which is where weight 300 lives. The applied
    172's static "Manrope Logo" 800/700 instances have no thin weights and are no
    longer referenced by the wordmark (see §3). */
-html:not([data-theme="light"]) .ns-logo{color:rgba(255,255,255,.48) !important;-webkit-text-stroke:.5px rgba(255,255,255,.60)}
+html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-stroke:0}   /* glass removed (Nov 19): solid, thin caps stay */
 /* The footer giant (Patch 172, revised) — NEXTSHELF in all caps, ExtraLight 200,
    the study's delicate glass. The caps, weight and tracking are the logo itself
    (both themes — the unscoped rule below); the glass is dark-only. */
 html .ft-giant{text-transform:uppercase;font-weight:200;letter-spacing:.01em}
 /* Dark glass at the same presence as today: the study's thin treatment seen through opacity .55 (fill ≈ .21, edge ≈ .47),
    folded into the alphas so the giant's own blue glow and text-shadow stay at full strength. */
-html:not([data-theme="light"]) .ft-giant{color:rgba(255,255,255,.21);-webkit-text-stroke:.5px rgba(255,255,255,.47)}
+/* footer giant: glass removed (Nov 19) — its base flat colour and blue glow apply; caps/ExtraLight stay */
 
 /* "We watch it." — same blue as the line above, with a band of light that sweeps across it, then rests */
 @property --hxs{syntax:"<percentage>";inherits:false;initial-value:-40%}

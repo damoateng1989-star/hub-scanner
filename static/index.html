@@ -2562,7 +2562,7 @@ html .ns-logo span{font-weight:300 !important}
    the variable "Manrope" (200-800), which is where weight 300 lives. The applied
    172's static "Manrope Logo" 800/700 instances have no thin weights and are no
    longer referenced by the wordmark (see §3). */
-html:not([data-theme="light"]) .ns-logo{color:rgba(255,255,255,.48) !important;-webkit-text-stroke:.5px rgba(255,255,255,.60)}
+html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-stroke:0}   /* glass removed (Nov 19): solid, thin caps stay */
 </style>
 <script src="/vendor/lightweight-charts-5.js"></script>
 <style>
@@ -8822,6 +8822,24 @@ html .ask-pop b:not([class]):not([style]), html .ask-pop strong:not([class]):not
 html[data-theme="light"] .ask-pop .ask-you b, html .ask-pop .ask-you b { color: #FFFFFF !important; }
 .ask-msg.ask-sika .ask-scan-head { color: #C9CCD3 !important; }
 .ask-msg.ask-sika .ask-scan-mid { color: #F2F3F5; }
+
+/* Sika keeps its glass (Nov 19: "remove all the glass and keep Sika"): the chat window and the LIVE panel only,
+   dark theme. Clear tint, heavy blur, a lensing highlight top-left, a cool glow bottom-right and a bright rim. */
+html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-pop {
+  background: radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,.16), rgba(255,255,255,0) 52%),
+              radial-gradient(90% 60% at 100% 100%, rgba(170,210,255,.09), rgba(255,255,255,0) 58%),
+              linear-gradient(160deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(255,255,255,.05) 100%),
+              rgba(10,12,18,.40) !important;
+  border: 1px solid rgba(255,255,255,.20) !important; border-radius: 28px;
+  -webkit-backdrop-filter: blur(40px) saturate(2.3) brightness(1.08); backdrop-filter: blur(40px) saturate(2.3) brightness(1.08);
+  box-shadow: inset 0 1.5px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.20), inset 1px 0 0 rgba(255,255,255,.12),
+              inset 0 14px 22px -14px rgba(255,255,255,.18), inset 0 -16px 26px -16px rgba(150,200,255,.14), 0 30px 80px rgba(0,0,0,.55) !important; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-pop { background: rgba(18,20,26,.96) !important; }
+}
+html:not([data-theme="light"]) .ask-row input { background: rgba(0,0,0,.45) !important; border: 1px solid rgba(255,255,255,.20) !important; border-radius: 999px !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.18); }
+html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
 </style>
 </body>
 </html>
