@@ -7676,6 +7676,7 @@ const ASK_SCAN_KINDS = [
   ["gap rip", "gapfade"], ["doubles", "double"], ["double", "double"],
   ["dt/db", "double"], ["dt / db", "double"], ["dt", "double"], ["db", "double"],
   ["hubs", "hub"], ["hub", "hub"],
+  ["breaking out", "hub"], ["breaking down", "hub"], ["breakouts", "hub"], ["breakdowns", "hub"], ["broke out", "hub"], ["broke down", "hub"],
 ];
 const ASK_SCAN_VERBS = ["find", "scan", "show", "list", "any", "give me", "got any", "looking for", "what's", "whats", "what are", "are there", "which"];
 const ASK_SCAN_STOP = new Set(["on", "it", "in", "is", "at", "to", "of", "be", "do", "go", "so", "no", "or", "an", "as", "by", "up", "us", "am", "if", "my", "me", "we", "he",
@@ -7846,6 +7847,25 @@ function askSikaScanHTML(data, kind) {
   h += '<p class="sp-hint">Tap a ticker for its play.</p>';
   return h;
 }
+// "Which stocks need my attention?", "what's on my watchlist?", "my stocks": answered from the member's own
+// watchlist with exactly the rule and wording of Today's "Needs your attention" panel, so the two always match.
+function askSikaAttnAsk(raw) {
+  const t = " " + askSikaNorm(raw) + " ";
+  return /\b(need|needs|needing)\b.*\battention\b|\battention\b.*\b(stocks?|tickers?|list)\b|\bmy (watch ?list|list|stocks|tickers|shelves)\b|\bon my (watch ?list|list)\b|\b(stocks?|tickers?) i('m| am)? (watching|following)\b/.test(t);
+}
+function askSikaAttnHTML() {
+  if (!TICKERS.length) return '<p class="sp-hint">Your watchlist is empty. Add a few stocks on the <a href="#list">Watchlist</a> page and I\'ll tell you when one sets up.</p>';
+  const st = (t) => effState(t.status || {});
+  const urgent = TICKERS.filter(t => ["breakout_up", "breakdown", "forming", "watching"].includes(st(t)))
+    .sort((a, b) => (PRIORITY[st(a)] ?? 4) - (PRIORITY[st(b)] ?? 4));
+  if (!urgent.length) return '<p class="sp-hint">All quiet on your watchlist. Nothing is in a range or breaking out right now.</p>';
+  let h = '<p class="ask-scan-head"><b>Needs your attention</b> · ' + urgent.length + ' on your watchlist · same as the Today page</p>';
+  h += urgent.slice(0, 12).map(t => '<div class="ask-scan-row"><button class="ask-scan-sym" type="button" onclick="askSikaTap(\'' + esc(t.symbol) + '\')">' + esc(t.symbol) + '</button>'
+    + '<div class="ask-scan-mid">' + oneLine(t.status || {}, liveOther(t.status) ? "setup" : st(t)) + '</div></div>').join("");
+  if (urgent.length > 12) h += '<p class="sp-hint">' + (urgent.length - 12) + ' more on your <a href="#list">Watchlist</a>.</p>';
+  h += '<p class="sp-hint">Tap a ticker for its play.</p>';
+  return h;
+}
 function askSikaTap(sym) {
   ASK_QUEUE.push(sym);
   askSikaDrain();
@@ -7968,6 +7988,14 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
   const one = more ? null : askSikaPlayAsk(raw);
   if (one) { await askSikaProcess(one, true); return; }
 
+  if (!more && askSikaAttnAsk(raw) && ME && !ME.guest) {
+    askSikaHistory("user", raw);
+    const html = askSikaAttnHTML();
+    askSikaHistory("sika", html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    askSikaSay(html, "ask-sika ask-scanmsg");
+    ASK_SCAN_SYMBOLS = new Set([...ASK_SCAN_SYMBOLS, ...TICKERS.map(t => t.symbol)]);
+    return;
+  }
   const scanKind = more ? ASK_LAST_SCAN : askSikaIsScan(raw);
   if (scanKind) {
     if (ME && !ME.guest && (isPro() || ME.options)) {
@@ -8905,6 +8933,12 @@ html[data-theme="light"] .wl-section-head .wl-hot.wl-calm i { background: #8A93A
 .ask-msg.ask-sika .ask-scan-g.g-A { background: #1E7A3C; color: #fff; } .ask-msg.ask-sika .ask-scan-g.g-B { background: #D1F2DF; color: #0F5132; }
 .ask-msg.ask-sika .ask-scan-g.g-C { background: #FDF0C8; color: #7A5A00; } .ask-msg.ask-sika .ask-scan-g.g-D { background: #F6D5D1; color: #8A1F14; }
 .ask-msg.ask-sika .ask-scan-sym { background: #F2F3F5; color: #15171C; }
+
+/* Sika panel is dark in both themes: keep its bold text and list headings light under the light theme too */
+html .ask-pop b:not([class]):not([style]), html .ask-pop strong:not([class]):not([style]), html[data-theme="light"] .ask-pop b:not([class]):not([style]), html[data-theme="light"] .ask-pop strong:not([class]):not([style]) { color: #F2F3F5 !important; }
+html[data-theme="light"] .ask-pop .ask-you b, html .ask-pop .ask-you b { color: #FFFFFF !important; }
+.ask-msg.ask-sika .ask-scan-head { color: #C9CCD3 !important; }
+.ask-msg.ask-sika .ask-scan-mid { color: #F2F3F5; }
 </style>
 </body>
 </html>
