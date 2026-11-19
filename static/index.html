@@ -295,6 +295,7 @@
   .sk-badge.full { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
   .sk-badge.part { background: color-mix(in srgb, var(--stall) 18%, transparent); color: var(--stall); }
   .sk-badge.low { background: var(--sunk); color: var(--muted); }
+  .sk-badge.dn { background: color-mix(in srgb, var(--down) 16%, transparent); color: var(--down); }
   .sk-rules { font-size: 13px; line-height: 1.8; margin: 8px 0 0; }
   .sk-rules .y { color: var(--up); } .sk-rules .n { color: var(--down); }
   .sk-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
@@ -6361,7 +6362,7 @@ function stkItem(sym, names) {
 }
 function stkBadge(sym, names) {
   const x = stkItem(sym, names); if (!x) return "";
-  return `<span class="sk-badge ${x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"} sk-inline" title="${esc(x.name)}: ${x.passed} of ${x.total} stacked rules${x.missing ? " · missing: " + esc(x.missing) : ""}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
+  return `<span class="sk-badge ${x.direction === -1 ? "dn" : x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"} sk-inline" title="${esc(x.name)}: ${x.passed} of ${x.total} stacked rules${x.missing ? " · missing: " + esc(x.missing) : ""}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
 }
 function stkLab(name) {
   const L = STACKED && STACKED.lab && STACKED.lab[name];
@@ -6386,7 +6387,7 @@ function renderStacked() {
       : "None of your watchlist stocks has a live breakout, gap fade or double bottom right now."}</div>`;
     return;
   }
-  const badge = (x) => `<span class="sk-badge ${x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
+  const badge = (x) => `<span class="sk-badge ${x.direction === -1 ? "dn" : x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
   const why = (x) => !x.missing ? "" : /Stack in the way/.test(x.missing) ? "stack in the way" : /Target on a stack/.test(x.missing) ? "no stack at the target"
     : /stacked/.test(x.missing) ? (x.name === "Stacked Double Bottom" ? "neckline alone" : x.name === "Stacked Gap Fade" ? "gap-day high alone" : "trigger alone") : "";
   const open = (x) => `onclick="openBrief('${esc(x.symbol)}')"`;
@@ -6397,7 +6398,7 @@ function renderStacked() {
     <div class="sk-nums"><div><small>${h.name === "Stacked Double Bottom" ? "Neckline" : h.name === "Stacked Gap Fade" ? "Gap-day high" : "Trigger"}</small><b>${money(h.edge)}</b></div>
       <div><small>Target</small><b>${money(h.target)}</b></div><div><small>Nearest stack</small><b>${h.stack_target ? money(h.stack_target) : "—"}</b></div></div>
     <div class="sk-lab">${esc(stkLab(h.name))}</div></div>`;
-  el.innerHTML = hero + items.slice(1, 8).map(x => `<a class="arow sk-row" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(${x.ok ? "--up" : "--stall"})"><i></i>
+  el.innerHTML = hero + items.slice(1, 8).map(x => `<a class="arow sk-row" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(${x.direction === -1 ? "--down" : x.ok ? "--up" : "--stall"})"><i></i>
       <span class="t"><span class="tk">${esc(x.symbol)}</span><span>${{"Stacked Shelf": "Shelf", "Stacked Gap Fade": "Gap fade", "Stacked Double Bottom": "Double bottom"}[x.name] || esc(x.name)}${why(x) ? " · " + why(x) : ""}</span></span>${badge(x)}</a>`).join("")
     + (STACKED.gamma ? "" : `<div class="note" style="padding:8px 18px 12px;margin:0">Price levels only. Pro adds gamma walls and shelves to each stack.</div>`);
 }
@@ -6716,8 +6717,8 @@ function paintHeatmap() {
     html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(short[S.k] || S.k)}</div>` : ""}`;
     for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
       const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fit = Math.min(t.w / (t.s.length * 0.62), t.h / 1.6), fs = Math.max(10, Math.min(15, fit));
-      const sk = typeof stkItem === "function" ? stkItem(t.s) : null, skc = sk ? (sk.ok ? " hm-stk" : sk.passed >= sk.total - 1 ? " hm-stk3" : "") : "";
-      if (skc) counts[sk.ok ? "stk" : "stk3"] = (counts[sk.ok ? "stk" : "stk3"] || 0) + 1;
+      const sk = typeof stkItem === "function" ? stkItem(t.s) : null, skc = sk ? (sk.ok ? " hm-stk" : sk.passed >= sk.total - 1 ? " hm-stk3" : "") + (sk.direction === -1 ? " hm-dn" : "") : "";
+      if (skc) { const ck = sk.direction === -1 ? "stkdn" : sk.ok ? "stk" : "stk3"; counts[ck] = (counts[ck] || 0) + 1; }
       html += `<button class="hm-t ${cls}${skc}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}${sk ? ` · ${esc(sk.name)} ${sk.passed}/${sk.total}` : ""}"
         onclick="openBrief('${esc(t.s)}')">${fit >= 10 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
     }
@@ -6726,7 +6727,8 @@ function paintHeatmap() {
   const legend = ["up", "edge", "resting", "down", "none"].concat(HEAT.locked ? ["locked"] : []).filter(k => counts[k])
     .map(k => `<span class="hm-lg"><i class="${HEAT_ST[k][1]}"></i>${HEAT_ST[k][0]} <b>${counts[k]}</b></span>`).join("")
     + (counts.stk ? `<span class="hm-lg"><i class="hm-lg-stk"></i>Stacked 4/4 <b>${counts.stk}</b></span>` : "")
-    + (counts.stk3 ? `<span class="hm-lg"><i class="hm-lg-stk3"></i>Stacked 3/4 <b>${counts.stk3}</b></span>` : "");
+    + (counts.stk3 ? `<span class="hm-lg"><i class="hm-lg-stk3"></i>Stacked 3/4 <b>${counts.stk3}</b></span>` : "")
+    + (counts.stkdn ? `<span class="hm-lg"><i class="hm-lg-stkdn"></i>Stacked breakdown <b>${counts.stkdn}</b></span>` : "");
   el.innerHTML = `<div class="hm-card"><div class="hm-top"><div><b>Market map</b><small>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands ("close to the trigger" = within half a typical 4-hour move of it). Tap one to open it.</small></div></div>
     <div class="hm-legend">${legend}</div>
     <div class="hm-box" style="height:${H}px">${html}<div class="hm-tip" id="hmTip"></div></div></div>`;
@@ -8855,7 +8857,13 @@ html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="ligh
 .hm-t.hm-stk3::after { width: 6px; height: 6px; }
 .hm-lg i.hm-lg-stk { background: transparent; border: 2px solid #3DD68C; box-sizing: border-box; animation: livePulse 2s infinite; }
 .hm-lg i.hm-lg-stk3 { background: #3DD68C; border-radius: 50%; width: 7px; height: 7px; animation: livePulse 2s infinite; }
-@media (prefers-reduced-motion: reduce) { .hm-t.hm-stk, .hm-t.hm-stk::after, .hm-t.hm-stk3::after, .hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3 { animation: none; } .hm-t.hm-stk { box-shadow: inset 0 0 0 2px #3DD68C; } }
+.hm-t.hm-stk.hm-dn { animation-name: hmStkDn; }
+@keyframes hmStkDn { 0%, 100% { box-shadow: inset 0 0 0 2px #FF6B5E, 0 0 0 0 rgba(255,107,94,0); filter: brightness(1); }
+  50% { box-shadow: inset 0 0 0 2px #FF6B5E, inset 0 0 14px rgba(255,107,94,.75), 0 0 10px 2px rgba(255,107,94,.55); filter: brightness(1.18); } }
+.hm-t.hm-dn::after { background: #FF6B5E; animation-name: dnPulse; }
+@keyframes dnPulse { 0% { box-shadow: 0 0 0 0 rgba(255,107,94,.6); } 70% { box-shadow: 0 0 0 6px rgba(255,107,94,0); } 100% { box-shadow: 0 0 0 0 rgba(255,107,94,0); } }
+.hm-lg i.hm-lg-stkdn { background: transparent; border: 2px solid #FF6B5E; box-sizing: border-box; animation: dnPulse 2s infinite; }
+@media (prefers-reduced-motion: reduce) { .hm-t.hm-stk, .hm-t.hm-stk::after, .hm-lg i.hm-lg-stkdn, .hm-t.hm-stk3::after, .hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3 { animation: none; } .hm-t.hm-stk { box-shadow: inset 0 0 0 2px #3DD68C; } .hm-t.hm-stk.hm-dn { box-shadow: inset 0 0 0 2px #FF6B5E; } }
 
 /* compact Context card; the old duplicate rows below the map are hidden in the map view */
 body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: none !important; }
