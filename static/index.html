@@ -303,6 +303,7 @@
   .sk-nums b { font-family: var(--mono); font-size: 14px; }
   .sk-lab { font-size: 12px; color: var(--muted); margin-top: 8px; }
   .sk-row .sk-badge { font-size: 11px; }
+  .sk-inline { display: inline-block; font-size: 11px; padding: 2px 7px; margin-left: 6px; vertical-align: middle; }
   .arow i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
   .arow .t { font-size: 14px; line-height: 1.45; min-width: 0; }
   .arow .t .tk { font-family: var(--mono); font-weight: 600; margin-right: 6px; color: var(--ink); }
@@ -3725,7 +3726,7 @@ function showTab() {
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
   renderSide();
   if (CUR === "today") loadToday();
-  if (CUR === "discover") { loadBoard(); pollAgent(); }
+  if (CUR === "discover") { loadBoard(); pollAgent(); loadStacked(); }
   if (CUR === "results") loadRecord();
   if (CUR === "paper") loadPaper();
   if (CUR === "account") loadAccount();
@@ -6351,6 +6352,15 @@ async function loadStacked(force) {
   if (!force && STACKED && Date.now() - STACKED_AT < 5 * 60 * 1000) return renderStacked();
   try { STACKED = await api("/api/stacked"); STACKED_AT = Date.now(); STACKED_ERR = null; } catch (e) { STACKED_ERR = e; }
   renderStacked();
+  if (CUR === "discover" && BOARD_DATA) { try { renderInstitutionalBoard(); if (SETUP_TAB !== "hub") renderSetupBoard(); } catch (e) {} }
+}
+function stkItem(sym, names) {
+  const it = STACKED && (STACKED.items || []).find(x => x.symbol === sym);
+  return it && (!names || names.includes(it.name)) ? it : null;
+}
+function stkBadge(sym, names) {
+  const x = stkItem(sym, names); if (!x) return "";
+  return `<span class="sk-badge ${x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"} sk-inline" title="${esc(x.name)}: ${x.passed} of ${x.total} stacked rules${x.missing ? " · missing: " + esc(x.missing) : ""}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
 }
 function stkLab(name) {
   const L = STACKED && STACKED.lab && STACKED.lab[name];
@@ -6624,7 +6634,7 @@ function boardRows(){
 }
 function renderInstitutionalBoard(){
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     // Patch 67: in the Broke out view, fresh breakouts (0/10 candles) sort first, then by candle count ascending.
     // Not flipped by the column-sort direction; rows without a count sort last.
@@ -6649,7 +6659,7 @@ function renderInstitutionalBoard(){
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -6749,6 +6759,7 @@ async function loadBoard() {
     '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
     '<button class="board-filter" data-kind="new" onclick="filterInstitutionalBoard(\'new\')">New</button>'+
+    '<button class="board-filter" data-kind="stacked" onclick="filterInstitutionalBoard(\'stacked\')" title="Live hub breakouts with their stacked score">Stacked</button>'+
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
     '<button class="board-filter" data-kind="recent" onclick="filterInstitutionalBoard(\'recent\')" title="Breakouts that already reached their target, failed or ran out of time">Finished</button></div></div>'+
     '<div class="board-frame"><div class="board-caption"><span>HUB STRUCTURE MONITOR</span><span id="boardCount"></span></div><div class="board-scroll"><table class="board-table"><thead><tr>'+
@@ -7228,7 +7239,7 @@ function setupCard(x) {
       : (x.kind === "double_top" ? `Watch only: double tops lost money in the two-year test, so there's no entry plan on the short side.`
         : x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> on a 4:00 PM retest close, if the entry isn't past halfway to the target. Stop sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
   }
-  return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small></div>
+  return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small>${live && (gap || x.kind === "double_bottom") ? stkBadge(x.symbol, [gap ? "Stacked Gap Fade" : "Stacked Double Bottom"]) : ""}</div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
     ${x.flow && (x.state === "breakout_up" || x.state === "breakdown") ? `<div class="sc-flow">📊 <b>Flow at the breakout: ${x.flow.side === "call" ? "unusual call volume" : x.flow.side === "put" ? "unusual put volume" : "no unusual flow"}</b>${x.flow.side === "none" ? "." : ` — ${x.flow.side === "call" ? Number(x.flow.call_voi).toFixed(1) : Number(x.flow.put_voi).toFixed(1)}× open interest on the ${new Date(x.flow.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})} ${x.flow.side === "call" ? "calls" : "puts"}.`}<small>Measured on ${new Date(x.flow.breakout_date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"})}, from the options chain. A past fact, not a live reading.</small></div>` : ""}
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
