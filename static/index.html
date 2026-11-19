@@ -675,8 +675,9 @@ html[data-theme="light"] .bf-heat table.bh td.bh-pos, html[data-theme="light"] .
 /* Patch 168 tier palette: the approved mockup's fixed hexes, both themes */
 .bf-heat { --bh-c-low: #29768A; --bh-c-sg: #32A87B; --bh-c-sp: #430E5A; --bh-c-mg: #00E0BB; --bh-c-mp: #91008D; --bh-c-max: #F2DE31;
   --bh-i-low: #FFFFFF; --bh-i-sg: #FFFFFF; --bh-i-sp: #FFFFFF; --bh-i-mg: #000000; --bh-i-mp: #FFFFFF; --bh-i-max: #000000; }
-.bf-heat tr.bh-spotrow td { background: #FFFFFF !important; color: #000000 !important; border-radius: 6px !important; font: 700 10.5px var(--sans) !important; letter-spacing: .14em !important; text-align: left; padding: 4px 8px; box-shadow: none; }
-html[data-theme="light"] .bf-heat tr.bh-spotrow td { box-shadow: inset 0 0 0 1px rgba(13,17,23,.25); }   /* white on the light panel needs an edge */
+.bf-heat .bh-spot { display: inline-block; margin-left: -8px; background: #FFFFFF; color: #000000 !important; font-weight: 800; padding: 3px 14px 3px 8px; border-radius: 6px 0 0 6px;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%); }
+html[data-theme="light"] .bf-heat .bh-spot { background: #0d1117; color: #FFFFFF !important; }
 .bf-heat .bh-legend { display: flex; flex-wrap: wrap; gap: 5px 14px; align-items: center; margin-top: 10px; font: 600 10.5px var(--sans); color: var(--bh-mute); }
 .bf-heat .bh-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 .bf-heat .bh-legend em { font-style: normal; opacity: .75; }
@@ -5869,19 +5870,16 @@ function bfHeatHTML(j) {
   const colMax = g.expiries.map((_, i) => Math.max(0, ...g.rows.map(r => Math.abs(Number((r.gex || [])[i]) || 0))));
   const md = (e) => new Date(e + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
   const head = g.expiries.map(e => `<th>${md(e).toUpperCase()}</th>`).join("");
+  const spotStrike = spot > 0 ? g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike : null;
   const rowHTML = g.rows.map(r => {
     const cells = (r.gex || []).map((v, i) => {
       v = Number(v) || 0;
       if (colMax[i] > 0 && Math.abs(v) === colMax[i]) return `<td class="${v < 0 ? "bh-neg" : "bh-pos"}">${M(v)}</td>`;   // that expiry's strongest pull: chart green +, chart orange −
       return `<td class="bh-dim">${M(v)}</td>`;          // everything else is dimmed
     }).join("");
-    return `<tr><th>${r.strike}</th>${cells}</tr>`;      // no NEXT tags or pull arrow in the panel (his call, Nov 18)
+    const atSpot = r.strike === spotStrike;                // the strike nearest the price wears a white arrow tag
+    return `<tr><th>${atSpot ? `<span class="bh-spot" title="Price $${spot.toFixed(2)}">${r.strike}</span>` : r.strike}</th>${cells}</tr>`;
   });
-  if (spot > 0) {
-    let at = rowHTML.length;
-    for (let k = 0; k < g.rows.length; k++) { if (Number(g.rows[k].strike) <= spot) { at = k; break; } }
-    rowHTML.splice(at, 0, `<tr class="bh-spotrow"><td colspan="${g.expiries.length + 1}">SPOT $${spot.toFixed(2)}</td></tr>`);
-  }
   const rows = rowHTML.join("");
   const sw = (v) => `<i style="background:var(${v})"></i>`;
   const legend = `<div class="bh-legend"><span>${sw("--bh-up")}Positive gamma</span><span>${sw("--bh-down")}Negative gamma</span><em>the strongest pull in each expiry · the rest is dimmed</em></div>`;
