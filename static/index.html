@@ -5848,7 +5848,7 @@ function bfHeatHTML(j) {
   const g = j && j.grid;
   if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) return null;
   const spot = Number(g.spot) || 0;
-  const K = (v) => { const k = Number(v) / 1000, a = Math.abs(k).toLocaleString("en-US", {minimumFractionDigits: 1, maximumFractionDigits: 1}); return k < 0 ? "−" + a : a; };
+  const M = (v) => { const n = Number(v) || 0; return (n < 0 ? "−" : "") + (Math.abs(n) / 1e6).toFixed(2) + "M"; };
   let greenStrike = null, greenVal = 0, negMax = 0;
   g.rows.forEach(r => { const v = Number((r.gex || [])[0]) || 0; if (v > greenVal) { greenVal = v; greenStrike = r.strike; } if (v < 0 && Math.abs(v) > negMax) negMax = Math.abs(v); });
   let maxStrike = null, maxExp = -1, maxVal = 0;
@@ -5862,15 +5862,15 @@ function bfHeatHTML(j) {
       v = Number(v) || 0;
       if (r.strike === maxStrike && i === maxExp) {
         const near = spot > 0 && Math.abs(r.strike - spot) / spot <= 0.005;
-        return `<td class="bh-max">${K(v)}${near ? "" : (r.strike < spot ? " ↓" : " ↑")}</td>`;
+        return `<td class="bh-max">${M(v)}${near ? "" : (r.strike < spot ? " ↓" : " ↑")}</td>`;
       }
-      if (i === 0 && v > 0 && r.strike === greenStrike) return `<td class="bh-g">${K(v)}</td>`;
-      if (i === 0 && v < 0 && negMax > 0 && Math.abs(v) >= 0.5 * negMax) return `<td class="bh-p">${K(v)}</td>`;
-      return `<td class="bh-t">${K(v)}</td>`;
+      if (i === 0 && v > 0 && r.strike === greenStrike) return `<td class="bh-g">${M(v)}</td>`;
+      if (i === 0 && v < 0 && negMax > 0 && Math.abs(v) >= 0.5 * negMax) return `<td class="bh-p">${M(v)}</td>`;
+      return `<td class="bh-t">${M(v)}</td>`;
     }).join("");
     return `<tr${nx ? ` class="bh-next"` : ""}><th>${r.strike}${nx ? ` <span class="bh-tag">NEXT ${nx === "up" ? "↑" : "↓"}</span>` : ""}</th>${cells}</tr>`;
   }).join("");
-  return `<div class="bh-card"><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · K = $1,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  return `<div class="bh-card"><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · M = $1,000,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 function paintHeat(sym) {
   const el = $("bfHeat"); if (!el) return;
