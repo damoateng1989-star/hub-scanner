@@ -1194,6 +1194,70 @@ def _rss_mb() -> float:
 TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_", "gs_", "db_")      # graduation rows a tests-only run measures
 
 
+# ---------------------------------------------------------------- named tests: progress that survives a stop (Nov 19)
+# The Stacked / gap-open tests keep only a few thousand small rows, so their progress is saved after every chunk.
+# If one stops (memory guard, a deploy, a restart), tapping the same test again carries on from that stock.
+NAMED_TESTS = ("gapgo", "stacked", "gapstk", "dbstk")
+TPROG = db.DATA_DIR / "lab_test_progress.json"
+
+
+def _row_plain(r) -> dict:
+    d = {}
+    for k in _ROW_KEYS:
+        try:
+            v = object.__getattribute__(r, k)
+        except AttributeError:
+            continue
+        d[k] = {kk: list(vv) for kk, vv in v.items()} if k == "ex" else v
+    if r._x:
+        d.update(r._x)
+    return d
+
+
+def _save_tprog(test, syms, done, rows, failed, failed_msg, started):
+    try:
+        tmp = TPROG.with_suffix(".tmp")
+        tmp.write_text(json.dumps(dict(test=test, days=DAYS, syms=syms, done=done, rows=[_row_plain(r) for r in rows],
+                                       failed=failed, failed_msg=failed_msg, started=started, saved=time.time()),
+                                  default=lambda o: o.item() if hasattr(o, "item") else str(o)))
+        tmp.replace(TPROG)
+    except Exception:
+        traceback.print_exc()
+
+
+def _load_tprog(test, days):
+    try:
+        p = json.loads(TPROG.read_text())
+    except Exception:
+        return None
+    if p.get("test") != test or p.get("days") != days or time.time() - (p.get("saved") or 0) > 2 * 86400:
+        return None
+    for r in p["rows"]:
+        r["ex"] = {k: tuple(v) for k, v in r["ex"].items()}
+    return p
+
+
+def _free_mem():
+    """Drop the site's own caches (4H bars, levels) and hand freed memory back before the memory guard decides."""
+    try:
+        import scanner
+        scanner._BARS.clear()
+    except Exception:
+        pass
+    try:
+        import levels
+        levels._CACHE.clear()
+        levels._SL_CACHE.clear()
+    except Exception:
+        pass
+    gc.collect()
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None, only_tests: bool | str = False):
     global DAYS
     if not _LOCK.acquire(blocking=False):
@@ -1216,8 +1280,13 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 DAYS = 360 * years if years == 2 else 365 * years   # 2 years stays 720 days, like every earlier run
             syms = symbols or universe.board_universe()
             start_i, rows, failed, failed_msg, started = 0, [], 0, None, time.time()
-            _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None, days=DAYS,
-                 failed=0, failed_msg=None, trades_so_far=0, resumed=False, resumes=0)
+            tp = _load_tprog(only_tests, DAYS) if only_tests in NAMED_TESTS and not symbols else None
+            if tp:            # the same test stopped part-way: carry on from where it got to
+                syms, start_i, rows = tp["syms"], tp["done"], _compact(tp["rows"])
+                failed, failed_msg, started = tp.get("failed", 0), tp.get("failed_msg"), tp.get("started") or time.time()
+                log.info("lab test: %s continuing at %d/%d stocks", only_tests, start_i, len(syms))
+            _set(status="running", done=start_i, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None, days=DAYS,
+                 failed=failed, failed_msg=failed_msg, trades_so_far=len(rows), resumed=bool(start_i), resumes=0)
             log.info("lab test: started, %d stocks", len(syms))
         regime = _spy_regime()
         for i in range(start_i, len(syms), CHUNK):
@@ -1250,10 +1319,16 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             _set(done=min(i + CHUNK, len(syms)), failed=failed, failed_msg=failed_msg, trades_so_far=len(rows) if only_tests else len([r for r in rows if r.get("entry", "breakout") == "breakout"]),
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
+            if only_tests in NAMED_TESTS:
+                _save_tprog(only_tests, syms, min(i + CHUNK, len(syms)), rows, failed, failed_msg, started)
             rss = _rss_mb()
             if rss > LAB_RSS_STOP_MB:
+                _free_mem()                   # the site's caches first: often enough to carry on
+                rss = _rss_mb()
+            if rss > LAB_RSS_STOP_MB:
                 CKPT.unlink(missing_ok=True)
-                _set(status="stopped", error=f"Stopped at {int(rss)} MB to stay under the server's 512 MB limit. Tap Run the test again.")
+                more = " Tap the same test again: it carries on from here." if only_tests in NAMED_TESTS else " Tap Run the test again."
+                _set(status="stopped", error=f"Stopped at {min(i + CHUNK, len(syms))}/{len(syms)} stocks ({int(rss)} MB) to stay under the server's 512 MB limit.{more}")
                 log.info("lab test: stopped at %d MB to stay under the memory limit", int(rss))
                 return
             time.sleep(0.2)                   # leave room for the site and the live scan
@@ -1279,6 +1354,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             _set(status="done", result=out, tests_only=True, finished=pd.Timestamp.now(tz="UTC").isoformat(),
                  seconds=round(time.time() - started))
             CKPT.unlink(missing_ok=True)
+            TPROG.unlink(missing_ok=True)
             return
         brows = [r for r in rows if r.get("entry", "breakout") == "breakout"]
         span = sorted(r["t"] for r in brows)
@@ -1289,6 +1365,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         CKPT.unlink(missing_ok=True)
     except _Stopped:
         CKPT.unlink(missing_ok=True)           # a stopped run isn't resumed; the last finished results stay on the page
+        TPROG.unlink(missing_ok=True)          # you pressed Stop: the next tap starts fresh
         _set(status="stopped", error=None, stopped=pd.Timestamp.now(tz="UTC").isoformat())
         log.info("lab test: stopped")
     except Exception as e:
@@ -1343,6 +1420,7 @@ def status() -> dict:
         # saved as running, but nothing is running in this server: it restarted (a deploy, or it ran out of memory)
         # Do not resume it here: a page view must never silently restart a memory-heavy test.
         CKPT.unlink(missing_ok=True)
-        st.update(status="stopped", error="The test was interrupted (the server restarted part-way). Tap Run the test again.")
+        st.update(status="stopped", error="The test was interrupted (the server restarted part-way). Tap Run the test again"
+                  + (": the Stacked and gap-open tests carry on from where they got to." if TPROG.exists() else "."))
         db.set_setting("lab_exits", json.dumps(st))
     return st
