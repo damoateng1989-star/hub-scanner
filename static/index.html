@@ -6390,7 +6390,7 @@ function renderStacked() {
     return;
   }
   const badge = (x) => `<span class="sk-badge ${x.direction === -1 ? "dn" : x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
-  const why = (x) => !x.missing ? "" : /Stack in the way/.test(x.missing) ? "stack in the way" : /Target on a stack/.test(x.missing) ? "no stack at the target"
+  const why = (x) => !x.missing ? "" : /Stack in the way/.test(x.missing) ? "stack in the way" : /Target on a stack/.test(x.missing) ? "no stack at the target" : /Levels on the trigger/.test(x.missing) ? "levels on the trigger"
     : /stacked/.test(x.missing) ? (x.name === "Stacked Double Bottom" ? "neckline alone" : x.name === "Stacked Gap Fade" ? "gap-day high alone" : "trigger alone") : "";
   const open = (x) => `onclick="openBrief('${esc(x.symbol)}')"`;
   const h = items[0];

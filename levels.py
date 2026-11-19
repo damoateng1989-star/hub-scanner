@@ -149,13 +149,18 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                 cands = [c for c in cands if round(c["price"], 2) not in own and abs(c["price"] - last) <= BAND * last]
                 cands += [c for c in _cands(sym, c4, res, st, last, with_gamma) if c["group"] in ("wall", "shelf", "summed")]
                 chk = stacked.check(cands, d, float(edge), last, float(st["target"]), tol)
+                # Nov 19, first Lab run: a clear path was the edge (+0.54% vs +0.41%), while other levels sitting on
+                # the trigger did WORSE (+0.26%). So the trigger rule is now "clean": nothing else on the hub edge.
+                tgt_ok = chk["target_stacked"] or chk["stack_target"] is not None
                 rules = [("Hub breakout confirmed by a 4H close", True),
-                         ("Trigger stacked: " + (", ".join(stacked.KIND.get(k, k) for k in chk["trig_kinds"]) or "nothing else on the hub edge"), chk["trig_stacked"]),
+                         ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"]),
+                         ("Trigger clean: nothing else on the hub edge" if not chk["trig_stacked"]
+                          else "Levels on the trigger: " + ", ".join(stacked.KIND.get(k, k) for k in chk["trig_kinds"]) + " (these did worse in the Lab)", not chk["trig_stacked"]),
                          ("Target on a stack: " + (f"nearest stack ${chk['stack_target']:,.2f}" if chk["stack_target"] else "no stack beyond the entry")
                           + (f"; the ${float(st['target']):,.2f} shelf has {', '.join(stacked.KIND.get(k, k) for k in chk['tgt_kinds'])} on it" if chk["target_stacked"] else ""),
-                          chk["target_stacked"] or chk["stack_target"] is not None),
-                         ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
-                stk = dict(name="Stacked Shelf", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
+                          tgt_ok)]
+                ok = bool(chk["clear_path"] and not chk["trig_stacked"] and tgt_ok)
+                stk = dict(name="Stacked Shelf", ok=ok, passed=sum(1 for _, v in rules if v), total=len(rules),
                            rules=[dict(text=t, ok=bool(v)) for t, v in rules], stack_target=chk["stack_target"], direction=d,
                            edge=round(float(edge), 2), target=round(float(st["target"]), 2))
         if stk is None:      # a live post-earnings gap fade & rip: the Stacked Gap Fade checklist
@@ -221,6 +226,7 @@ STACKED_TTL = 600
 _SL_CACHE: dict = {}
 _SL_LOCK = threading.Lock()
 LAB_KEYS = {"Stacked Shelf": "stk", "Stacked Gap Fade": "gs", "Stacked Double Bottom": "db"}
+LAB_ALL = {"Stacked Shelf": "_v2"}       # which Lab row is "the full stack" for each setup (the Shelf's rules changed Nov 19)
 
 
 def _lab_line(name: str) -> dict | None:
@@ -229,7 +235,7 @@ def _lab_line(name: str) -> dict | None:
         g = (lab_exits.status().get("result") or {}).get("graduation") or []
         pre = LAB_KEYS[name]
         by = {r["key"]: r for r in g}
-        a, b = by.get(pre + "_all"), by.get(pre + "_base")
+        a, b = by.get(pre + LAB_ALL.get(name, "_all")), by.get(pre + "_base")
         if not a or not b:
             return None
         return dict(all_avg=a["avg"], all_n=a["n"], base_avg=b["avg"], base_n=b["n"], better=a["avg"] > b["avg"] and a["avg"] > 0)
