@@ -156,7 +156,8 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                           chk["target_stacked"] or chk["stack_target"] is not None),
                          ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
                 stk = dict(name="Stacked Shelf", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
-                           rules=[dict(text=t, ok=bool(v)) for t, v in rules], stack_target=chk["stack_target"], direction=d)
+                           rules=[dict(text=t, ok=bool(v)) for t, v in rules], stack_target=chk["stack_target"], direction=d,
+                           edge=round(float(edge), 2), target=round(float(st["target"]), 2))
         if stk is None:      # a live post-earnings gap fade & rip: the Stacked Gap Fade checklist
             import patterns
             gp = {"trades": [], "live": []}
@@ -175,7 +176,8 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                           chk["target_stacked"] or chk["stack_target"] is not None),
                          ("Clear path to the 2R target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
                 stk = dict(name="Stacked Gap Fade", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
-                           rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1)
+                           rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1,
+                           edge=round(float(t["edge"]), 2), target=round(float(t["target"]), 2))
         if stk is None:      # a live double bottom (neckline broken, still in play): the Stacked Double Bottom checklist
             import patterns
             A = res["atr"].to_numpy(float)
@@ -200,7 +202,8 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                           chk["target_stacked"] or chk["stack_target"] is not None),
                          ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
                 stk = dict(name="Stacked Double Bottom", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
-                           rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1)
+                           rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1,
+                           edge=round(float(t["edge"]), 2), target=round(float(t["target"]), 2))
     except Exception as e:
         log.warning("stacked shelf %s: %s", sym, e)
     out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma, stacked=stk,
@@ -208,3 +211,61 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
     with _LOCK:
         _CACHE[key] = (time.time(), out)
     return out
+
+
+# ---------------------------------------------------------------- the Stacked list (Today page, Nov 19)
+# Every live hub breakout, post-earnings gap fade and double bottom on the board (Pro) or on the user's watchlist,
+# each run through its stacked checklist, sorted by score. Context only: it never changes a trigger, target or grade.
+STACKED_MAX = 24            # at most this many stocks per refresh (memory: one 4H history at a time)
+STACKED_TTL = 600
+_SL_CACHE: dict = {}
+_SL_LOCK = threading.Lock()
+LAB_KEYS = {"Stacked Shelf": "stk", "Stacked Gap Fade": "gs", "Stacked Double Bottom": "db"}
+
+
+def _lab_line(name: str) -> dict | None:
+    try:
+        import lab_exits
+        g = (lab_exits.status().get("result") or {}).get("graduation") or []
+        pre = LAB_KEYS[name]
+        by = {r["key"]: r for r in g}
+        a, b = by.get(pre + "_all"), by.get(pre + "_base")
+        if not a or not b:
+            return None
+        return dict(all_avg=a["avg"], all_n=a["n"], base_avg=b["avg"], base_n=b["n"], better=a["avg"] > b["avg"] and a["avg"] > 0)
+    except Exception:
+        return None
+
+
+def stacked_list(candidates: list[str], with_gamma: bool) -> dict:
+    """candidates: symbols with a live hub breakout, gap fade or double bottom. Cached per (symbols, gamma)."""
+    syms = list(dict.fromkeys(candidates))[:STACKED_MAX]
+    key = (tuple(sorted(syms)), with_gamma)
+    hit = _SL_CACHE.get(key)
+    if hit and time.time() - hit[0] < STACKED_TTL:
+        return hit[1]
+    with _SL_LOCK:
+        hit = _SL_CACHE.get(key)
+        if hit and time.time() - hit[0] < STACKED_TTL:
+            return hit[1]
+        items = []
+        for sym in syms:
+            try:
+                L = compute(sym, with_gamma)
+            except Exception as e:
+                log.info("stacked list %s: %s", sym, e)
+                continue
+            S = L.get("stacked")
+            if not S:
+                continue
+            miss = next((r["text"] for r in S["rules"] if not r["ok"]), None)
+            items.append(dict(symbol=sym, price=L["price"], name=S["name"], ok=S["ok"], passed=S["passed"], total=S["total"],
+                              rules=S["rules"], missing=miss, edge=S.get("edge"), target=S.get("target"),
+                              stack_target=S.get("stack_target"), direction=S.get("direction", 1)))
+        items.sort(key=lambda x: (-x["passed"], x["symbol"]))
+        lab = {n: _lab_line(n) for n in LAB_KEYS}
+        out = dict(items=items, lab=lab, checked=len(syms), updated=time.time())
+        if len(_SL_CACHE) > 20:
+            _SL_CACHE.pop(min(_SL_CACHE, key=lambda k: _SL_CACHE[k][0]), None)
+        _SL_CACHE[key] = (time.time(), out)
+        return out

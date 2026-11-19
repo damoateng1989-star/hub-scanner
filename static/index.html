@@ -284,6 +284,25 @@
   .arow { display: grid; grid-template-columns: 10px 1fr auto; gap: 12px; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line);
           text-decoration: none; color: inherit; }
   .arow:hover { background: var(--sunk); }
+  .sk-pills { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 18px 10px; }
+  .sk-pills button { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--muted); cursor: pointer; }
+  .sk-pills button.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .sk-hero { margin: 0 14px 12px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 14px; background: var(--surface); cursor: pointer; }
+  .sk-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .sk-top .tk { font-family: var(--mono); font-weight: 600; font-size: 16px; margin-right: 6px; }
+  .sk-top .nm { font-size: 13px; color: var(--muted); }
+  .sk-badge { font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; font-weight: 600; }
+  .sk-badge.full { background: color-mix(in srgb, var(--up) 16%, transparent); color: var(--up); }
+  .sk-badge.part { background: color-mix(in srgb, var(--stall) 18%, transparent); color: var(--stall); }
+  .sk-badge.low { background: var(--sunk); color: var(--muted); }
+  .sk-rules { font-size: 13px; line-height: 1.8; margin: 8px 0 0; }
+  .sk-rules .y { color: var(--up); } .sk-rules .n { color: var(--down); }
+  .sk-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+  .sk-nums div { background: var(--sunk); border-radius: 8px; padding: 6px 8px; }
+  .sk-nums small { display: block; font-size: 11px; color: var(--muted); }
+  .sk-nums b { font-family: var(--mono); font-size: 14px; }
+  .sk-lab { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .sk-row .sk-badge { font-size: 11px; }
   .arow i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
   .arow .t { font-size: 14px; line-height: 1.45; min-width: 0; }
   .arow .t .tk { font-family: var(--mono); font-weight: 600; margin-right: 6px; color: var(--ink); }
@@ -2676,6 +2695,11 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div class="panel">
     <div class="ph"><h2>Needs your attention</h2><a href="#list" class="more-link">Watchlist →</a></div>
     <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
+  </div>
+  <div class="panel" id="stkPanel">
+    <div class="ph"><h2>Stacked</h2><span class="more-link" id="stkSub"></span></div>
+    <div class="sk-pills" id="stkPills"></div>
+    <div id="stacked"><div class="loading"><span class="spin"></span>Checking the levels…</div></div>
   </div>
   <div class="panel">
     <div class="ph"><h2>Worth a look</h2><a href="#discover" class="more-link">Browse setups →</a></div>
@@ -6320,7 +6344,54 @@ async function loadPremarket() {
   try { PREMARKET = await api("/api/premarket"); } catch (e) { PREMARKET = null; }
   renderPremarket();
 }
+// the Stacked list: live hub breakouts, gap fades and double bottoms run through their stacked checklist
+let STACKED = null, STACKED_AT = 0, STACKED_ERR = null, STK_F = "all";
+async function loadStacked(force) {
+  if (!ME || ME.guest) { const p = $("stkPanel"); if (p) p.hidden = true; return; }
+  if (!force && STACKED && Date.now() - STACKED_AT < 5 * 60 * 1000) return renderStacked();
+  try { STACKED = await api("/api/stacked"); STACKED_AT = Date.now(); STACKED_ERR = null; } catch (e) { STACKED_ERR = e; }
+  renderStacked();
+}
+function stkLab(name) {
+  const L = STACKED && STACKED.lab && STACKED.lab[name];
+  if (!L) return "Lab: not measured yet. Run the test in the Lab";
+  const f = (v) => (v > 0 ? "+" : "") + v.toFixed(2) + "%";
+  return `Lab: full stack ${f(L.all_avg)} per trade (${L.all_n}) vs ${f(L.base_avg)} for all (${L.base_n})${L.better ? "" : " · not better yet"}`;
+}
+function renderStacked() {
+  const el = $("stacked"); if (!el) return;
+  if (STACKED_ERR && !STACKED) { el.innerHTML = failedHTML("the stacked list", STACKED_ERR, "loadStacked(true)"); return; }
+  if (!STACKED) return;
+  const short = {"Stacked Shelf": "shelf", "Stacked Gap Fade": "gap", "Stacked Double Bottom": "db"};
+  const all = STACKED.items || [];
+  const cnt = (k) => all.filter(x => short[x.name] === k).length;
+  $("stkPills").innerHTML = [["all", "All", all.length], ["shelf", "Shelf", cnt("shelf")], ["gap", "Gap fade", cnt("gap")], ["db", "Double bottom", cnt("db")]]
+    .map(([k, t, n]) => `<button type="button" class="${STK_F === k ? "on" : ""}" onclick="STK_F='${k}';renderStacked()">${t}${n ? " " + n : ""}</button>`).join("");
+  $("stkSub").textContent = STACKED.whole_market ? `${STACKED.checked} live setups checked` : "Your watchlist · Pro checks the whole market";
+  const items = all.filter(x => STK_F === "all" || short[x.name] === STK_F);
+  if (!items.length) {
+    el.innerHTML = `<div class="empty">${all.length ? "None of this kind right now." : STACKED.whole_market
+      ? "No live hub breakout, gap fade or double bottom right now. They show here with their checklist when one confirms."
+      : "None of your watchlist stocks has a live breakout, gap fade or double bottom right now."}</div>`;
+    return;
+  }
+  const badge = (x) => `<span class="sk-badge ${x.ok ? "full" : x.passed >= x.total - 1 ? "part" : "low"}">${x.passed}/${x.total}${x.ok ? " stacked" : ""}</span>`;
+  const why = (x) => !x.missing ? "" : /Stack in the way/.test(x.missing) ? "stack in the way" : /Target on a stack/.test(x.missing) ? "no stack at the target"
+    : /stacked/.test(x.missing) ? (x.name === "Stacked Double Bottom" ? "neckline alone" : x.name === "Stacked Gap Fade" ? "gap-day high alone" : "trigger alone") : "";
+  const open = (x) => `onclick="openBrief('${esc(x.symbol)}')"`;
+  const h = items[0];
+  const hero = `<div class="sk-hero" role="button" tabindex="0" ${open(h)}>
+    <div class="sk-top"><div><span class="tk">${esc(h.symbol)}</span><span class="nm">${esc(h.name)}</span></div>${badge(h)}</div>
+    <div class="sk-rules">${h.rules.map(r => `<div><span class="${r.ok ? "y" : "n"}">${r.ok ? "✓" : "✗"}</span> ${esc(r.text)}</div>`).join("")}</div>
+    <div class="sk-nums"><div><small>${h.name === "Stacked Double Bottom" ? "Neckline" : h.name === "Stacked Gap Fade" ? "Gap-day high" : "Trigger"}</small><b>${money(h.edge)}</b></div>
+      <div><small>Target</small><b>${money(h.target)}</b></div><div><small>Nearest stack</small><b>${h.stack_target ? money(h.stack_target) : "—"}</b></div></div>
+    <div class="sk-lab">${esc(stkLab(h.name))}</div></div>`;
+  el.innerHTML = hero + items.slice(1, 8).map(x => `<a class="arow sk-row" href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(${x.ok ? "--up" : "--stall"})"><i></i>
+      <span class="t"><span class="tk">${esc(x.symbol)}</span><span>${{"Stacked Shelf": "Shelf", "Stacked Gap Fade": "Gap fade", "Stacked Double Bottom": "Double bottom"}[x.name] || esc(x.name)}${why(x) ? " · " + why(x) : ""}</span></span>${badge(x)}</a>`).join("")
+    + (STACKED.gamma ? "" : `<div class="note" style="padding:8px 18px 12px;margin:0">Price levels only. Pro adds gamma walls and shelves to each stack.</div>`);
+}
 async function loadToday() {
+  loadStacked();
   renderToday();
   const mb = $("mbrief"); if (mb && !mb.innerHTML.trim()) { mb.hidden = false; mb.innerHTML = '<p class="mb-quiet">Loading the board…</p>'; }
   loadWeek();

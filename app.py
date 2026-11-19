@@ -1207,6 +1207,25 @@ async def swing_card_endpoint(symbol: str, u: dict = User):
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/stacked")
+async def stacked_endpoint(u: dict = User):
+    """The Stacked list on Today: live hub breakouts, gap fades and double bottoms with their stacked checklist.
+    Pro (the board): the whole market. Free: only stocks on the user's watchlist. Gamma levels count for Pro only."""
+    import levels
+    b = board.board()
+    mine = set(db.user_symbols(u["id"]))
+    whole = bool(board_for(u))
+    cands = [r["symbol"] for r in b["live"] if r.get("state") in ("breakout_up", "breakdown")]
+    cands += [x["symbol"] for x in b["setups"] if x.get("state") == "breakout_up" and x.get("kind") in ("gapfade", "double_bottom")]
+    mine_first = [c for c in cands if c in mine] + [c for c in cands if c not in mine]
+    if not whole:
+        mine_first = [c for c in mine_first if c in mine]
+    out = await run_in_threadpool(levels.stacked_list, mine_first, bool(options_for(u)))
+    for x in out["items"]:
+        x["watching"] = x["symbol"] in mine
+    return {**out, "whole_market": whole, "gamma": bool(options_for(u))}
+
+
 @app.get("/api/levels/{symbol}")
 async def levels_endpoint(symbol: str, u: dict = User):
     """Levels to watch: the strongest stacked levels near price. Everyone signed in gets the price levels;
