@@ -1360,6 +1360,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                     failed_syms = [x for x in syms[:start_i] if x not in have]
                 log.info("lab test: %s continuing at %d/%d stocks", only_tests, start_i, len(syms))
             _set(status="running", done=start_i, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None, days=DAYS,
+                 run_test=only_tests if isinstance(only_tests, str) else bool(only_tests), run_years=years,
                  failed=failed, failed_msg=failed_msg, trades_so_far=len(rows), resumed=bool(start_i), resumes=0)
             log.info("lab test: started, %d stocks", len(syms))
         try:
@@ -1469,7 +1470,11 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         CKPT.unlink(missing_ok=True)
     except _Stopped:
         CKPT.unlink(missing_ok=True)           # a stopped run isn't resumed; the last finished results stay on the page
-        TPROG.unlink(missing_ok=True)          # you pressed Stop: the next tap starts fresh
+        try:      # you pressed Stop on this named test: its next tap starts fresh. Another test's progress is kept.
+            if only_tests in NAMED_TESTS and json.loads(TPROG.read_text()).get("test") == only_tests:
+                TPROG.unlink(missing_ok=True)
+        except Exception:
+            pass
         _set(status="stopped", error=None, stopped=pd.Timestamp.now(tz="UTC").isoformat())
         log.info("lab test: stopped")
     except Exception as e:
@@ -1479,7 +1484,8 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         _LOCK.release()
         if _RESTART["on"]:
             _RESTART["on"] = False
-            start()
+            last = json.loads(db.get_setting("lab_exits") or "{}")      # Restart = the same test and period again
+            start(years=last.get("run_years"), only_tests=last.get("run_test") or False)
 
 
 def start(resume: bool = False, years: int | None = None, only_tests: bool | str = False) -> bool:
@@ -1499,7 +1505,7 @@ def stop(restart: bool = False) -> dict:
     st = json.loads(db.get_setting("lab_exits") or "{}")
     if st.get("status") == "running":
         _set(status="stopped", error=None)
-    started = start() if restart else False
+    started = start(years=st.get("run_years"), only_tests=st.get("run_test") or False) if restart else False
     return dict(stopping=False, restart=restart, started=started)
 
 
