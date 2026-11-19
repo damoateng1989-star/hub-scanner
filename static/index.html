@@ -652,18 +652,27 @@ html[data-theme="light"] .bf-heat { --bh-bg: #F8F9FD; --bh-line: rgba(13,17,23,.
 .bf-heat table.bh th, .bf-heat table.bh td { padding: 6px 8px; border-radius: 6px; font: 600 12.5px var(--mono); text-align: right; white-space: nowrap; }
 .bf-heat table.bh thead th { background: transparent; font: 700 11px var(--sans); letter-spacing: .08em; }
 .bf-heat table.bh tbody th { background: transparent; text-align: left; font-weight: 700; }
-.bf-heat td.bh-t { background: var(--bh-hub) !important; }
-.bf-heat td.bh-g { background: var(--bh-up) !important; }
-.bf-heat td.bh-p { background: var(--bh-down) !important; }
-.bf-heat td.bh-max { background: var(--bh-trig) !important; font-weight: 800; }
+.bf-heat td.bh-t { background: var(--bh-c-low) !important; }
+.bf-heat td.bh-sg { background: var(--bh-c-sg) !important; }
+.bf-heat td.bh-sp { background: var(--bh-c-sp) !important; }
+.bf-heat td.bh-mg { background: var(--bh-c-mg) !important; }
+.bf-heat td.bh-mp { background: var(--bh-c-mp) !important; }
+.bf-heat td.bh-max { background: var(--bh-c-max) !important; font-weight: 800; }
 .bf-heat tr.bh-next th, .bf-heat tr.bh-next td { box-shadow: inset 0 0 0 2px var(--bh-ring); }
 .bf-heat .bh-tag { display: inline-block; margin-left: 6px; padding: 2px 6px; border-radius: 5px; background: var(--bh-trig); color: #000; font: 800 10px var(--sans); letter-spacing: .04em; vertical-align: middle; }
 .bf-heat table.bh th, .bf-heat table.bh td { color: var(--bh-ink) !important; border-bottom: 0 !important; letter-spacing: 0 !important; text-transform: none !important; }
 .bf-heat table.bh tbody th, .bf-heat table.bh td { font-size: 12.5px !important; }
 .bf-heat table.bh thead th { font-size: 11px !important; letter-spacing: .08em !important; text-transform: uppercase !important; }
-.bf-heat table.bh td.bh-t { color: var(--bh-hub-ink) !important; }
-.bf-heat table.bh td.bh-max, .bf-heat table.bh td.bh-g, .bf-heat table.bh td.bh-p { color: #0B0C0E !important; }
-html[data-theme="light"] .bf-heat table.bh td.bh-g, html[data-theme="light"] .bf-heat table.bh td.bh-p { color: #FFFFFF !important; }
+.bf-heat table.bh td.bh-t { color: var(--bh-i-low) !important; } .bf-heat table.bh td.bh-sg { color: var(--bh-i-sg) !important; }
+.bf-heat table.bh td.bh-sp { color: var(--bh-i-sp) !important; } .bf-heat table.bh td.bh-mg { color: var(--bh-i-mg) !important; }
+.bf-heat table.bh td.bh-mp { color: var(--bh-i-mp) !important; } .bf-heat table.bh td.bh-max { color: var(--bh-i-max) !important; }
+/* Patch 168 tier palette: the approved mockup's fixed hexes, both themes */
+.bf-heat { --bh-c-low: #29768A; --bh-c-sg: #32A87B; --bh-c-sp: #430E5A; --bh-c-mg: #00E0BB; --bh-c-mp: #91008D; --bh-c-max: #F2DE31;
+  --bh-i-low: #FFFFFF; --bh-i-sg: #FFFFFF; --bh-i-sp: #FFFFFF; --bh-i-mg: #000000; --bh-i-mp: #FFFFFF; --bh-i-max: #000000; }
+.bf-heat tr.bh-spotrow td { background: transparent !important; color: var(--bh-mute) !important; font: 700 10.5px var(--sans) !important; letter-spacing: .14em !important; text-align: left; padding: 2px 8px; border-radius: 0; box-shadow: inset 0 1px 0 var(--bh-line), inset 0 -1px 0 var(--bh-line); }
+.bf-heat .bh-legend { display: flex; flex-wrap: wrap; gap: 5px 14px; align-items: center; margin-top: 10px; font: 600 10.5px var(--sans); color: var(--bh-mute); }
+.bf-heat .bh-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.bf-heat .bh-legend em { font-style: normal; opacity: .75; }
 .bf-heat table.bh tbody th, .bf-heat table.bh thead th:first-child { width: 1%; text-align: left; }
 @media (max-width: 899px) { .bf-heat { margin: 0 12px 14px; } .bf-heat .bh-card { padding: 10px; } .bf-heat table.bh { min-width: 0; border-spacing: 2px; }
   .bf-heat table.bh th, .bf-heat table.bh td { padding: 5px 5px; } .bf-heat table.bh tbody th, .bf-heat table.bh td { font-size: 11.5px !important; } .bf-heat .bh-tag { margin-left: 3px; padding: 1px 4px; } }
@@ -5841,22 +5850,23 @@ function paintGamma(sym) {
   paintVizScale();
 }
 // ---------------------------------------------------------------- GEX heat map panel beside the Shelf card (Patch 166)
-// Renders j.grid from the SAME /api/gamma payload loadGamma already fetches (no second request). Mockup tiles:
-// teal; green = the nearest expiry's biggest positive; purple = its big negatives (>= 50% of its largest);
-// yellow + pull arrow = the grid's biggest cell. NEXT rows = j.next_levels (server-side 25% rule). Fail-open.
+// Renders j.grid from the SAME /api/gamma payload loadGamma already fetches (no second request).
+// Patch 168 tiers: every cell is coloured by its share of its own expiry column's biggest cell —
+// strong >= 40%, mid 15-40%, base below that; the grid's biggest cell stays yellow with its pull arrow.
+// A SPOT divider row marks where price sits; a legend under the grid names the tiers.
+// NEXT rows = j.next_levels (server-side 25% rule). Fail-open.
 function bfHeatHTML(j) {
   const g = j && j.grid;
   if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) return null;
   const spot = Number(g.spot) || 0;
   const M = (v) => { const n = Number(v) || 0; return (n < 0 ? "−" : "") + (Math.abs(n) / 1e6).toFixed(2) + "M"; };
-  let greenStrike = null, greenVal = 0, negMax = 0;
-  g.rows.forEach(r => { const v = Number((r.gex || [])[0]) || 0; if (v > greenVal) { greenVal = v; greenStrike = r.strike; } if (v < 0 && Math.abs(v) > negMax) negMax = Math.abs(v); });
+  const colMax = g.expiries.map((_, i) => Math.max(0, ...g.rows.map(r => Math.abs(Number((r.gex || [])[i]) || 0))));
   let maxStrike = null, maxExp = -1, maxVal = 0;
   g.rows.forEach(r => (r.gex || []).forEach((v, i) => { v = Number(v) || 0; if (Math.abs(v) > Math.abs(maxVal)) { maxVal = v; maxStrike = r.strike; maxExp = i; } }));
   const nl = j.next_levels, nUp = nl && nl.next_up ? nl.next_up.strike : null, nDn = nl && nl.next_down ? nl.next_down.strike : null;
   const md = (e) => new Date(e + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
   const head = g.expiries.map(e => `<th>${md(e).toUpperCase()}</th>`).join("");
-  const rows = g.rows.map(r => {
+  const rowHTML = g.rows.map(r => {
     const nx = r.strike === nUp ? "up" : r.strike === nDn ? "dn" : "";
     const cells = (r.gex || []).map((v, i) => {
       v = Number(v) || 0;
@@ -5864,13 +5874,22 @@ function bfHeatHTML(j) {
         const near = spot > 0 && Math.abs(r.strike - spot) / spot <= 0.005;
         return `<td class="bh-max">${M(v)}${near ? "" : (r.strike < spot ? " ↓" : " ↑")}</td>`;
       }
-      if (i === 0 && v > 0 && r.strike === greenStrike) return `<td class="bh-g">${M(v)}</td>`;
-      if (i === 0 && v < 0 && negMax > 0 && Math.abs(v) >= 0.5 * negMax) return `<td class="bh-p">${M(v)}</td>`;
+      const share = colMax[i] > 0 ? Math.abs(v) / colMax[i] : 0;
+      if (share >= 0.40) return `<td class="${v < 0 ? "bh-sp" : "bh-sg"}">${M(v)}</td>`;
+      if (share >= 0.15) return `<td class="${v < 0 ? "bh-mp" : "bh-mg"}">${M(v)}</td>`;
       return `<td class="bh-t">${M(v)}</td>`;
     }).join("");
     return `<tr${nx ? ` class="bh-next"` : ""}><th>${r.strike}${nx ? ` <span class="bh-tag">NEXT ${nx === "up" ? "↑" : "↓"}</span>` : ""}</th>${cells}</tr>`;
-  }).join("");
-  return `<div class="bh-card"><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · M = $1,000,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  });
+  if (spot > 0) {
+    let at = rowHTML.length;
+    for (let k = 0; k < g.rows.length; k++) { if (Number(g.rows[k].strike) <= spot) { at = k; break; } }
+    rowHTML.splice(at, 0, `<tr class="bh-spotrow"><td colspan="${g.expiries.length + 1}">SPOT $${spot.toFixed(2)}</td></tr>`);
+  }
+  const rows = rowHTML.join("");
+  const sw = (v) => `<i style="background:var(${v})"></i>`;
+  const legend = `<div class="bh-legend"><span>${sw("--bh-c-max")}Strongest pull</span><span>${sw("--bh-c-sg")}Strong +</span><span>${sw("--bh-c-sp")}Strong −</span><em>≥40% of the expiry's biggest</em><span>${sw("--bh-c-mg")}Mid +</span><span>${sw("--bh-c-mp")}Mid −</span><em>15–40%</em><span>${sw("--bh-c-low")}Low</span></div>`;
+  return `<div class="bh-card"><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · M = $1,000,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>${legend}</div>`;
 }
 function paintHeat(sym) {
   const el = $("bfHeat"); if (!el) return;
