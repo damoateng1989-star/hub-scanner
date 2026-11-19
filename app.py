@@ -1380,6 +1380,18 @@ def admin_nextday(u: dict = Admin):
     return dict(rows=nextday.rows(200), stats=nextday.stats(), time=nextday.NEXTDAY_TIME)
 
 
+@app.get("/api/admin/confluence")
+def admin_confluence(u: dict = Admin):
+    import confluence
+    return dict(rows=confluence.stats())
+
+
+@app.post("/api/admin/confluence/run")
+async def admin_confluence_run(u: dict = Admin):
+    import confluence
+    return dict(tagged=await run_in_threadpool(confluence.tag_recent))
+
+
 @app.post("/api/admin/nextday/run")
 async def admin_nextday_run(u: dict = Admin):
     import nextday

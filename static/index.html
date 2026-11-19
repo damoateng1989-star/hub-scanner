@@ -4219,6 +4219,17 @@ async function jrDelete(id) {
   loadJournal();
 }
 
+async function loadConfluence() {
+  const el = $("labConfluence"); if (!el) return;
+  let R; try { R = await api("/api/admin/confluence"); } catch (e) { el.innerHTML = ""; return; }
+  const rows = R.rows || [], sg = (v) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%", pc = (v) => v == null ? "–" : v + "%";
+  const tagged = rows.reduce((a, r) => a + r.tagged, 0);
+  const tr = (r) => `<tr><td><b>${r.kind === "setup" ? "Confirmed setups" : "Breakouts"}</b> · ${r.confluence ? "with confluence" : "without"}</td><td>${r.tagged}</td><td>${r.resolved}</td><td>${pc(r.hit_pct)}</td><td>${sg(r.avg_ret)}</td><td>${pc(r.next_day_green)}</td><td>${sg(r.next_day_avg)}</td></tr>`;
+  el.innerHTML = `<div class="panel"><div class="ph"><h2>Confluence check</h2><span class="note">does a gamma level on the trigger or target help? tagged when each signal fires</span>
+      <button class="btnx sm" onclick="this.disabled=true;this.textContent='Tagging…';api('/api/admin/confluence/run',{method:'POST',timeout:180000}).then(r=>{toast(r.tagged+' tagged');loadConfluence()}).catch(e=>{toast(e.message);loadConfluence()})">Tag now</button></div>
+    ${tagged ? `<div class="tbl" style="padding:0 18px 10px"><table><tr><th></th><th>Tagged</th><th>Resolved</th><th>Reached target</th><th>Avg result</th><th>Next day went its way</th><th>Avg next close</th></tr>${rows.map(tr).join("")}</table></div>` : ""}
+    <p class="note" style="padding:0 18px 16px;margin:0">${tagged ? "" : "Nothing tagged yet. "}Each confirmed setup and hub breakout is tagged yes/no at the moment it fires: yes when a call or put wall, or a gamma shelf of real size (25%+ of the biggest), sits within 1% of its trigger or target, on that day's options chain. Option chains aren't kept historically, so this starts from now. Give it 40–50 resolved trades a side before reading anything into the gap.</p></div>`;
+}
 async function loadNextDay() {
   const el = $("labNextDay"); if (!el) return;
   let N; try { N = await api("/api/admin/nextday"); } catch (e) { el.innerHTML = ""; return; }
@@ -4259,9 +4270,10 @@ async function loadLab() {
       <td>${st.win_rate ?? "–"}${st.win_rate == null ? "" : "%"}</td><td style="${pc(st.avg_ret)}">${sign(st.avg_ret)}</td></tr>` : "";
   const kindName = { symmetric: "Symmetric ◇", ascending: "Ascending ◢", descending: "Descending ◥" };
   const live = (S.live || []);
-  setTimeout(loadNextDay, 0);
+  setTimeout(loadNextDay, 0); setTimeout(loadConfluence, 0);
   $("lab").innerHTML = `
     <div id="labNextDay"></div>
+    <div id="labConfluence"></div>
     <div id="labExits"></div>
     <div class="panel"><div class="ph"><h2>What's being tested</h2></div>
       <p class="note" style="padding:0 18px 16px;margin:0">A <b>tightening hub</b> is a range that narrows: highs falling and/or lows rising, so the end of the range is at most 60% as wide as the start. The rules are the same as for hubs: breakout = a 4-hour close outside the lines, target = next shelf, failed = close back inside.</p></div>

@@ -431,6 +431,11 @@ def _scan_board() -> int:
         log.info("board scan done: %d/%d symbols (%d skipped: illiquid, %d skipped: small-cap)",
                  done, len(syms), skipped_illiquid, skipped_smallcap)
         threading.Thread(target=_warm_gamma, daemon=True).start()   # walls for the fresh breakouts, off the hot path
+        try:      # confluence log: tag fresh setups/breakouts with today's gamma (measured in the Lab)
+            import confluence
+            threading.Thread(target=confluence.tag_recent, daemon=True).start()
+        except Exception as ex:
+            log.warning("confluence tagging failed: %s", ex)
         try:      # Sika's setup list: real grades ready before anyone asks
             import sika_find
             threading.Thread(target=sika_find.warm, daemon=True).start()

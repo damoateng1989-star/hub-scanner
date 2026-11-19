@@ -60,6 +60,7 @@ _GAMMA_PATH_SHARE = 0.25      # an in-path shelf counts when its |gex| reaches
                               # this share of the largest supplied shelf (spec
                               # §5; the same 0.25 NEXT_LEVEL_SHARE uses — here
                               # it is only a wording threshold, never a label)
+GAMMA_LADDER_N = 4            # top 4 positive + top 4 negative strikes for gamma context (was the card's 2+2)
 _GAMMA_CONFLUENCE_PCT = 0.01  # a gamma strike within 1% of the trigger or the
                               # target counts as at that price (spec §5; the
                               # same 1% the GEX Lab triggers T3/T4 use)
@@ -126,6 +127,9 @@ def _gamma_confluence(gx, d, trigger, target):
     wall = gx.get("call_wall") if d == 1 else gx.get("put_wall")
     wall_word = "call wall" if d == 1 else "put wall"
     shelves = gx.get("shelves") or []
+    # only real piles count: a shelf must reach the same 25% size bar the path check uses (walls always count)
+    biggest = max((abs(s["gex"]) for s in shelves), default=0.0)
+    shelves = [s for s in shelves if biggest and abs(s["gex"]) >= _GAMMA_PATH_SHARE * biggest]
     for at, price in (("target", target), ("trigger", trigger)):
         hit = None
         if wall is not None and _near(wall, price):
@@ -342,7 +346,13 @@ def card(sym):
                favored=None, opposite=None, in_between=None, context=[], message=None)
     # Gamma context (Patch 173): facts ride on every card state; the composed
     # lines are added only for a live favored play, in the live branch below.
-    out["gamma"] = _gamma_facts(sym, last, sh)
+    # A wider ladder (top 4 call + top 4 put strikes) for gamma context only, so confluence and the path read more
+    # than the 2+2 shelves the card's own levels use (same cached chain; the measured card is unchanged).
+    try:
+        sh_wide = gamma.shelves(sym, last, n=GAMMA_LADDER_N)
+    except Exception:
+        sh_wide = None
+    out["gamma"] = _gamma_facts(sym, last, sh_wide or sh)
 
     # --- the live setup: hub first, then patterns (the same order options._plan uses)
     live = None  # (direction, edge, target, setup_name, kind, trade_hub)
