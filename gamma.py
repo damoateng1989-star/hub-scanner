@@ -143,6 +143,49 @@ def chain_as_of(symbol: str) -> str | None:
 NEXT_LEVEL_SHARE = 0.25     # a node counts when its |net GEX| is at least this share of the expiry's largest
 
 
+SUMMED_EXPIRIES = 8
+
+
+def summed(symbol: str, spot: float | None, fetch: bool = True, n_exp: int = SUMMED_EXPIRIES) -> dict | None:
+    """Net gamma per strike ADDED UP across the nearest n_exp expiries (weeklies included), the way multi-expiry
+    GEX profiles show it: the strikes where every expiry piles up stand out. Returns {'expiries', 'nodes'} where
+    nodes are the local maxima of |summed net GEX| that reach 25% of the largest ({'strike', 'gex'} in dollar
+    notional, sorted by size), or None. Display/confluence only. Never raises."""
+    try:
+        sym = (symbol or "").upper()
+        if not spot or float(spot) <= 0:
+            return None
+        spot = float(spot)
+        if fetch:
+            contracts = _fetch_contracts(sym)
+        else:
+            with _LOCK:
+                contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
+        if not contracts:
+            return None
+        today = datetime.now(_NY).date()
+        rows = [(exp, call, k, g, oi) for exp, call, k, g, oi, v in _slim(contracts) if exp >= today and abs(k - spot) / spot <= 0.15]
+        exps = sorted({r[0] for r in rows})[:n_exp]
+        if not exps:
+            return None
+        keep = set(exps)
+        net: dict[float, float] = {}
+        for exp, call, k, g, oi in rows:
+            if exp in keep:
+                v = g * oi * 100 * spot
+                net[k] = net.get(k, 0.0) + (v if call else -v)
+        ks = sorted(net)
+        top = max((abs(v) for v in net.values()), default=0.0)
+        nodes = [dict(strike=k, gex=round(net[k], 1)) for i, k in enumerate(ks)
+                 if top > 0 and abs(net[k]) >= NEXT_LEVEL_SHARE * top
+                 and (i == 0 or abs(net[k]) > abs(net[ks[i - 1]])) and (i == len(ks) - 1 or abs(net[k]) > abs(net[ks[i + 1]]))]
+        nodes.sort(key=lambda n: -abs(n["gex"]))
+        return dict(expiries=[e.isoformat() for e in exps], nodes=nodes[:8])
+    except Exception as e:
+        log.warning("summed gamma failed for %s: %s", symbol, e)
+        return None
+
+
 def next_levels(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
     """GEX next levels (spec Nov 18, PANW): on the NEAREST expiry with chain data (weeklies and 0DTE included),
     the near-term call/put wall and flip (same math as _compute), the nearest significant node above and below

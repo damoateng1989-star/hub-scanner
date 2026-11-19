@@ -110,8 +110,12 @@ def _gamma_facts(sym, spot, sh):
             weekly = dict(expiry=nl["expiry_nt"], call_wall=nl.get("call_wall_nt"), put_wall=nl.get("put_wall_nt"))
     except Exception:
         weekly = None
+    try:       # gamma added up across the nearest 8 expiries: the strikes every expiry piles onto
+        sm = gamma.summed(sym, spot, fetch=False)
+    except Exception:
+        sm = None
     return dict(expiry=(w or {}).get("expiry") or (sh or {}).get("expiry"),
-                as_of=as_of, spot=spot, weekly=weekly,
+                as_of=as_of, spot=spot, weekly=weekly, summed=sm,
                 call_wall=(w or {}).get("call_wall"),
                 put_wall=(w or {}).get("put_wall"),
                 flip=flip, regime=regime, shelves=shelves,
@@ -156,10 +160,16 @@ def price_levels(c4):
             out.append(dict(price=float(h[i]), what="old high"))
         if l[i] == min(l[i - k:i + k + 1]):
             out.append(dict(price=float(l[i]), what="old low"))
-    if n >= 50:
-        out.append(dict(price=float(c[-50:].mean()), what="50-day average"))
-    if n >= 200:
-        out.append(dict(price=float(c[-200:].mean()), what="200-day average"))
+    for p in (9, 21, 50, 200):                       # daily simple moving averages
+        if n >= p:
+            out.append(dict(price=float(c[-p:].mean()), what=f"daily {p}-SMA", kind="ma"))
+    try:
+        c4c = c4["Close"].to_numpy(float)
+        for p in (9, 21, 50):                        # 4-hour simple moving averages
+            if len(c4c) >= p:
+                out.append(dict(price=float(c4c[-p:].mean()), what=f"4H {p}-SMA", kind="ma"))
+    except Exception:
+        pass
     return out
 
 
@@ -199,7 +209,16 @@ def _gamma_confluence(gx, d, trigger, target, atr=None, levels=None):
         if near:
             sv = min(near, key=lambda s: abs(s["strike"] - price))
             add(sv["strike"], "gamma shelf", "gamma")
-        for kind_word in ("old high", "old low", "50-day average", "200-day average"):
+        sn = [x for x in ((gx.get("summed") or {}).get("nodes") or []) if _near(x["strike"], price, tol)]
+        if sn:
+            x = min(sn, key=lambda x: abs(x["strike"] - price))
+            add(x["strike"], "summed gamma node", "gamma")
+        mas = [x for x in (levels or []) if x.get("kind") == "ma" and _near(x["price"], price, tol)]
+        if mas:          # a cluster of moving averages counts once, named in full
+            mean = sum(x["price"] for x in mas) / len(mas)
+            hits.append(dict(at=at, price=price, strike=float(mean), what="moving averages", kind="price",
+                             names=[x["what"] for x in mas], n=len(mas)))
+        for kind_word in ("old high", "old low"):
             cands = [x for x in (levels or []) if x["what"] == kind_word and _near(x["price"], price, tol)]
             if cands:
                 x = min(cands, key=lambda x: abs(x["price"] - price))
@@ -214,6 +233,13 @@ def _gamma_confluence(gx, d, trigger, target, atr=None, levels=None):
 
 def _level_phrase(c):
     w = c["what"]
+    if w == "moving averages":
+        names = [n.replace("-SMA", "") for n in c.get("names") or []]
+        if len(names) == 1:
+            return f"the {c['names'][0]} at {_money(c['strike'])}"
+        return f"{len(names)} moving averages ({_join(names)}) around {_money(c['strike'])}"
+    if w == "summed gamma node":
+        return f"the {_money(c['strike'])} gamma node (all expiries added up)"
     if w == "round number":
         return f"the ${c['strike']:,.0f} round number"
     if w in ("old high", "old low"):

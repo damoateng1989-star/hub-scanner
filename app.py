@@ -1258,7 +1258,8 @@ async def gamma_walls(symbol: str, u: dict = User):
     s = await run_in_threadpool(gamma.shelves, sym, spot) if spot else None
     g = await run_in_threadpool(gamma.grid, sym, spot) if spot else None
     nl = await run_in_threadpool(gamma.next_levels, sym, spot, False) if spot else None    # display only (spec Nov 18)
-    return dict(symbol=sym, walls=w, shelves=s, grid=g, next_levels=nl, spot=spot,
+    sm = await run_in_threadpool(gamma.summed, sym, spot, False) if spot else None    # all nearest expiries added up
+    return dict(symbol=sym, walls=w, shelves=s, grid=g, next_levels=nl, summed=sm, spot=spot,
                 as_of=pd.Timestamp.now(tz="America/New_York").isoformat(timespec="seconds"),
                 chain_as_of=gamma.chain_as_of(sym))
 
