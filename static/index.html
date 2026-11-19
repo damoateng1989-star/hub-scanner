@@ -6352,6 +6352,7 @@ async function loadStacked(force) {
   if (!force && STACKED && Date.now() - STACKED_AT < 5 * 60 * 1000) return renderStacked();
   try { STACKED = await api("/api/stacked"); STACKED_AT = Date.now(); STACKED_ERR = null; } catch (e) { STACKED_ERR = e; }
   renderStacked();
+  if (CUR === "discover") { try { paintHeatmap(); } catch (e) {} }
   if (CUR === "discover" && BOARD_DATA) { try { renderInstitutionalBoard(); if (SETUP_TAB !== "hub") renderSetupBoard(); } catch (e) {} }
 }
 function stkItem(sym, names) {
@@ -6715,13 +6716,17 @@ function paintHeatmap() {
     html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(short[S.k] || S.k)}</div>` : ""}`;
     for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
       const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fit = Math.min(t.w / (t.s.length * 0.62), t.h / 1.6), fs = Math.max(10, Math.min(15, fit));
-      html += `<button class="hm-t ${cls}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}"
+      const sk = typeof stkItem === "function" ? stkItem(t.s) : null, skc = sk ? (sk.ok ? " hm-stk" : sk.passed >= sk.total - 1 ? " hm-stk3" : "") : "";
+      if (skc) counts[sk.ok ? "stk" : "stk3"] = (counts[sk.ok ? "stk" : "stk3"] || 0) + 1;
+      html += `<button class="hm-t ${cls}${skc}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}${sk ? ` · ${esc(sk.name)} ${sk.passed}/${sk.total}` : ""}"
         onclick="openBrief('${esc(t.s)}')">${fit >= 10 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
     }
     html += `</div>`;
   }
   const legend = ["up", "edge", "resting", "down", "none"].concat(HEAT.locked ? ["locked"] : []).filter(k => counts[k])
-    .map(k => `<span class="hm-lg"><i class="${HEAT_ST[k][1]}"></i>${HEAT_ST[k][0]} <b>${counts[k]}</b></span>`).join("");
+    .map(k => `<span class="hm-lg"><i class="${HEAT_ST[k][1]}"></i>${HEAT_ST[k][0]} <b>${counts[k]}</b></span>`).join("")
+    + (counts.stk ? `<span class="hm-lg"><i class="hm-lg-stk"></i>Stacked 4/4 <b>${counts.stk}</b></span>` : "")
+    + (counts.stk3 ? `<span class="hm-lg"><i class="hm-lg-stk3"></i>Stacked 3/4 <b>${counts.stk3}</b></span>` : "");
   el.innerHTML = `<div class="hm-card"><div class="hm-top"><div><b>Market map</b><small>Every stock NextShelf scans, grouped by sector, sized by company value, coloured by where its setup stands ("close to the trigger" = within half a typical 4-hour move of it). Tap one to open it.</small></div></div>
     <div class="hm-legend">${legend}</div>
     <div class="hm-box" style="height:${H}px">${html}<div class="hm-tip" id="hmTip"></div></div></div>`;
@@ -8842,6 +8847,12 @@ html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] 
 html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
 .hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
 .hm-tip.on { opacity: 1; }
+.hm-t.hm-stk { box-shadow: inset 0 0 0 2px #fff; z-index: 1; }
+.hm-t.hm-stk::after, .hm-t.hm-stk3::after { content: ""; position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+.hm-t.hm-stk3::after { background: transparent; box-shadow: inset 0 0 0 1.5px #fff; }
+.hm-lg i.hm-lg-stk { background: #1f9d63; box-shadow: inset 0 0 0 2px #fff; outline: 1px solid var(--line-2, #3A3A36); }
+.hm-lg i.hm-lg-stk3 { background: transparent; border-radius: 50%; width: 8px; height: 8px; box-shadow: inset 0 0 0 1.5px var(--ink, #fff); }
+html[data-theme="light"] .hm-t.hm-stk { box-shadow: inset 0 0 0 2px #0d1117; }
 
 /* compact Context card; the old duplicate rows below the map are hidden in the map view */
 body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: none !important; }
