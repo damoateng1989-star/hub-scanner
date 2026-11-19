@@ -2580,6 +2580,85 @@ html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[d
   .btnx:active, .sp-row:active, .ask-scan-sym:active, .ask-send:active, .sp-go:active, .sp-alt:active, .chip:active, .board-filter:active, .sb-item:active, .kpi:active, .hm-t:active, .scout-fab:active, .kpi:hover { transform: none !important; }
 }
 </style>
+<style>
+/* ================= Liquid Glass skin (Patch 171) =================
+   The approved glass study (nextshelf-glass-study) carried to the real
+   surfaces. Dark theme only — every rule is scoped to
+   html:not([data-theme="light"]); the light theme's own glass
+   (L1413–1418) is untouched. Fills are black-based, so where
+   backdrop-filter is unsupported the dark fill alone still reads as a
+   solid dark card. backdrop-filter is applied ONLY to the three fixed
+   panels (.brief, .ask-pop, .scout-pop); the cards and tiles inside
+   them get the glass fill/border/edge without their own blur — they
+   sit on the panel's frost, and a filter on an inner card would cost
+   scroll smoothness inside the brief for no visible gain. */
+html:not([data-theme="light"]) {
+  --glass: rgba(0,0,0,.52); --glass-soft: rgba(0,0,0,.46); --glass-strong: rgba(0,0,0,.60);
+  --glass-tile: rgba(0,0,0,.44); --glass-input: rgba(0,0,0,.50);
+  --glass-line: rgba(255,255,255,.18); --glass-edge: inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* Page: pure black, with the study's two glows at the approved strength. */
+html:not([data-theme="light"]) body { background-color: #000 !important;
+  background-image: radial-gradient(ellipse 90% 55% at 85% -10%, rgba(5,18,36,.34), transparent 62%),
+                    radial-gradient(ellipse 80% 50% at 8% 108%, rgba(30,21,6,.30), transparent 62%) !important; }
+
+/* --- The shelf card --- */
+html:not([data-theme="light"]) .brief { background: var(--glass) !important; border-left-color: var(--glass-line) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: var(--glass-edge), 0 30px 90px rgba(0,0,0,.55); }
+/* While the heat map shows, the L8680 rule strips this panel's backdrop
+   filter (a filter would trap the fixed heat-map panel inside the
+   card) — so in that one state the panel goes near-solid instead of
+   frosted, and the layout is exactly Patch 166's. */
+html:not([data-theme="light"]) body.heat-on .brief { background: rgba(5,6,9,.94) !important; }
+html:not([data-theme="light"]) #brief .bf-hero { background: var(--glass-soft) !important; border-color: var(--glass-line) !important;
+  border-radius: 28px !important; box-shadow: var(--glass-edge), 0 18px 40px rgba(0,0,0,.45) !important; }
+html:not([data-theme="light"]) #brief .vz-card { background: var(--glass-soft) !important; border-color: var(--glass-line) !important;
+  border-radius: 28px; box-shadow: var(--glass-edge), 0 12px 30px rgba(0,0,0,.35); }
+html:not([data-theme="light"]) .bf-card { background: var(--glass-soft); border-color: var(--glass-line);
+  border-radius: 28px; box-shadow: var(--glass-edge); }
+html:not([data-theme="light"]) .bf-stats > div { background: var(--glass-tile); border: 1px solid var(--glass-line);
+  border-radius: 20px; padding: 12px 10px 10px; box-shadow: var(--glass-edge); }
+html:not([data-theme="light"]) .bf-foot { background: var(--glass-strong) !important; border-top-color: var(--glass-line) !important; }
+
+/* The one glass numeral: the card's price, like the lock-screen clock.
+   The day-change <em> inside the live chip keeps its own crisp colour;
+   the live dot <i> is a background element and is unaffected. */
+html:not([data-theme="light"]) #bfLive .live { font-size: 30px; font-weight: 800; letter-spacing: -.01em;
+  color: rgba(255,255,255,.55); -webkit-text-fill-color: rgba(255,255,255,.55); -webkit-text-stroke: 1px rgba(255,255,255,.65); }
+html:not([data-theme="light"]) #bfLive .live em { -webkit-text-stroke: 0; -webkit-text-fill-color: currentColor; }
+@supports not (-webkit-text-stroke: 1px black) {
+  html:not([data-theme="light"]) #bfLive .live { color: #fff; -webkit-text-fill-color: #fff; }
+}
+
+/* --- Sika's panels --- */
+html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-pop { background: var(--glass); border-color: var(--glass-line);
+  border-radius: 28px; box-shadow: var(--glass-edge), 0 30px 80px rgba(0,0,0,.6);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4); }
+/* Play cards: glass fill, but the 3px direction edge (Patch 162) stays —
+   it is re-asserted after the border-color so the glass border cannot
+   wash it out, and there is no inset top edge here (the direction edge
+   already does that job). */
+html:not([data-theme="light"]) #askBody .ask-msg.ask-play { background: var(--glass-soft); border-color: var(--glass-line); border-radius: 28px; }
+html:not([data-theme="light"]) #askBody .ask-msg.ask-play.ask-calls { border-top-color: #3DD68C; }
+html:not([data-theme="light"]) #askBody .ask-msg.ask-play.ask-puts { border-top-color: #FF6B5E; }
+/* The input bar: the study's dark-glass pill. */
+html:not([data-theme="light"]) .ask-row input { background: var(--glass-input) !important; border-color: var(--glass-line) !important;
+  border-radius: 999px !important; box-shadow: var(--glass-edge); }
+html:not([data-theme="light"]) .ask-send { border-radius: 999px; }
+html:not([data-theme="light"]) .sp-acts button, html:not([data-theme="light"]) .sp-acts a { border-radius: 999px !important; }
+html:not([data-theme="light"]) .sp-alt { background: var(--glass-soft) !important; border-color: var(--glass-line) !important; }
+
+/* --- Shared buttons and chips --- */
+html:not([data-theme="light"]) .btnx { background: var(--glass-soft); border-color: var(--glass-line);
+  border-radius: 999px; box-shadow: var(--glass-edge); }
+/* Primary keeps its solid fill (L1361, untouched) and only gains the pill. */
+html:not([data-theme="light"]) button.primary, html:not([data-theme="light"]) .btnx.primary, html:not([data-theme="light"]) .primary { border-radius: 999px !important; }
+html:not([data-theme="light"]) .chip { background: var(--glass-soft) !important; border-color: var(--glass-line) !important; border-radius: 999px !important; }
+/* The selected chip keeps its white fill (L1965, untouched) and only gains the pill. */
+html:not([data-theme="light"]) body .chip.on, html:not([data-theme="light"]) body .chip.active { border-radius: 999px !important; }
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">

@@ -440,6 +440,25 @@ html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[d
   .seg button:active, #watch:active, .btnx:active, .tvbtn:active, button.sec:active { transform: none !important; }
 }
 </style>
+<style>
+/* ================= Liquid Glass skin (Patch 171) =================
+   Same tokens as the app (static/index.html, Patch 171 §1) — the two
+   files share no CSS, so the block is duplicated. Dark only, scoped to
+   html:not([data-theme="light"]) exactly as in the app. Every section
+   container on this page is a .card (chart L551, #swingPlay L568,
+   #gexShelves L569, #optionsSwing L570), so one rule skins them all.
+   No backdrop-filter here: the cards sit on the black page, where a
+   blur would be invisible — and on the tall chart card it would cost
+   scroll smoothness for nothing. The black-based fill is the look. */
+html:not([data-theme="light"]) {
+  --glass: rgba(0,0,0,.52); --glass-line: rgba(255,255,255,.18); --glass-edge: inset 0 1px 0 rgba(255,255,255,.25);
+}
+html:not([data-theme="light"]) body { background-color: #000 !important;
+  background-image: radial-gradient(ellipse 90% 55% at 85% -10%, rgba(5,18,36,.34), transparent 62%),
+                    radial-gradient(ellipse 80% 50% at 8% 108%, rgba(30,21,6,.30), transparent 62%) !important; }
+html:not([data-theme="light"]) .card { background: var(--glass) !important; border-color: var(--glass-line) !important;
+  border-radius: 28px !important; box-shadow: var(--glass-edge), 0 14px 38px rgba(0,0,0,.18) !important; }
+</style>
 </head>
 <body>
 <nav><div class="wrap">
