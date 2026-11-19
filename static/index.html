@@ -6352,6 +6352,7 @@ async function loadStacked(force) {
   if (!ME || ME.guest) { const p = $("stkPanel"); if (p) p.hidden = true; return; }
   if (!force && STACKED && Date.now() - STACKED_AT < 5 * 60 * 1000) return renderStacked();
   try { STACKED = await api("/api/stacked"); STACKED_AT = Date.now(); STACKED_ERR = null; } catch (e) { STACKED_ERR = e; }
+  if (STACKED && STACKED.computing) { STACKED_AT = 0; clearTimeout(loadStacked._t); loadStacked._t = setTimeout(() => loadStacked(true), 8000); }
   renderStacked();
   if (CUR === "discover") { try { paintHeatmap(); } catch (e) {} }
   if (CUR === "discover" && BOARD_DATA) { try { renderInstitutionalBoard(); if (SETUP_TAB !== "hub") renderSetupBoard(); } catch (e) {} }
@@ -6374,6 +6375,7 @@ function renderStacked() {
   const el = $("stacked"); if (!el) return;
   if (STACKED_ERR && !STACKED) { el.innerHTML = failedHTML("the stacked list", STACKED_ERR, "loadStacked(true)"); return; }
   if (!STACKED) return;
+  if (STACKED.computing && !(STACKED.items || []).length) { el.innerHTML = `<div class="loading"><span class="spin"></span>Checking the levels on every live setup… this takes about a minute the first time.</div>`; $("stkPills").innerHTML = ""; return; }
   const short = {"Stacked Shelf": "shelf", "Stacked Gap Fade": "gap", "Stacked Double Bottom": "db"};
   const all = STACKED.items || [];
   const cnt = (k) => all.filter(x => short[x.name] === k).length;

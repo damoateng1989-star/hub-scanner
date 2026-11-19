@@ -269,3 +269,32 @@ def stacked_list(candidates: list[str], with_gamma: bool) -> dict:
             _SL_CACHE.pop(min(_SL_CACHE, key=lambda k: _SL_CACHE[k][0]), None)
         _SL_CACHE[key] = (time.time(), out)
         return out
+
+
+_SL_BUSY: set = set()
+_SL_LAST: dict = {}          # gamma flag -> the newest finished list, shown while a fresh one is computed
+
+
+def stacked_list_nowait(candidates: list[str], with_gamma: bool) -> dict:
+    """Never blocks the page: returns the newest list it has (marked computing) and builds a fresh one in the
+    background. The option walls behind the gamma levels can take a minute for two dozen stocks."""
+    syms = list(dict.fromkeys(candidates))[:STACKED_MAX]
+    key = (tuple(sorted(syms)), with_gamma)
+    hit = _SL_CACHE.get(key)
+    if hit and time.time() - hit[0] < STACKED_TTL:
+        return hit[1]
+    if key not in _SL_BUSY:
+        _SL_BUSY.add(key)
+
+        def work():
+            try:
+                _SL_LAST[with_gamma] = stacked_list(syms, with_gamma)
+            except Exception as e:
+                log.warning("stacked list: %s", e)
+            finally:
+                _SL_BUSY.discard(key)
+        threading.Thread(target=work, daemon=True).start()
+    prev = (hit[1] if hit else None) or _SL_LAST.get(with_gamma)
+    if prev:
+        return {**prev, "computing": True}
+    return dict(items=[], lab={}, checked=len(syms), updated=None, computing=True)

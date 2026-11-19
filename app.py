@@ -1220,7 +1220,7 @@ async def stacked_endpoint(u: dict = User):
     mine_first = [c for c in cands if c in mine] + [c for c in cands if c not in mine]
     if not whole:
         mine_first = [c for c in mine_first if c in mine]
-    out = await run_in_threadpool(levels.stacked_list, mine_first, bool(options_for(u)))
+    out = levels.stacked_list_nowait(mine_first, bool(options_for(u)))
     for x in out["items"]:
         x["watching"] = x["symbol"] in mine
     return {**out, "whole_market": whole, "gamma": bool(options_for(u))}
