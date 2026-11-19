@@ -22,6 +22,10 @@
 @font-face { font-family: "Inter"; src: url("/fonts/Inter.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "JetBrains Mono"; src: url("/fonts/JetBrainsMono.woff2") format("woff2"); font-weight: 100 800; font-style: normal; font-display: swap; }
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
+/* Patch 172: the wordmark's glyphs as static 800/700 instances with overlapping contours merged, so the glass edge
+   (-webkit-text-stroke) traces only the outline — on the variable font it also drew the inner seams (e, t, h crossbars). */
+@font-face { font-family: "Manrope Logo"; src: url("/fonts/ManropeLogo-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Manrope Logo"; src: url("/fonts/ManropeLogo-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 :root {
   --paper: #0A0A0A; --card: #101214; --sunk: #121418;
   --ink: #E9EBEF; --ink2: #9AA0AC; --ink3: #6B7280;
@@ -200,7 +204,7 @@ footer nav[aria-label="Social"] a { display: inline-flex; opacity: .75; }
 footer nav[aria-label="Social"] a:hover { opacity: 1; }
 footer nav[aria-label="Social"] svg { width: 20px; height: 20px; display: block; }
 
-/* Footer giant wordmark: the brand as the stamp, flat soft grey — #C3CCD7 on dark, #3A4656 on light, faint by design — with the blue glow behind it (the text itself stays flat). */
+/* Footer giant wordmark: the brand as the stamp — on dark, glass (Patch 172: translucent white at the stamp's .22 strength, 1px bright edge); on light, flat #3A4656; faint by design — with the blue glow behind it. */
 footer { position: relative; overflow: hidden; }
 .ft-giant { text-align: center; white-space: nowrap; line-height: .84; letter-spacing: -.06em; font-size: min(18.5vw, 300px); font-family: "Manrope", Arial, sans-serif; font-weight: 800; color: rgba(195,204,215,.22); background: radial-gradient(60% 95% at 50% 100%, rgba(47,84,235,.24), rgba(47,84,235,0) 70%); text-shadow: 0 0 55px rgba(37,99,235,.14); transform: translateY(17%); user-select: none; pointer-events: none; }
 
@@ -974,6 +978,12 @@ html[data-theme="light"] .hx-c.up .w{color:#0F7A4F}html[data-theme="light"] .hx-
 .ns-logo{gap:0 !important;column-gap:0 !important;word-spacing:0 !important;white-space:nowrap !important}
 .ns-logo span{font-weight:700 !important;margin:0 !important;padding:0 !important}
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
+/* Glass wordmark (Patch 172) — dark theme only, Treatment B (glass-lite): translucent white fill with a 1px bright edge,
+   the iOS clock treatment at working size. Light theme keeps Patch 164's flat #3A4656. */
+html:not([data-theme="light"]) .ns-logo{font-family:"Manrope Logo","Manrope",Arial,sans-serif !important;color:rgba(255,255,255,.80) !important;-webkit-text-stroke:1px rgba(255,255,255,.35)}
+/* The footer giant (Patch 172) — the one Treatment A instance: full glass at the stamp's own .22 strength, 1px bright edge.
+   Size, tracking, the blue glow and its text-shadow are untouched; the light rule is untouched. */
+html:not([data-theme="light"]) .ft-giant{font-family:"Manrope Logo","Manrope",Arial,sans-serif;color:rgba(255,255,255,.22);-webkit-text-stroke:1px rgba(255,255,255,.65)}
 
 /* "We watch it." — same blue as the line above, with a band of light that sweeps across it, then rests */
 @property --hxs{syntax:"<percentage>";inherits:false;initial-value:-40%}

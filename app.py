@@ -328,7 +328,7 @@ def touch_icon():
 @app.get("/fonts/{name}")
 def fonts(name: str):
     """Self-hosted fonts (SIL Open Font License): sharp, fast, no third-party font requests."""
-    if name not in ("Geist.woff2", "GeistMono.woff2", "Newsreader.woff2", "NewsreaderItalic.woff2", "DMSans.woff2", "Inter.woff2", "InstrumentSerif.woff2", "InstrumentSerifItalic.woff2", "JetBrainsMono.woff2", "Manrope.woff2",
+    if name not in ("Geist.woff2", "GeistMono.woff2", "Newsreader.woff2", "NewsreaderItalic.woff2", "DMSans.woff2", "Inter.woff2", "InstrumentSerif.woff2", "InstrumentSerifItalic.woff2", "JetBrainsMono.woff2", "Manrope.woff2", "ManropeLogo-800.woff2", "ManropeLogo-700.woff2",
                     "OFL.txt", "OFL-Manrope.txt", "OFL-Newsreader.txt", "OFL-DMSans.txt", "OFL-Inter.txt", "OFL-InstrumentSerif.txt", "OFL-JetBrainsMono.txt"):
         raise HTTPException(404)
     return FileResponse(STATIC / "fonts" / name, media_type="font/woff2" if name.endswith("woff2") else "text/plain",

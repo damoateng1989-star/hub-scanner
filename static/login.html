@@ -193,6 +193,10 @@ input:focus { border-color: #3DD68C !important; box-shadow: 0 0 0 3px rgba(61,21
 @font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
+/* Patch 172: the wordmark's glyphs as static 800/700 instances with overlapping contours merged, so the glass edge
+   (-webkit-text-stroke) traces only the outline — on the variable font it also drew the inner seams (e, t, h crossbars). */
+@font-face { font-family: "Manrope Logo"; src: url("/fonts/ManropeLogo-800.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+@font-face { font-family: "Manrope Logo"; src: url("/fonts/ManropeLogo-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 :root { --sans: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
         --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace !important;
         --serif: "Geist", -apple-system, sans-serif !important; }
@@ -316,6 +320,9 @@ html[data-theme="light"] body .box { background: #F8F9FD !important; }
 .ns-logo{gap:0 !important;column-gap:0 !important;word-spacing:0 !important;white-space:nowrap !important}
 .ns-logo span{font-weight:700 !important;margin:0 !important;padding:0 !important}
 html[data-theme="light"] .ns-logo, html[data-theme="light"] nav .ns-logo, html[data-theme="light"] nav .ns-logo.brand{color:#3a4656 !important}
+/* Glass wordmark (Patch 172) — dark theme only, Treatment B (glass-lite): translucent white fill with a 1px bright edge,
+   the iOS clock treatment at working size. Light theme keeps Patch 164's flat #3A4656. */
+html:not([data-theme="light"]) .ns-logo{font-family:"Manrope Logo","Manrope",Arial,sans-serif !important;color:rgba(255,255,255,.80) !important;-webkit-text-stroke:1px rgba(255,255,255,.35)}
 </style>
 </head>
 <body>
