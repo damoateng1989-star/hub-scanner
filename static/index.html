@@ -5863,23 +5863,20 @@ function bfHeatHTML(j) {
   const colMax = g.expiries.map((_, i) => Math.max(0, ...g.rows.map(r => Math.abs(Number((r.gex || [])[i]) || 0))));
   let maxStrike = null, maxExp = -1, maxVal = 0;
   g.rows.forEach(r => (r.gex || []).forEach((v, i) => { v = Number(v) || 0; if (Math.abs(v) > Math.abs(maxVal)) { maxVal = v; maxStrike = r.strike; maxExp = i; } }));
-  const nl = j.next_levels, nUp = nl && nl.next_up ? nl.next_up.strike : null, nDn = nl && nl.next_down ? nl.next_down.strike : null;
   const md = (e) => new Date(e + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
   const head = g.expiries.map(e => `<th>${md(e).toUpperCase()}</th>`).join("");
   const rowHTML = g.rows.map(r => {
-    const nx = r.strike === nUp ? "up" : r.strike === nDn ? "dn" : "";
     const cells = (r.gex || []).map((v, i) => {
       v = Number(v) || 0;
       if (r.strike === maxStrike && i === maxExp) {
-        const near = spot > 0 && Math.abs(r.strike - spot) / spot <= 0.005;
-        return `<td class="bh-max">${M(v)}${near ? "" : (r.strike < spot ? " ↓" : " ↑")}</td>`;
+        return `<td class="bh-max">${M(v)}</td>`;
       }
       const share = colMax[i] > 0 ? Math.abs(v) / colMax[i] : 0;
       if (share >= 0.40) return `<td class="${v < 0 ? "bh-sp" : "bh-sg"}">${M(v)}</td>`;
       if (share >= 0.15) return `<td class="${v < 0 ? "bh-mp" : "bh-mg"}">${M(v)}</td>`;
       return `<td class="bh-t">${M(v)}</td>`;
     }).join("");
-    return `<tr${nx ? ` class="bh-next"` : ""}><th>${r.strike}${nx ? ` <span class="bh-tag">NEXT ${nx === "up" ? "↑" : "↓"}</span>` : ""}</th>${cells}</tr>`;
+    return `<tr><th>${r.strike}</th>${cells}</tr>`;      // no NEXT tags or pull arrow in the panel (his call, Nov 18)
   });
   if (spot > 0) {
     let at = rowHTML.length;
