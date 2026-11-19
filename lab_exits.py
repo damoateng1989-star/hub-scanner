@@ -1267,11 +1267,12 @@ def _row_plain(r) -> dict:
     return d
 
 
-def _save_tprog(test, syms, done, rows, failed, failed_msg, started):
+def _save_tprog(test, syms, done, rows, failed, failed_msg, started, failed_syms=None):
     try:
         tmp = TPROG.with_suffix(".tmp")
         tmp.write_text(json.dumps(dict(test=test, days=DAYS, syms=syms, done=done, rows=[_row_plain(r) for r in rows],
-                                       failed=failed, failed_msg=failed_msg, started=started, saved=time.time()),
+                                       failed=failed, failed_msg=failed_msg, started=started, saved=time.time(),
+                                       failed_syms=list(failed_syms or [])),
                                   default=lambda o: o.item() if hasattr(o, "item") else str(o)))
         tmp.replace(TPROG)
     except Exception:
@@ -1288,6 +1289,22 @@ def _load_tprog(test, days):
     for r in p["rows"]:
         r["ex"] = {k: tuple(v) for k, v in r["ex"].items()}
     return p
+
+
+def _download(part):
+    """Bars for one chunk, patient with Alpaca's rate limit (429): up to 6 tries, waiting 15 s, 30 s, 60 s, 90 s…
+    Returns (bars, error message); bars is None when every try failed."""
+    msg = None
+    for attempt in range(6):
+        if _CANCEL.is_set():
+            raise _Stopped()
+        try:
+            return data.get_bars_many(part, DAYS), msg
+        except Exception as e:
+            msg = str(e)[:200]
+            log.warning("lab test: %s..%s failed (try %d): %s", part[0], part[-1], attempt + 1, e)
+            time.sleep(min(90, 15 * 2 ** attempt))
+    return None, msg
 
 
 def _free_mem():
@@ -1337,26 +1354,31 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             if tp:            # the same test stopped part-way: carry on from where it got to
                 syms, start_i, rows = tp["syms"], tp["done"], _compact(tp["rows"])
                 failed, failed_msg, started = tp.get("failed", 0), tp.get("failed_msg"), tp.get("started") or time.time()
+                failed_syms = tp.get("failed_syms")
+                if failed_syms is None and failed:      # saved before the list existed: retry every stock with no rows
+                    have = {r["sym"] for r in rows}
+                    failed_syms = [x for x in syms[:start_i] if x not in have]
                 log.info("lab test: %s continuing at %d/%d stocks", only_tests, start_i, len(syms))
             _set(status="running", done=start_i, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None, days=DAYS,
                  failed=failed, failed_msg=failed_msg, trades_so_far=len(rows), resumed=bool(start_i), resumes=0)
             log.info("lab test: started, %d stocks", len(syms))
+        try:
+            failed_syms
+        except NameError:
+            failed_syms = None
+        failed_syms = list(failed_syms or [])
         regime = _spy_regime()
         for i in range(start_i, len(syms), CHUNK):
             if _CANCEL.is_set():
                 raise _Stopped()
             part = syms[i:i + CHUNK]
-            bars = {}
-            for attempt in range(3):          # Alpaca rate limits come back as errors: wait and retry
-                try:
-                    bars = data.get_bars_many(part, DAYS)
-                    break
-                except Exception as e:
-                    failed_msg = str(e)[:200]
-                    log.warning("lab test: %s..%s failed (try %d): %s", part[0], part[-1], attempt + 1, e)
-                    time.sleep(10 * (attempt + 1))
-            else:
+            bars, m = _download(part)
+            if m:
+                failed_msg = m
+            if bars is None:
+                bars = {}
                 failed += len(part)
+                failed_syms += part
             for sym in part:
                 if _CANCEL.is_set():
                     raise _Stopped()
@@ -1373,7 +1395,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                  heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
             log.info("lab test: %d/%d stocks, %d breakouts", min(i + CHUNK, len(syms)), len(syms), len(rows))
             if only_tests in NAMED_TESTS:
-                _save_tprog(only_tests, syms, min(i + CHUNK, len(syms)), rows, failed, failed_msg, started)
+                _save_tprog(only_tests, syms, min(i + CHUNK, len(syms)), rows, failed, failed_msg, started, failed_syms)
             rss = _rss_mb()
             if rss > LAB_RSS_STOP_MB:
                 _free_mem()                   # the site's caches first: often enough to carry on
@@ -1384,7 +1406,36 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 _set(status="stopped", error=f"Stopped at {min(i + CHUNK, len(syms))}/{len(syms)} stocks ({int(rss)} MB) to stay under the server's {MEM_LIMIT_MB} MB limit.{more}")
                 log.info("lab test: stopped at %d MB to stay under the memory limit", int(rss))
                 return
-            time.sleep(0.2)                   # leave room for the site and the live scan
+            time.sleep(1.0)                   # leave room for the site, the live scan and Alpaca's rate limit
+        if failed_syms:                       # one more pass over the stocks that couldn't download, slower
+            _set(failed_msg=f"Retrying the {len(failed_syms)} stocks that couldn't download…", heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
+            log.info("lab test: retrying %d stocks that failed to download", len(failed_syms))
+            time.sleep(30)
+            still = []
+            for k in range(0, len(failed_syms), 10):
+                part = failed_syms[k:k + 10]
+                bars, m = _download(part)
+                if bars is None:
+                    still += part
+                    continue
+                failed -= len(part)
+                for sym in part:
+                    try:
+                        b = bars.get(sym)
+                        if b is not None and not b.empty:
+                            rows.extend(_compact(trades_for(sym, engine.to_4h(b), s, regime, only_tests)))
+                    except Exception:
+                        traceback.print_exc()
+                bars = None
+                gc.collect()
+                _set(failed=failed, trades_so_far=len(rows), heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
+                time.sleep(3)
+            failed_syms = still
+            if not still:
+                failed_msg = None
+            _set(failed=failed, failed_msg=failed_msg)
+            if only_tests in NAMED_TESTS:
+                _save_tprog(only_tests, syms, len(syms), rows, failed, failed_msg, started, failed_syms)
         if not rows and only_tests == "dbstk" and failed < len(syms):
             raise RuntimeError("no double bottom A retests in this period, so there is nothing to compare")
         if not rows and only_tests == "gapstk" and failed < len(syms):
