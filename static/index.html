@@ -2659,6 +2659,66 @@ html:not([data-theme="light"]) .chip { background: var(--glass-soft) !important;
 /* The selected chip keeps its white fill (L1965, untouched) and only gains the pill. */
 html:not([data-theme="light"]) body .chip.on, html:not([data-theme="light"]) body .chip.active { border-radius: 999px !important; }
 </style>
+<style>
+/* ================= Liquid Glass, stronger (follow-up to Patch 171) =================
+   Dark theme only. Glass only reads when there is something behind it, so the page gets brighter colour glows
+   (fixed to the screen), and every surface gets the iOS recipe: a see-through white-tinted fill, heavy blur +
+   saturation where something sits behind it, a bright specular top edge and a soft inner glow.
+   The shelf card's blur lives on a ::before layer instead of the card itself: a backdrop-filter on .brief would
+   trap the fixed heat-map panel (Patch 166), a pseudo-element's would not, so the card stays frosted with the
+   heat map open too. */
+html:not([data-theme="light"]) {
+  --lg-fill: linear-gradient(160deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.04) 38%, rgba(255,255,255,.025) 70%, rgba(255,255,255,.06) 100%);
+  --lg-line: rgba(255,255,255,.15);
+  --lg-shine: inset 0 1px 0 rgba(255,255,255,.38), inset 1px 0 0 rgba(255,255,255,.07), inset -1px 0 0 rgba(255,255,255,.04), inset 0 -1px 0 rgba(255,255,255,.06), inset 0 0 30px rgba(255,255,255,.025);
+  --lg-drop: 0 18px 50px rgba(0,0,0,.40);
+  --lg-blur: blur(30px) saturate(1.9) brightness(1.05);
+}
+html:not([data-theme="light"]) body { background-color: #000 !important; background-attachment: fixed !important;
+  background-image:
+    radial-gradient(ellipse 60% 45% at 88% -6%, rgba(46,104,255,.34), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 18% 28%, rgba(132,74,255,.16), transparent 70%),
+    radial-gradient(ellipse 55% 45% at 6% 104%, rgba(255,166,48,.20), transparent 70%),
+    radial-gradient(ellipse 45% 40% at 96% 92%, rgba(0,196,170,.13), transparent 70%) !important; }
+
+/* page surfaces: sidebar, panels, stat cards, phone tab bar */
+html:not([data-theme="light"]) .side, html:not([data-theme="light"]) nav.bottom {
+  background: var(--lg-fill), rgba(14,16,22,.30) !important; border-color: var(--lg-line) !important;
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); box-shadow: var(--lg-shine), var(--lg-drop) !important; }
+html:not([data-theme="light"]) .panel, html:not([data-theme="light"]) .kpi, html:not([data-theme="light"]) .week, html:not([data-theme="light"]) .retest, html:not([data-theme="light"]) .rule1, html:not([data-theme="light"]) .setup, html:not([data-theme="light"]) .hm-card, html:not([data-theme="light"]) .board-frame, html:not([data-theme="light"]) .feed, html:not([data-theme="light"]) .acct, html:not([data-theme="light"]) .step, html:not([data-theme="light"]) .mb, html:not([data-theme="light"]) .install-banner {
+  background: var(--lg-fill), rgba(10,12,18,.35) !important; border: 1px solid var(--lg-line) !important;
+  border-radius: 24px !important; box-shadow: var(--lg-shine), var(--lg-drop) !important; }
+
+html:not([data-theme="light"]) .mb-chip, html:not([data-theme="light"]) .style-opt, html:not([data-theme="light"]) form.cmd {
+  background: var(--lg-fill), rgba(255,255,255,.02) !important; border: 1px solid var(--lg-line) !important; box-shadow: var(--lg-shine) !important; }
+/* the shelf card: a clear, frosted sheet over the page */
+html:not([data-theme="light"]) .brief, html:not([data-theme="light"]) body.heat-on .brief {
+  background: rgba(8,10,16,.34) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  box-shadow: var(--lg-shine), 0 30px 90px rgba(0,0,0,.55) !important; border-left-color: var(--lg-line) !important; }
+html:not([data-theme="light"]) .brief::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); }
+html:not([data-theme="light"]) .brief { isolation: isolate; }
+html:not([data-theme="light"]) #bfMap .mp-card, html:not([data-theme="light"]) .mp-card {
+  background: var(--lg-fill), rgba(255,255,255,.015) !important; border: 1px solid var(--lg-line) !important;
+  border-radius: 24px !important; box-shadow: var(--lg-shine), 0 10px 30px rgba(0,0,0,.25) !important; }
+html:not([data-theme="light"]) .mp-cells > *, html:not([data-theme="light"]) .mp-qs > * {
+  border-radius: 16px; }
+html:not([data-theme="light"]) .bf-foot { background: linear-gradient(180deg, rgba(8,10,16,0), rgba(8,10,16,.55) 40%) !important; border-top-color: transparent !important; }
+html:not([data-theme="light"]) .bf-x, html:not([data-theme="light"]) .mp-planbtn, html:not([data-theme="light"]) .mp-head .mp-upd {
+  background: var(--lg-fill), rgba(255,255,255,.03) !important; border: 1px solid var(--lg-line) !important;
+  box-shadow: var(--lg-shine) !important; border-radius: 999px !important; }
+
+/* Sika's panels: clearer and frostier */
+html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-pop {
+  background: var(--lg-fill), rgba(10,12,18,.42) !important; border-color: var(--lg-line) !important;
+  -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); box-shadow: var(--lg-shine), 0 30px 80px rgba(0,0,0,.55) !important; }
+html:not([data-theme="light"]) .btnx, html:not([data-theme="light"]) .chip:not(.on):not(.active) {
+  background: var(--lg-fill), rgba(255,255,255,.02) !important; border-color: var(--lg-line) !important; box-shadow: var(--lg-shine) !important; }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html:not([data-theme="light"]) .brief, html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-pop,
+  html:not([data-theme="light"]) .side, html:not([data-theme="light"]) nav.bottom { background: rgba(14,16,22,.94) !important; }
+}
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
