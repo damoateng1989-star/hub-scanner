@@ -176,6 +176,31 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                          ("Clear path to the 2R target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
                 stk = dict(name="Stacked Gap Fade", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
                            rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1)
+        if stk is None:      # a live double bottom (neckline broken, still in play): the Stacked Double Bottom checklist
+            import patterns
+            A = res["atr"].to_numpy(float)
+            n = len(c4)
+            t = None
+            for p in patterns._find_doubles(c4, A, res["close"]):
+                if p["kind"] == "double_bottom" and p["brk"] is not None and not p["active"]:
+                    i0, e = p["brk"], float(p["neck"])
+                    tg, _ = patterns._target(res, p["a"], 1, e, float(A[i0]), scanner.SETTINGS)
+                    o = patterns._outcome(res["close"], i0, 1, e, tg, scanner.SETTINGS)
+                    if o["outcome"] == "pending":
+                        t = dict(hub=dict(start_i=p["a"], end_i=i0 - 1, low=p["cl"], high=p["ch"]), edge=e, target=tg)
+            if t:
+                cands = stacked.History(c4, res).at(n - 1, own_hub=t["hub"], price=last)
+                cands = [c for c in cands if abs(c["price"] - last) <= BAND * last]
+                cands += [c for c in _cands(sym, c4, res, st, last, with_gamma) if c["group"] in ("wall", "shelf", "summed")]
+                chk = stacked.check(cands, 1, float(t["edge"]), last, float(t["target"]), tol)
+                rules = [("Double bottom confirmed: a 4H close above the neckline", True),
+                         ("Neckline stacked: " + (", ".join(stacked.KIND.get(k, k) for k in chk["trig_kinds"]) or "nothing else on it"), chk["trig_stacked"]),
+                         ("Target on a stack: " + (f"nearest stack ${chk['stack_target']:,.2f}" if chk["stack_target"] else "no stack beyond the entry")
+                          + (f"; the ${float(t['target']):,.2f} target has {', '.join(stacked.KIND.get(k, k) for k in chk['tgt_kinds'])} on it" if chk["target_stacked"] else ""),
+                          chk["target_stacked"] or chk["stack_target"] is not None),
+                         ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
+                stk = dict(name="Stacked Double Bottom", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
+                           rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1)
     except Exception as e:
         log.warning("stacked shelf %s: %s", sym, e)
     out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma, stacked=stk,
