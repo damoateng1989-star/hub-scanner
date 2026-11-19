@@ -7678,7 +7678,8 @@ const ASK_SCAN_KINDS = [
   ["hubs", "hub"], ["hub", "hub"],
 ];
 const ASK_SCAN_VERBS = ["find", "scan", "show", "list", "any", "give me", "got any", "looking for", "what's", "whats", "what are", "are there", "which"];
-const ASK_SCAN_STOP = new Set(["on", "it", "in", "is", "at", "to", "of", "be", "do", "go", "so", "no", "or", "an", "as", "by", "up", "us", "am", "if", "my", "me", "we", "he"]);
+const ASK_SCAN_STOP = new Set(["on", "it", "in", "is", "at", "to", "of", "be", "do", "go", "so", "no", "or", "an", "as", "by", "up", "us", "am", "if", "my", "me", "we", "he",
+  "all", "any", "and", "the", "for", "now", "new", "rip", "top", "out", "are", "can", "get", "see", "buy", "has", "how", "why", "who", "big", "low", "one", "two", "day", "pay", "fade", "gap", "run", "hot", "best", "good", "real", "plan"]);
 const ASK_SCAN_NONE = {
   all: "No qualifying setups are in play on the board right now.",
   hub: "No hubs breaking out or breaking down right now.",
@@ -7712,6 +7713,11 @@ function askSikaBoardSymbols() {
   return out;
 }
 function askSikaTickersIn(raw) {
+  // In a normal sentence a ticker is typed in capitals ("setups on AMAT"); lowercase words are words, so "all",
+  // "rip", "now" never turn into Allstate etc. In an all-caps message capitals tell us nothing, so fall back to the
+  // stop list and drop one-letter words.
+  const shout = askSikaShout(raw);
+  const capsTyped = new Set(String(raw || "").split(/\s+/).map(t => t.replace(/[^A-Za-z0-9.\-]/g, "").replace(/^\$/, "")).filter(t => /[A-Z]/.test(t) && t === t.toUpperCase()).map(t => t.toUpperCase()));
   const m = askSikaScanKind(raw);
   const rest = m ? askSikaStripKind(raw, m.phrase) : askSikaNorm(raw);
   const boardSyms = askSikaBoardSymbols();
@@ -7720,6 +7726,7 @@ function askSikaTickersIn(raw) {
     tok = tok.replace(/'s$/, "").toUpperCase();
     if (!tok || found.includes(tok)) continue;
     if (tok.length < 2 || ASK_SCAN_STOP.has(tok.toLowerCase())) continue;   // "give me a set up": a, me, on are words here, not Agilent etc.
+    if (!shout && !capsTyped.has(tok)) continue;
     if (ASK_SCAN_SYMBOLS.has(tok)) { found.push(tok); continue; }
     if (tok.length >= 2 && !ASK_SCAN_STOP.has(tok.toLowerCase()) && boardSyms.has(tok)) found.push(tok);
   }
@@ -7980,6 +7987,20 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
         ASK_SCAN_SYMBOLS = new Set((data.rows || []).map(r => r.symbol));
         await waitMin();
         if (reading) { reading.className = "ask-msg ask-sika ask-scanmsg"; reading.innerHTML = askSikaScanHTML(data, scanKind); }
+        // Grades still being worked out: they finish in the background, so re-check and redraw this same list
+        // (every 8 s, up to about a minute) until every row has a real grade.
+        const pend = (d) => (d.rows || []).some(r => !r.grade || r.grade === "?");
+        if (reading && pend(data)) {
+          const req = {kind: scanKind, limit: more ? 60 : 8};
+          for (let k = 0; k < 8 && reading.isConnected; k++) {
+            await new Promise(r => setTimeout(r, 8000));
+            let d2; try { d2 = await api("/api/sika/find", {method: "POST", timeout: 30000, body: JSON.stringify(req)}); } catch (e) { continue; }
+            if (!reading.isConnected) break;
+            reading.innerHTML = askSikaScanHTML(d2, scanKind);
+            ASK_SCAN_SYMBOLS = new Set((d2.rows || []).map(r => r.symbol));
+            if (!pend(d2)) break;
+          }
+        }
       } catch (e) {
         const fallback = "Sika couldn't answer that right now.";
         askSikaHistory("sika", fallback);
