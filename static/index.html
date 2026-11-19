@@ -7628,6 +7628,23 @@ function askSikaSay(html, cls) {
   body.scrollTop = body.scrollHeight;
   return d;
 }
+// The typing bubble for answers Sika builds itself (a ticker's play, your watchlist, which side, the stop): the dots
+// show at once and the answer replaces them in place after a short beat, the same feel as a model answer.
+const ASK_TYPE_MIN = 1500;
+function askSikaTyping() {
+  const el = askSikaSay('<span class="ask-typing-dots" aria-label="Sika is typing"><i></i><i></i><i></i></span>', "ask-typing");
+  const t0 = Date.now();
+  const say = async (html, cls) => {
+    const w = Math.max(0, ASK_TYPE_MIN - (Date.now() - t0));
+    if (w) await new Promise(r => setTimeout(r, w));
+    if (!el || !el.isConnected) return askSikaSay(html, cls);
+    el.className = "ask-msg " + (cls || "ask-sika"); el.innerHTML = html;
+    const body = $("askBody"); if (body) body.scrollTop = body.scrollHeight;
+    return el;
+  };
+  say.cancel = () => { if (el && el.isConnected) el.remove(); };
+  return say;
+}
 function askSikaHistory(role, text) {
   ASK_HISTORY.push({role, text: String(text || "").slice(0, 1200)});
   ASK_HISTORY = ASK_HISTORY.slice(-10);
@@ -7938,6 +7955,7 @@ async function askSikaProcess(raw, skipEcho) {
   if (!more && /^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
     if (ASK_SYMBOL !== ticker) { ASK_SYMBOL = ticker; ASK_HISTORY = []; }
     askSikaHistory("user", `Let's discuss ${ticker}.`);
+    const say = askSikaTyping();
     if (ME && !ME.guest && (isPro() || ME.options)) {
       const c = await askSikaCard(ticker);
       let reply = "", tone = "";
@@ -7970,16 +7988,16 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
         // and the plain-text play renders instead — same values, no colour.
         const cardHtml = (c && c.state === "live" && c.favored) ? askSikaPlayHTML(ticker, c) : null;
         if (cardHtml) {
-          askSikaSay(cardHtml, "ask-play " + (c.favored.side === "calls" ? "ask-calls" : "ask-puts"));
+          await say(cardHtml, "ask-play " + (c.favored.side === "calls" ? "ask-calls" : "ask-puts"));
         } else {
-          askSikaSay(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`, "ask-sika" + tone);
+          await say(`<p class="sp-hint">${esc(reply).replace(/\n/g, "<br>")}</p>`, "ask-sika" + tone);
         }
         return;
       }
     }
     const fallback = `I'm ready to discuss ${ticker}. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.`;
     askSikaHistory("sika", fallback);
-    askSikaSay(`<p class="sp-hint">I'm ready to discuss <b>${esc(ticker)}</b>. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.</p>`);
+    await say(`<p class="sp-hint">I'm ready to discuss <b>${esc(ticker)}</b>. Ask me what is driving the setup, where price sits in the hub, or what could invalidate it.</p>`);
     return;
   }
 
@@ -7990,9 +8008,9 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
 
   if (!more && askSikaAttnAsk(raw) && ME && !ME.guest) {
     askSikaHistory("user", raw);
-    const html = askSikaAttnHTML();
+    const say = askSikaTyping(), html = askSikaAttnHTML();
     askSikaHistory("sika", html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
-    askSikaSay(html, "ask-sika ask-scanmsg");
+    await say(html, "ask-sika ask-scanmsg");
     ASK_SCAN_SYMBOLS = new Set([...ASK_SCAN_SYMBOLS, ...TICKERS.map(t => t.symbol)]);
     return;
   }
@@ -8063,22 +8081,26 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
   // "Calls or puts?", "which side?", "bullish or bearish?": answer with the play card itself (green for calls,
   // red for puts) when the ticker has a live favored play. Otherwise Sika answers in words as before.
   if (askSikaSideAsk(raw)) {
+    const say = askSikaTyping();
     const c = await askSikaCard(ASK_SYMBOL);
     const html = c && c.state === "live" && c.favored ? askSikaPlayHTML(ASK_SYMBOL, c) : null;
+    if (!html) say.cancel();
     if (html) {
       const f = c.favored, other = c.opposite;
       askSikaHistory("user", raw);
       askSikaHistory("sika", `The favored side for ${ASK_SYMBOL} is ${f.side}: trigger ${f.trigger.text}, target ${(f.targets || []).join(" · ")}, wrong if ${f.wrong_if}.`
         + (other && other.trigger ? ` The other side (${other.side}) is only on a break: ${other.trigger.text}.` : ""));
-      askSikaSay(html, "ask-play " + (f.side === "calls" ? "ask-calls" : "ask-puts"));
+      await say(html, "ask-play " + (f.side === "calls" ? "ask-calls" : "ask-puts"));
       return;
     }
   }
   // "What could invalidate it?", "where's the stop?", "when is it wrong?": the card already holds the answer
   // (wrong-if and the other side's trigger), so answer straight from it — no model call that could fail or hedge.
   if (askSikaWrongAsk(raw)) {
+    const say = askSikaTyping();
     const c = await askSikaCard(ASK_SYMBOL);
     const f = c && c.state === "live" && c.favored;
+    if (!(f && f.wrong_if)) say.cancel();
     if (f && f.wrong_if) {
       const o = c.opposite, side = f.side === "puts" ? "puts" : "calls";
       const txt = `${ASK_SYMBOL}'s ${side} play is wrong on a ${f.wrong_if.replace(/^4H/, "4-hour")}. That close is the line: once it prints, the setup has failed and the plan says get out.`
@@ -8086,7 +8108,7 @@ Ask me what is driving the setup, where price sits in the hub, or what could inv
         + ` A wick through the level doesn't count; only the 4-hour close does.`;
       askSikaHistory("user", raw);
       askSikaHistory("sika", txt);
-      askSikaSay(`<p class="sp-hint">${esc(txt)}</p>`);
+      await say(`<p class="sp-hint">${esc(txt)}</p>`);
       return;
     }
   }
