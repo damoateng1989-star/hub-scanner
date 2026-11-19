@@ -4314,7 +4314,7 @@ async function runLabExits(btn, testsOnly) {
   btn.disabled = true; btn.textContent = "Starting…";
   let r;
   const yrs = ($("labYears") && +$("labYears").value) || 2;
-  try { r = await api("/api/admin/lab/exits/run?years=" + yrs + (testsOnly === "gapgo" ? "&test=gapgo" : testsOnly ? "&tests_only=true" : ""), {method: "POST", timeout: 60000}); }
+  try { r = await api("/api/admin/lab/exits/run?years=" + yrs + (typeof testsOnly === "string" ? "&test=" + testsOnly : testsOnly ? "&tests_only=true" : ""), {method: "POST", timeout: 60000}); }
   catch (e) { btn.disabled = false; btn.textContent = "Run the test"; toast("Couldn't start the test: " + e.message); return; }
   if (r && r.started === false) toast("The test is already running.");
   setTimeout(loadLabExits, 1500);
@@ -4331,7 +4331,8 @@ function renderLabExits() {
         : `<span style="display:inline-flex;gap:6px;align-items:center"><label class="note" style="margin:0">Test period <select id="labYears" title="How far back to test. Longer covers more market conditions (5 years includes the 2022 bear market) but takes longer: about an hour per year.">${[2, 3, 5, 10].map(y => `<option value="${y}"${y === Math.round((L.days || 720) / 360) || (y === 2 && (L.days || 720) <= 730) ? " selected" : ""}>${y} years</option>`).join("")}</select></label>
            <button class="btnx sm" onclick="runLabExits(this)">${R ? "Run again" : "Run the test"}</button>
            <button class="btnx sm" title="Only the Test · setups (hub floor bounce, close above a resting hub, gap fade bought at the open). Much lighter on memory and faster; keeps the last full run's results for everything else." onclick="runLabExits(this, true)">Run only the tests</button>
-           <button class="btnx sm" title="Only the gap fade test: buy the open vs wait for the close. Daily candles only, no hub scan: the lightest run." onclick="runLabExits(this, 'gapgo')">Run gap-open test</button></span>`}</div>`
+           <button class="btnx sm" title="Only the gap fade test: buy the open vs wait for the close. Daily candles only, no hub scan: the lightest run." onclick="runLabExits(this, 'gapgo')">Run gap-open test</button>
+           <button class="btnx sm" title="Only the Stacked Shelf test: A+B hub retests with stacked trigger / stacked target / clear path, using only price levels known at the time." onclick="runLabExits(this, 'stacked')">Run Stacked Shelf test</button></span>`}</div>`
     + (L.status === "stopped" ? `<p class="note" style="padding:0 18px 8px;margin:0">The last run was stopped.${L.error ? " " + esc(L.error) : ""}${R ? " The results below are from the last run that finished." : ""}</p>` : "")
     + (L.status === "done" && L.tests_only && R && R.tests_run ? `<p class="note" style="padding:0 18px 8px;margin:0">The Test · rows below are from a tests-only run (${new Date(R.tests_run).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}). Everything else is from the last full run.</p>` : "")
     + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");
@@ -5364,8 +5365,12 @@ function levelsCardHTML(sym) {
   const mv = (d.movers || []).length && d.since ? `<div class="lv-mv"><span>Gamma change since ${esc(new Date(d.since + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}))}</span>`
     + d.movers.slice(0, 4).map(m => `<b class="${m.change >= 0 ? "u" : "d"}">${esc(money(m.strike))} ${m.change >= 0 ? "+" : "−"}${(Math.abs(m.change) / 1e6).toFixed(2)}M</b>`).join("")
     + `<small>Net gamma added up across the nearest 8 expiries: + means more call gamma, − more put gamma. Part of a change can be an expiry rolling off.</small></div>` : "";
-  return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div>${d.above.map(row).join("")}${now}${d.below.map(row).join("")}
-    ${mv}<p class="lv-note">${d.gamma_locked ? "Options walls and gamma levels are on Pro. " : ""}Levels within ${esc(money(d.tolerance))} of each other are stacked; ${"N×"} = how many kinds agree. Where price may react, not a prediction.</p></div>`;
+  const S = d.stacked;
+  const stk = S ? `<div class="lv-stk ${S.ok ? "on" : ""}"><div class="lv-stk-h"><b>Stacked Shelf</b><span>${S.ok ? "✓ all rules met" : `${S.passed} of ${S.total}`}</span></div>`
+    + S.rules.map(r => `<div class="lv-stk-r ${r.ok ? "y" : "n"}"><i>${r.ok ? "✓" : "✗"}</i>${esc(r.text)}</div>`).join("")
+    + `<small>Being tested in the Lab (price levels only). Not a buy signal.</small></div>` : "";
+  return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div>${stk}${d.above.map(row).join("")}${now}${d.below.map(row).join("")}
+    ${mv}<p class="lv-note">${d.gamma_locked ? "Options walls and gamma levels are on Pro. " : ""}Levels within ${esc(money(d.tolerance))} of each other are stacked; ${"N×"} = how many kinds agree (round numbers don't count on their own, moving averages only as a cluster). Where price may react, not a prediction.</p></div>`;
 }
 function mapSidePaint() {
   const el = $("mpSide"); if (!el || !BRIEF_SYM || !MAP_ON()) return;
@@ -8918,6 +8923,13 @@ html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
 .mp-lv .lv-mv span { width: 100%; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--mp-mut); }
 .mp-lv .lv-mv b { font: 700 12px var(--mono); } .mp-lv .lv-mv b.u { color: #3DD68C; } .mp-lv .lv-mv b.d { color: #FF6B5E; }
 .mp-lv .lv-mv small { width: 100%; color: var(--mp-mut); opacity: .75; font-size: 10.5px; }
+.mp-lv .lv-stk { border: 1px solid var(--mp-line); border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; display: grid; gap: 5px; }
+.mp-lv .lv-stk.on { border-color: rgba(61,214,140,.55); box-shadow: 0 0 16px rgba(61,214,140,.12); }
+.mp-lv .lv-stk-h { display: flex; justify-content: space-between; align-items: baseline; } .mp-lv .lv-stk-h b { font-size: 13.5px; }
+.mp-lv .lv-stk-h span { font: 700 11.5px var(--mono); color: var(--mp-mut); } .mp-lv .lv-stk.on .lv-stk-h span { color: #3DD68C; }
+.mp-lv .lv-stk-r { font-size: 12px; color: var(--mp-mut); display: flex; gap: 7px; } .mp-lv .lv-stk-r i { font-style: normal; font-weight: 800; }
+.mp-lv .lv-stk-r.y i { color: #3DD68C; } .mp-lv .lv-stk-r.n i { color: #FF6B5E; }
+.mp-lv .lv-stk small { font-size: 10.5px; color: var(--mp-mut); opacity: .75; }
 .mp-lv .lv-note { margin: 4px 0 0; font-size: 11px; color: var(--mp-mut); opacity: .8; }
 html[data-theme="light"] .mp-lv .lv-p b { color: #0d1117; } html[data-theme="light"] .mp-lv .lv-now { background: rgba(13,17,23,.05); }
 html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x { color: #15803d; } html[data-theme="light"] .mp-lv .lv-p .d { color: #dc2626; }

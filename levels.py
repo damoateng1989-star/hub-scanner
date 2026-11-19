@@ -82,12 +82,13 @@ def _stacks(cands, last, tol):
         stacks.append(cur)
     out = []
     for s in stacks:
+        import stacked
         groups = {c["group"] for c in s}
-        if groups == {"round"} or (len(groups) == 1 and len(s) == 1 and groups <= {"ma", "high"}):
-            continue                                  # a lone round number or a single MA is not a level to watch
+        if not stacked.kinds_of(s):
+            continue                                  # round numbers alone, or a single moving average, are not levels to watch
         anchor = next((c for g in ("wall", "summed", "hub", "shelf", "high") for c in s if c["group"] == g), None)
         price = anchor["price"] if anchor else sum(c["price"] for c in s) / len(s)
-        kinds = len({("gamma" if c["group"] in ("shelf", "summed") else c["group"]) for c in s})
+        kinds = len(stacked.kinds_of(s))           # same counting as the Stacked Shelf: no round numbers, MAs only as a cluster
         score = kinds + (1 if groups & {"wall", "summed"} else 0) + (0.5 if "hub" in groups else 0)
         seen, items = set(), []
         for c in sorted(s, key=lambda c: ("wall", "summed", "shelf", "hub", "high", "ma", "round").index(c["group"])):
@@ -133,7 +134,32 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
             movers, since = (sm or {}).get("movers") or [], (sm or {}).get("since")
         except Exception:
             pass
-    out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma,
+    stk = None
+    try:       # the Stacked Shelf checklist, for a live hub breakout
+        import stacked
+        if st.get("state") in ("breakout_up", "breakdown") and st.get("target"):
+            d = 1 if st.get("direction", "up") == "up" else -1
+            h = res["hubs"][-1] if res.get("hubs") else None
+            edge = (st.get("retest") or {}).get("edge") or (h and (h["high"] if d == 1 else h["low"]))
+            if edge:
+                own = {round(x, 2) for x in (h and (h["high"], h["low"]) or ()) } | {round(float(st.get(k) or 0), 2) for k in ("trigger_up", "trigger_down")}
+                # the same price levels the Lab test uses (no pivots from inside this hub, older hubs only if well
+                # before it), plus the gamma levels for Pro
+                cands = stacked.History(c4, res).at(len(c4) - 1, own_hub=h, price=last)
+                cands = [c for c in cands if round(c["price"], 2) not in own and abs(c["price"] - last) <= BAND * last]
+                cands += [c for c in _cands(sym, c4, res, st, last, with_gamma) if c["group"] in ("wall", "shelf", "summed")]
+                chk = stacked.check(cands, d, float(edge), last, float(st["target"]), tol)
+                rules = [("Hub breakout confirmed by a 4H close", True),
+                         ("Trigger stacked: " + (", ".join(stacked.KIND.get(k, k) for k in chk["trig_kinds"]) or "nothing else on the hub edge"), chk["trig_stacked"]),
+                         ("Target on a stack: " + (f"nearest stack ${chk['stack_target']:,.2f}" if chk["stack_target"] else "no stack beyond the entry")
+                          + (f"; the ${float(st['target']):,.2f} shelf has {', '.join(stacked.KIND.get(k, k) for k in chk['tgt_kinds'])} on it" if chk["target_stacked"] else ""),
+                          chk["target_stacked"] or chk["stack_target"] is not None),
+                         ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
+                stk = dict(ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
+                           rules=[dict(text=t, ok=bool(v)) for t, v in rules], stack_target=chk["stack_target"], direction=d)
+    except Exception as e:
+        log.warning("stacked shelf %s: %s", sym, e)
+    out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma, stacked=stk,
                above=pick("above"), below=pick("below"), movers=movers, since=since)
     with _LOCK:
         _CACHE[key] = (time.time(), out)
