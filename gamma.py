@@ -144,6 +144,38 @@ NEXT_LEVEL_SHARE = 0.25     # a node counts when its |net GEX| is at least this 
 
 
 SUMMED_EXPIRIES = 8
+_DAILY_READY = False
+
+
+def _daily_table():
+    """One row per symbol per day: the summed net GEX by strike, so a strike's change since the last session can
+    be shown. Written whenever summed() runs (the last write of the day wins); kept 30 days."""
+    global _DAILY_READY
+    if _DAILY_READY:
+        return
+    import db
+    with db._lock:
+        db._conn.execute("CREATE TABLE IF NOT EXISTS gex_daily (symbol TEXT, day TEXT, net TEXT, PRIMARY KEY (symbol, day))")
+        db._conn.commit()
+    _DAILY_READY = True
+
+
+def _daily_record(sym: str, net: dict) -> dict | None:
+    """Save today's summed net-by-strike for sym and return the previous session's ({strike: gex}) or None."""
+    try:
+        import db
+        _daily_table()
+        today = datetime.now(_NY).date().isoformat()
+        db._run("INSERT OR REPLACE INTO gex_daily (symbol, day, net) VALUES (?, ?, ?)",
+                (sym, today, json.dumps({f"{k:g}": round(v, 1) for k, v in net.items()}, separators=(",", ":"))))
+        db._run("DELETE FROM gex_daily WHERE day < ?", ((datetime.now(_NY).date() - timedelta(days=30)).isoformat(),))
+        r = db._run("SELECT day, net FROM gex_daily WHERE symbol = ? AND day < ? ORDER BY day DESC LIMIT 1", (sym, today)).fetchone()
+        if not r:
+            return None
+        return dict(day=r["day"], net={float(k): float(v) for k, v in json.loads(r["net"]).items()})
+    except Exception as e:
+        log.warning("gex daily record failed for %s: %s", sym, e)
+        return None
 
 
 def summed(symbol: str, spot: float | None, fetch: bool = True, n_exp: int = SUMMED_EXPIRIES) -> dict | None:
@@ -180,7 +212,22 @@ def summed(symbol: str, spot: float | None, fetch: bool = True, n_exp: int = SUM
                  if top > 0 and abs(net[k]) >= NEXT_LEVEL_SHARE * top
                  and (i == 0 or abs(net[k]) > abs(net[ks[i - 1]])) and (i == len(ks) - 1 or abs(net[k]) > abs(net[ks[i + 1]]))]
         nodes.sort(key=lambda n: -abs(n["gex"]))
-        return dict(expiries=[e.isoformat() for e in exps], nodes=nodes[:8])
+        nodes = nodes[:8]
+        # day over day: the same strike's summed net GEX at the last session ("Node Momentum")
+        prev = _daily_record(sym, net)
+        movers = []
+        if prev:
+            pn = prev["net"]
+            for n in nodes:
+                if n["strike"] in pn:
+                    n["prev"] = round(pn[n["strike"]], 1)
+                    n["change"] = round(n["gex"] - pn[n["strike"]], 1)
+            ch = {k: net[k] - pn.get(k, 0.0) for k in set(net) | set(pn) if k in net}
+            topc = max((abs(v) for v in ch.values()), default=0.0)
+            movers = sorted(({"strike": k, "gex": round(net[k], 1), "change": round(v, 1)} for k, v in ch.items()
+                             if topc and abs(v) >= 0.25 * topc), key=lambda m: -abs(m["change"]))[:6]
+        return dict(expiries=[e.isoformat() for e in exps], nodes=nodes,
+                    since=prev["day"] if prev else None, movers=movers)
     except Exception as e:
         log.warning("summed gamma failed for %s: %s", symbol, e)
         return None
@@ -547,6 +594,7 @@ def snapshot_symbol(symbol: str, spot: float | None) -> bool:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload, separators=(",", ":"), allow_nan=False), encoding="utf-8")
         os.replace(tmp, path)
+        summed(sym, float(spot), fetch=False)      # also records today's summed gamma for the day-over-day change
         return True
     except Exception as exc:
         log.warning("GEX snapshot skipped for %s: %s", sym, exc)

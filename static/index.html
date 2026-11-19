@@ -5361,8 +5361,11 @@ function levelsCardHTML(sym) {
       <div class="lv-w">${tag}${what}${plan}</div></div>`;
   };
   const now = `<div class="lv-now">Price ${esc(money(d.price))}</div>`;
+  const mv = (d.movers || []).length && d.since ? `<div class="lv-mv"><span>Gamma change since ${esc(new Date(d.since + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}))}</span>`
+    + d.movers.slice(0, 4).map(m => `<b class="${m.change >= 0 ? "u" : "d"}">${esc(money(m.strike))} ${m.change >= 0 ? "+" : "−"}${(Math.abs(m.change) / 1e6).toFixed(2)}M</b>`).join("")
+    + `<small>Net gamma added up across the nearest 8 expiries: + means more call gamma, − more put gamma. Part of a change can be an expiry rolling off.</small></div>` : "";
   return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div>${d.above.map(row).join("")}${now}${d.below.map(row).join("")}
-    <p class="lv-note">${d.gamma_locked ? "Options walls and gamma levels are on Pro. " : ""}Levels within ${esc(money(d.tolerance))} of each other are stacked; ${"N×"} = how many kinds agree. Where price may react, not a prediction.</p></div>`;
+    ${mv}<p class="lv-note">${d.gamma_locked ? "Options walls and gamma levels are on Pro. " : ""}Levels within ${esc(money(d.tolerance))} of each other are stacked; ${"N×"} = how many kinds agree. Where price may react, not a prediction.</p></div>`;
 }
 function mapSidePaint() {
   const el = $("mpSide"); if (!el || !BRIEF_SYM || !MAP_ON()) return;
@@ -8911,6 +8914,10 @@ html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
 .mp-lv .lv-x { display: inline-block; margin-right: 6px; padding: 1px 6px; border-radius: 999px; background: rgba(61,214,140,.14); color: #3DD68C; font: 800 11px var(--mono); }
 .mp-lv .lv-now { margin: 4px 0; padding: 5px 10px; border-radius: 8px; background: rgba(255,255,255,.06); font: 600 11.5px var(--mono); color: var(--mp-mut); text-align: center; }
 .mp-lv .lv-plan { margin-top: 4px; font-size: 11.5px; color: var(--mp-mut); border-left: 2px solid rgba(242,193,78,.6); padding-left: 7px; }
+.mp-lv .lv-mv { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--mp-line); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; font-size: 12px; }
+.mp-lv .lv-mv span { width: 100%; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--mp-mut); }
+.mp-lv .lv-mv b { font: 700 12px var(--mono); } .mp-lv .lv-mv b.u { color: #3DD68C; } .mp-lv .lv-mv b.d { color: #FF6B5E; }
+.mp-lv .lv-mv small { width: 100%; color: var(--mp-mut); opacity: .75; font-size: 10.5px; }
 .mp-lv .lv-note { margin: 4px 0 0; font-size: 11px; color: var(--mp-mut); opacity: .8; }
 html[data-theme="light"] .mp-lv .lv-p b { color: #0d1117; } html[data-theme="light"] .mp-lv .lv-now { background: rgba(13,17,23,.05); }
 html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x { color: #15803d; } html[data-theme="light"] .mp-lv .lv-p .d { color: #dc2626; }

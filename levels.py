@@ -62,7 +62,9 @@ def _cands(sym, c4, res, st, last, with_gamma):
                     add(r["strike"], f"gamma shelf {abs(r['gex']) / 1e6:.2f}M", "shelf")
             sm = gamma.summed(sym, last, fetch=False)
             for n in (sm or {}).get("nodes") or []:
-                add(n["strike"], f"gamma node {abs(n['gex']) / 1e6:.2f}M (all expiries)", "summed")
+                chg = n.get("change")
+                ch = "" if chg is None else f", net {'+' if chg >= 0 else '−'}{abs(chg) / 1e6:.2f}M since last session"
+                add(n["strike"], f"gamma node {abs(n['gex']) / 1e6:.2f}M (all expiries{ch})", "summed")
         except Exception as e:
             log.warning("levels gamma %s: %s", sym, e)
     return [c for c in out if abs(c["price"] - last) <= BAND * last]
@@ -124,8 +126,15 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
     stacks = _stacks(_cands(sym, c4, res, st, last, with_gamma), last, tol)
     pick = lambda side: sorted(sorted([s for s in stacks if s["side"] == side], key=lambda s: (-s["score"], abs(s["distance_pct"])))[:3],
                                key=lambda s: -s["price"])
+    movers, since = [], None
+    if with_gamma:
+        try:
+            sm = gamma.summed(sym, last, fetch=False)
+            movers, since = (sm or {}).get("movers") or [], (sm or {}).get("since")
+        except Exception:
+            pass
     out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma,
-               above=pick("above"), below=pick("below"))
+               above=pick("above"), below=pick("below"), movers=movers, since=since)
     with _LOCK:
         _CACHE[key] = (time.time(), out)
     return out
