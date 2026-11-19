@@ -2688,11 +2688,16 @@ html:not([data-theme="light"]) body .chip.on, html:not([data-theme="light"]) bod
    trap the fixed heat-map panel (Patch 166), a pseudo-element's would not, so the card stays frosted with the
    heat map open too. */
 html:not([data-theme="light"]) {
-  --lg-fill: linear-gradient(160deg, rgba(255,255,255,.11) 0%, rgba(255,255,255,.04) 38%, rgba(255,255,255,.025) 70%, rgba(255,255,255,.06) 100%);
-  --lg-line: rgba(255,255,255,.15);
-  --lg-shine: inset 0 1px 0 rgba(255,255,255,.38), inset 1px 0 0 rgba(255,255,255,.07), inset -1px 0 0 rgba(255,255,255,.04), inset 0 -1px 0 rgba(255,255,255,.06), inset 0 0 30px rgba(255,255,255,.025);
+  /* watery: a clearer body, a bright lensing highlight top-left, a softer caustic glow bottom-right, and a rim
+     that catches light on the top and bottom edges like a drop of water */
+  --lg-fill: radial-gradient(120% 70% at 0% 0%, rgba(255,255,255,.16), rgba(255,255,255,0) 52%),
+             radial-gradient(90% 60% at 100% 100%, rgba(170,210,255,.09), rgba(255,255,255,0) 58%),
+             linear-gradient(160deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,.015) 45%, rgba(255,255,255,.01) 70%, rgba(255,255,255,.05) 100%);
+  --lg-line: rgba(255,255,255,.20);
+  --lg-shine: inset 0 1.5px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.20), inset 1px 0 0 rgba(255,255,255,.12), inset -1px 0 0 rgba(255,255,255,.06),
+              inset 0 14px 22px -14px rgba(255,255,255,.18), inset 0 -16px 26px -16px rgba(150,200,255,.14), inset 0 0 36px rgba(255,255,255,.03);
   --lg-drop: 0 18px 50px rgba(0,0,0,.40);
-  --lg-blur: blur(30px) saturate(1.9) brightness(1.05);
+  --lg-blur: blur(40px) saturate(2.3) brightness(1.08) contrast(1.05);
 }
 html:not([data-theme="light"]) body { background-color: #000 !important; background-attachment: fixed !important;
   background-image:
@@ -2703,17 +2708,17 @@ html:not([data-theme="light"]) body { background-color: #000 !important; backgro
 
 /* page surfaces: sidebar, panels, stat cards, phone tab bar */
 html:not([data-theme="light"]) .side, html:not([data-theme="light"]) nav.bottom {
-  background: var(--lg-fill), rgba(14,16,22,.30) !important; border-color: var(--lg-line) !important;
+  background: var(--lg-fill), rgba(14,16,22,.20) !important; border-color: var(--lg-line) !important;
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); box-shadow: var(--lg-shine), var(--lg-drop) !important; }
 html:not([data-theme="light"]) .panel, html:not([data-theme="light"]) .kpi, html:not([data-theme="light"]) .week, html:not([data-theme="light"]) .retest, html:not([data-theme="light"]) .rule1, html:not([data-theme="light"]) .setup, html:not([data-theme="light"]) .hm-card, html:not([data-theme="light"]) .board-frame, html:not([data-theme="light"]) .feed, html:not([data-theme="light"]) .acct, html:not([data-theme="light"]) .step, html:not([data-theme="light"]) .mb, html:not([data-theme="light"]) .install-banner {
-  background: var(--lg-fill), rgba(10,12,18,.35) !important; border: 1px solid var(--lg-line) !important;
+  background: var(--lg-fill), rgba(10,12,18,.26) !important; border: 1px solid var(--lg-line) !important;
   border-radius: 24px !important; box-shadow: var(--lg-shine), var(--lg-drop) !important; }
 
 html:not([data-theme="light"]) .mb-chip, html:not([data-theme="light"]) .style-opt, html:not([data-theme="light"]) form.cmd {
   background: var(--lg-fill), rgba(255,255,255,.02) !important; border: 1px solid var(--lg-line) !important; box-shadow: var(--lg-shine) !important; }
 /* the shelf card: a clear, frosted sheet over the page */
 html:not([data-theme="light"]) .brief, html:not([data-theme="light"]) body.heat-on .brief {
-  background: rgba(8,10,16,.34) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+  background: rgba(8,10,16,.24) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
   box-shadow: var(--lg-shine), 0 30px 90px rgba(0,0,0,.55) !important; border-left-color: var(--lg-line) !important; }
 html:not([data-theme="light"]) .brief::before { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); }
@@ -2730,7 +2735,7 @@ html:not([data-theme="light"]) .bf-x, html:not([data-theme="light"]) .mp-planbtn
 
 /* Sika's panels: clearer and frostier */
 html:not([data-theme="light"]) .scout-pop, html:not([data-theme="light"]) .ask-pop {
-  background: var(--lg-fill), rgba(10,12,18,.42) !important; border-color: var(--lg-line) !important;
+  background: var(--lg-fill), rgba(10,12,18,.32) !important; border-color: var(--lg-line) !important;
   -webkit-backdrop-filter: var(--lg-blur); backdrop-filter: var(--lg-blur); box-shadow: var(--lg-shine), 0 30px 80px rgba(0,0,0,.55) !important; }
 html:not([data-theme="light"]) .btnx, html:not([data-theme="light"]) .chip:not(.on):not(.active) {
   background: var(--lg-fill), rgba(255,255,255,.02) !important; border-color: var(--lg-line) !important; box-shadow: var(--lg-shine) !important; }
