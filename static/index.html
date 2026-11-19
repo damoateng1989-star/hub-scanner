@@ -4332,7 +4332,8 @@ function renderLabExits() {
            <button class="btnx sm" onclick="runLabExits(this)">${R ? "Run again" : "Run the test"}</button>
            <button class="btnx sm" title="Only the Test · setups (hub floor bounce, close above a resting hub, gap fade bought at the open). Much lighter on memory and faster; keeps the last full run's results for everything else." onclick="runLabExits(this, true)">Run only the tests</button>
            <button class="btnx sm" title="Only the gap fade test: buy the open vs wait for the close. Daily candles only, no hub scan: the lightest run." onclick="runLabExits(this, 'gapgo')">Run gap-open test</button>
-           <button class="btnx sm" title="Only the Stacked Shelf test: A+B hub retests with stacked trigger / stacked target / clear path, using only price levels known at the time." onclick="runLabExits(this, 'stacked')">Run Stacked Shelf test</button></span>`}</div>`
+           <button class="btnx sm" title="Only the Stacked Shelf test: A+B hub retests with stacked trigger / stacked target / clear path, using only price levels known at the time." onclick="runLabExits(this, 'stacked')">Run Stacked Shelf test</button>
+           <button class="btnx sm" title="Only the Stacked Gap Fade test: gap fade & rip trades with the gap-day high stacked / 2R target on a stack / clear path, price levels known at the time." onclick="runLabExits(this, 'gapstk')">Run Stacked Gap Fade test</button></span>`}</div>`
     + (L.status === "stopped" ? `<p class="note" style="padding:0 18px 8px;margin:0">The last run was stopped.${L.error ? " " + esc(L.error) : ""}${R ? " The results below are from the last run that finished." : ""}</p>` : "")
     + (L.status === "done" && L.tests_only && R && R.tests_run ? `<p class="note" style="padding:0 18px 8px;margin:0">The Test · rows below are from a tests-only run (${new Date(R.tests_run).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}). Everything else is from the last full run.</p>` : "")
     + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");
@@ -5366,7 +5367,7 @@ function levelsCardHTML(sym) {
     + d.movers.slice(0, 4).map(m => `<b class="${m.change >= 0 ? "u" : "d"}">${esc(money(m.strike))} ${m.change >= 0 ? "+" : "−"}${(Math.abs(m.change) / 1e6).toFixed(2)}M</b>`).join("")
     + `<small>Net gamma added up across the nearest 8 expiries: + means more call gamma, − more put gamma. Part of a change can be an expiry rolling off.</small></div>` : "";
   const S = d.stacked;
-  const stk = S ? `<div class="lv-stk ${S.ok ? "on" : ""}"><div class="lv-stk-h"><b>Stacked Shelf</b><span>${S.ok ? "✓ all rules met" : `${S.passed} of ${S.total}`}</span></div>`
+  const stk = S ? `<div class="lv-stk ${S.ok ? "on" : ""}"><div class="lv-stk-h"><b>${esc(S.name || "Stacked Shelf")}</b><span>${S.ok ? "✓ all rules met" : `${S.passed} of ${S.total}`}</span></div>`
     + S.rules.map(r => `<div class="lv-stk-r ${r.ok ? "y" : "n"}"><i>${r.ok ? "✓" : "✗"}</i>${esc(r.text)}</div>`).join("")
     + `<small>Being tested in the Lab (price levels only). Not a buy signal.</small></div>` : "";
   return `<div class="mp-card mp-sc mp-lv"><div class="mp-sct">Levels to watch</div>${stk}${d.above.map(row).join("")}${now}${d.below.map(row).join("")}

@@ -414,6 +414,53 @@ def _stacked_rows(sym, c4, res, s):
     return out
 
 
+# ---------------------------------------------------------------- the Stacked Gap Fade (test only, Nov 19)
+# Post-earnings gap fade & rip trades (the live rule: daily close above the gap-day high), each tagged with the
+# stacked rules using only price levels that existed at the entry close. Daily close-based walk, same horizon.
+GAPSTK_EXITS = {
+    "gs_2r": "Close above the gap-day high · 2R target · stop on a close below the fade low · daily closes (the live rule)",
+    "gs_stack": "Same entry and stop · target = the nearest stack (2+ kinds) beyond the entry, else 2R",
+}
+
+
+def _gapstk_rows(sym, c4, res, s):
+    import patterns
+    import stacked
+    out_p = {"trades": [], "live": []}
+    patterns._gapfade(c4, res["close"], len(c4), s, out_p)
+    if not out_p["trades"]:
+        return []
+    d = engine.complete_days(c4)
+    dclose = d["Close"].to_numpy(float)
+    dkey = d.index.tz_convert(engine.NY).normalize()
+    day4 = c4.index.tz_convert(engine.NY).normalize()
+    atr = res["atr"].to_numpy(float)
+    hist = stacked.History(c4, res)
+    rows = []
+    for t in out_p["trades"]:
+        j = t["i0"]
+        di = int(np.searchsorted(dkey, day4[j]))
+        if di >= len(dkey) or dkey[di] != day4[j]:
+            continue
+        entry, stop, tgt = float(t["entry"]), float(t["stop"]), float(t["target"])
+        tl = stacked.tol(entry, float(atr[j]))
+        cands = hist.at(j, own_hub=t["hub"], price=entry)          # pivots from the gap day/fade are skipped
+        chk = stacked.check(cands, 1, float(t["edge"]), entry, tgt, tl)
+        ex = {}
+        r = _gg_walk(dclose, di + 1, entry, stop, tgt, s.horizon)
+        if r:
+            ex["gs_2r"] = (round(r[0], 3), r[1])
+        t2 = chk["stack_target"] if chk["stack_target"] and chk["stack_target"] > entry else tgt
+        r = _gg_walk(dclose, di + 1, entry, stop, t2, s.horizon)
+        if r:
+            ex["gs_stack"] = (round(r[0], 3), r[1])
+        if ex:
+            rows.append(dict(sym=sym, grp="gapstk", entry="gapstk", t=str(c4.index[j]), d=1, ex=ex,
+                             st_trig=chk["trig_stacked"], st_tgt=chk["target_stacked"], st_path=chk["clear_path"],
+                             st_has=chk["stack_target"] is not None, st_all=chk["stacked"]))
+    return rows
+
+
 def _exit_half(close: np.ndarray, i0: int, d: int, entry: float, target: float, stop: float, r: float, horizon: int):
     """Half off at entry + 1R (or the target if that comes first); the rest is stopped at entry once half is off."""
     n, lvl, half = len(close), entry + d * r, None
@@ -480,6 +527,8 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     res = engine.analyze(c4, s)
     if only_tests == "stacked":                               # only the Stacked Shelf test
         return _stacked_rows(sym, c4, res, s)
+    if only_tests == "gapstk":                                # only the Stacked Gap Fade test
+        return _gapstk_rows(sym, c4, res, s)
     if only_tests:                                            # a light run: just the test-only setups (floor bounce, hub edge)
         atr = res["atr"].to_numpy(float)
         day = c4.index.tz_convert(engine.NY).normalize()
@@ -817,6 +866,23 @@ LIVE_RULES = [
      lambda r: r["grp"] == "edge" and r.get("tight"), "ed_shelf"),
     ("edge_tight_tighthub", "Test · Same, tight hubs only: next shelf, intraday stop at the hub bottom",
      lambda r: r["grp"] == "edge" and r.get("tight"), "ed_tight"),
+    # test only (Nov 19): the Stacked Gap Fade — gap fade & rip with stacked trigger / stacked target / clear path
+    ("gs_base", "Test · Gap fade & rip: all trades (the baseline, 2R target)",
+     lambda r: r["grp"] == "gapstk", "gs_2r"),
+    ("gs_trig", "Test · Gap-day high stacked (another kind of level on it)",
+     lambda r: r["grp"] == "gapstk" and r.get("st_trig"), "gs_2r"),
+    ("gs_notrig", "Test · Gap-day high NOT stacked (for comparison)",
+     lambda r: r["grp"] == "gapstk" and not r.get("st_trig"), "gs_2r"),
+    ("gs_tgt", "Test · 2R target has a level on it",
+     lambda r: r["grp"] == "gapstk" and r.get("st_tgt"), "gs_2r"),
+    ("gs_path", "Test · Clear path (no 2+ stack between the gap-day high and the 2R target)",
+     lambda r: r["grp"] == "gapstk" and r.get("st_path"), "gs_2r"),
+    ("gs_all", "Test · Full Stacked Gap Fade, 2R target",
+     lambda r: r["grp"] == "gapstk" and r.get("st_all"), "gs_2r"),
+    ("gs_all_stack", "Test · Full Stacked Gap Fade, aiming at the nearest stack",
+     lambda r: r["grp"] == "gapstk" and r.get("st_all"), "gs_stack"),
+    ("gs_base_stack", "Test · All gap fades, aiming at the nearest stack instead of 2R",
+     lambda r: r["grp"] == "gapstk", "gs_stack"),
     # test only (Nov 19): the Stacked Shelf — A+B hub retests with stacked trigger / stacked target / clear path
     ("stk_base", "Test · Stacked Shelf: all A+B hub retests (the baseline, shelf target)",
      lambda r: r["grp"] == "stacked", "stk_shelf"),
@@ -895,7 +961,7 @@ def graduation(rows: list[dict]) -> list[dict]:
         cut = (pd.Timestamp(got[-1]["t"]) - pd.Timedelta(days=182)).isoformat()
         recent = np.array([r["ex"][ek][0] for r in got if r["t"] >= cut])
         sp = _spread(x, syms)
-        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or EDGE_EXITS.get(ek) or GAPGO_EXITS.get(ek) or STACKED_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
+        res = dict(key=key, label=label, exit=ek, exit_label=dict(EXITS).get(ek) or FLOOR_EXITS.get(ek) or EDGE_EXITS.get(ek) or GAPGO_EXITS.get(ek) or STACKED_EXITS.get(ek) or GAPSTK_EXITS.get(ek) or NOSHELF_EXITS.get(ek, ek), n=n,
                    win=round(100 * len(wins) / n, 1), avg=round(float(x.mean()), 2),
                    pf=round(pf, 2) if pf is not None else None,
                    early=round(early, 2) if early is not None else None, late=round(late, 2) if late is not None else None,
@@ -1054,7 +1120,7 @@ def _rss_mb() -> float:
         return 0.0
 
 
-TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_")      # graduation rows a tests-only run measures
+TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_", "gs_")      # graduation rows a tests-only run measures
 
 
 def run(symbols: list[str] | None = None, resume: bool = False, years: int | None = None, only_tests: bool | str = False):
@@ -1120,6 +1186,8 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 log.info("lab test: stopped at %d MB to stay under the memory limit", int(rss))
                 return
             time.sleep(0.2)                   # leave room for the site and the live scan
+        if not rows and only_tests == "gapstk" and failed < len(syms):
+            raise RuntimeError("no gap fade & rip trades in this period, so there is nothing to compare")
         if not rows and only_tests == "stacked" and failed < len(syms):
             raise RuntimeError("no A or B hub retests in this period, so there is nothing to compare")
         if not rows and only_tests == "gapgo" and failed < len(syms):
@@ -1130,7 +1198,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         if only_tests:
             # keep the last full run's tables and live-rule checks; replace only the test rows
             prev = (json.loads(db.get_setting("lab_exits") or "{}").get("result") or {})
-            tk = ("gapgo_",) if only_tests == "gapgo" else ("stk_",) if only_tests == "stacked" else TEST_KEYS
+            tk = ("gapgo_",) if only_tests == "gapgo" else ("stk_",) if only_tests == "stacked" else ("gs_",) if only_tests == "gapstk" else TEST_KEYS
             mine = [g for g in out["graduation"] if g["key"].startswith(tk)]
             keep = [g for g in (prev.get("graduation") or []) if not g["key"].startswith(tk)]
             out = dict(prev or out, graduation=keep + mine, tests_run=pd.Timestamp.now(tz="UTC").isoformat(),

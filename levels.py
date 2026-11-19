@@ -155,8 +155,27 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                           + (f"; the ${float(st['target']):,.2f} shelf has {', '.join(stacked.KIND.get(k, k) for k in chk['tgt_kinds'])} on it" if chk["target_stacked"] else ""),
                           chk["target_stacked"] or chk["stack_target"] is not None),
                          ("Clear path to the target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
-                stk = dict(ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
+                stk = dict(name="Stacked Shelf", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
                            rules=[dict(text=t, ok=bool(v)) for t, v in rules], stack_target=chk["stack_target"], direction=d)
+        if stk is None:      # a live post-earnings gap fade & rip: the Stacked Gap Fade checklist
+            import patterns
+            gp = {"trades": [], "live": []}
+            patterns._gapfade(c4, res["close"], len(c4), scanner.SETTINGS, gp)
+            lv = next((x for x in gp["live"] if x.get("state") == "breakout_up" and x.get("trade")), None)
+            if lv:
+                t = lv["trade"]
+                cands = stacked.History(c4, res).at(len(c4) - 1, own_hub=t["hub"], price=last)
+                cands = [c for c in cands if abs(c["price"] - last) <= BAND * last]
+                cands += [c for c in _cands(sym, c4, res, st, last, with_gamma) if c["group"] in ("wall", "shelf", "summed")]
+                chk = stacked.check(cands, 1, float(t["edge"]), last, float(t["target"]), tol)
+                rules = [("Gap fade & rip confirmed: a daily close back above the gap-day high", True),
+                         ("Gap-day high stacked: " + (", ".join(stacked.KIND.get(k, k) for k in chk["trig_kinds"]) or "nothing else on it"), chk["trig_stacked"]),
+                         ("Target on a stack: " + (f"nearest stack ${chk['stack_target']:,.2f}" if chk["stack_target"] else "no stack beyond the entry")
+                          + (f"; the ${float(t['target']):,.2f} 2R target has {', '.join(stacked.KIND.get(k, k) for k in chk['tgt_kinds'])} on it" if chk["target_stacked"] else ""),
+                          chk["target_stacked"] or chk["stack_target"] is not None),
+                         ("Clear path to the 2R target" if chk["clear_path"] else "Stack in the way at " + ", ".join(f"${p:,.2f}" for p in chk["blocking"]), chk["clear_path"])]
+                stk = dict(name="Stacked Gap Fade", ok=chk["stacked"], passed=sum(1 for _, v in rules if v), total=len(rules),
+                           rules=[dict(text=t_, ok=bool(v)) for t_, v in rules], stack_target=chk["stack_target"], direction=1)
     except Exception as e:
         log.warning("stacked shelf %s: %s", sym, e)
     out = dict(symbol=sym, price=round(last, 2), tolerance=round(tol, 2), gamma=with_gamma, stacked=stk,
