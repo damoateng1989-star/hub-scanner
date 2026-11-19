@@ -9,6 +9,7 @@ Nothing here changes live alerts. It only measures.
 from __future__ import annotations
 
 import json
+import os
 import gc
 import logging
 import sys
@@ -29,7 +30,26 @@ log = logging.getLogger("lab")
 DAYS = 720                       # the test period; each run can pick its own (2, 3, 5 or 10 years)
 YEARS_OK = (2, 3, 5, 10)
 CHUNK = 20
-LAB_RSS_STOP_MB = 400   # stop the test before Render kills the whole instance at 512 MB; tune only if the baseline moves
+def _mem_limit_mb() -> int:
+    """The server's memory size: LAB_MEM_MB if set, else the container limit (cgroup v2 or v1), else 512 (Render Starter)."""
+    try:
+        if os.environ.get("LAB_MEM_MB"):
+            return int(os.environ["LAB_MEM_MB"])
+    except ValueError:
+        pass
+    for f in ("/sys/fs/cgroup/memory.max", "/sys/fs/cgroup/memory/memory.limit_in_bytes"):
+        try:
+            v = open(f).read().strip()
+            if v.isdigit() and int(v) < (1 << 50):
+                return int(v) // (1024 * 1024)
+        except Exception:
+            pass
+    return 512
+
+
+MEM_LIMIT_MB = _mem_limit_mb()
+# stop the test before Render kills the whole instance: 400 of 512 MB (78%), scaled when the instance is bigger
+LAB_RSS_STOP_MB = int(os.environ.get("LAB_RSS_STOP_MB") or round(MEM_LIMIT_MB * 0.78))
 _LOCK = threading.Lock()
 _CANCEL = threading.Event()   # set by stop(): the run quits at the next stock
 _RESTART = {"on": False}      # stop(restart=True): start a fresh run as soon as the old one has quit
@@ -1361,7 +1381,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             if rss > LAB_RSS_STOP_MB:
                 CKPT.unlink(missing_ok=True)
                 more = " Tap the same test again: it carries on from here." if only_tests in NAMED_TESTS else " Tap Run the test again."
-                _set(status="stopped", error=f"Stopped at {min(i + CHUNK, len(syms))}/{len(syms)} stocks ({int(rss)} MB) to stay under the server's 512 MB limit.{more}")
+                _set(status="stopped", error=f"Stopped at {min(i + CHUNK, len(syms))}/{len(syms)} stocks ({int(rss)} MB) to stay under the server's {MEM_LIMIT_MB} MB limit.{more}")
                 log.info("lab test: stopped at %d MB to stay under the memory limit", int(rss))
                 return
             time.sleep(0.2)                   # leave room for the site and the live scan
