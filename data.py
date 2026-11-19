@@ -245,9 +245,14 @@ def extended_price(sym: str) -> dict:
             tm = ts.hour * 60 + ts.minute
             in_win = (240 <= tm < 570) if window == "pre" else (960 <= tm < 1200)
             if ts.date() == et.date() and in_win:
-                out = dict(session=window, price=round(float(t["p"]), 2), at=ts.isoformat(), feed=feed,
-                           delayed=feed == "delayed_sip", why=None)
-                break
+                # keep the NEWEST trade across feeds: IEX stops trading around 5 PM, so after that its last print
+                # (e.g. 4:23 PM) is older than the 15-minute-delayed full-market price; the newer one wins
+                if out["session"] is None or ts > pd.Timestamp(out["at"]):
+                    out = dict(session=window, price=round(float(t["p"]), 2), at=ts.isoformat(), feed=feed,
+                               delayed=feed == "delayed_sip", why=None)
+                if feed != "delayed_sip" and (et - ts).total_seconds() < 120:
+                    break                      # a real-time trade from the last 2 minutes: nothing newer to find
+                continue
             errors.append(f"{feed}: last trade {ts.strftime('%b %d %H:%M')} ET is not in this session")
         if out["session"] is None:
             out["why"] = "; ".join(errors) or "no trade"
