@@ -666,7 +666,7 @@ def _chart_expiry(now: pd.Timestamp) -> pd.Timestamp:
 def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False) -> dict:
     """The stock panel's chart, served from a cache until the next close; only the forming candle is refreshed per call."""
     sym = scanner.clean_symbol(sym)
-    if tf not in ("4h", "1d"):
+    if tf not in ("1h", "2h", "3h", "4h", "1d"):
         tf = "4h"
     t0, now = time.time(), pd.Timestamp.now(tz="UTC")
     key = (sym, tf, bool(lab_mode))
@@ -735,7 +735,12 @@ def _build_chart(sym: str, tf: str, lab_mode: bool) -> dict:
     tm["bars"] = round((time.time() - t0) * 1000)
     if c4.empty:
         raise ValueError("no price data")
-    frame = engine.to_daily(c4) if tf == "1d" else c4     # the view's candles; all analysis stays on c4
+    if tf == "1d":
+        frame = engine.to_daily(c4)                     # the view's candles; all analysis stays on c4
+    elif tf in ("1h", "2h", "3h"):                      # finer views regroup the same 30-minute bars (display only)
+        frame = engine.to_hours(scanner.load_raw(sym, scanner.SCAN_DAYS), int(tf[0]), now=pd.Timestamp.now(tz="UTC")).iloc[-700:]
+    else:
+        frame = c4
     t1 = time.time()
     res = engine.analyze(c4, scanner.SETTINGS)
     st = engine.current_status(c4, res, scanner.SETTINGS)

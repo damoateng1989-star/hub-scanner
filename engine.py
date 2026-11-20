@@ -74,6 +74,32 @@ def to_4h(bars: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
 
 
 
+def to_hours(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None) -> pd.DataFrame:
+    """Regular-hours intraday bars -> N-hour candles anchored at the 9:30 open (the last one of the day is short:
+    it ends at the 4:00 close). Display only — every setup is still worked out on 4-hour closes."""
+    if bars.empty:
+        return bars
+    df = bars.tz_convert(NY)
+    mins = df.index.hour * 60 + df.index.minute
+    df = df[(mins >= OPEN_MIN) & (mins < CLOSE_MIN)]
+    if df.empty:
+        return df
+    mins = df.index.hour * 60 + df.index.minute
+    k = (mins - OPEN_MIN) // (hours * 60)
+    day = df.index.normalize()
+    start = day + pd.to_timedelta(OPEN_MIN + k * hours * 60, unit="m")
+    end = day + pd.to_timedelta(np.minimum(OPEN_MIN + (k + 1) * hours * 60, CLOSE_MIN), unit="m")
+    df = df.assign(_start=start, _end=end)
+    out = df.groupby("_start").agg(
+        Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),
+        Close=("Close", "last"), _end=("_end", "first"),
+        **({"Volume": ("Volume", "sum")} if "Volume" in df.columns else {}))
+    if now is not None:
+        out = out[out["_end"] <= pd.Timestamp(now).tz_convert(NY)]
+    out.index.name = None
+    return out.drop(columns="_end")
+
+
 def to_daily(c4: pd.DataFrame) -> pd.DataFrame:
     """4H candles -> daily candles (regular hours only, finished candles).
     Aggregates the 4H frame, so the daily view can never disagree with the

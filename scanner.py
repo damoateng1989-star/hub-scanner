@@ -87,6 +87,13 @@ def load_4h(symbol: str, days: int) -> pd.DataFrame:
 
 
 
+def load_raw(symbol: str, days: int) -> pd.DataFrame:
+    """The shared 30-minute bars behind load_4h (the chart's 1H/2H/3H views regroup these: no new fetch)."""
+    load_4h(symbol, days)
+    hit = _BARS.get((symbol, days))
+    return hit[1] if hit else data.get_bars(symbol, days)
+
+
 def forming_candle(sym: str, now: pd.Timestamp | None = None) -> dict | None:
     """The 4H candle that's still forming (open/high/low/close so far), for drawing it faded on the setup map.
     None outside market hours or when no bars have printed yet. Uses the shared bar cache (load_4h)."""

@@ -4771,12 +4771,15 @@ document.body.classList.toggle("map-v2", MAP_ON());
 let MAP_Q = null;   // which Sika question is open
 // how much history the map shows (4H candles: 2 a session). Pinch / ctrl-scroll zooms between 8 and 3 months.
 // timeframe of the map's candles: "4h" (default) or "1d". The setup itself is always worked out on 4-hour closes.
-let MAP_TF = (() => { try { return localStorage.getItem("ns-map-tf") === "1d" ? "1d" : "4h"; } catch (e) { return "4h"; } })();
+const MAP_TFS = [["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "1D"]];
+let MAP_TF = (() => { try { const v = localStorage.getItem("ns-map-tf"); return MAP_TFS.some(([k]) => k === v) ? v : "4h"; } catch (e) { return "4h"; } })();
 let MAP_DCH = null;      // the daily chart for the open stock (fetched when 1D is picked)
-const MAP_RANGE_SETS = {"4h": [["1W", 10], ["2W", 20], ["1M", 42], ["3M", 126]], "1d": [["1M", 21], ["3M", 63], ["6M", 126]]};
-const MAP_RANGE_DEF = {"4h": 42, "1d": 63};
+const MAP_RANGE_SETS = {"1h": [["2D", 14], ["1W", 35], ["2W", 70], ["1M", 147]], "2h": [["1W", 20], ["2W", 40], ["1M", 84], ["2M", 168]],
+                        "3h": [["1W", 15], ["2W", 30], ["1M", 63], ["3M", 189]],
+                        "4h": [["1W", 10], ["2W", 20], ["1M", 42], ["3M", 126]], "1d": [["1M", 21], ["3M", 63], ["6M", 126]]};
+const MAP_RANGE_DEF = {"1h": 35, "2h": 40, "3h": 30, "4h": 42, "1d": 63};
 const mapRanges = () => MAP_RANGE_SETS[MAP_TF];
-const mapNKey = () => MAP_TF === "1d" ? "ns-map-n-1d" : "ns-map-n";
+const mapNKey = () => MAP_TF === "4h" ? "ns-map-n" : "ns-map-n-" + MAP_TF;
 let MAP_N = (() => { try { return +localStorage.getItem(mapNKey()) || MAP_RANGE_DEF[MAP_TF]; } catch (e) { return MAP_RANGE_DEF[MAP_TF]; } })();
 let MAP_G = null, MAP_HOVER = null, MAP_LWC_DATA = null, MAP_LWC = null;
 // "plan my trade": drag the stop and target on the map, see reward:risk and position size. {sym, stop, target, on}
@@ -5452,8 +5455,9 @@ function paintMap() {
   mapBodyHome();                         // put the lower sections back before redrawing (they live inside the map's left column)   // typing: don't redraw under the cursor
   const sym = BRIEF_SYM, chart4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart4 && chart4.status) || findStatus(sym);
   // the candles drawn: daily when 1D is picked and loaded, else the 4-hour chart (levels and status always come from 4H)
-  const chart = MAP_TF === "1d" ? (MAP_DCH && MAP_DCH.symbol === sym && chart4 ? {...MAP_DCH, status: chart4.status, tf: "1d"} : null) : chart4;
-  if (MAP_TF === "1d" && chart4 && !(MAP_DCH && MAP_DCH.symbol === sym)) mapLoadDaily(sym);
+  const altOk = MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF;
+  const chart = MAP_TF !== "4h" ? (altOk && chart4 ? {...MAP_DCH, status: chart4.status, tf: MAP_TF} : null) : chart4;
+  if (MAP_TF !== "4h" && chart4 && !altOk) mapLoadDaily(sym);
   if (!st || st.last_close == null) { el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()">← Back</button><h3>${esc(sym)}</h3><button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>`; return; }
   const P0 = mapPlan(sym, st), steps = MAP_STEPS[P0.steps];
   const canPlan = !P0.watch && P0.trig != null && P0.stop != null && P0.shelf != null && P0.dir === 1;
@@ -5490,7 +5494,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF === "1d" ? "1D" : "4H"} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "AFTER HOURS") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${ME && ME.is_admin && !rp ? `<button class="mp-planbtn" onclick="journalNew('${esc(sym)}')" title="Write a journal note about this stock">✎ Journal</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<div class="mp-rng mp-tf">${[["4h", "4H"], ["1d", "1D"]].map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "AFTER HOURS") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${ME && ME.is_admin && !rp ? `<button class="mp-planbtn" onclick="journalNew('${esc(sym)}')" title="Write a journal note about this stock">✎ Journal</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
@@ -5578,7 +5582,7 @@ function mapReplayChart(chart, W) {
 function mapReplayBar() {
   const R = MAP_RP, n = R.n || 1, k = Math.min(R.k, n - 1), ev = R.ev || [], cs = R.cs || [];
   let last = null; for (let i = k; i >= 0 && !last; i--) if (ev[i] && ev[i].length) last = {i, e: ev[i][ev[i].length - 1]};
-  const c = cs[k], when = c ? new Date(c.time * 1000).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"}) + (MAP_TF === "1d" ? "" : new Date(c.time * 1000).getUTCHours() < 13 ? " 9:30 AM" : " 1:30 PM") : "";
+  const c = cs[k], when = c ? new Date(c.time * 1000).toLocaleDateString("en-US", {month: "short", day: "numeric", timeZone: "UTC"}) + (MAP_TF === "1d" ? "" : " " + new Date(c.time * 1000).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "UTC"})) : "";
   const done = !R.play && k >= n - 1;
   return `<div class="mp-rp">
     <div class="mp-rp-say ${last && last.i === k ? "fresh" : ""}">${last ? last.e.txt : "Watching the candles. Nothing set up yet."}</div>
@@ -5593,7 +5597,7 @@ function mapReplayBar() {
 function mapReplayRedraw() {
   const cw = $("mpCw"), svg = cw && cw.querySelector("svg"), bar = document.querySelector(".mp-rp");
   if (!svg || !bar || !BRIEF_CHART) return paintMap();
-  const ch = MAP_TF === "1d" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM ? {...MAP_DCH, tf: "1d"} : BRIEF_CHART;
+  const ch = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM && MAP_DCH.tf === MAP_TF ? {...MAP_DCH, tf: MAP_TF} : BRIEF_CHART;
   const tmp = document.createElement("div"); tmp.innerHTML = mapReplayChart(ch, MAP_W()); svg.replaceWith(tmp.firstElementChild);
   tmp.innerHTML = mapReplayBar(); const nb = tmp.firstElementChild;
   bar.querySelector(".mp-rp-say").replaceWith(nb.querySelector(".mp-rp-say"));
@@ -5602,7 +5606,7 @@ function mapReplayRedraw() {
 }
 function mapReplayStart() {
   MAP_WI = null; mapHideTip();
-  const chart = MAP_TF === "1d" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM ? MAP_DCH : BRIEF_CHART; if (!chart) return;
+  const chart = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM && MAP_DCH.tf === MAP_TF ? MAP_DCH : BRIEF_CHART; if (!chart) return;
   MAP_RP = {sym: BRIEF_SYM, k: Math.min(3, mapReplayCandles(chart).length - 1), play: true, fast: false};
   paintMap(); mapReplayTick();
 }
@@ -5816,7 +5820,7 @@ function mapCalcOut(P0, wi) {
 // while dragging, redraw only the chart and the numbers (the chart's element must survive: it holds the pointer)
 function mapDragRedraw() {
   const sym = BRIEF_SYM, c4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(sym);
-  const chart = MAP_TF === "1d" && MAP_DCH && MAP_DCH.symbol === sym ? {...MAP_DCH, tf: "1d"} : c4;
+  const chart = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF ? {...MAP_DCH, tf: MAP_TF} : c4;
   const cw = $("mpCw"), svg = cw && cw.querySelector("svg"); if (!svg || !MAP_WI) return;
   const P0 = mapPlan(sym, st), tmp = document.createElement("div");
   tmp.innerHTML = mapChart({...P0, stop: MAP_WI.stop, shelf: MAP_WI.target, planning: true}, chart, MAP_W());
@@ -5830,8 +5834,9 @@ function mapCalcSave() {
   if (MAP_WI && $("mpCalcOut")) $("mpCalcOut").innerHTML = mapCalcOut(mapPlan(sym, st), MAP_WI);
 }
 async function mapLoadDaily(sym) {
-  if (mapLoadDaily.busy === sym) return; mapLoadDaily.busy = sym;
-  try { const c = await api(`/api/chart/${encodeURIComponent(sym)}?tf=1d`); if (BRIEF_SYM === sym) { MAP_DCH = c; paintMap(); } }
+  const tf = MAP_TF, key = sym + "|" + tf;
+  if (mapLoadDaily.busy === key) return; mapLoadDaily.busy = key;
+  try { const c = await api(`/api/chart/${encodeURIComponent(sym)}?tf=${tf}`); if (BRIEF_SYM === sym && MAP_TF === tf) { MAP_DCH = c; paintMap(); } }
   catch (e) {} finally { mapLoadDaily.busy = null; }
 }
 function mapTf(tf) {

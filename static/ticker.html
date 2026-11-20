@@ -591,8 +591,7 @@ function render(d) {
       <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="badge" style="--c:var(${color})">${label}</span>
         <span class="seg" role="tablist" aria-label="Chart timeframe">
-          <button type="button" data-tf="4h" class="${TF === "4h" ? "on" : ""}" role="tab" aria-selected="${TF === "4h"}">4H</button>
-          <button type="button" data-tf="1d" class="${TF === "1d" ? "on" : ""}" role="tab" aria-selected="${TF === "1d"}">Daily</button>
+          ${[["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "Daily"]].map(([k, l]) => `<button type="button" data-tf="${k}" class="${TF === k ? "on" : ""}" role="tab" aria-selected="${TF === k}">${l}</button>`).join("")}
         </span></span>
     </header>
     <p class="sum">${summary(st)}</p>
@@ -602,7 +601,7 @@ function render(d) {
         <span style="--c:var(--up)"><i class="dash"></i>Shelf above</span>
         <span style="--c:var(--down)"><i class="dash"></i>Shelf below</span>
         <span>▲▼ breakouts, labelled hit / failed / timed out</span>
-        <span>${d.tf === "1d" ? "Daily candles (hubs and breakouts still come from 4H closes)" : "4H candles"}, regular hours, New York time</span>
+        <span>${d.tf === "1d" ? "Daily candles (hubs and breakouts still come from 4H closes)" : d.tf === "4h" ? "4H candles" : d.tf.toUpperCase() + " candles (hubs and breakouts still come from 4H closes)"}, regular hours, New York time</span>
         ${d.tightening ? `<span style="--c:var(--snap)"><i></i>Tightening hubs (Lab, only you see this)</span>` : ""}
         ${d.setups && d.setups.lines.some(l => l.kind === "triangle") ? `<span style="--c:#F2C14E"><i></i>Triangles</span>` : ""}
         ${d.setups && d.setups.lines.some(l => l.kind.startsWith("channel")) ? `<span style="--c:#2FD4C0"><i></i>Channels</span>` : ""}
