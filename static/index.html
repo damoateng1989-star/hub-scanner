@@ -8857,23 +8857,24 @@ html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] 
 html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
 .hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
 .hm-tip.on { opacity: 1; }
-.hm-t.hm-stk, .hm-t.hm-stk3 { background-image: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)); }
-.hm-t.hm-stk { z-index: 1; animation: hmStk 1.6s ease-in-out infinite; }
-@keyframes hmStk { 0%, 100% { box-shadow: inset 0 0 0 3px #3DD68C, inset 0 0 6px rgba(61,214,140,.35), 0 0 0 0 rgba(61,214,140,0); }
-  50% { box-shadow: inset 0 0 0 3px #5BF0A6, inset 0 0 18px rgba(61,214,140,.85), 0 0 12px 3px rgba(61,214,140,.6); } }
+.hm-t.hm-stk, .hm-t.hm-stk3 { background-image: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)); z-index: 1;
+  --skc: 61,214,140; --skw: 3px; animation: hmStk 1.4s ease-in-out infinite; }
+.hm-t.hm-stk3 { --skw: 2px; animation-duration: 1.8s; }
+.hm-t.hm-dn { --skc: 255,107,94; }
+@keyframes hmStk {
+  0%, 100% { box-shadow: inset 0 0 0 var(--skw) rgba(var(--skc), .95), inset 0 0 4px rgba(var(--skc), .3), 0 0 0 0 rgba(var(--skc), 0); }
+  50% { box-shadow: inset 0 0 0 var(--skw) rgba(var(--skc), 1), inset 0 0 18px rgba(var(--skc), .9), 0 0 12px 3px rgba(var(--skc), .65); } }
 .hm-t.hm-stk::after, .hm-t.hm-stk3::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%;
-  background: #3DD68C; box-shadow: 0 0 0 0 rgba(61,214,140,.6); animation: livePulse 2s infinite; }
-.hm-t.hm-stk3::after { width: 6px; height: 6px; }
-.hm-t.hm-stk.hm-xs::after { display: none; }
-.hm-lg i.hm-lg-stk { background: transparent; border: 2px solid #3DD68C; box-sizing: border-box; animation: livePulse 2s infinite; }
-.hm-lg i.hm-lg-stk3 { background: #3DD68C; border-radius: 50%; width: 7px; height: 7px; animation: livePulse 2s infinite; }
-.hm-t.hm-stk.hm-dn { animation-name: hmStkDn; }
-@keyframes hmStkDn { 0%, 100% { box-shadow: inset 0 0 0 3px #FF6B5E, inset 0 0 6px rgba(255,107,94,.35), 0 0 0 0 rgba(255,107,94,0); }
-  50% { box-shadow: inset 0 0 0 3px #FF8C80, inset 0 0 18px rgba(255,107,94,.85), 0 0 12px 3px rgba(255,107,94,.6); } }
-.hm-t.hm-dn::after { background: #FF6B5E; animation-name: dnPulse; }
-@keyframes dnPulse { 0% { box-shadow: 0 0 0 0 rgba(255,107,94,.6); } 70% { box-shadow: 0 0 0 6px rgba(255,107,94,0); } 100% { box-shadow: 0 0 0 0 rgba(255,107,94,0); } }
-.hm-lg i.hm-lg-stkdn { background: transparent; border: 2px solid #FF6B5E; box-sizing: border-box; animation: dnPulse 2s infinite; }
-@media (prefers-reduced-motion: reduce) { .hm-t.hm-stk, .hm-t.hm-stk::after, .hm-lg i.hm-lg-stkdn, .hm-t.hm-stk3::after, .hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3 { animation: none; } .hm-t.hm-stk { box-shadow: inset 0 0 0 3px #3DD68C; } .hm-t.hm-stk.hm-dn { box-shadow: inset 0 0 0 3px #FF6B5E; } }
+  background: rgb(var(--skc)); animation: skBlink 1s ease-in-out infinite; }
+.hm-t.hm-stk3::after { width: 7px; height: 7px; }
+@keyframes skBlink { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--skc), .8), 0 0 6px rgba(var(--skc), 1); }
+  50% { opacity: .2; box-shadow: 0 0 0 5px rgba(var(--skc), 0), 0 0 0 rgba(var(--skc), 0); } }
+.hm-t.hm-xs::after { display: none; }
+.hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3, .hm-lg i.hm-lg-stkdn { background: transparent; border: 2px solid #3DD68C; box-sizing: border-box; animation: skBlink 1s ease-in-out infinite; --skc: 61,214,140; }
+.hm-lg i.hm-lg-stk3 { border-width: 1.5px; }
+.hm-lg i.hm-lg-stkdn { border-color: #FF6B5E; --skc: 255,107,94; }
+@media (prefers-reduced-motion: reduce) { .hm-t.hm-stk, .hm-t.hm-stk3, .hm-t.hm-stk::after, .hm-t.hm-stk3::after, .hm-lg i { animation: none; }
+  .hm-t.hm-stk, .hm-t.hm-stk3 { box-shadow: inset 0 0 0 var(--skw) rgb(var(--skc)); } }
 
 /* compact Context card; the old duplicate rows below the map are hidden in the map view */
 body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: none !important; }
