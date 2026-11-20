@@ -7,10 +7,12 @@ No trading, no alert, no record entry, no Lab log.
 """
 import json
 import logging
+import os
 from datetime import date
 
 import db
 import engine
+import flow_signal
 import gamma
 import options
 
@@ -338,6 +340,71 @@ def _gamma_lines(gx, d, trigger, target, atr=None, levels=None):
     return out[:2]
 
 
+def _flow_pct(x):
+    """A record percentage the way the spec's lines print it: signed, two
+    decimals, the app's minus sign (−0.10%, not -0.10%)."""
+    return f"{x:+.2f}%".replace("-", "−")
+
+
+def _flow_facts(sym, d, breakout_date):
+    """The stored tape classification of this play's breakout (Patch 174;
+    fail-open -> None).
+
+    Reads the flow_signal row the post-close job wrote — never a live
+    provider call, never a recomputation (the spec section 4 read-the-row
+    rule: at card time the window has moved on, and a recomputation would
+    not be the measurement that was stored), and never the flow_log proxy
+    row. No row -> None, and the card carries no flow key at all."""
+    if not breakout_date:
+        return None
+    try:
+        row = db.flow_signal_for(sym, d, breakout_date)
+    except Exception:
+        row = None
+    if not row:
+        return None
+    return dict(state=row["state"], breakout_date=row["breakout_date"],
+                window=[row["window_start"], row["window_end"]],
+                flow_net=row["flow_net"], threshold=row["threshold"],
+                provider=row["provider"], as_of=row["as_of"],
+                record=flow_signal.FLOW_RECORD, lines=[])
+
+
+def _flow_lines(fx, d):
+    """The card's flow line (Patch 174; the spec section 7 templates).
+
+    Phase 1 composes at most one line, here in code — never by the model.
+    'confirmed' states the classification and cites the measured record;
+    'against' does the same with its own side of the record (Decision 2:
+    visible, the spec's proposed default — the record shows both sides or
+    neither; making it silent is deleting the 'against' branch below and
+    nothing else). 'none' composes no line: it is the majority state, and
+    a 'nothing happened' line on most plays is noise — the facts stay on
+    the card for chat. The only variable in the wording is the net
+    premium, in the app's M format (Patch 167, via _gex_size)."""
+    rec = fx["record"]
+    c, n, a = rec["confirmed"], rec["none"], rec["against"]
+    net = _gex_size(fx["flow_net"])
+    if fx["state"] == "confirmed":
+        record = (f"Flow-confirmed retests measured {_flow_pct(c['avg_pct'])} per trade in the "
+                  f"Flow Lab test ({c['n']} trades, PF {c['pf']:.2f}); retests without decisive "
+                  f"flow measured {_flow_pct(n['avg_pct'])} ({n['n']} trades).")
+        if d == 1:
+            return [f"Flow: aggressive buying confirmed this breakout — {net} net aggressive-buy "
+                    f"premium over the two sessions into the break. {record}"]
+        return [f"Flow: aggressive put buying confirmed this breakdown — net aggressive-buy "
+                f"premium of −{net} over the two sessions into the break. {record}"]
+    if fx["state"] == "against":
+        record = (f"In the Flow Lab test, retests with flow against them measured "
+                  f"{_flow_pct(a['avg_pct'])} per trade ({a['n']} trades, PF {a['pf']:.2f}).")
+        if d == 1:
+            return [f"Flow: aggressive buying ran against this breakout — net aggressive-buy "
+                    f"premium of −{net} over the two sessions into the break. {record}"]
+        return [f"Flow: aggressive call buying ran against this breakdown — net aggressive-buy "
+                f"premium of +{net} over the two sessions into the break. {record}"]
+    return []
+
+
 def _wall_beyond(sh, d, level):
     """Next GEX wall beyond `level` in direction d, from gamma.shelves() (fail-open)."""
     if not sh:
@@ -429,9 +496,33 @@ def _context(op):
     return out
 
 
-def card(sym):
+def flow_allowed(user) -> bool:
+    """Patch 174's visibility gate for the flow key (the user's Nov 19
+    call: the business licence waits until he opens up to members).
+
+    Env FLOW_CONFLUENCE_VISIBILITY:
+      'internal' (the default) — admin accounts only: the feature is
+        built and validated internally, on Standard, while the display
+        licence waits for the member opening;
+      'members' — every Pro user: the launch step, to be set only once
+        the licence is in hand;
+      'off' — nobody, not even admin.
+    The two endpoints that serve the card and the chat pass the result
+    into card()/answer() as include_flow; every other caller of card()
+    gets the card exactly as before this patch."""
+    mode = os.getenv("FLOW_CONFLUENCE_VISIBILITY", "internal").strip().lower()
+    if mode == "members":
+        return True
+    if mode == "off":
+        return False
+    return bool(user and user.get("is_admin"))
+
+
+def card(sym, include_flow=False):
     """Sika's swing-play read for one symbol. Raises ValueError when there is not
-    enough price history (the endpoint turns it into a 400, like /api/options)."""
+    enough price history (the endpoint turns it into a 400, like /api/options).
+    include_flow (Patch 174) is passed only by the two endpoints, after swing_card.flow_allowed() has judged the
+    caller; it defaults off so every other caller gets the card exactly as before."""
     import patterns
     import scanner
 
@@ -472,11 +563,21 @@ def card(sym):
 
     # --- the live setup: hub first, then patterns (the same order options._plan uses)
     live = None  # (direction, edge, target, setup_name, kind, trade_hub)
+    bdate = None  # the live play's breakout date (Patch 174); read by hub plays only in phase 1
     state = st.get("state")
     if state in ("breakout_up", "breakdown"):
         d = 1 if state == "breakout_up" else -1
         edge = st["hub"]["high"] if d == 1 else st["hub"]["low"]
         live = (d, edge, st["target"], "Hub", "hub", st["hub"])
+        # The breakout candle's New York date (Patch 174): the candle
+        # st["retest"] counts back from (engine.current_status sets
+        # candles_since = n-1-i0 for the pending trade) — the same
+        # derivation the scanner's Patch 112 read uses.
+        try:
+            i0 = len(c4) - 1 - int(st["retest"]["candles_since"])
+            bdate = c4.index[i0].tz_convert("America/New_York").date().isoformat()
+        except Exception:
+            bdate = None
     else:
         try:
             pa = patterns.analyze_all(c4, res, S)
@@ -487,6 +588,12 @@ def card(sym):
             d = 1 if lv["state"] == "breakout_up" else -1
             th = (lv.get("trade") or {}).get("hub")
             live = (d, lv["edge"], lv["target"], patterns.KINDS.get(lv["kind"], lv["kind"]), lv["kind"], th)
+            # A pattern row's breakout date rides on the row ('since' is
+            # the breakout candle's timestamp — patterns.py's derivation).
+            # Doubles and gap fades were not in the Flow Lab test and never
+            # read it — the flow attach below is hub-only; this is here so
+            # a hub row that ever arrives by this path is keyed correctly.
+            bdate = str(lv.get("since") or "")[:10] or None
 
     if live:
         d, edge, target, setup_name, kind, th = live
@@ -495,6 +602,14 @@ def card(sym):
         out["grade"] = g.get("grade")
         out["state"] = "live"
         out["context"] = _context(op)
+        # Flow confluence (Patch 174): the stored tape classification of
+        # THIS play's breakout — hub plays only (the tested population),
+        # and only for callers the visibility gate lets through. Facts
+        # here; the composed line is added in the A/B branch below.
+        if include_flow and kind == "hub" and bdate:
+            fx = _flow_facts(sym, d, bdate)
+            if fx is not None:
+                out["flow"] = fx
         if g.get("grade") in ("A", "B"):
             out["favored"] = _side(d, edge, target, res, hub, S, atr, sh, op, regime, "favored")
             out["opposite"] = _opposite(d, edge, target, st, th, res, hub, S, atr, sh, op, regime)
@@ -505,6 +620,8 @@ def card(sym):
                 conf = _gamma_confluence({}, d, edge, target, atr, lv)
                 line = _confluence_line(conf, edge, target)
                 out["levels"] = dict(confluence=conf, lines=[line] if line else [])
+            if out.get("flow"):
+                out["flow"]["lines"] = _flow_lines(out["flow"], d)
         else:
             # Spec §4.2: the favored side is only set for a live setup graded A or B.
             # A live setup graded C, D or "?" is watch only — the card says so instead of

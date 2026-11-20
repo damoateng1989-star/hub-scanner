@@ -50,6 +50,7 @@ import snaptrade  # noqa: E402
 import swing_card  # noqa: E402
 import sika_chat  # noqa: E402
 import sika_find  # noqa: E402
+import flow_signal  # noqa: E402
 import telegram_bot  # noqa: E402
 import universe  # noqa: E402
 
@@ -224,6 +225,13 @@ async def lifespan(_app: FastAPI):
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
     if BOARD_TIMES and not db.board_rows():      # first start: fill the board shortly after the site is up
         threading.Timer(20, board.scan_board).start()
+    # Patch 174: post-close flow classification — the evening's hub breakouts get their tape
+    # classification stored in flow_signal. Internal build: a no-op unless FLOW_TAPE_PROVIDER
+    # is configured, and it writes data only — nothing member-facing reads the table without
+    # the visibility gate (swing_card.flow_allowed).
+    sched.add_job(flow_signal.classify_recent, CronTrigger(day_of_week="mon-fri", hour=18, minute=30,
+                                                           timezone="America/New_York"),
+                  misfire_grace_time=1800, coalesce=True, max_instances=1, id="flow_classify", replace_existing=True)
     # Patch 139: compact Cboe GEX snapshots for the shared watchlist only (78 slots/day).
     sched.add_job(_snapshot_gex_watchlist, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5",
                                                       timezone="America/New_York"),
@@ -1202,7 +1210,8 @@ async def swing_card_endpoint(symbol: str, u: dict = User):
     if not options_for(u):
         raise HTTPException(403, "Options plans are a Pro feature")
     try:
-        return await run_in_threadpool(swing_card.card, symbol)
+        return await run_in_threadpool(swing_card.card, symbol,
+                                       include_flow=swing_card.flow_allowed(u))
     except Exception as e:
         raise HTTPException(400, str(e))
 
@@ -1248,7 +1257,8 @@ async def sika_chat_endpoint(body: SikaChatBody, u: dict = User):
         raise HTTPException(400, "Message is too long")
     try:
         return await run_in_threadpool(
-            sika_chat.answer, body.symbol, body.message, body.history or [], body.plain_english
+            sika_chat.answer, body.symbol, body.message, body.history or [], body.plain_english,
+            include_flow=swing_card.flow_allowed(u)
         )
     except ValueError as e:
         raise HTTPException(400, str(e))

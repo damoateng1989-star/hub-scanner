@@ -69,6 +69,13 @@ with _lock:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (symbol, direction, breakout_date)
     );
+    CREATE TABLE IF NOT EXISTS flow_signal (
+        symbol TEXT, direction INTEGER, breakout_date TEXT,
+        state TEXT, flow_net REAL, threshold REAL, median_net REAL,
+        window_start TEXT, window_end TEXT, provider TEXT, as_of TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (symbol, direction, breakout_date)
+    );
     CREATE TABLE IF NOT EXISTS signals (
         id TEXT PRIMARY KEY, symbol TEXT, direction INTEGER,
         hub_low REAL, hub_high REAL, hub_sessions INTEGER,
@@ -284,6 +291,33 @@ def flow_for(symbol: str, direction: int, breakout_date: str) -> dict | None:
     """The flow-proxy row logged for one breakout, or None if no log exists."""
     try:
         r = _run("SELECT * FROM flow_log WHERE symbol=? AND direction=? AND breakout_date=?",
+                 (symbol, direction, breakout_date)).fetchone()
+        return dict(r) if r else None
+    except sqlite3.OperationalError:
+        return None
+
+# --- flow signal (Patch 174): the tape classification of a breakout.
+# A separate table from flow_log on purpose: proxy rows and tape
+# classifications never share a table, a row, or a join (spec section 4).
+def log_flow_signal(symbol: str, direction: int, breakout_date: str, state: str,
+                    flow_net: float, threshold: float, median_net: float,
+                    window_start: str, window_end: str, provider: str, as_of: str):
+    """First write wins: the classification is the breakout window's tape,
+    written once by the post-close job; a later run never overwrites it
+    (a recomputation on a later day would not be the stored measurement)."""
+    _run("""INSERT OR IGNORE INTO flow_signal
+            (symbol, direction, breakout_date, state, flow_net, threshold, median_net,
+             window_start, window_end, provider, as_of)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+         (symbol, direction, breakout_date, state, flow_net, threshold, median_net,
+          window_start, window_end, provider, as_of))
+
+
+def flow_signal_for(symbol: str, direction: int, breakout_date: str) -> dict | None:
+    """The stored tape classification for one breakout, or None if the
+    breakout has no row (never classified, or its tape was unavailable)."""
+    try:
+        r = _run("SELECT * FROM flow_signal WHERE symbol=? AND direction=? AND breakout_date=?",
                  (symbol, direction, breakout_date)).fetchone()
         return dict(r) if r else None
     except sqlite3.OperationalError:

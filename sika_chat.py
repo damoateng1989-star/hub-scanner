@@ -52,7 +52,7 @@ GROUNDING RULES — follow every rule:
 1. Use ONLY the supplied data: the current Swing Play Card JSON, the supplied
    Plain-English paragraph, the supplied regime, the supplied recent 4H price
    history, supplied record figures, news headlines, sector/market
-   performance, and the gamma figures when they are present. Do not use training knowledge, outside market facts, other
+   performance, the gamma figures when they are present, and the supplied flow figures (the breakout's aggressive-buy classification, its net premium, and the measured Flow Lab record) when they are present. Do not use training knowledge, outside market facts, other
    tickers, news, or assumptions. Conversation history is context for the
    question only; it is NOT a source of facts.
 2. Never invent a number: no trigger, target, stop, price, grade, percentage,
@@ -104,6 +104,22 @@ GROUNDING RULES — follow every rule:
     gamma level "next". If no gamma figures are supplied and the member asks
     about gamma, walls, or the flip, say exactly: "I don't have gamma data for
     this one right now." Then stop.
+12. Flow: when flow figures are supplied, they are the classification of
+    this play's breakout from the options tape — aggressive buying measured
+    trade by trade against the paired quote — together with the measured
+    record of the Flow Lab test (confirmed retests +0.45% per trade,
+    n = 102, PF 1.31; against −0.49%, n = 95; none −0.10%, n = 376). You may
+    say the flow confirmed the breakout, or ran against it, only in those
+    words and only when the supplied state says so, and when you do, cite
+    the record. Confirmation is a fact about similar past setups, not a
+    prediction about this one: never say flow makes this trade likely to
+    work, never call flow bullish or bearish, and never present it as a
+    direction call. The volume-versus-open-interest line elsewhere in the
+    app is a different, unmeasured proxy — never describe it with these
+    numbers or this language. Flow never changes the card's trigger,
+    target, stop, grade, or contract. If no flow figures are supplied and
+    the member asks about flow, aggressive buying, or confirmation, say
+    exactly: "I don't have flow data for this one right now." Then stop.
 
 Return only the answer text, without quotation marks or a JSON wrapper.
 """
@@ -348,7 +364,19 @@ def _gamma(card: dict) -> dict | None:
         return None
 
 
-def answer(sym: str, message: str, history=None, plain_english: str = "") -> dict:
+def _flow(card: dict) -> dict | None:
+    """The flow facts the swing card already computed (Patch 174): the card's own flow object, returned
+    unchanged, so chat and the card can never disagree. None when the card carries none — no stored
+    classification for the play's breakout, or the visibility gate kept the key off this card (rule 12
+    gives the exact fallback sentence for that case)."""
+    try:
+        fx = (card or {}).get("flow")
+        return fx if isinstance(fx, dict) and fx else None
+    except Exception:
+        return None
+
+
+def answer(sym: str, message: str, history=None, plain_english: str = "", include_flow: bool = False) -> dict:
     """Return one grounded conversational answer. Raises on missing key/API failure."""
     key = os.getenv("SIKA_API_KEY", "").strip()
     if not key:
@@ -361,7 +389,7 @@ def answer(sym: str, message: str, history=None, plain_english: str = "") -> dic
 
     # Re-read the deterministic card for every answer: no stale levels are carried
     # forward from the browser or conversation history.
-    card = swing_card.card(symbol)
+    card = swing_card.card(symbol, include_flow=include_flow)
     try:
         regime_raw = db.get_setting("regime")
         regime = json.loads(regime_raw) if regime_raw else None
@@ -381,6 +409,10 @@ def answer(sym: str, message: str, history=None, plain_english: str = "") -> dic
     gx = _gamma(card)
     if gx is not None:
         supplied["gamma_context"] = gx
+    # Always supplied when the card carries it: the flow context (Patch 174).
+    fx = _flow(card)
+    if fx is not None:
+        supplied["flow_context"] = fx
 
     # Only when asked: the record (a question about how this setup has done)
     # and the news (a question about why it moved). A false positive on the

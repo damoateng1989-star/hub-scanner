@@ -7947,6 +7947,11 @@ function askSikaPlayHTML(ticker, c) {
   const gLines = (c.gamma && Array.isArray(c.gamma.lines) && c.gamma.lines.length) ? c.gamma.lines
     : (c.levels && Array.isArray(c.levels.lines) ? c.levels.lines : []);      // no options chain: price-level confluence only
   const gammaBlock = gLines.length ? `<div class="ask-play-gamma">${gLines.map(t => `<div>${esc(t)}</div>`).join("")}</div>` : "";
+  // Patch 174: flow confluence lines, composed server-side on the card (c.flow.lines) — rendered
+  // verbatim, never computed here. Absent (no stored classification, a non-hub play, or the
+  // internal-visibility gate) renders nothing; the play card is unchanged without flow.
+  const flowBlock = (c.flow && Array.isArray(c.flow.lines) && c.flow.lines.length)
+    ? `<div class="ask-play-flow">${c.flow.lines.map(t => `<div>${esc(t)}</div>`).join("")}</div>` : "";
   const chips = [
     ["What's driving it?", "What is driving the setup?"],
     ["Where does price sit in the hub?", "Where does price sit in the hub?"],
@@ -7961,6 +7966,7 @@ function askSikaPlayHTML(ticker, c) {
     + `</div>`
     + idea
     + gammaBlock
+    + flowBlock
     + `<div class="ask-play-ask"><div class="ask-label">Ask Sika about this setup</div><div class="ask-play-chips">${chips}</div></div>`;
 }
 
@@ -9018,6 +9024,10 @@ html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
    as context, never as part of the plan. */
 .ask-play-gamma{margin-top:10px;padding-top:9px;border-top:1px solid rgba(128,128,128,.28);font-size:12.5px;line-height:1.5;opacity:.82}
 .ask-play-gamma div+div{margin-top:3px}
+/* Patch 174: flow confluence lines on the play card — server-composed text,
+   rendered verbatim; the gamma block's muted context treatment, no colour of its own. */
+.ask-play-flow{margin-top:10px;padding-top:9px;border-top:1px solid rgba(128,128,128,.28);font-size:12.5px;line-height:1.5;opacity:.82}
+.ask-play-flow div+div{margin-top:3px}
 
 /* Levels to watch */
 .mp-lv .lv-row { display: grid; grid-template-columns: 92px 1fr; gap: 10px; padding: 8px 0; border-top: 1px solid var(--mp-line); align-items: start; }
