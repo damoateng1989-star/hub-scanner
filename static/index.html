@@ -6301,7 +6301,7 @@ function renderRetest() {
     const up = x.state !== "breakdown";
     const txt = kind === "now"
       ? `${esc(x.label)} · at the edge ${money(x.edge)} · target ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
-      : `${esc(x.label)} · broke out, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
+      : `${esc(x.label)} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span></span><span class="go">›</span></a>`;
   };
@@ -9155,6 +9155,9 @@ html:not([data-theme="light"]) body .board-actions .plain-btn.on, html:not([data
 @keyframes splFlash { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.4); opacity: 0; } }
 @keyframes splDrop { 0% { transform: translate(0,0) scale(var(--ds,1)); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx),var(--dy)) scale(.4); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .spl-rg, .spl-fl, .spl-dp { display: none !important; } }
+/* Nov 20: Retesting now rows in white (dark theme); the ticker keeps its own style */
+html:not([data-theme="light"]) #retest .arow .t > span:not(.tk) { color: #F2F3F5 !important; }
+html[data-theme="light"] #retest .arow .t > span:not(.tk) { color: var(--ink) !important; }
 </style>
 <script>
 /* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
