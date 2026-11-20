@@ -9,6 +9,34 @@ from pathlib import Path
 DATA_DIR = Path(os.getenv("DATA_DIR", "data"))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
+
+def _prune_bar_cache():
+    """Nov 20: the disk filled up (site down: 'database or disk is full'). The Alpaca bar cache kept one JSON file per
+    stock per history length, and the 2- and 5-year Lab runs wrote hundreds of big ones. Only the site's own short
+    histories are cached now (data.py BARS_CACHE_MAX_DAYS); this removes the long ones, before the database opens."""
+    import re
+    max_days = int(os.getenv("BARS_CACHE_MAX_DAYS", "400"))
+    d = DATA_DIR / "bars"
+    if not d.is_dir():
+        return
+    freed = 0
+    for f in d.iterdir():
+        m = re.match(r".+_(\d+)d\.json(\..*)?$", f.name)
+        if (m and int(m.group(1)) > max_days) or f.name.endswith(".tmp") or f.name.startswith("tmp"):
+            try:
+                freed += f.stat().st_size
+                f.unlink()
+            except OSError:
+                pass
+    if freed:
+        print(f"bar cache: freed {freed / 1e6:.0f} MB of long-history files", flush=True)
+
+
+try:
+    _prune_bar_cache()
+except Exception as _e:      # never block startup on housekeeping
+    print(f"bar cache prune failed: {_e}", flush=True)
+
 _conn = sqlite3.connect(DATA_DIR / "hubscanner.db", check_same_thread=False)
 _conn.row_factory = sqlite3.Row
 _lock = threading.Lock()

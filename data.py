@@ -45,8 +45,14 @@ def _disk_read(symbol: str, days: int) -> pd.DataFrame | None:
         return None
 
 
+BARS_CACHE_MAX_DAYS = int(os.getenv("BARS_CACHE_MAX_DAYS", "400"))   # the site's own histories (260 days); Lab runs aren't cached
+
+
 def _disk_write(symbol: str, days: int, df: pd.DataFrame) -> None:
-    """Best-effort atomic JSON write. A cache failure must never fail a chart."""
+    """Best-effort atomic JSON write. A cache failure must never fail a chart.
+    Long histories (the 2/5/10-year Lab runs) are not written: hundreds of them filled the disk (Nov 20)."""
+    if int(days) > BARS_CACHE_MAX_DAYS:
+        return
     if df is None or df.empty:
         return
     tmp_name = None
