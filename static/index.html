@@ -5046,6 +5046,37 @@ function mapLwcKey(D) {
 // spread evenly across its high-low range). The longest bar (point of control) is brightest; the 70% value area is
 // a shade stronger than the rest. Redrawn as the view pans, zooms or resizes.
 let MAP_VP_DRAW = null;
+// a live countdown to the close of the candle that's forming, for the timeframe on screen (regular hours only)
+let MAP_TIMER = null;
+function mapCandleClose(tf, now) {
+  const ny = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"})), dow = ny.getDay();
+  const m = ny.getHours() * 60 + ny.getMinutes() + ny.getSeconds() / 60;
+  if (dow === 0 || dow === 6 || m < 570 || m >= 960) return null;              // 9:30-16:00 ET, weekdays
+  let end;
+  if (tf === "1d") end = 960;
+  else if (tf === "4h") end = m < 810 ? 810 : 960;
+  else { const h = +tf[0] * 60; end = Math.min(960, 570 + (Math.floor((m - 570) / h) + 1) * h); }
+  return Math.max(0, Math.round((end - m) * 60));
+}
+function mapCandleTimer(chart, series, D) {
+  const el = chart.chartElement(); if (!el) return;
+  let tag = el.querySelector(".mp-ctimer");
+  if (!tag) { tag = document.createElement("div"); tag.className = "mp-ctimer"; el.appendChild(tag); }
+  if (MAP_TIMER) clearInterval(MAP_TIMER);
+  const tick = () => {
+    if (!el.isConnected) { clearInterval(MAP_TIMER); MAP_TIMER = null; return; }
+    const left = mapCandleClose(MAP_TF, new Date());
+    const last = D.cs[D.cs.length - 1], px = D.P && D.P.px != null ? +D.P.px : last ? +last.close : null;
+    const y = px != null ? series.priceToCoordinate(px) : null;
+    if (left == null || y == null) { tag.hidden = true; return; }
+    const hh = Math.floor(left / 3600), mm = Math.floor(left % 3600 / 60), ss = left % 60, p2 = (n) => String(n).padStart(2, "0");
+    tag.textContent = (hh ? hh + ":" + p2(mm) : mm) + ":" + p2(ss);
+    tag.title = `This ${MAP_TF.toUpperCase()} candle closes in ${tag.textContent}`;
+    tag.style.top = Math.round(y + 12) + "px"; tag.style.left = (chart.timeScale().width() + 1) + "px";
+    tag.hidden = false;
+  };
+  tick(); MAP_TIMER = setInterval(tick, 1000);
+}
 function mapVolProfile(chart, series, D, light) {
   const el = chart.chartElement(); if (!el) return;
   el.style.position = "relative";
@@ -5084,14 +5115,20 @@ function mapVolProfile(chart, series, D, light) {
         g.fillStyle = k === poc ? (light ? "rgba(47,84,235,.45)" : "rgba(124,147,255,.55)") : `rgba(${base},${va.has(k) ? (light ? .16 : .22) : (light ? .08 : .11)})`;
         g.fillRect(0, top, w, h);
       }
-      const yp = series.priceToCoordinate(lo + (poc + .5) * step);
-      if (yp != null) {
-        g.fillStyle = light ? "rgba(47,84,235,.9)" : "rgba(170,186,255,.95)"; g.font = '600 9px "JetBrains Mono", ui-monospace, monospace';
-        g.fillText("MOST TRADED " + money(lo + (poc + .5) * step), 4, Math.max(10, yp - 4));
+      const pocPx = lo + (poc + .5) * step, yp = series.priceToCoordinate(pocPx);
+      if (yp != null) {            // the POC as a solid line across the whole chart, with a solid tag on the left
+        const col = light ? "rgba(47,84,235,.95)" : "rgba(150,170,255,1)";
+        g.save(); g.strokeStyle = col; g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(0, Math.round(yp) + .5); g.lineTo(W, Math.round(yp) + .5); g.stroke(); g.restore();
+        const txt = "POC " + money(pocPx); g.font = '700 10px "JetBrains Mono", ui-monospace, monospace';
+        const tw = g.measureText(txt).width + 10, ty = Math.max(2, Math.min(H - 17, yp - 8));
+        g.fillStyle = col; g.fillRect(2, ty, tw, 16);
+        g.fillStyle = light ? "#fff" : "#0B0D12"; g.fillText(txt, 7, ty + 12);
       }
     } catch (e) {}
   };
   MAP_VP_DRAW = draw;
+  mapCandleTimer(chart, series, D);
   chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
   requestAnimationFrame(() => requestAnimationFrame(draw));
 }
@@ -9321,6 +9358,9 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
 .stack-hint { position: absolute; left: 0; right: 0; bottom: calc(120px + env(safe-area-inset-bottom)); text-align: center; z-index: 2; font-size: 14px; color: #fff;
   text-shadow: 0 1px 8px rgba(0,0,0,.8); animation: stkHint 1.6s ease-in-out infinite; pointer-events: none; }
 @keyframes stkHint { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-8px); opacity: .5; } }
+.mp-ctimer { position: absolute; z-index: 4; pointer-events: none; padding: 2px 6px; border-radius: 3px; font: 600 10px/1.3 "JetBrains Mono", ui-monospace, monospace;
+  background: #2A2F3A; color: #E9EBEF; white-space: nowrap; }
+html[data-theme="light"] .mp-ctimer { background: #E3E7EE; color: #0d1117; }
 </style>
 <script>
 /* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
