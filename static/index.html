@@ -2680,6 +2680,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div id="phoneNudge"></div>
   <div id="premarket" hidden></div>
   <div class="week" id="week" hidden></div>
+  <div class="today-stories" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div></div>
   <div class="retest" id="retest" hidden></div>
   <div class="rule1" id="rule1"></div>
   <div class="mbrief" id="mbrief" hidden></div>
@@ -6454,6 +6455,7 @@ function renderToday() {
   $("mkt").innerHTML = marketChip();
   renderPremarket();
   renderWeek();
+  renderWaitingRoom();
   renderRetest();
   renderRule();
   renderKpis();
@@ -9184,6 +9186,32 @@ html body :is(.board-filters, #chips, #stkPills) > :is(button, .chip, .board-fil
 html[data-theme="light"] body :is(.board-filters, #chips, #stkPills) { background: #FFFFFF; border-color: rgba(15,23,42,.10); }
 html[data-theme="light"] body :is(.board-filters, #chips, #stkPills) > :is(button, .chip, .board-filter) { color: #3B4250 !important; }
 html[data-theme="light"] body :is(.board-filters, #chips, #stkPills) > :is(button, .chip, .board-filter):is(.on, .active) { background: #E9EAEC !important; color: #0d1117 !important; }
+/* The Waiting Room (Patch 178) */
+.wr-card { background: #12151B; border: 1px solid rgba(255,255,255,.13); border-radius: 18px; padding: 16px; min-width: 0; }
+.wr-eyebrow { display: flex; justify-content: space-between; font: 600 11px/1 var(--mono, monospace); letter-spacing: .12em; color: #9AA3AF; margin-bottom: 12px; }
+.wr-window { position: relative; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: #0B0D12; }
+.wr-video { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.85); }
+.wr-chip { position: absolute; left: 10px; top: 10px; font: 600 10px/1 var(--mono, monospace); letter-spacing: .12em; color: #F2F3F5; background: rgba(7,9,13,.55); padding: 6px 8px; border-radius: 6px; }
+.wr-pause { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: rgba(7,9,13,.55); color: #fff; font-size: 12px; cursor: pointer; }
+.wr-head { font: 400 22px/1.25 "Newsreader", Georgia, "Times New Roman", serif !important; margin: 14px 0 6px; color: var(--ink); }
+.wr-hint { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 0 0 14px; }
+.wr-q { font: 600 11px/1.3 var(--mono, monospace); letter-spacing: .1em; color: #9AA3AF; margin-bottom: 10px; }
+.wr-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.wr-pill { border-radius: 999px !important; padding: 9px 16px !important; background: #1A1A1A !important; border: 1px solid rgba(255,255,255,.14) !important; color: #EDEDED !important; font-size: 14px; cursor: pointer; transition: opacity .25s; }
+.wr-pill:disabled { opacity: .35; cursor: default; text-decoration: line-through; }
+.wr-show { margin-top: 10px; background: none !important; border: 0 !important; color: var(--muted) !important; font-size: 13px; text-decoration: underline; cursor: pointer; padding: 0 !important; }
+.wr-reveal { border-top: 1px solid rgba(255,255,255,.1); padding-top: 12px; }
+.wr-place { font-weight: 600; color: var(--ink); font-size: 15px; }
+.wr-cap { color: var(--muted); font-size: 14px; line-height: 1.55; margin: 6px 0 0; }
+.wr-credit { color: var(--faint, #7d8590); font-size: 12px; margin: 6px 0 0; }
+.wr-foot { display: flex; justify-content: space-between; margin-top: 14px; font: 600 10px/1 var(--mono, monospace); letter-spacing: .1em; color: #6B7380; }
+html[data-theme="light"] .wr-card { background: #fff; border-color: rgba(15,23,42,.1); }
+html[data-theme="light"] .wr-pill { background: #F3F4F6 !important; color: #1F2328 !important; border-color: rgba(15,23,42,.12) !important; }
+.today-stories { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 16px 0; }
+.today-stories:has(> :not([hidden]) + :not([hidden])) { grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+.today-stories:not(:has(> :not([hidden]))) { display: none; }
+.wr-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 980px) { .wr-row:has(> #waitingRoom:not([hidden])) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
 </style>
 <script>
 /* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
@@ -9212,6 +9240,71 @@ html[data-theme="light"] body :is(.board-filters, #chips, #stkPills) > :is(butto
     }
   }, {passive: true});
 })();
+</script>
+<script>
+/* The Waiting Room (Patch 178): a slow scene from somewhere in the world, a three-city guess. No score, no streaks.
+   Poster first; the clip plays only while the card is on screen; reduced motion / save-data get a play button. */
+const WR = { data: null, io: null };
+function wrEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]); }
+function wrLocalTime(tz) { try { return new Intl.DateTimeFormat([], {hour: "numeric", minute: "2-digit", timeZone: tz}).format(new Date()); } catch (e) { return ""; } }
+async function renderWaitingRoom(host) {
+  host = host || document.getElementById("waitingRoom"); if (!host) return;
+  let d = null;
+  try { const r = await fetch("/api/waiting-room", {credentials: "same-origin"}); if (r.status === 200) d = await r.json(); } catch (e) {}
+  if (!d || !d.poster || !Array.isArray(d.options)) { host.hidden = true; host.innerHTML = ""; return; }
+  WR.data = d;
+  const day = new Date(d.date + "T12:00:00").toLocaleDateString([], {weekday: "short", month: "short", day: "numeric"});
+  const calm = (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) || (navigator.connection && navigator.connection.saveData);
+  host.innerHTML = `<div class="wr-eyebrow"><span>THE WAITING ROOM</span><span>${wrEsc(day)}</span></div>
+    <div class="wr-window">
+      <video class="wr-video" muted loop playsinline preload="none" poster="${wrEsc(d.poster)}" aria-label="A slow scene: ${wrEsc(d.hint)}"></video>
+      <span class="wr-chip">TODAY'S WINDOW</span>
+      ${d.video ? `<button class="wr-pause" type="button" aria-label="${calm ? "Play" : "Pause"}">${calm ? "▶" : "❚❚"}</button>` : ""}
+    </div>
+    <h3 class="wr-head">${wrEsc(d.headline)}</h3>
+    <p class="wr-hint">${wrEsc(d.hint)}</p>
+    <div class="wr-q">WHERE IN THE WORLD IS THE WAITING ROOM?</div>
+    <div class="wr-game"></div>
+    <div class="wr-foot"><span>A NEW WINDOW EVERY MORNING</span><span>Sound off, always</span></div>`;
+  host.hidden = false;
+  const v = host.querySelector(".wr-video"), btn = host.querySelector(".wr-pause");
+  let manualPause = !!calm, loaded = false;
+  const load = () => { if (loaded || !d.video) return; const s = document.createElement("source"); s.src = d.video; s.type = "video/mp4"; v.appendChild(s); v.load(); loaded = true; };
+  const play = () => { if (!d.video || manualPause) return; load(); const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  const pause = () => { try { v.pause(); } catch (e) {} };
+  v.addEventListener("error", () => { if (btn) btn.remove(); }, true);
+  if (btn) btn.onclick = () => { manualPause = !v.paused ? true : false; if (manualPause) { pause(); btn.textContent = "▶"; btn.setAttribute("aria-label", "Play"); } else { manualPause = false; play(); btn.textContent = "❚❚"; btn.setAttribute("aria-label", "Pause"); } };
+  if (WR.io) WR.io.disconnect();
+  if ("IntersectionObserver" in window && d.video) {
+    WR.io = new IntersectionObserver(es => es.forEach(e => (e.isIntersecting && e.intersectionRatio >= .5 && !document.hidden) ? play() : pause()), {threshold: [0, .5, 1]});
+    WR.io.observe(v);
+  }
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); });
+  wrRenderGame(host, d.guessed || null, []);
+}
+function wrRenderGame(host, rev, wrong) {
+  const g = host.querySelector(".wr-game"); if (!g) return;
+  const d = WR.data;
+  if (rev) {
+    const t = wrLocalTime(rev.tz);
+    g.innerHTML = `<div class="wr-reveal"><div class="wr-place">${rev.correct ? "✓ " : ""}${wrEsc(rev.city)}, ${wrEsc(rev.country)}${t ? " · " + wrEsc(t) : ""}${rev.scene_weather ? " · " + wrEsc(rev.scene_weather) : ""}</div>
+      <p class="wr-cap">${wrEsc(rev.caption)}</p>${rev.credit ? `<p class="wr-credit">Video: ${wrEsc(rev.credit)}</p>` : ""}</div>`;
+    return;
+  }
+  g.innerHTML = `<div class="wr-pills">${d.options.map(o => `<button type="button" class="wr-pill"${wrong.includes(o) ? " disabled" : ""}>${wrEsc(o)}</button>`).join("")}</div>
+    <button type="button" class="wr-show">Just show me</button>`;
+  g.querySelectorAll(".wr-pill").forEach(b => b.onclick = () => wrGuess(host, b.textContent, wrong));
+  g.querySelector(".wr-show").onclick = () => wrGuess(host, "__reveal__", wrong);
+}
+async function wrGuess(host, choice, wrong) {
+  try {
+    const r = await fetch("/api/waiting-room/guess", {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({choice})});
+    if (!r.ok) return;
+    const x = await r.json();
+    if (x.correct || choice === "__reveal__") wrRenderGame(host, x, wrong);
+    else wrRenderGame(host, null, wrong.concat([choice]));
+  } catch (e) {}
+}
 </script>
 </body>
 </html>

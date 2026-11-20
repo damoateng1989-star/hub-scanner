@@ -127,6 +127,10 @@ with _lock:
         code TEXT PRIMARY KEY, note TEXT, max_uses INTEGER DEFAULT 1, uses INTEGER DEFAULT 0,
         active INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS wr_guesses (
+        user_id INTEGER, date TEXT, choice TEXT, correct INTEGER,
+        PRIMARY KEY (user_id, date)
+    );
     CREATE TABLE IF NOT EXISTS paper_trades (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         symbol TEXT, direction INTEGER, qty INTEGER,
@@ -370,6 +374,18 @@ def log_flow_tape(symbol: str, day: str, agg: dict, provider: str, as_of: str):
          (symbol, day, agg["call_buy_premium"], agg["put_buy_premium"], agg["net"],
           agg["trades"], agg["classified"], agg["unclassified"], agg["contracts"],
           provider, as_of))
+
+
+def wr_guess(user_id, date):
+    """The Waiting Room (Patch 178): the day's revealed state for one member, and nothing else."""
+    rows = _run("SELECT choice, correct FROM wr_guesses WHERE user_id=? AND date=?", (user_id, date)).fetchall()
+    return dict(rows[0]) if rows else None
+
+
+def save_wr_guess(user_id, date, choice, correct):
+    _run("INSERT INTO wr_guesses (user_id, date, choice, correct) VALUES (?,?,?,?) "
+         "ON CONFLICT(user_id, date) DO UPDATE SET choice=excluded.choice, correct=excluded.correct",
+         (user_id, date, choice, 1 if correct else 0))
 
 
 def flow_tape_for(symbol: str, day: str) -> dict | None:

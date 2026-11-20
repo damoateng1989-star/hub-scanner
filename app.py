@@ -1359,6 +1359,57 @@ async def flow_aggregates(body: FlowAggregatesBody, request: Request):
     return {"stored": stored, "received": len(rows), "classified": classified}
 
 
+
+# ---------------------------------------------------------------- The Waiting Room (Patch 178)
+class WRGuessBody(BaseModel):
+    choice: str = ""
+
+
+def _wr_today():
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _ZoneInfo
+    return _dt.now(_ZoneInfo("America/New_York")).date()
+
+
+@app.get("/waiting-room/{name}")
+def waiting_room_media(name: str):
+    """The scenes' clips and posters — only the manifest's files (no directory listing, no other paths)."""
+    import waiting_room as wr
+    stem, _, ext = name.rpartition(".")
+    if ext not in ("mp4", "webp") or stem not in {s["id"] for s in wr.POOL}:
+        raise HTTPException(404, "Not found")
+    f = wr.MEDIA / name
+    if not f.is_file():
+        raise HTTPException(404, "Not found")
+    return FileResponse(f, media_type="video/mp4" if ext == "mp4" else "image/webp",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/waiting-room")
+def waiting_room(u: dict = User):
+    import waiting_room as wr
+    today = _wr_today()
+    if not wr.media_ready(wr.scene_for_date(today)):
+        return Response(status_code=204)          # media not placed yet: the card stays hidden
+    payload = wr.public_payload(today)
+    g = db.wr_guess(u["id"], payload["date"])
+    if g:
+        payload["guessed"] = {**wr.reveal(today, g["choice"]), "choice": g["choice"], "correct": bool(g["correct"])}
+    return payload
+
+
+@app.post("/api/waiting-room/guess")
+def waiting_room_guess(body: WRGuessBody, u: dict = User):
+    import waiting_room as wr
+    today = _wr_today()
+    choice = str(body.choice or "")[:60]
+    payload = wr.public_payload(today)
+    if choice not in payload["options"] and choice != "__reveal__":
+        raise HTTPException(400, "unknown option")
+    r = wr.reveal(today, choice)
+    db.save_wr_guess(u["id"], payload["date"], choice, r["correct"])
+    return r
+
 @app.get("/api/gamma/{symbol}")
 async def gamma_walls(symbol: str, u: dict = User):
     """Gamma walls for the Shelf card (one Cboe chain per symbol per day, cached). Fail-open: walls=None."""

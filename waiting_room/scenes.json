@@ -1,0 +1,311 @@
+[
+ {
+  "id": "marrakech",
+  "city": "Marrakech",
+  "country": "Morocco",
+  "region": "Africa",
+  "tz": "Africa/Casablanca",
+  "headline": "Where the light is made by hand",
+  "hint": "Lanterns crowd the shade here, in a red-walled old town that has traded like this for centuries",
+  "scene_weather": "warm shade, 31°",
+  "caption": "Hand-pierced lamps fill the souks of Marrakech's medina, glowing even in daylight.",
+  "decoys": [
+   "Fes",
+   "Istanbul"
+  ],
+  "seconds": 18,
+  "source_url": "https://www.pexels.com/video/an-arts-and-crafts-store-4957410/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "accra",
+  "city": "Accra",
+  "country": "Ghana",
+  "region": "Africa",
+  "tz": "Africa/Accra",
+  "headline": "A square big enough to hear the ocean",
+  "hint": "A black star stands over an empty parade ground built for a nation's first morning",
+  "scene_weather": "bright sun, 30°",
+  "caption": "Black Star Square in Accra, Ghana's independence parade ground, sits almost empty between ceremonies, facing the Atlantic.",
+  "decoys": [
+   "Abuja",
+   "Dakar"
+  ],
+  "seconds": 23,
+  "source_url": "https://www.pexels.com/video/ghana-blackstar-square-20546634/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "lagos",
+  "city": "Lagos",
+  "country": "Nigeria",
+  "region": "Africa",
+  "tz": "Africa/Lagos",
+  "headline": "The city, crossing its own water slowly",
+  "hint": "Islands stitched together by one white harp of a bridge, in a megacity that lives on a lagoon",
+  "scene_weather": "hazy sun, 29°",
+  "caption": "The Lekki–Ikoyi Link Bridge crosses the lagoon in Lagos, Nigeria — the city's daily rush reduced to a thread from above.",
+  "decoys": [
+   "Abidjan",
+   "Accra"
+  ],
+  "seconds": 24,
+  "source_url": "https://www.pexels.com/video/aerial-view-of-lagos-cable-bridge-over-lagoon-38147824/",
+  "source_name": "Pexels",
+  "credit": "",
+  "flag": "borderline calm: aerial traffic reads as a slow pulse over water"
+ },
+ {
+  "id": "nairobi",
+  "city": "Nairobi",
+  "country": "Kenya",
+  "region": "Africa",
+  "tz": "Africa/Nairobi",
+  "headline": "Weather, passing over a high city",
+  "hint": "A cool, high-altitude capital where the clouds do all the rushing and the towers just watch",
+  "scene_weather": "sunny with fast clouds, 24°",
+  "caption": "Clouds race over downtown Nairobi, Kenya — a capital at 1,700 metres, with a national park at its edge.",
+  "decoys": [
+   "Johannesburg",
+   "Addis Ababa"
+  ],
+  "seconds": 17,
+  "source_url": "https://www.pexels.com/video/time-lapse-of-a-city-and-clouds-in-the-sky-12659644/",
+  "source_name": "Pexels",
+  "credit": "",
+  "flag": "borderline calm: timelapse, but clouds only"
+ },
+ {
+  "id": "cairo",
+  "city": "Cairo",
+  "country": "Egypt",
+  "region": "Africa",
+  "tz": "Africa/Cairo",
+  "headline": "The oldest skyline, under moving weather",
+  "hint": "Three triangles of stone at a desert's edge, close enough to a modern megacity to share its horizon",
+  "scene_weather": "broken cloud, 27°",
+  "caption": "The Great Pyramids of Giza stand on the desert edge of greater Cairo, Egypt, under a fast-changing sky.",
+  "decoys": [
+   "Luxor",
+   "Khartoum"
+  ],
+  "seconds": 19,
+  "source_url": "https://www.pexels.com/video/great-pyramids-of-giza-queops-khufu-quefren-and-menkaure-mikerinos-timelapse-20284253/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "zanzibar",
+  "city": "Zanzibar",
+  "country": "Tanzania",
+  "region": "Africa",
+  "tz": "Africa/Dar_es_Salaam",
+  "headline": "One sail, going home on the evening light",
+  "hint": "A triangular sail older than the spice trade routes it still crosses, off an island of cloves and carved doors",
+  "scene_weather": "golden hour, 28°",
+  "caption": "A dhow sails at sunset off Zanzibar, Tanzania — the wooden boats that have worked this Swahili coast for centuries.",
+  "decoys": [
+   "Mombasa",
+   "Lamu"
+  ],
+  "seconds": 21,
+  "source_url": "https://www.pexels.com/video/serene-zanzibar-sunset-with-traditional-dhow-29822750/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "lisbon",
+  "city": "Lisbon",
+  "country": "Portugal",
+  "region": "Europe",
+  "tz": "Europe/Lisbon",
+  "headline": "The yellow car that climbs the hill all day",
+  "hint": "Look for tiled facades, steep cobbles, and a tram that has run these tracks for generations",
+  "scene_weather": "sunny, 21°",
+  "caption": "Lisbon's classic yellow trams still climb the steep, cobbled streets of its historic centre, past rows of old tiled buildings.",
+  "decoys": [
+   "Porto",
+   "Seville"
+  ],
+  "seconds": 16,
+  "source_url": "https://www.pexels.com/video/charming-lisbon-tram-ascends-historic-street-32018396/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "paris",
+  "city": "Paris",
+  "country": "France",
+  "region": "Europe",
+  "tz": "Europe/Paris",
+  "headline": "Everyone out for a walk, all at once",
+  "hint": "Stone facades, wide pavements, and bicycles threading politely through the crowd",
+  "scene_weather": "clear, 18°",
+  "caption": "Paris street life in full flow — pedestrians and cyclists sharing the broad streets of the French capital on an ordinary day.",
+  "decoys": [
+   "Brussels",
+   "Vienna"
+  ],
+  "seconds": 14,
+  "source_url": "https://www.pexels.com/video/vibrant-paris-street-life-on-a-busy-day-32413901/",
+  "source_name": "Pexels",
+  "credit": "",
+  "flag": "short (14s, 1s under the floor) + borderline calm (bustling)"
+ },
+ {
+  "id": "reykjavik",
+  "city": "Reykjavík",
+  "country": "Iceland",
+  "region": "Europe",
+  "tz": "Atlantic/Reykjavik",
+  "headline": "An orange sentinel in a white world",
+  "hint": "Snow to the water's edge, low northern light, and a coast that feels far from anywhere",
+  "scene_weather": "snow-covered, -2°",
+  "caption": "Near Reykjavík, Iceland's snowy coast is dotted with brightly painted lighthouses standing out against the white winter landscape.",
+  "decoys": [
+   "Tromsø",
+   "Helsinki"
+  ],
+  "seconds": 28,
+  "source_url": "https://www.pexels.com/video/bright-orange-lighthouse-in-snowy-landscape-30685081/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "istanbul",
+  "city": "Istanbul",
+  "country": "Türkiye",
+  "region": "Europe",
+  "tz": "Europe/Istanbul",
+  "headline": "The market has been meeting here for centuries",
+  "hint": "Stalls, spices and shoppers where two continents trade in the same street",
+  "scene_weather": "sunny, 24°",
+  "caption": "Istanbul's street markets fill with shoppers on sunny days, continuing a trading tradition that has run through the city for centuries.",
+  "decoys": [
+   "Cairo",
+   "Marrakech"
+  ],
+  "seconds": 20,
+  "source_url": "https://www.pexels.com/video/bustling-day-at-istanbul-street-market-36493468/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "antalya",
+  "city": "Antalya",
+  "country": "Türkiye",
+  "region": "Europe",
+  "tz": "Europe/Istanbul",
+  "headline": "Boats asleep in blue water",
+  "hint": "Masts, still water and a harbour town baking quietly in the southern sun",
+  "scene_weather": "sunny, 29°",
+  "caption": "Antalya's old harbour on Türkiye's Mediterranean coast, where sailboats sit at the dock under clear summer skies.",
+  "decoys": [
+   "Amalfi",
+   "Dubrovnik"
+  ],
+  "seconds": 24,
+  "source_url": "https://www.pexels.com/video/sailboats-parked-on-the-dock-5168344/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "tokyo",
+  "city": "Tokyo",
+  "country": "Japan",
+  "region": "Asia",
+  "tz": "Asia/Tokyo",
+  "headline": "Where a thousand paths cross, quietly",
+  "hint": "Umbrellas are common here, and the crowds move like a tide that knows its timing",
+  "scene_weather": "bright and clear",
+  "caption": "This is Shibuya Crossing in Tokyo, one of the world's busiest pedestrian scrambles, where hundreds cross at once when the lights change.",
+  "decoys": [
+   "Seoul",
+   "Osaka"
+  ],
+  "seconds": 18,
+  "source_url": "https://www.pexels.com/video/busy-pedestrian-crossing-in-tokyo-s-urban-street-38298405/",
+  "source_name": "Pexels",
+  "credit": "",
+  "flag": "borderline calm: busy but orderly, real-time"
+ },
+ {
+  "id": "hanoi",
+  "city": "Hanoi",
+  "country": "Vietnam",
+  "region": "Asia",
+  "tz": "Asia/Ho_Chi_Minh",
+  "headline": "The lake keeps the last of the light",
+  "hint": "Motorbikes rule the old streets nearby, but everyone slows down at this water at dusk",
+  "scene_weather": "clear sunset",
+  "caption": "This is the waterfront at Hoan Kiem Lake in central Hanoi, the city's beloved gathering place at the edge of the Old Quarter.",
+  "decoys": [
+   "Bangkok",
+   "Taipei"
+  ],
+  "seconds": 27,
+  "source_url": "https://www.pexels.com/video/serene-sunset-over-city-skyline-34081884/",
+  "source_name": "Pexels",
+  "credit": "thuan.jpeg"
+ },
+ {
+  "id": "buenos-aires",
+  "city": "Buenos Aires",
+  "country": "Argentina",
+  "region": "South America",
+  "tz": "America/Argentina/Buenos_Aires",
+  "headline": "A street in bloom, going about its day",
+  "hint": "In spring the avenues here turn violet, and café tables fill long before noon",
+  "scene_weather": "spring daytime, jacarandas in bloom",
+  "caption": "Buenos Aires is famous for its jacaranda-lined avenues, which flood the city's grand boulevards with purple blossom each spring.",
+  "decoys": [
+   "Montevideo",
+   "Santiago"
+  ],
+  "seconds": 19,
+  "source_url": "https://www.pexels.com/video/traffic-on-street-in-buenos-aires-10229755/",
+  "source_name": "Pexels",
+  "credit": "",
+  "flag": "borderline calm: traffic is the motion, softened by canopy"
+ },
+ {
+  "id": "new-york",
+  "city": "New York",
+  "country": "United States",
+  "region": "North America",
+  "tz": "America/New_York",
+  "headline": "A green pause in the middle of everything",
+  "hint": "The towers are close enough to touch, but nobody here is in a hurry",
+  "scene_weather": "sunny afternoon",
+  "caption": "This is Central Park in New York, the vast green rectangle in the middle of Manhattan where the city comes to lie on the grass.",
+  "decoys": [
+   "Chicago",
+   "Boston"
+  ],
+  "seconds": 15,
+  "source_url": "https://www.pexels.com/video/relaxing-day-at-central-park-with-cityscape-34118777/",
+  "source_name": "Pexels",
+  "credit": ""
+ },
+ {
+  "id": "sydney",
+  "city": "Sydney",
+  "country": "Australia",
+  "region": "Oceania",
+  "tz": "Australia/Sydney",
+  "headline": "Sails that never leave the harbour",
+  "hint": "The commuters here cross by water, and the white shells on the shore are not boats at all",
+  "scene_weather": "sunny summer day",
+  "caption": "A ferry crosses Sydney Harbour past the Sydney Opera House, whose white sail-shaped roofs are Australia's most recognisable landmark.",
+  "decoys": [
+   "Auckland",
+   "Brisbane"
+  ],
+  "seconds": 30,
+  "source_url": "https://www.pexels.com/video/a-ferry-boat-is-traveling-in-front-of-the-sydney-opera-house-26970448/",
+  "source_name": "Pexels",
+  "credit": ""
+ }
+]
