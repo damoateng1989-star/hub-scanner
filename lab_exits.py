@@ -1419,7 +1419,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                 if bars is None:
                     still += part
                     continue
-                failed -= len(part)
+                failed = max(0, failed - len(part))   # the retry list can hold stocks that never failed (old progress files)
                 for sym in part:
                     try:
                         b = bars.get(sym)
@@ -1429,7 +1429,8 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
                         traceback.print_exc()
                 bars = None
                 gc.collect()
-                _set(failed=failed, trades_so_far=len(rows), heartbeat=pd.Timestamp.now(tz="UTC").isoformat())
+                _set(failed=failed, trades_so_far=len(rows), heartbeat=pd.Timestamp.now(tz="UTC").isoformat(),
+                     failed_msg=f"Retrying the stocks that couldn't download: {min(k + 10, len(failed_syms))}/{len(failed_syms)}…")
                 time.sleep(3)
             failed_syms = still
             if not still:
