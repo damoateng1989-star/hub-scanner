@@ -612,7 +612,7 @@ function render(d) {
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
-    <div class="wr-row"><div id="swingPlay" class="card"></div><div class="wr-card" id="waitingRoom" hidden></div></div>
+    <div class="wr-row"><div id="swingPlay" class="card"></div></div>
     <div id="gexShelves" class="card gex-shelf-card" hidden></div>
     <div id="optionsSwing" class="card"></div>
     <h2>Past <em>results</em></h2>
@@ -776,7 +776,6 @@ function render(d) {
   // loadGexShelves();   // GEX shelves + heat map hidden (Nov 17); un-comment and drop `hidden` on #gexShelves to show it again
   loadOptionsPanel();
   loadSwingCard();
-  try { renderWaitingRoom(); } catch (e) {}      // Patch 178: the Waiting Room beside the shelf card
 
 
   // Live candle: poll the live price and move the forming candle in place.

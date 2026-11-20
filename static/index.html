@@ -660,6 +660,8 @@ body.brief-open .brief { transform: none; opacity: 1; }
 body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ease-out both; }
 /* ---------- GEX heat map beside the shelf card (Patch 166) ---------- */
 .bf-heat[hidden] { display: none !important; }
+.bf-wr { position: fixed; top: 50%; transform: translateY(-50%); z-index: 36; max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box; }
+.bf-wr[hidden], body:not(.brief-open) .bf-wr { display: none !important; }
 body:not(.brief-open) .bf-heat { display: none; }
 .bf-heat { margin: 0 20px 16px; font-family: var(--sans); flex: none; }
 /* colours = the shelf-card chart's: its background, hub blue, the member's up/down candle colours (set in paintHeat), trigger yellow */
@@ -2850,6 +2852,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
+<div class="wr-card bf-wr" id="bfWr" hidden></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
   <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
 </button>
@@ -4495,6 +4498,7 @@ async function openBrief(sym, focus) {
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
   paintBriefWatch(sym);
   document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false"); $("brief").scrollTop = 0;
+  setTimeout(briefSideRoom, 450);             // after the slide-in, so the card's real left edge is known
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   renderShelfTradeCard(sym);
@@ -4517,7 +4521,7 @@ async function openBrief(sym, focus) {
     if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#9AA0AC;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
   }
 }
-function closeBrief() { hideHeat(); clearTimeout(MAP_FT); if (typeof MAP_POP !== "undefined" && MAP_POP) mapPopClose(); if (typeof MAP_TK !== "undefined" && MAP_TK) mapTicketClose(); if (typeof mapReplayStop === "function" && MAP_RP) mapReplayStop(true); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null;
+function closeBrief() { hideHeat(); clearTimeout(MAP_FT); if (typeof MAP_POP !== "undefined" && MAP_POP) mapPopClose(); if (typeof MAP_TK !== "undefined" && MAP_TK) mapTicketClose(); if (typeof mapReplayStop === "function" && MAP_RP) mapReplayStop(true); document.body.classList.remove("brief-open"); $("brief").setAttribute("aria-hidden", "true"); BRIEF_SYM = null; briefSideRoom();
   renderStrip(); }
 // one-line summary for the top of the sheet (Patch 77); the long version lives in summary()
 function vizSummary(st) {
@@ -6163,9 +6167,21 @@ function paintHeat(sym) {
   if (!html) { hideHeat(); return; }             // fail-open: no gamma, no panel; the card renders as before
   const cc = candleColors();                       // the chart's candle colours, the member's own if they set them
   if (cc[0]) el.style.setProperty("--bh-up", cc[0]); if (cc[1]) el.style.setProperty("--bh-down", cc[1]);
-  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on");
+  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on"); briefSideRoom();
 }
-function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); }
+// computers: the Waiting Room plays in the space left of the shelf card (when it's wide enough and the GEX
+// heat map isn't using it); phones never see it here, the card fills the screen
+function briefSideRoom() {
+  const el = $("bfWr"), card = $("brief"); if (!el || !card) return;
+  const open = document.body.classList.contains("brief-open") && !document.body.classList.contains("heat-on");
+  const gap = open ? Math.round(card.getBoundingClientRect().left) : 0;
+  if (gap < 380) { if (!el.hidden) { el.hidden = true; const v = el.querySelector("video"); if (v) try { v.pause(); } catch (e) {} } return; }
+  el.style.width = Math.min(560, gap - 48) + "px"; el.style.left = Math.round((gap - Math.min(560, gap - 48)) / 2) + "px";
+  if (!el.dataset.on) { el.dataset.on = "1"; renderWaitingRoom(el); }
+  else el.hidden = false;
+}
+window.addEventListener("resize", () => { clearTimeout(window._bsrT); window._bsrT = setTimeout(briefSideRoom, 200); });
+function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); if (typeof briefSideRoom === "function") setTimeout(briefSideRoom, 0); }
 function paintBriefWatch(sym) {          // the watchlist button next to "Open full chart"
   const b = $("bfWatch"); if (!b) return;
   const on = (TICKERS || []).some(t => t.symbol === sym);
@@ -9525,10 +9541,10 @@ async function renderWaitingRoom(host) {
   const pause = () => { try { v.pause(); } catch (e) {} };
   v.addEventListener("error", () => { if (btn) btn.remove(); }, true);
   if (btn) btn.onclick = () => { manualPause = !v.paused ? true : false; if (manualPause) { pause(); btn.textContent = "▶"; btn.setAttribute("aria-label", "Play"); } else { manualPause = false; play(); btn.textContent = "❚❚"; btn.setAttribute("aria-label", "Pause"); } };
-  if (WR.io) WR.io.disconnect();
+  if (host._wrIo) host._wrIo.disconnect();       // one watcher per window (Today's row and the shelf card's side each have their own)
   if ("IntersectionObserver" in window && d.video) {
-    WR.io = new IntersectionObserver(es => es.forEach(e => (e.isIntersecting && e.intersectionRatio >= .5 && !document.hidden) ? play() : pause()), {threshold: [0, .5, 1]});
-    WR.io.observe(v);
+    host._wrIo = new IntersectionObserver(es => es.forEach(e => (e.isIntersecting && e.intersectionRatio >= .5 && !document.hidden) ? play() : pause()), {threshold: [0, .5, 1]});
+    host._wrIo.observe(v);
   }
   document.addEventListener("visibilitychange", () => { if (document.hidden) pause(); });
   wrRenderGame(host, d.guessed || null, []);
