@@ -19,7 +19,16 @@ def _order(cycle: int) -> list[dict]:
     return random.Random(cycle).sample(POOL, len(POOL))
 
 
+# Hand-picked days (date -> scene id); everything else follows the rotation.
+OVERRIDES = {"2026-11-20": "istanbul"}
+
+
 def scene_for_date(d: date) -> dict:
+    pick = OVERRIDES.get(d.isoformat())
+    if pick:
+        for s in POOL:
+            if s["id"] == pick:
+                return s
     n = len(POOL)
     o = d.toordinal()
     cycle, pos = o // n, o % n
