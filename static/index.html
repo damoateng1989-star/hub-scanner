@@ -6719,7 +6719,7 @@ function paintHeatmap() {
     html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(short[S.k] || S.k)}</div>` : ""}`;
     for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
       const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fit = Math.min(t.w / (t.s.length * 0.62), t.h / 1.6), fs = Math.max(10, Math.min(15, fit));
-      const sk = typeof stkItem === "function" ? stkItem(t.s) : null, skc = sk ? (sk.ok ? " hm-stk" : sk.passed >= sk.total - 1 ? " hm-stk3" : "") + (sk.direction === -1 ? " hm-dn" : "") : "";
+      const sk = typeof stkItem === "function" ? stkItem(t.s) : null, skc = sk ? (sk.ok ? " hm-stk" : sk.passed >= sk.total - 1 ? " hm-stk3" : "") + (sk.direction === -1 ? " hm-dn" : "") + (t.w < 56 || t.h < 30 ? " hm-xs" : "") : "";
       if (skc) { const ck = sk.direction === -1 ? "stkdn" : sk.ok ? "stk" : "stk3"; counts[ck] = (counts[ck] || 0) + 1; }
       html += `<button class="hm-t ${cls}${skc}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}${sk ? ` · ${esc(sk.name)} ${sk.passed}/${sk.total}` : ""}"
         onclick="openBrief('${esc(t.s)}')">${fit >= 10 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
@@ -8851,21 +8851,23 @@ html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] 
 html[data-theme="light"] .hm-rest { background: #8b93d6; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
 .hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
 .hm-tip.on { opacity: 1; }
-.hm-t.hm-stk { z-index: 1; animation: hmStk 1.8s ease-in-out infinite; }
-@keyframes hmStk { 0%, 100% { box-shadow: inset 0 0 0 2px #3DD68C, 0 0 0 0 rgba(61,214,140,.0); filter: brightness(1); }
-  50% { box-shadow: inset 0 0 0 2px #3DD68C, inset 0 0 14px rgba(61,214,140,.75), 0 0 10px 2px rgba(61,214,140,.55); filter: brightness(1.18); } }
-.hm-t.hm-stk::after, .hm-t.hm-stk3::after { content: ""; position: absolute; top: 3px; right: 3px; width: 7px; height: 7px; border-radius: 50%;
+.hm-t.hm-stk, .hm-t.hm-stk3 { background-image: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)); }
+.hm-t.hm-stk { z-index: 1; animation: hmStk 1.6s ease-in-out infinite; }
+@keyframes hmStk { 0%, 100% { box-shadow: inset 0 0 0 3px #3DD68C, inset 0 0 6px rgba(61,214,140,.35), 0 0 0 0 rgba(61,214,140,0); }
+  50% { box-shadow: inset 0 0 0 3px #5BF0A6, inset 0 0 18px rgba(61,214,140,.85), 0 0 12px 3px rgba(61,214,140,.6); } }
+.hm-t.hm-stk::after, .hm-t.hm-stk3::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%;
   background: #3DD68C; box-shadow: 0 0 0 0 rgba(61,214,140,.6); animation: livePulse 2s infinite; }
 .hm-t.hm-stk3::after { width: 6px; height: 6px; }
+.hm-t.hm-stk.hm-xs::after { display: none; }
 .hm-lg i.hm-lg-stk { background: transparent; border: 2px solid #3DD68C; box-sizing: border-box; animation: livePulse 2s infinite; }
 .hm-lg i.hm-lg-stk3 { background: #3DD68C; border-radius: 50%; width: 7px; height: 7px; animation: livePulse 2s infinite; }
 .hm-t.hm-stk.hm-dn { animation-name: hmStkDn; }
-@keyframes hmStkDn { 0%, 100% { box-shadow: inset 0 0 0 2px #FF6B5E, 0 0 0 0 rgba(255,107,94,0); filter: brightness(1); }
-  50% { box-shadow: inset 0 0 0 2px #FF6B5E, inset 0 0 14px rgba(255,107,94,.75), 0 0 10px 2px rgba(255,107,94,.55); filter: brightness(1.18); } }
+@keyframes hmStkDn { 0%, 100% { box-shadow: inset 0 0 0 3px #FF6B5E, inset 0 0 6px rgba(255,107,94,.35), 0 0 0 0 rgba(255,107,94,0); }
+  50% { box-shadow: inset 0 0 0 3px #FF8C80, inset 0 0 18px rgba(255,107,94,.85), 0 0 12px 3px rgba(255,107,94,.6); } }
 .hm-t.hm-dn::after { background: #FF6B5E; animation-name: dnPulse; }
 @keyframes dnPulse { 0% { box-shadow: 0 0 0 0 rgba(255,107,94,.6); } 70% { box-shadow: 0 0 0 6px rgba(255,107,94,0); } 100% { box-shadow: 0 0 0 0 rgba(255,107,94,0); } }
 .hm-lg i.hm-lg-stkdn { background: transparent; border: 2px solid #FF6B5E; box-sizing: border-box; animation: dnPulse 2s infinite; }
-@media (prefers-reduced-motion: reduce) { .hm-t.hm-stk, .hm-t.hm-stk::after, .hm-lg i.hm-lg-stkdn, .hm-t.hm-stk3::after, .hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3 { animation: none; } .hm-t.hm-stk { box-shadow: inset 0 0 0 2px #3DD68C; } .hm-t.hm-stk.hm-dn { box-shadow: inset 0 0 0 2px #FF6B5E; } }
+@media (prefers-reduced-motion: reduce) { .hm-t.hm-stk, .hm-t.hm-stk::after, .hm-lg i.hm-lg-stkdn, .hm-t.hm-stk3::after, .hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3 { animation: none; } .hm-t.hm-stk { box-shadow: inset 0 0 0 3px #3DD68C; } .hm-t.hm-stk.hm-dn { box-shadow: inset 0 0 0 3px #FF6B5E; } }
 
 /* compact Context card; the old duplicate rows below the map are hidden in the map view */
 body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: none !important; }
