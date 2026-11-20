@@ -1033,6 +1033,15 @@ def board_data(u: dict | None = Maybe):
     for group in ("live", "near", "forming", "recent"):
         for r in b[group]:
             r["watching"] = r["symbol"] in mine
+    try:      # Patch 165: the board's live-first order needs each live row's setup grade. This is a
+        import time as _time   # cache-only read of Sika's grade cache (Patch 159): the deadline is
+        import sika_find       # already expired, so a miss returns "?" and never computes on the
+        for r in b["live"]:    # request path; warm_board_grades fills the cache after each sweep.
+            d = 1 if r.get("state") == "breakout_up" else -1
+            r["grade"] = sika_find._grade_for(r["symbol"], "hub", d, _time.monotonic()).get("grade") or "?"
+    except Exception:
+        for r in b["live"]:
+            r.setdefault("grade", "?")
     if not board_for(u):                    # free: the timely groups are counts only
         b["locked"] = True
         b["live_count"], b["near_count"] = len(b["live"]), len(b["near"])

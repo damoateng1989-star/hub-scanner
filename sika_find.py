@@ -216,6 +216,18 @@ def warm() -> int:
     return find("all", limit=1000, budget_s=600.0)["total"]
 
 
+def warm_board_grades() -> int:
+    """After a board sweep: cache the setup grade of EVERY live hub row, including the ones find()
+    skips for Room < 1.5 — Patch 165's board order grades the whole live group. Same cache, same
+    _grade; the board endpoint only ever reads the cache."""
+    deadline = time.monotonic() + 600.0
+    n = 0
+    for r in board.board().get("live") or []:
+        _grade_for(r["symbol"], "hub", 1 if r.get("state") == "breakout_up" else -1, deadline)
+        n += 1
+    return n
+
+
 def find(kind: str, limit: int = CAP, budget_s: float = GRADE_BUDGET_S) -> dict:
     """Return live breakouts/breakdowns only, each with computable Room >= 1.5.
 

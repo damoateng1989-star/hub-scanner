@@ -489,6 +489,7 @@ tr:hover td{background:rgba(155,178,202,.035)!important}
 .board-table tr:last-child td{border-bottom:0}.board-table tbody tr:hover td{background:#1F2023}
 .board-table tr.board-row-stale td{opacity:1}
 .board-stale{display:block;color:#d8b878;font-size:9px;font-weight:700;margin-top:2px}
+.board-daypct{display:block;font-size:9px;font-weight:700;margin-top:2px}
 .board-sort{border:0!important;background:transparent!important;color:inherit!important;padding:0!important;font:inherit!important;letter-spacing:inherit!important;text-transform:inherit!important}
 .board-symbol a{font-weight:750;color:#E9EBEF;text-decoration:none;font-size:12px}.board-symbol small{display:block;color:#718296;font-size:9px;margin-top:2px}
 .board-state{display:inline-flex;align-items:center;gap:6px;padding:4px 7px;border-radius:4px;background:#222326;color:#c4d4e5;font-size:10px;font-weight:650}
@@ -6552,7 +6553,7 @@ function bGroup(title, rows, kind, empty) {
   </div>` : `<div class="empty">${empty}</div>`}</div>`;
 }
 
-let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "symbol", BOARD_SORT_DIR = 1;
+let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "tier", BOARD_SORT_DIR = 1;
 const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
 function volChip(r) { const w = rvolWord(r); return w ? `<span class="vol-chip ${w}" title="Breakout-candle volume vs a normal candle at that time of day">Vol ${Number(r).toFixed(2)}× · ${w}</span>` : ""; }
 const gradeWord = (h) => h && h.grade ? `${h.grade === "warehouse" ? "Warehouse" : "Ledge"} · ${h.score}/6` : "";
@@ -6643,6 +6644,20 @@ function boardShelf(r,kind){
 }
 // candles since the breakout: the row's own count, else parsed from its label ("Breakout up, 0/10 candles"), like paper.py _fresh
 function boardCandles(r){if(Number.isFinite(Number(r.candles))&&r.candles!==null&&r.candles!=="")return Number(r.candles);const m=/(\d+)\/\d+/.exec(r.label||"");return m?Number(m[1]):null;}
+// Patch 165: the day's move vs the prior session's close (board.py stores prev_close from the same
+// bars the sweep already loaded; no prev_close -> no percentage, never a guessed one). px defaults
+// to the sweep's last close; the price cell passes the price it actually displays.
+function boardDayPct(r,px){
+  const pc=Number(r.prev_close), p=px==null?Number(r.last_close):Number(px);
+  if(!Number.isFinite(pc)||!Number.isFinite(p)||pc<=0) return null;
+  return (p-pc)/pc*100;
+}
+function boardDayPctHTML(r,px){
+  const v=boardDayPct(r,px); if(v==null) return "";
+  const t=Math.round(v*10)/10;
+  const cls=t>0?"u-up":t<0?"u-down":"";
+  return '<small class="board-daypct '+cls+'">'+(t>0?"+":"")+t.toFixed(1)+'%</small>';
+}
 function boardRows(){
   const rows=[];
   const seen=new Set();   // a stock "at the edge" is also "in a hub": list it once, under its most urgent state
@@ -6654,6 +6669,16 @@ function renderInstitutionalBoard(){
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
   let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
+    // Patch 165: the default All view ("tier" sort): live setups first (grade A→B→C→D→?), then your
+    // watchlist, then the rest by the size of the day's move. Returning 0 keeps the board's own order
+    // inside a tier (live rows keep board()'s closest-to-target order). Column sorts replace this.
+    if(BOARD_SORT==="tier"&&BOARD_KIND==="all"){
+      const ta=a._kind==="live"?0:a.watching?1:2, tb=b._kind==="live"?0:b.watching?1:2;
+      if(ta!==tb) return ta-tb;
+      if(ta===0){ const gr={"A":0,"B":1,"C":2,"D":3}; const ga=gr[a.grade]??4, gb=gr[b.grade]??4; if(ga!==gb) return ga-gb; }
+      if(ta===2){ const da=boardDayPct(a), db=boardDayPct(b); const va=da==null?-1:Math.abs(da), vb=db==null?-1:Math.abs(db); if(va!==vb) return vb-va; }
+      return 0;
+    }
     // Patch 67: in the Broke out view, fresh breakouts (0/10 candles) sort first, then by candle count ascending.
     // Not flipped by the column-sort direction; rows without a count sort last.
     if(BOARD_KIND==="live"&&a._kind==="live"&&b._kind==="live"){
@@ -6669,7 +6694,7 @@ function renderInstitutionalBoard(){
       if(la!==lb) return la-lb;
     }
     let av,bv;
-    if(BOARD_SORT==="symbol"){av=a.symbol;bv=b.symbol;}
+    if(BOARD_SORT==="symbol"||BOARD_SORT==="tier"){av=a.symbol;bv=b.symbol;}   // tier outside All = today's A–Z
     else if(BOARD_SORT==="price"){av=Number(a.last_close)||0;bv=Number(b.last_close)||0;}
     else if(BOARD_SORT==="distance"){av=boardDistance(a,a._kind)??Infinity;bv=boardDistance(b,b._kind)??Infinity;}
     else{av=boardStatus(a,a._kind)[0];bv=boardStatus(b,b._kind)[0];}
@@ -6685,7 +6710,7 @@ function renderInstitutionalBoard(){
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -6808,7 +6833,7 @@ async function loadBoard() {
     '<th class="th-pos"><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Position ↕</button></th><th class="th-rng">Hub range</th><th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
     '<th class="nowrap-th">Next shelf</th><th>4H context</th><th>Actions</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
     '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels.</div></div>';
-  BOARD_KIND="all";BOARD_SORT="symbol";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
+  BOARD_KIND="all";BOARD_SORT="tier";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
 }
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";

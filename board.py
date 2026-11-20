@@ -135,6 +135,12 @@ def _board_status(c4: pd.DataFrame, res: dict) -> dict:
         st["near_edge"] = "up" if st["pos"] >= 0.75 else "down" if st["pos"] <= 0.25 else None
     if st.get("target") is not None:
         st["to_target_pct"] = round((st["target"] / p - 1) * 100, 2)
+    try:      # Patch 165: prior session's close, for the board's day %. The daily frame is the
+        daily = engine.to_daily(c4)      # sweep's own 4H bars regrouped (no new fetch); its last
+        if len(daily) >= 2:              # bar is the last candle's session, so [-2] is prior close.
+            st["prev_close"] = round(float(daily["Close"].iloc[-2]), 2)
+    except Exception:
+        pass
     return st
 
 
@@ -439,6 +445,7 @@ def _scan_board() -> int:
         try:      # Sika's setup list: real grades ready before anyone asks
             import sika_find
             threading.Thread(target=sika_find.warm, daemon=True).start()
+            threading.Thread(target=sika_find.warm_board_grades, daemon=True).start()
         except Exception as ex:
             log.warning("sika grade warm-up failed: %s", ex)
         if FRESH_A:
