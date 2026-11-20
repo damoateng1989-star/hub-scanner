@@ -5042,6 +5042,59 @@ function mapLwcKey(D) {
     g && g !== "loading" ? [g.call_wall, g.put_wall] : null, P.px,
     LEVELS[P.sym] && LEVELS[P.sym].d ? LEVELS[P.sym].t : null]);
 }
+// Volume profile on the left of the chart: volume traded at each price over the candles in view (each candle's volume
+// spread evenly across its high-low range). The longest bar (point of control) is brightest; the 70% value area is
+// a shade stronger than the rest. Redrawn as the view pans, zooms or resizes.
+let MAP_VP_DRAW = null;
+function mapVolProfile(chart, series, D, light) {
+  const el = chart.chartElement(); if (!el) return;
+  el.style.position = "relative";
+  let cv = el.querySelector("canvas.mp-vp");
+  if (!cv) { cv = document.createElement("canvas"); cv.className = "mp-vp"; cv.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:2"; el.appendChild(cv); }
+  const cs = D.cs.filter(c => Number.isFinite(+c.high) && Number.isFinite(+c.low) && +c.volume > 0);
+  const draw = () => {
+    try {
+      const pane = chart.panes ? chart.panes()[0] : null;
+      const H = pane && pane.getHeight ? pane.getHeight() : el.clientHeight * .78, W = chart.timeScale().width();
+      const dpr = window.devicePixelRatio || 1;
+      cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + "px"; cv.style.height = H + "px";
+      const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
+      const r = chart.timeScale().getVisibleLogicalRange(); if (!r) return;
+      const vis = cs.filter((c, i) => true).slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1);
+      const view = D.cs.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1).filter(c => +c.volume > 0);
+      if (view.length < 3) return;
+      const lo = Math.min(...view.map(c => +c.low)), hi = Math.max(...view.map(c => +c.high)); if (!(hi > lo)) return;
+      const N = Math.max(16, Math.min(40, Math.round(H / 9))), step = (hi - lo) / N, bins = new Array(N).fill(0);
+      for (const c of view) {
+        const a = Math.max(0, Math.floor((+c.low - lo) / step)), b = Math.min(N - 1, Math.floor((+c.high - lo) / step)), share = +c.volume / (b - a + 1);
+        for (let k = a; k <= b; k++) bins[k] += share;
+      }
+      const max = Math.max(...bins), poc = bins.indexOf(max), total = bins.reduce((x, y) => x + y, 0);
+      const va = new Set([poc]); let acc = max, lo2 = poc, hi2 = poc;            // value area: 70% of volume around the POC
+      while (acc < total * .7 && (lo2 > 0 || hi2 < N - 1)) {
+        const dn = lo2 > 0 ? bins[lo2 - 1] : -1, up = hi2 < N - 1 ? bins[hi2 + 1] : -1;
+        if (up >= dn) { hi2++; va.add(hi2); acc += bins[hi2]; } else { lo2--; va.add(lo2); acc += bins[lo2]; }
+      }
+      const maxW = W * .24, base = light ? "13,17,23" : "154,170,196";
+      for (let k = 0; k < N; k++) {
+        if (!bins[k]) continue;
+        const y1 = series.priceToCoordinate(lo + (k + 1) * step), y2 = series.priceToCoordinate(lo + k * step);
+        if (y1 == null || y2 == null) continue;
+        const top = Math.min(y1, y2) + .5, h = Math.max(1, Math.abs(y2 - y1) - 1), w = bins[k] / max * maxW;
+        g.fillStyle = k === poc ? (light ? "rgba(47,84,235,.45)" : "rgba(124,147,255,.55)") : `rgba(${base},${va.has(k) ? (light ? .16 : .22) : (light ? .08 : .11)})`;
+        g.fillRect(0, top, w, h);
+      }
+      const yp = series.priceToCoordinate(lo + (poc + .5) * step);
+      if (yp != null) {
+        g.fillStyle = light ? "rgba(47,84,235,.9)" : "rgba(170,186,255,.95)"; g.font = '600 9px "JetBrains Mono", ui-monospace, monospace';
+        g.fillText("MOST TRADED " + money(lo + (poc + .5) * step), 4, Math.max(10, yp - 4));
+      }
+    } catch (e) {}
+  };
+  MAP_VP_DRAW = draw;
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
+  requestAnimationFrame(() => requestAnimationFrame(draw));
+}
 function initLightweightMapChart() {
   const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
   if (MAP_LWC_RO) { MAP_LWC_RO.disconnect(); MAP_LWC_RO = null; }
@@ -5054,7 +5107,7 @@ function initLightweightMapChart() {
       if (MAP_LWC_FOOT) host.after(MAP_LWC_FOOT);
       MAP_LWC_HOSTEL = host;
       MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390});
-      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); });
+      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => MAP_VP_DRAW && MAP_VP_DRAW()); } });
       MAP_LWC_RO.observe(host);
       return;
     } catch (e) { /* fall through to a full rebuild */ }
@@ -5212,7 +5265,8 @@ function initLightweightMapChart() {
       if(xh){xh.style.left=param.point.x+"px";xh.style.top="0";xh.style.height=(MAP_LWC_HOSTEL||host).clientHeight+"px";xh.classList.add("on");}
     });
     MAP_LWC_CHART=chart; MAP_LWC_CANDLE=candles; MAP_LWC_VOLUME=vol; MAP_LWC_HOSTEL=host;
-    MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected)MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});});
+    mapVolProfile(chart, candles, D, light);
+    MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected){MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});requestAnimationFrame(()=>MAP_VP_DRAW&&MAP_VP_DRAW());}});
     MAP_LWC_RO.observe(host);
     const foot=document.createElement("div");foot.className="mp-lwc-foot";foot.innerHTML='TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc. · <a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>';host.after(foot);MAP_LWC_FOOT=foot;
   } catch(err) { console.error("NextShelf chart init failed",err); host.innerHTML='<div class="mp-lwc-empty">Chart unavailable. Please refresh.</div>'; }
