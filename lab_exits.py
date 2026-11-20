@@ -134,6 +134,37 @@ def _spy_regime() -> pd.Series | None:
         return None
 
 
+_REGX = None      # market conditions by day (Nov 20, the regime test): set once per run by _spy_regime_ext()
+
+
+def _spy_regime_ext():
+    """Daily market conditions from SPY, for the regime test: above the 200-day, 20-day return positive, and calm
+    (20-day realized volatility below its own one-year median). Values for a day use that day's close; trades read
+    the PRIOR day (no look-ahead)."""
+    try:
+        c4 = engine.to_4h(data.get_bars("SPY", DAYS + 400))
+        dc = c4["Close"].groupby(c4.index.normalize()).last()
+        rv = dc.pct_change().rolling(20).std()
+        return pd.DataFrame({
+            "mkt200": (dc > dc.rolling(200).mean()).where(dc.rolling(200).count() >= 200),
+            "mom20": (dc > dc.shift(20)).where(dc.shift(20).notna()),
+            "calm": (rv < rv.rolling(252, min_periods=120).median()).where(rv.rolling(252, min_periods=120).count() >= 120),
+        })
+    except Exception:
+        traceback.print_exc()
+        return None
+
+
+def _regx_as_of(on_day) -> dict:
+    if _REGX is None:
+        return {}
+    past = _REGX[_REGX.index < on_day]
+    if not len(past):
+        return {}
+    row = past.iloc[-1]
+    return {k: (None if pd.isna(v) else bool(v)) for k, v in row.items()}
+
+
 def _exit(close: np.ndarray, i0: int, d: int, entry: float, target: float, stop: float, horizon: int):
     """Close-based exits from the candle after entry. Returns (ret %, how) or None when the outcome isn't known yet."""
     n = len(close)
@@ -603,7 +634,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         return _dbstk_rows(sym, c4, res, s)
     if only_tests == "gapstk":                                # only the Stacked Gap Fade test
         return _gapstk_rows(sym, c4, res, s)
-    if only_tests:                                            # a light run: just the test-only setups (floor bounce, hub edge)
+    if only_tests and only_tests != "regime":                 # a light run: just the test-only setups (floor bounce, hub edge)
         atr = res["atr"].to_numpy(float)
         day = c4.index.tz_convert(engine.NY).normalize()
         dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum() if "Volume" in c4.columns else None
@@ -628,18 +659,21 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     own = (dclose > dclose.rolling(50).mean()).where(dclose.rolling(50).count() >= 50)
     mc = universe.market_cap(sym)
     out = []
-    try:
-        out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own)
-    except Exception:
-        traceback.print_exc()
-    try:
-        out += _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
-    except Exception:
-        traceback.print_exc()
-    try:
-        out += _gapgo_rows(sym, c4, s)
-    except Exception:
-        traceback.print_exc()
+    if only_tests == "regime":      # the regime test: only hub and double retests, the live alerts' rows
+        other = [t for t in other if t.get("kind") in ("double_top", "double_bottom")]
+    else:
+        try:
+            out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own)
+        except Exception:
+            traceback.print_exc()
+        try:
+            out += _edge_rows(sym, c4, res, s, atr, dvol, day, mc)
+        except Exception:
+            traceback.print_exc()
+        try:
+            out += _gapgo_rows(sym, c4, s)
+        except Exception:
+            traceback.print_exc()
     for t in [dict(x, kind="hub") for x in res["trades"]] + other:
         kind = t.get("kind", "hub")
         grp = GROUP_OF.get(kind)
@@ -699,7 +733,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
             ex[key] = _exit(close, i0, d, entry, target, stop, hz)
         ex["half"] = _exit_half(close, i0, d, entry, target, edge, risk_mid if risk_mid > 0 else d * (entry - edge), s.horizon)
         f["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
-        if "edge" in f["ex"]:
+        if "edge" in f["ex"] and only_tests != "regime":
             out.append(f)
 
         # --- Patch 79: the same breakout, entered on the retest instead ---
@@ -725,7 +759,8 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
                           chase=d * (entry2 - edge) > 0.5 * d * (target - edge),
                           margin=d * (entry2 - edge) / A2,
                           rr=(d * (target - entry2) / risk2) if risk2 > 0 else None,
-                          pm=engine.candle_end(idx[j].tz_convert(engine.NY)).hour == 16)
+                          pm=engine.candle_end(idx[j].tz_convert(engine.NY)).hour == 16,
+                          **_regx_as_of(today2))
                 ex2 = {}
                 for key, stop, hz in (("edge", cur, s.horizon), ("mid", mid, s.horizon), ("far", far, s.horizon),
                                       ("edge20", cur, 20),
@@ -940,6 +975,33 @@ LIVE_RULES = [
      lambda r: r["grp"] == "edge" and r.get("tight"), "ed_shelf"),
     ("edge_tight_tighthub", "Test · Same, tight hubs only: next shelf, intraday stop at the hub bottom",
      lambda r: r["grp"] == "edge" and r.get("tight"), "ed_tight"),
+    # test only (Nov 20): the regime test — does the live A retest only work in some markets?
+    ("rg_hub_all", "Regime · Hubs A retest longs: every market (the baseline)",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4, "atr10"),
+    ("rg_hub_mkt50", "Regime · Hubs A retest longs: SPY above its 50-day",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("with_mkt") is True, "atr10"),
+    ("rg_hub_mkt50_no", "Regime · Hubs A retest longs: SPY below its 50-day (for comparison)",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("with_mkt") is False, "atr10"),
+    ("rg_hub_mkt200", "Regime · Hubs A retest longs: SPY above its 200-day",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("mkt200") is True, "atr10"),
+    ("rg_hub_mom", "Regime · Hubs A retest longs: SPY up over the last 20 days",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("mom20") is True, "atr10"),
+    ("rg_hub_calm", "Regime · Hubs A retest longs: calm market (SPY volatility below its 1-year median)",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("calm") is True, "atr10"),
+    ("rg_hub_wild", "Regime · Hubs A retest longs: volatile market (for comparison)",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("calm") is False, "atr10"),
+    ("rg_hub_trend", "Regime · Hubs A retest longs: the stock above its own 50-day",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("with_trend") is True, "atr10"),
+    ("rg_hub_best", "Regime · Hubs A retest longs: SPY above 50-day + calm",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("with_mkt") is True and r.get("calm") is True, "atr10"),
+    ("rg_hub_both", "Regime · Hubs A retest longs: SPY and the stock both above their 50-day",
+     lambda r: r["grp"] == "hub" and r.get("entry") == "retest" and r["d"] == 1 and (r.get("rr") or 0) >= 1.5 and (r.get("sessions") or 0) >= 4 and r.get("with_mkt") is True and r.get("with_trend") is True, "atr10"),
+    ("rg_db_all", "Regime · Double bottoms A retest: every market (the baseline)",
+     lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase"), "far"),
+    ("rg_db_mkt50", "Regime · Double bottoms A retest: SPY above its 50-day",
+     lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase") and r.get("with_mkt") is True, "far"),
+    ("rg_db_calm", "Regime · Double bottoms A retest: calm market",
+     lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase") and r.get("calm") is True, "far"),
     # test only (Nov 19): the Stacked Double Bottom — DB A retests with stacked trigger / stacked target / clear path
     ("db_base", "Test · Double bottom: all A retests (the baseline, measured target)",
      lambda r: r["grp"] == "dbstk", "db_shelf"),
@@ -1175,7 +1237,8 @@ class _Ex:
 
 
 _ROW_KEYS = ("sym", "grp", "entry", "t", "d", "dv", "board_ok", "rvol", "with_mkt", "with_trend", "chase", "margin", "rr",
-             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight", "first_6", "support", "held", "st_trig", "st_tgt", "st_path", "st_has", "st_all", "grade")
+             "width", "sessions", "pm", "gap_open", "ex", "no_shelf", "rr_nt", "first_any", "first_4", "far", "tight", "first_6", "support", "held", "st_trig", "st_tgt", "st_path", "st_has", "st_all", "grade",
+             "mkt200", "mom20", "calm")
 
 
 class _Row:
@@ -1244,13 +1307,13 @@ def _rss_mb() -> float:
         return 0.0
 
 
-TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_", "gs_", "db_")      # graduation rows a tests-only run measures
+TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_", "gs_", "db_", "rg_")      # graduation rows a tests-only run measures
 
 
 # ---------------------------------------------------------------- named tests: progress that survives a stop (Nov 19)
 # The Stacked / gap-open tests keep only a few thousand small rows, so their progress is saved after every chunk.
 # If one stops (memory guard, a deploy, a restart), tapping the same test again carries on from that stock.
-NAMED_TESTS = ("gapgo", "stacked", "gapstk", "dbstk")
+NAMED_TESTS = ("gapgo", "stacked", "gapstk", "dbstk", "regime")
 TPROG = db.DATA_DIR / "lab_test_progress.json"
 
 
@@ -1369,6 +1432,8 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             failed_syms = None
         failed_syms = list(failed_syms or [])
         regime = _spy_regime()
+        global _REGX
+        _REGX = _spy_regime_ext()
         for i in range(start_i, len(syms), CHUNK):
             if _CANCEL.is_set():
                 raise _Stopped()
@@ -1438,6 +1503,8 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
             _set(failed=failed, failed_msg=failed_msg)
             if only_tests in NAMED_TESTS:
                 _save_tprog(only_tests, syms, len(syms), rows, failed, failed_msg, started, failed_syms)
+        if not rows and only_tests == "regime" and failed < len(syms):
+            raise RuntimeError("no hub or double retests in this period, so there is nothing to compare")
         if not rows and only_tests == "dbstk" and failed < len(syms):
             raise RuntimeError("no double bottom A retests in this period, so there is nothing to compare")
         if not rows and only_tests == "gapstk" and failed < len(syms):
@@ -1452,7 +1519,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         if only_tests:
             # keep the last full run's tables and live-rule checks; replace only the test rows
             prev = (json.loads(db.get_setting("lab_exits") or "{}").get("result") or {})
-            tk = ("gapgo_",) if only_tests == "gapgo" else ("stk_",) if only_tests == "stacked" else ("gs_",) if only_tests == "gapstk" else ("db_",) if only_tests == "dbstk" else TEST_KEYS
+            tk = ("gapgo_",) if only_tests == "gapgo" else ("stk_",) if only_tests == "stacked" else ("gs_",) if only_tests == "gapstk" else ("db_",) if only_tests == "dbstk" else ("rg_",) if only_tests == "regime" else TEST_KEYS
             mine = [g for g in out["graduation"] if g["key"].startswith(tk)]
             keep = [g for g in (prev.get("graduation") or []) if not g["key"].startswith(tk)]
             out = dict(prev or out, graduation=keep + mine, tests_run=pd.Timestamp.now(tz="UTC").isoformat(),

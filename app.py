@@ -1504,7 +1504,7 @@ def admin_lab_exits_run(years: int = 2, tests_only: bool = False, test: str = ""
     import lab_exits
     if years not in lab_exits.YEARS_OK:
         raise HTTPException(400, "Pick 2, 3, 5 or 10 years")
-    only = test if test in ("gapgo", "stacked", "gapstk", "dbstk") else tests_only
+    only = test if test in ("gapgo", "stacked", "gapstk", "dbstk", "regime") else tests_only
     return dict(started=lab_exits.start(years=years, only_tests=only), years=years, tests_only=bool(only), test=test or None)
 
 
