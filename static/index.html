@@ -9125,7 +9125,7 @@ html:not([data-theme="light"]) body::before { content: ""; position: fixed; inse
               radial-gradient(45% 35% at 90% 30%, rgba(90,140,255,.13), transparent 70%),
               radial-gradient(50% 40% at 30% 85%, rgba(150,110,255,.10), transparent 70%); }
 html:not([data-theme="light"]) body > main.wrap, html:not([data-theme="light"]) body > nav:not(.bottom) { position: relative; z-index: 1; }
-html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box,.week,.retest,.brief,.tbl,.empty,.board-lock,.mp-card,.sc,.lrow,.msc,.wr-card) {
+html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box,.week,.retest,.brief,.tbl,.empty,.board-lock,.mp-card,.sc,.lrow,.msc) {
   background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,0) 38%), #12151B !important;
   border: 1px solid rgba(255,255,255,.13) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.20), inset 0 -1px 0 rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.40) !important; }
@@ -9212,6 +9212,7 @@ html[data-theme="light"] .wr-pill { background: #F3F4F6 !important; color: #1F23
 .today-stories:not(:has(> :not([hidden]))) { display: none; }
 .wr-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 980px) { .wr-row:has(> #waitingRoom:not([hidden])) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
+html:not([data-theme="light"]) .wr-card { background: #07090D !important; border: 1px solid rgba(255,255,255,.10) !important; box-shadow: none !important; }
 </style>
 <script>
 /* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
