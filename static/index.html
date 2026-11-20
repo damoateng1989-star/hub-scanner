@@ -9113,6 +9113,72 @@ html:not([data-theme="light"]) .ask-send { border-radius: 999px !important; }
 .mp-lv .lv-note { margin: 4px 0 0; font-size: 11px; color: var(--mp-mut); opacity: .8; }
 html[data-theme="light"] .mp-lv .lv-p b { color: #0d1117; } html[data-theme="light"] .mp-lv .lv-now { background: rgba(13,17,23,.05); }
 html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x { color: #15803d; } html[data-theme="light"] .mp-lv .lv-p .d { color: #dc2626; }
+
+/* Nov 20: solid glass, app-wide (dark theme). Glass LOOK — a glossy sheen, a bright rim, depth — but nothing is
+   see-through: every card, bar and button is opaque. A soft colour glow sits on the page itself, in the gaps. */
+html:not([data-theme="light"]) body { background: #07090D !important; }
+html:not([data-theme="light"]), html:not([data-theme="light"]) main.wrap { background: transparent !important; }
+html:not([data-theme="light"]) body::before { content: ""; position: fixed; inset: -20%; z-index: 0; pointer-events: none;
+  background: radial-gradient(40% 30% at 15% 10%, rgba(61,214,140,.13), transparent 70%),
+              radial-gradient(45% 35% at 90% 30%, rgba(90,140,255,.13), transparent 70%),
+              radial-gradient(50% 40% at 30% 85%, rgba(150,110,255,.10), transparent 70%); }
+html:not([data-theme="light"]) body > main.wrap, html:not([data-theme="light"]) body > nav:not(.bottom) { position: relative; z-index: 1; }
+html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box,.week,.retest,.brief,.tbl,.empty,.board-lock,.mp-card,.sc,.lrow,.msc) {
+  background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,0) 38%), #12151B !important;
+  border: 1px solid rgba(255,255,255,.13) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.20), inset 0 -1px 0 rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.40) !important; }
+html:not([data-theme="light"]) body > nav:not(.bottom), html:not([data-theme="light"]) nav.bottom {
+  background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)), #0B0D12 !important; border-color: rgba(255,255,255,.12) !important; }
+html:not([data-theme="light"]) :is(.btnx,.board-filter,.chip,.sk-pills button,.sp-alt,.theme-btn,.wl-pills button):not(.on):not(.active) {
+  background: radial-gradient(140% 90% at 30% 0%, rgba(160,220,255,.16), rgba(160,220,255,0) 60%), linear-gradient(180deg, #1A212C, #11161E) !important;
+  border: 1px solid rgba(190,230,255,.30) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.38), inset 0 -6px 12px -8px rgba(120,200,255,.40) !important; }
+html:not([data-theme="light"]) :is(.board-filter,.chip,.sk-pills button).active, html:not([data-theme="light"]) :is(.board-filter,.chip,.sk-pills button).on {
+  background: linear-gradient(180deg, #FFFFFF, #DCEEFF) !important; color: #071019 !important; border: 1px solid #fff !important;
+  box-shadow: inset 0 -6px 12px -8px rgba(90,170,240,.6), 0 0 16px rgba(160,220,255,.22) !important; }
+/* the splash: a flash, four rings and droplets spraying out of the button, where you touch */
+.spl-clip { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.spl-rg { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%,-50%) scale(0);
+  border: 3px solid rgba(205,242,255,.95); box-shadow: 0 0 18px rgba(150,220,255,.8), inset 0 0 16px rgba(150,220,255,.55);
+  animation: splRing 1s cubic-bezier(.15,.7,.3,1) forwards; }
+.spl-fl { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%,-50%) scale(.2);
+  background: radial-gradient(circle, rgba(235,250,255,.95), rgba(170,225,255,.5) 35%, rgba(170,225,255,0) 70%); animation: splFlash .45s ease-out forwards; }
+.spl-dp { position: fixed; z-index: 9999; width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #fff, rgba(170,225,255,.9) 60%); box-shadow: 0 0 8px rgba(150,220,255,.9);
+  animation: splDrop .8s cubic-bezier(.2,.8,.4,1) forwards; }
+:is(.on,.active) > .spl-clip .spl-rg { border-color: rgba(50,130,215,.75); box-shadow: 0 0 14px rgba(60,140,220,.5); }
+@keyframes splRing { 0% { transform: translate(-50%,-50%) scale(0); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+@keyframes splFlash { 0% { transform: translate(-50%,-50%) scale(.2); opacity: 1; } 100% { transform: translate(-50%,-50%) scale(1.4); opacity: 0; } }
+@keyframes splDrop { 0% { transform: translate(0,0) scale(var(--ds,1)); opacity: 1; } 70% { opacity: 1; } 100% { transform: translate(var(--dx),var(--dy)) scale(.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .spl-rg, .spl-fl, .spl-dp { display: none !important; } }
 </style>
+<script>
+/* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
+(function () {
+  const SEL = ".btnx,.board-filter,.chip,.sk-pills button,.sp-alt,.sp-go,.sp-row,.theme-btn,.ask-send,.ask-scan-sym,.wl-pills button,.ask-chip";
+  const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.addEventListener("pointerdown", e => {
+    if (reduce) return;
+    const b = e.target.closest && e.target.closest(SEL); if (!b) return;
+    const r = b.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top, d = Math.max(r.width, r.height) * 1.5;
+    if (getComputedStyle(b).position === "static") b.style.position = "relative";
+    let clip = b.querySelector(":scope > .spl-clip");
+    if (!clip) { clip = document.createElement("span"); clip.className = "spl-clip"; b.appendChild(clip); }
+    const add = (el, host) => { host.appendChild(el); setTimeout(() => el.remove(), 1600); };
+    const f = document.createElement("span"); f.className = "spl-fl";
+    f.style.cssText = `left:${x}px;top:${y}px;width:${d * .5}px;height:${d * .5}px`; add(f, clip);
+    [[1, 0], [1.25, .12], [1.5, .24], [1.8, .38]].forEach(([k, dl]) => {
+      const s = document.createElement("span"); s.className = "spl-rg";
+      s.style.cssText = `left:${x}px;top:${y}px;width:${d * k}px;height:${d * k}px;animation-delay:${dl}s;border-width:${(3 - dl * 4).toFixed(1)}px`; add(s, clip);
+    });
+    for (let i = 0; i < 14; i++) {
+      const a = Math.PI * 2 * i / 14 + Math.random() * .4, dist = 28 + Math.random() * 34, p = document.createElement("span");
+      p.className = "spl-dp";
+      p.style.cssText = `left:${e.clientX}px;top:${e.clientY}px;--dx:${(Math.cos(a) * dist).toFixed(1)}px;--dy:${(Math.sin(a) * dist - 12).toFixed(1)}px;--ds:${(.6 + Math.random() * .7).toFixed(2)};animation-delay:${(Math.random() * .08).toFixed(2)}s`;
+      add(p, document.body);
+    }
+  }, {passive: true});
+})();
+</script>
 </body>
 </html>
