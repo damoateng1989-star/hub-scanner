@@ -1357,6 +1357,7 @@ html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px
 </style>
 <style>
 /* Geist: NextShelf's typeface (self-hosted, SIL Open Font License) */
+@font-face { font-family: "DSEG7"; src: url("/fonts/DSEG7.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
 @font-face { font-family: "Geist"; src: url("/fonts/Geist.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "Geist Mono"; src: url("/fonts/GeistMono.woff2") format("woff2"); font-weight: 100 900; font-style: normal; font-display: swap; }
 @font-face { font-family: "Manrope"; src: url("/fonts/Manrope.woff2") format("woff2"); font-weight: 200 800; font-style: normal; font-display: swap; }
@@ -5078,7 +5079,13 @@ function mapCandleTimer(chart, series, D) {
     tag.title = `This ${MAP_TF.toUpperCase()} candle closes in ${tag.textContent}`;
     tag.style.top = Math.round(y + 12) + "px"; tag.style.left = (chart.timeScale().width() + 1) + "px";
     tag.hidden = false;
-    if (pill) { pill.textContent = `${MAP_TF.toUpperCase()} closes in ${tag.textContent}`; pill.hidden = false; }
+    if (pill) {           // the digital clock: ghost 8s behind lit digits, a colon that blinks, amber in the last minute
+      const txt = tag.textContent, ghost = txt.replace(/\d/g, "8"), blink = left % 2 === 0;
+      pill.classList.toggle("am", left < 60);
+      pill.innerHTML = `<span class="lab">${MAP_TF.toUpperCase()}<br>CLOSE</span><span class="dg"><span class="gh">${ghost}</span><span class="on">${txt.replace(/:/g, `<i style="opacity:${blink ? 1 : .15}">:</i>`)}</span></span>`;
+      pill.setAttribute("aria-label", `${MAP_TF.toUpperCase()} candle closes in ${txt}`);
+      pill.hidden = false;
+    }
   };
   tick(); MAP_TIMER = setInterval(tick, 1000);
 }
@@ -9365,10 +9372,17 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
 @keyframes stkHint { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-8px); opacity: .5; } }
 .mp-ctimer { position: absolute; z-index: 4; pointer-events: none; padding: 2px 7px; border-radius: 999px; font: 700 10px/1.3 "JetBrains Mono", ui-monospace, monospace;
   background: #0E1512; color: #3DD68C; border: 1px solid rgba(61,214,140,.6); box-shadow: 0 0 10px rgba(61,214,140,.35); white-space: nowrap; }
-.mp-cdpill { display: inline-flex; align-items: center; gap: 7px; margin-left: 8px; padding: 4px 11px 4px 9px; border-radius: 999px; white-space: nowrap;
-  font: 700 11px/1.2 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .04em; color: #3DD68C; background: #0E1512;
-  border: 1px solid rgba(61,214,140,.55); box-shadow: 0 0 18px rgba(61,214,140,.35); }
-.mp-cdpill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); animation: livePulse 2s infinite; }
+.mp-cdpill { display: inline-flex; align-items: center; gap: 9px; margin-left: 8px; padding: 6px 11px 6px 9px; border-radius: 12px; white-space: nowrap;
+  background: #0B110E; border: 1px solid rgba(61,214,140,.45); }
+.mp-cdpill .lab { color: #3DD68C; font: 600 9px/1.15 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .12em; opacity: .85; }
+.mp-cdpill .dg { position: relative; display: inline-block; font: 700 19px/1 "DSEG7", ui-monospace, monospace; letter-spacing: 1px; }
+.mp-cdpill .gh { display: block; color: rgba(61,214,140,.10); }
+.mp-cdpill .on { position: absolute; left: 0; top: 0; white-space: nowrap; color: #3DD68C; text-shadow: 0 0 8px rgba(61,214,140,.75); }
+.mp-cdpill .on i { font-style: normal; transition: opacity .15s; }
+.mp-cdpill.am { border-color: rgba(242,193,78,.55); background: #14110A; }
+.mp-cdpill.am .lab { color: #F2C14E; }
+.mp-cdpill.am .gh { color: rgba(242,193,78,.12); }
+.mp-cdpill.am .on { color: #F2C14E; text-shadow: 0 0 8px rgba(242,193,78,.75); }
 .mp-cdpill[hidden] { display: none; }
 </style>
 <script>
