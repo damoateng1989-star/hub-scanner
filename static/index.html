@@ -9318,6 +9318,9 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
 .stack-end h3 { font: 400 30px/1.2 "Newsreader", Georgia, serif; margin: 0 0 10px; color: #fff; }
 .stack-end p { color: #9AA3AF; margin: 0 0 22px; }
 .stack-end button { padding: 12px 22px; border-radius: 12px; background: #F4F6F9; color: #0E0F12; border: 0; font-weight: 600; font-size: 15px; cursor: pointer; }
+.stack-hint { position: absolute; left: 0; right: 0; bottom: calc(120px + env(safe-area-inset-bottom)); text-align: center; z-index: 2; font-size: 14px; color: #fff;
+  text-shadow: 0 1px 8px rgba(0,0,0,.8); animation: stkHint 1.6s ease-in-out infinite; pointer-events: none; }
+@keyframes stkHint { 0%, 100% { transform: translateY(0); opacity: .9; } 50% { transform: translateY(-8px); opacity: .5; } }
 </style>
 <script>
 /* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
@@ -9440,7 +9443,8 @@ function stkBuild() {
   v.innerHTML = `<div class="stack-top"><button class="stack-x" type="button" aria-label="Close" onclick="closeStack()">✕</button>
       <span class="stack-title">THE DAILY STACK</span><span class="stack-n" id="stkN">1 / ${n}</span><div class="stack-bar"><i id="stkBar"></i></div></div>
     <div class="stack-track" id="stkTrack">${d.clips.map((c, i) => `<section class="stack-slide" data-i="${i}" data-id="${stkEsc(c.id)}">
-        <video muted loop playsinline preload="none" poster="${stkEsc(c.poster)}" data-src="${stkEsc(c.video)}" aria-label="${stkEsc(c.caption)}"></video>
+        <video muted playsinline preload="none" poster="${stkEsc(c.poster)}" data-src="${stkEsc(c.video)}" aria-label="${stkEsc(c.caption)}"></video>
+        ${i === 0 ? `<div class="stack-hint">Swipe up for the next clip ↑</div>` : ""}
         ${calm ? `<button class="stack-play" type="button" aria-label="Play">▶</button>` : ""}
         <div class="stack-cap"><div class="stack-cat">${stkEsc(c.category)}</div><div class="stack-ans"></div><p class="stack-line">${stkEsc(c.caption)}</p></div>
         <div class="stack-rail"><button type="button" class="stk-where">Where?</button><button type="button" class="stk-pp" aria-label="Pause">❚❚</button></div>
@@ -9450,6 +9454,12 @@ function stkBuild() {
   const vid = (s) => s && s.querySelector("video");
   const play = (s) => { const x = vid(s); if (!x) return; if (!x.src && x.dataset.src) x.src = x.dataset.src; const p = x.play(); if (p && p.catch) p.catch(() => {}); };
   v.querySelectorAll(".stack-slide video").forEach(x => x.addEventListener("error", () => { x.removeAttribute("src"); }, {once: true}));
+  // when a clip finishes, move on to the next one by itself (a paused clip stays put)
+  v.querySelectorAll(".stack-slide video").forEach(x => x.addEventListener("ended", () => {
+    const s = x.closest(".stack-slide"), nx = s && s.nextElementSibling;
+    if (nx && !STK.manual) track.scrollTo({top: nx.offsetTop, behavior: "smooth"});
+  }));
+  track.addEventListener("scroll", () => { const h = v.querySelector(".stack-hint"); if (h && track.scrollTop > 40) h.remove(); }, {passive: true});
   v.querySelectorAll(".stack-play").forEach(b => b.onclick = () => { b.remove(); STK.manual = false; play(b.closest(".stack-slide")); });
   v.querySelectorAll(".stk-pp").forEach(b => b.onclick = () => {
     const s = b.closest(".stack-slide"), x = vid(s);
