@@ -660,7 +660,26 @@ body.brief-open .brief { transform: none; opacity: 1; }
 body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ease-out both; }
 /* ---------- GEX heat map beside the shelf card (Patch 166) ---------- */
 .bf-heat[hidden] { display: none !important; }
-.bf-wr { position: fixed; top: 50%; transform: translateY(-50%); z-index: 36; max-height: calc(100vh - 48px); overflow-y: auto; box-sizing: border-box; }
+.bf-wr { position: fixed; top: 24px; bottom: 24px; z-index: 36; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
+.bf-wr::-webkit-scrollbar { display: none; }
+.bf-wr > .wr-card { flex: none; }
+.bf-wr > .wr-card[hidden] { display: none; }
+.ss-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.ss-win { position: relative; height: min(420px, 46vh); aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; background: #000; }
+.ss-win video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ss-bar { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; gap: 3px; z-index: 2; }
+.ss-bar i { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.28); }
+.ss-bar i.on { background: #fff; }
+.ss-side { display: flex; flex-direction: column; min-width: 0; }
+.ss-cat { font: 600 10px/1.2 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; color: #9AA3AF; margin-bottom: 8px; }
+.ss-line { font: 400 19px/1.3 "Newsreader", Georgia, serif; color: var(--ink, #fff); margin: 0; }
+.ss-place { margin: 10px 0 0; color: #3DD68C; font-size: 14px; line-height: 1.4; }
+.ss-ctl { margin-top: auto; display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-ctl button { height: 38px; min-width: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: #121418; color: #EDEDED; font-size: 13px; cursor: pointer; }
+.ss-ctl button:disabled { opacity: .4; cursor: default; }
+.ss-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #07090D; z-index: 3; }
+.ss-end b { font: 400 20px/1.25 "Newsreader", Georgia, serif; color: #fff; margin-bottom: 6px; } .ss-end span { color: #9AA3AF; font-size: 13px; }
+html[data-theme="light"] .ss-ctl button { background: #F3F4F6; color: #1F2328; border-color: rgba(15,23,42,.12); }
 .bf-wr[hidden], body:not(.brief-open) .bf-wr { display: none !important; }
 body:not(.brief-open) .bf-heat { display: none; }
 .bf-heat { margin: 0 20px 16px; font-family: var(--sans); flex: none; }
@@ -2852,7 +2871,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
-<div class="wr-card bf-wr" id="bfWr" hidden></div>
+<div class="bf-wr" id="bfWr" hidden><div class="wr-card" id="bfWrRoom"></div><div class="wr-card bf-stk" id="bfStk" hidden></div></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
   <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
 </button>
@@ -6175,10 +6194,10 @@ function briefSideRoom() {
   const el = $("bfWr"), card = $("brief"); if (!el || !card) return;
   const open = document.body.classList.contains("brief-open") && !document.body.classList.contains("heat-on");
   const gap = open ? Math.round(card.getBoundingClientRect().left) : 0;
-  if (gap < 380) { if (!el.hidden) { el.hidden = true; const v = el.querySelector("video"); if (v) try { v.pause(); } catch (e) {} } return; }
+  if (gap < 380) { if (!el.hidden) { el.hidden = true; el.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); } return; }
   el.style.width = Math.min(560, gap - 48) + "px"; el.style.left = Math.round((gap - Math.min(560, gap - 48)) / 2) + "px";
-  if (!el.dataset.on) { el.dataset.on = "1"; renderWaitingRoom(el); }
-  else el.hidden = false;
+  el.hidden = false;
+  if (!el.dataset.on) { el.dataset.on = "1"; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
 }
 window.addEventListener("resize", () => { clearTimeout(window._bsrT); window._bsrT = setTimeout(briefSideRoom, 200); });
 function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); if (typeof briefSideRoom === "function") setTimeout(briefSideRoom, 0); }
@@ -9665,6 +9684,57 @@ function openStack() {
   document.documentElement.style.overflow = "hidden";
   v.hidden = false;
   const t = v.querySelector("#stkTrack"); t.scrollTop = 0;
+}
+// the Daily Stack as a small player beside the shelf card (computers): one clip at a time, on to the next when it ends
+async function renderSideStack(host) {
+  if (!host) return;
+  if (!STK.data) { try { const r = await fetch("/api/stack", {credentials: "same-origin"}); if (r.status === 200) STK.data = await r.json(); } catch (e) {} }
+  const d = STK.data; if (!d || !Array.isArray(d.clips) || !d.clips.length) { host.hidden = true; return; }
+  const n = d.clips.length, calm = stkCalm(), day = new Date(d.date + "T12:00:00").toLocaleDateString([], {weekday: "short", month: "short", day: "numeric"});
+  host.innerHTML = `<div class="wr-eyebrow"><span>THE DAILY STACK</span><span class="ss-n">1 / ${n}</span></div>
+    <div class="ss-row"><div class="ss-win"><div class="ss-bar">${d.clips.map(() => "<i></i>").join("")}</div><video muted playsinline preload="none"></video></div>
+    <div class="ss-side"><div class="ss-cat"></div><p class="ss-line"></p><div class="ss-ans"></div>
+    <div class="ss-ctl"><button type="button" class="ss-prev" aria-label="Previous clip">‹</button><button type="button" class="ss-pp" aria-label="Pause">❚❚</button><button type="button" class="ss-next" aria-label="Next clip">›</button><button type="button" class="ss-where">Where?</button></div></div></div>
+    <div class="wr-foot"><span>${stkEsc(day)} · ${n} CLIPS</span><span>Silent by design</span></div>`;
+  host.hidden = false;
+  const v = host.querySelector("video"), win = host.querySelector(".ss-win"), pp = host.querySelector(".ss-pp");
+  let i = 0, paused = calm, seen = false;
+  const play = () => { if (paused || !seen) return; const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  const show = (k) => {
+    const end = win.querySelector(".ss-end"); if (end) end.remove();
+    i = Math.max(0, Math.min(n - 1, k)); const c = d.clips[i];
+    host.querySelector(".ss-n").textContent = `${i + 1} / ${n}`;
+    host.querySelectorAll(".ss-bar i").forEach((b, j) => b.classList.toggle("on", j <= i));
+    host.querySelector(".ss-cat").textContent = c.category || ""; host.querySelector(".ss-line").textContent = c.caption || "";
+    host.querySelector(".ss-ans").innerHTML = ""; const w = host.querySelector(".ss-where"); w.disabled = false;
+    host.querySelector(".ss-prev").disabled = i === 0;
+    v.poster = c.poster || ""; v.src = c.video; play();
+  };
+  v.addEventListener("ended", () => {
+    if (i < n - 1) return show(i + 1);
+    const e = document.createElement("div"); e.className = "ss-end";
+    e.innerHTML = `<b>That's today's stack.</b><span>A new stack tomorrow morning.</span>`; win.appendChild(e);
+    host.querySelector(".ss-next").textContent = "↺"; host.querySelector(".ss-next").setAttribute("aria-label", "Watch again");
+  });
+  host.querySelector(".ss-prev").onclick = () => show(i - 1);
+  host.querySelector(".ss-next").onclick = (ev) => { if (win.querySelector(".ss-end")) { ev.currentTarget.textContent = "›"; ev.currentTarget.setAttribute("aria-label", "Next clip"); return show(0); } show(i + 1 < n ? i + 1 : i); };
+  pp.onclick = () => { paused = !v.paused; if (paused) { v.pause(); pp.textContent = "▶"; pp.setAttribute("aria-label", "Play"); } else { pp.textContent = "❚❚"; pp.setAttribute("aria-label", "Pause"); play(); } };
+  if (calm) { pp.textContent = "▶"; pp.setAttribute("aria-label", "Play"); }
+  host.querySelector(".ss-where").onclick = async (ev) => {
+    const b = ev.currentTarget, c = d.clips[i]; b.disabled = true;
+    try {
+      const r = await fetch("/api/stack/reveal", {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: c.id})});
+      const x = r.ok ? await r.json() : null;
+      if (d.clips[i] === c) host.querySelector(".ss-ans").innerHTML = `<p class="ss-place">${stkEsc(x && x.place ? x.place : "Somewhere in the world — the footage doesn't say.")}</p>`;
+    } catch (e) { b.disabled = false; }
+  };
+  if ("IntersectionObserver" in window) {
+    if (host._io) host._io.disconnect();
+    host._io = new IntersectionObserver(es => es.forEach(e => { seen = e.isIntersecting && e.intersectionRatio >= .4 && !document.hidden; seen ? play() : v.pause(); }), {threshold: [0, .4, 1]});
+    host._io.observe(win);
+  } else seen = true;
+  document.addEventListener("visibilitychange", () => { if (document.hidden) v.pause(); });
+  show(0);
 }
 function closeStack() {
   const v = document.getElementById("stackView"); if (!v) return;
