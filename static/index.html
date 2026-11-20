@@ -4529,7 +4529,7 @@ async function openBrief(sym, focus) {
   $("bfChart").href = `/t/${encodeURIComponent(sym)}`;
   paintBriefWatch(sym);
   document.body.classList.add("brief-open"); $("brief").setAttribute("aria-hidden", "false"); $("brief").scrollTop = 0;
-  setTimeout(briefSideRoom, 450);             // after the slide-in, so the card's real left edge is known
+  briefSideRoom(); setTimeout(briefSideRoom, 450);   // placed straight away (layout box), checked again after the slide-in
   const st = findStatus(sym);
   $("bfBody").innerHTML = st ? briefHTML(sym, st) : loadingHTML("Reading the levels…");
   renderShelfTradeCard(sym);
@@ -6225,7 +6225,9 @@ function briefSideRoom() {
   const B = document.body.classList, tab = $("bfWrTab");
   const open = B.contains("brief-open") && !B.contains("heat-on") && !B.contains("side-off");
   if (tab) tab.hidden = !(B.contains("brief-open") && !B.contains("heat-on") && B.contains("side-off") && innerWidth >= 1280);
-  const gap = open ? Math.round(card.getBoundingClientRect().left) : 0;
+  // the card's resting left edge from its layout box, not its on-screen box: while it slides in, the on-screen
+  // box is still part-way across, which used to park the videos in the middle for a second
+  const gap = open ? Math.round(document.documentElement.clientWidth - card.offsetWidth - (parseFloat(getComputedStyle(card).right) || 0)) : 0;
   if (gap < 380) { if (!el.hidden) { el.hidden = true; el.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); } return; }
   const w = Math.min(560, gap - 40); el.style.width = w + "px"; el.style.left = Math.round((gap - w) / 2) + "px";
   el.style.setProperty("--ssh", Math.round(Math.min(420, innerHeight * .46, (w - 32 - 150) * 16 / 9)) + "px");   // the clip shrinks on narrow columns so the caption keeps ~150px
@@ -6233,6 +6235,8 @@ function briefSideRoom() {
   if (!el.dataset.on) { el.dataset.on = "1"; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
 }
 window.addEventListener("resize", () => { clearTimeout(window._bsrT); window._bsrT = setTimeout(briefSideRoom, 200); });
+// the card changes width while it loads (and when the heat map comes and goes): keep the videos beside it
+if ("ResizeObserver" in window) addEventListener("DOMContentLoaded", () => { const c = $("brief"); if (c) new ResizeObserver(() => { if (document.body.classList.contains("brief-open")) briefSideRoom(); }).observe(c); });
 function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); if (typeof briefSideRoom === "function") setTimeout(briefSideRoom, 0); }
 function paintBriefWatch(sym) {          // the watchlist button next to "Open full chart"
   const b = $("bfWatch"); if (!b) return;
