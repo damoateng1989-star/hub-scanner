@@ -6955,7 +6955,14 @@ function optionsHTML(o) {
     if (!g) loadGrade(BRIEF_SYM, kind);
     const UG = GRADE[BRIEF_SYM + "|" + kind];
     const U = (UG && typeof UG === "object") ? UG.universe : null;
-    const odds = g && g.grade !== "?" ? `Setup grade <b class="sg-in ${GRADE_CLS[g.grade]}">${g.grade} · ${g.word}</b>: ${kind === "hub" ? (up ? "long breakouts" : "short breakdowns") : esc(p.setup)} ${gradeVerb(g)} per trade on the stock (${g.win}% winners, ${g.n} trades).${g.grade === "D" ? " The stock usually lost on this setup, so this contract is more likely to lose than win." : ""}`
+    // Nov 20: the same grade the shelf card shows — the A retest, not the breakout-close record (they disagreed: A vs D)
+    const RA = (UG && typeof UG === "object") ? (UG.retest && UG.retest.grade !== "?" ? UG.retest : UG.universe_a) : null;
+    const rname = kind === "hub" ? "hub A retests" : "double bottom A retests";
+    const retestOdds = !RA ? null : !up
+      ? `Watch only: ${kind === "hub" ? "short breakdowns" : "double tops"} lost money in the two-year test.`
+      : `Setup grade <b class="sg-in ${GRADE_CLS[RA.grade]}">${RA.grade} · ${RA.word}</b> if it retests as an A: ${RA === UG.retest ? `${rname} on ${esc(BRIEF_SYM)}` : `${rname} across all 543 stocks`} ${RA.avg > 0 ? `made <b>+${RA.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(RA.avg).toFixed(2)}%</b>`} per trade (${Number(RA.n).toLocaleString()} trades, ${RA.win}% won).`;
+    const odds = (kind === "hub" || kind === "double_bottom" || kind === "double") && retestOdds ? retestOdds
+      : g && g.grade !== "?" ? `Setup grade <b class="sg-in ${GRADE_CLS[g.grade]}">${g.grade} · ${g.word}</b>: ${kind === "hub" ? (up ? "long breakouts" : "short breakdowns") : esc(p.setup)} ${gradeVerb(g)} per trade on the stock (${g.win}% winners, ${g.n} trades).${g.grade === "D" ? " The stock usually lost on this setup, so this contract is more likely to lose than win." : ""}`
       : g && U ? `Setup grade <b class="sg-in ${GRADE_CLS[U.grade]}">${U.grade} · ${U.word}</b>: ${esc(U.label)} record across all 543 stocks: ${U.avg > 0 ? `made <b>+${U.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(U.avg).toFixed(2)}%</b>`} per trade over two years (${Number(U.n).toLocaleString()} trades, ${U.win}% won). Too few on ${esc(BRIEF_SYM)} itself to grade.${U.grade === "D" ? " The pattern lost money in the two-year test." : ""}${U.caveat ? ` ${esc(U.caveat)}` : ""}`
       : kind === "hub" && h.n ? `Reached the aim in ${h.reached} of ${h.n} past setups.` : "Too few past setups to judge the odds yet.";
     const note = c.estimated ? `≈${money(c.mid)} if the ${move} happens (about ${money(c.quote_now)} now, since the stock isn't there yet). ${odds}` : `${money(c.cost)} for one contract (100 shares). ${odds}`;
