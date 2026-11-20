@@ -5105,36 +5105,37 @@ function mapCandleTimer(chart, series, D) {
     const left = mapCandleClose(MAP_TF, new Date());
     const last = D.cs[D.cs.length - 1], px = D.P && D.P.px != null ? +D.P.px : last ? +last.close : null;
     const y = px != null ? series.priceToCoordinate(px) : null;
-    // the same countdown as a green pill in the chart's header (like LIVE), so it's easy to find
-    const head = document.querySelector(".mp-chartcard .mp-prostatus");
-    let pill = document.getElementById("mpCdPill");
-    if (head && !pill) { const box = document.createElement("span"); box.className = "mp-clocks"; head.after(box);
-      pill = document.createElement("span"); pill.id = "mpCdPill"; pill.className = "mp-cdpill"; box.appendChild(pill); }
-    // a second LED clock beside it with the real Eastern time (11:16 AM), shown all day
-    let clk = document.getElementById("mpClkPill");
-    if (pill && !clk) { clk = document.createElement("span"); clk.id = "mpClkPill"; clk.className = "mp-cdpill mp-clk"; pill.after(clk); }
-    if (clk) {
-      const now = new Date(), [hm, ap] = now.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", hour12: true }).split(" ");
-      const d = hm.length < 5 ? "!" + hm : hm, on = now.getSeconds() % 2 === 0;   // "!" is a blank digit in the LED font
-      clk.innerHTML = `<span class="lab">${ap}<br>ET</span><span class="dg"><span class="gh">88:88</span><span class="on">${d.replace(":", `<i style="opacity:${on ? 1 : .15}">:</i>`)}</span></span>`;
-      clk.setAttribute("aria-label", `${hm} ${ap} Eastern time`);
-    }
-    if (left == null || y == null) { tag.hidden = true; if (pill) pill.hidden = true; return; }
+    if (left == null || y == null) { tag.hidden = true; return; }
     const hh = Math.floor(left / 3600), mm = Math.floor(left % 3600 / 60), ss = left % 60, p2 = (n) => String(n).padStart(2, "0");
     tag.textContent = (hh ? hh + ":" + p2(mm) : mm) + ":" + p2(ss);
     tag.title = `This ${MAP_TF.toUpperCase()} candle closes in ${tag.textContent}`;
     tag.style.top = Math.round(y + 12) + "px"; tag.style.left = (chart.timeScale().width() + 1) + "px";
     tag.hidden = false;
-    if (pill) {           // the digital clock: ghost 8s behind lit digits, a colon that blinks, amber in the last minute
-      const txt = tag.textContent, ghost = txt.replace(/\d/g, "8"), blink = left % 2 === 0;
-      pill.classList.toggle("am", left < 60);
-      pill.innerHTML = `<span class="lab">${MAP_TF.toUpperCase()}<br>CLOSE</span><span class="dg"><span class="gh">${ghost}</span><span class="on">${txt.replace(/:/g, `<i style="opacity:${blink ? 1 : .15}">:</i>`)}</span></span>`;
-      pill.setAttribute("aria-label", `${MAP_TF.toUpperCase()} candle closes in ${txt}`);
-      pill.hidden = false;
-    }
   };
   tick(); MAP_TIMER = setInterval(tick, 1000);
 }
+// the two LED clocks in the chart header: the candle countdown and Eastern time. They run on their own timer
+// and are put back the instant the panel redraws (every 30 s for prices), so they never blink out
+function paintHeaderClocks() {
+  const head = document.querySelector("#bfMap .mp-chartcard .mp-prostatus"); if (!head) return;
+  let box = head.parentElement.querySelector(".mp-clocks");
+  if (!box) { box = document.createElement("span"); box.className = "mp-clocks"; box.innerHTML = `<span class="mp-cdpill" id="mpCdPill" hidden></span><span class="mp-cdpill mp-clk" id="mpClkPill"></span>`; head.after(box); }
+  const pill = box.querySelector("#mpCdPill"), clk = box.querySelector("#mpClkPill"), now = new Date();
+  const [hm, ap] = now.toLocaleTimeString("en-US", {timeZone: "America/New_York", hour: "numeric", minute: "2-digit", hour12: true}).split(" ");
+  const d = hm.length < 5 ? "!" + hm : hm, on = now.getSeconds() % 2 === 0;   // "!" is a blank digit in the LED font
+  clk.innerHTML = `<span class="lab">${ap}<br>ET</span><span class="dg"><span class="gh">88:88</span><span class="on">${d.replace(":", `<i style="opacity:${on ? 1 : .15}">:</i>`)}</span></span>`;
+  clk.setAttribute("aria-label", `${hm} ${ap} Eastern time`);
+  const left = mapCandleClose(MAP_TF, now);
+  if (left == null || MAP_RP) { pill.hidden = true; return; }
+  const hh = Math.floor(left / 3600), mm = Math.floor(left % 3600 / 60), ss = left % 60, p2 = (n) => String(n).padStart(2, "0");
+  const txt = (hh ? hh + ":" + p2(mm) : mm) + ":" + p2(ss), ghost = txt.replace(/\d/g, "8"), blink = left % 2 === 0;
+  pill.classList.toggle("am", left < 60);
+  pill.innerHTML = `<span class="lab">${MAP_TF.toUpperCase()}<br>CLOSE</span><span class="dg"><span class="gh">${ghost}</span><span class="on">${txt.replace(/:/g, `<i style="opacity:${blink ? 1 : .15}">:</i>`)}</span></span>`;
+  pill.setAttribute("aria-label", `${MAP_TF.toUpperCase()} candle closes in ${txt}`);
+  pill.hidden = false;
+}
+setInterval(() => { if (document.body.classList.contains("brief-open")) paintHeaderClocks(); }, 1000);
+addEventListener("DOMContentLoaded", () => { const m = $("bfMap"); if (m && "MutationObserver" in window) new MutationObserver(() => paintHeaderClocks()).observe(m, {childList: true}); });
 function mapVolProfile(chart, series, D, light) {
   const el = chart.chartElement(); if (!el) return;
   el.style.position = "relative";
