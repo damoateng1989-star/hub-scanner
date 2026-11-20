@@ -693,8 +693,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     A0_ = float(res["atr"].iloc[i0])
                     touched_ = (float(c4["Low"].iloc[j]) <= edge + engine.RETEST_TOUCH * A0_) if d == 1 else \
                                (float(c4["High"].iloc[j]) >= edge - engine.RETEST_TOUCH * A0_)
-                    if touched_:
-                        left_ = engine.RETEST_MAX - k
+                    left_ = engine.RETEST_MAX - k
+                    if touched_ and left_ > 0:      # the window's last candle leaves no close to decide it
                         msg_ = (f"👀 {sym}: back at the edge {_money(edge)}\n"
                                 f"Retesting now: it {'broke out' if d == 1 else 'broke down'} {k} candle{'s' if k != 1 else ''} ago and pulled back to the hub. "
                                 f"A 4-hour close that holds just {'above' if d == 1 else 'below'} {_money(edge)} is the entry"
