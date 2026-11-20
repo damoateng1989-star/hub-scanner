@@ -662,11 +662,22 @@ body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ea
 .bf-heat[hidden] { display: none !important; }
 .bf-wr { position: fixed; top: 24px; bottom: 24px; z-index: 36; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
 .bf-wr::-webkit-scrollbar { display: none; }
+.bf-wr-top { display: flex; justify-content: flex-end; flex: none; margin-bottom: -6px; }
+.bf-wr-top button, .bf-wr-tab { border: 1px solid rgba(255,255,255,.14); background: #121418; color: #C9CED6; font-size: 12.5px; border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.bf-wr-top button:hover, .bf-wr-tab:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+.bf-wr-tab { position: fixed; left: 20px; bottom: 22px; z-index: 36; }
+.bf-wr-tab[hidden], body:not(.brief-open) .bf-wr-tab { display: none !important; }
+.vid-expand { position: absolute; right: 10px; top: 10px; width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: rgba(7,9,13,.55); color: #fff; font-size: 15px; cursor: pointer; z-index: 3; padding: 0; }
+.vid-theater { position: fixed; inset: 0; z-index: 2100; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; padding: 40px; }
+.vid-theater[hidden] { display: none; }
+.vid-theater video { max-width: 100%; max-height: 100%; border-radius: 16px; background: #000; }
+.vt-x { position: absolute; right: 20px; top: 20px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.5); color: #fff; font-size: 18px; cursor: pointer; }
 .bf-wr > .wr-card { flex: none; }
 .bf-wr > .wr-card[hidden] { display: none; }
 .ss-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 14px; align-items: stretch; }
-.ss-win { position: relative; height: min(420px, 46vh); aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; background: #000; }
+.ss-win { position: relative; height: var(--ssh, min(420px, 46vh)); aspect-ratio: 9 / 16; border-radius: 14px; overflow: hidden; background: #000; }
 .ss-win video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ss-win .vid-expand { top: 16px; right: 8px; width: 28px; height: 28px; font-size: 13px; }
 .ss-bar { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; gap: 3px; z-index: 2; }
 .ss-bar i { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,.28); }
 .ss-bar i.on { background: #fff; }
@@ -2871,7 +2882,8 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
-<div class="bf-wr" id="bfWr" hidden><div class="wr-card" id="bfWrRoom"></div><div class="wr-card bf-stk" id="bfStk" hidden></div></div>
+<button class="bf-wr-tab" id="bfWrTab" type="button" hidden onclick="briefSideToggle(true)" aria-label="Show the videos">▶ Videos</button>
+<div class="bf-wr" id="bfWr" hidden><div class="bf-wr-top"><button type="button" onclick="briefSideToggle(false)">‹ Hide videos, bigger chart</button></div><div class="wr-card" id="bfWrRoom"></div><div class="wr-card bf-stk" id="bfStk" hidden></div></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
   <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
 </button>
@@ -6190,12 +6202,33 @@ function paintHeat(sym) {
 }
 // computers: the Waiting Room plays in the space left of the shelf card (when it's wide enough and the GEX
 // heat map isn't using it); phones never see it here, the card fills the screen
+function briefSideToggle(on) {           // "Hide videos" gives the chart the whole width; "▶ Videos" brings them back (remembered)
+  document.body.classList.toggle("side-off", !on);
+  try { localStorage.setItem("ns-side-off", on ? "0" : "1"); } catch (e) {}
+  if (!on) $("bfWr").querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} });
+  setTimeout(briefSideRoom, 420);          // after the card resizes
+  if (!on) briefSideRoom();
+  if (MAP_LWC_CHART) setTimeout(() => window.dispatchEvent(new Event("resize")), 450);
+}
+try { if (localStorage.getItem("ns-side-off") === "1") document.body.classList.add("side-off"); } catch (e) {}
+// a video opened big, over everything (the Waiting Room scene, or a Daily Stack clip)
+function vidTheater(src, poster, label) {
+  let t = $("vidTheater");
+  if (!t) { t = document.createElement("div"); t.id = "vidTheater"; t.className = "vid-theater"; t.onclick = (e) => { if (e.target === t) vidTheaterClose(); }; document.body.appendChild(t); }
+  t.innerHTML = `<button type="button" class="vt-x" aria-label="Close" onclick="vidTheaterClose()">✕</button><video muted loop playsinline autoplay poster="${wrEsc(poster || "")}" src="${wrEsc(src)}" aria-label="${wrEsc(label || "")}"></video>`;
+  t.hidden = false; $("bfWr").querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} });
+}
+function vidTheaterClose() { const t = $("vidTheater"); if (!t) return; t.hidden = true; t.innerHTML = ""; }
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("vidTheater") && !$("vidTheater").hidden) vidTheaterClose(); });
 function briefSideRoom() {
   const el = $("bfWr"), card = $("brief"); if (!el || !card) return;
-  const open = document.body.classList.contains("brief-open") && !document.body.classList.contains("heat-on");
+  const B = document.body.classList, tab = $("bfWrTab");
+  const open = B.contains("brief-open") && !B.contains("heat-on") && !B.contains("side-off");
+  if (tab) tab.hidden = !(B.contains("brief-open") && !B.contains("heat-on") && B.contains("side-off") && innerWidth >= 1280);
   const gap = open ? Math.round(card.getBoundingClientRect().left) : 0;
   if (gap < 380) { if (!el.hidden) { el.hidden = true; el.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); } return; }
-  el.style.width = Math.min(560, gap - 48) + "px"; el.style.left = Math.round((gap - Math.min(560, gap - 48)) / 2) + "px";
+  const w = Math.min(560, gap - 40); el.style.width = w + "px"; el.style.left = Math.round((gap - w) / 2) + "px";
+  el.style.setProperty("--ssh", Math.round(Math.min(420, innerHeight * .46, (w - 32 - 150) * 16 / 9)) + "px");   // the clip shrinks on narrow columns so the caption keeps ~150px
   el.hidden = false;
   if (!el.dataset.on) { el.dataset.on = "1"; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
 }
@@ -8905,6 +8938,7 @@ html[data-theme="light"] body .panel, html[data-theme="light"] body .tbl, html[d
 body.map-v2 #brief .bf-hero { display: none !important; }
 body:not(.map-v2) #bfMap { display: none; }
 @media (min-width: 1100px) { body.map-v2 .brief { width: min(1440px, 100vw) !important; } }   /* a little wider: was 1240px */
+@media (min-width: 1280px) { body.map-v2:not(.heat-on):not(.side-off) .brief { width: min(1440px, calc(100vw - 420px)) !important; } }   /* laptops: leave room on the left for the Waiting Room and the Daily Stack */
 #bfMap { --mp-card: #15171C; --mp-line: #292A2D; --mp-ink: #F3F4F6; --mp-mut: #9AA0AC; --mp-hub: #5B7BFF; --mp-trig: #F2C14E; --mp-obst: #FF6B5E; --mp-shelf: #3DD68C; --mp-stop: #9AA0AC;
   padding: 14px 16px 4px; color: var(--mp-ink); }
 html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-ink: #0d1117; --mp-mut: #5b6472; --mp-hub: #4f46e5; --mp-trig: #b7791f; --mp-obst: #dc2626; --mp-shelf: #15803d; --mp-stop: #6b7280; }
@@ -9546,6 +9580,7 @@ async function renderWaitingRoom(host) {
       <video class="wr-video" muted loop playsinline preload="none" poster="${wrEsc(d.poster)}" aria-label="A slow scene: ${wrEsc(d.hint)}"></video>
       <span class="wr-chip">TODAY'S WINDOW</span>
       ${d.video ? `<button class="wr-pause" type="button" aria-label="${calm ? "Play" : "Pause"}">${calm ? "▶" : "❚❚"}</button>` : ""}
+      ${d.video ? `<button class="vid-expand wr-big" type="button" aria-label="Watch big">⤢</button>` : ""}
     </div>
     <h3 class="wr-head">${wrEsc(d.headline)}</h3>
     <p class="wr-hint">${wrEsc(d.hint)}</p>
@@ -9559,6 +9594,7 @@ async function renderWaitingRoom(host) {
   const play = () => { if (!d.video || manualPause) return; load(); const p = v.play(); if (p && p.catch) p.catch(() => {}); };
   const pause = () => { try { v.pause(); } catch (e) {} };
   v.addEventListener("error", () => { if (btn) btn.remove(); }, true);
+  const big = host.querySelector(".wr-big"); if (big) big.onclick = () => vidTheater(d.video, d.poster, d.hint);
   if (btn) btn.onclick = () => { manualPause = !v.paused ? true : false; if (manualPause) { pause(); btn.textContent = "▶"; btn.setAttribute("aria-label", "Play"); } else { manualPause = false; play(); btn.textContent = "❚❚"; btn.setAttribute("aria-label", "Pause"); } };
   if (host._wrIo) host._wrIo.disconnect();       // one watcher per window (Today's row and the shelf card's side each have their own)
   if ("IntersectionObserver" in window && d.video) {
@@ -9692,7 +9728,7 @@ async function renderSideStack(host) {
   const d = STK.data; if (!d || !Array.isArray(d.clips) || !d.clips.length) { host.hidden = true; return; }
   const n = d.clips.length, calm = stkCalm(), day = new Date(d.date + "T12:00:00").toLocaleDateString([], {weekday: "short", month: "short", day: "numeric"});
   host.innerHTML = `<div class="wr-eyebrow"><span>THE DAILY STACK</span><span class="ss-n">1 / ${n}</span></div>
-    <div class="ss-row"><div class="ss-win"><div class="ss-bar">${d.clips.map(() => "<i></i>").join("")}</div><video muted playsinline preload="none"></video></div>
+    <div class="ss-row"><div class="ss-win"><button type="button" class="vid-expand ss-big" aria-label="Watch big">⤢</button><div class="ss-bar">${d.clips.map(() => "<i></i>").join("")}</div><video muted playsinline preload="none"></video></div>
     <div class="ss-side"><div class="ss-cat"></div><p class="ss-line"></p><div class="ss-ans"></div>
     <div class="ss-ctl"><button type="button" class="ss-prev" aria-label="Previous clip">‹</button><button type="button" class="ss-pp" aria-label="Pause">❚❚</button><button type="button" class="ss-next" aria-label="Next clip">›</button><button type="button" class="ss-where">Where?</button></div></div></div>
     <div class="wr-foot"><span>${stkEsc(day)} · ${n} CLIPS</span><span>Silent by design</span></div>`;
@@ -9716,6 +9752,7 @@ async function renderSideStack(host) {
     e.innerHTML = `<b>That's today's stack.</b><span>A new stack tomorrow morning.</span>`; win.appendChild(e);
     host.querySelector(".ss-next").textContent = "↺"; host.querySelector(".ss-next").setAttribute("aria-label", "Watch again");
   });
+  host.querySelector(".ss-big").onclick = () => { const c = d.clips[i]; vidTheater(c.video, c.poster, c.caption); };
   host.querySelector(".ss-prev").onclick = () => show(i - 1);
   host.querySelector(".ss-next").onclick = (ev) => { if (win.querySelector(".ss-end")) { ev.currentTarget.textContent = "›"; ev.currentTarget.setAttribute("aria-label", "Next clip"); return show(0); } show(i + 1 < n ? i + 1 : i); };
   pp.onclick = () => { paused = !v.paused; if (paused) { v.pause(); pp.textContent = "▶"; pp.setAttribute("aria-label", "Play"); } else { pp.textContent = "❚❚"; pp.setAttribute("aria-label", "Pause"); play(); } };
