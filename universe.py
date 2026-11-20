@@ -44,6 +44,21 @@ ETFS = """
 SPY QQQ IWM DIA XLK XLF XLE XLV XLY XLP XLI XLB XLU XLRE XLC SMH SOXX XBI KRE ARKK TLT GLD SLV USO
 """.split()
 
+# Rough fund size (assets, $ billions) — used ONLY to size ETF tiles on the market map, so SPY and QQQ read as
+# big as they are instead of every ETF getting the same small unlabelled tile. Approximate on purpose; not shown.
+ETF_SIZE_B = {"SPY": 650, "QQQ": 350, "IWM": 70, "DIA": 35, "GLD": 100, "TLT": 60, "XLK": 75, "XLF": 50, "XLE": 30,
+              "XLV": 38, "XLY": 22, "XLP": 16, "XLI": 22, "XLB": 6, "XLU": 18, "XLRE": 8, "XLC": 22, "SMH": 30,
+              "SOXX": 14, "XBI": 7, "KRE": 4, "ARKK": 6, "SLV": 18, "USO": 1.5}
+
+
+def tile_size(symbol: str) -> float | None:
+    """What the market map sizes a tile by: market cap for stocks, fund size for the major ETFs."""
+    s = symbol.upper()
+    if s in ETF_SIZE_B:
+        return ETF_SIZE_B[s] * 1e9
+    return market_cap(s)
+
+
 UNIVERSES = {"ndx": NASDAQ_100, "sp500": SP_500, "etf": ETFS}
 
 

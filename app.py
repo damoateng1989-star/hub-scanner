@@ -1089,7 +1089,7 @@ def _heatmap(u: dict | None, full: bool):
         st = state.get(s, "none")
         if not full and st in ("up", "down", "edge", "edge_dn"):
             st = "locked"                          # free plan: the timely states stay hidden, like the board
-        tiles.append(dict(s=s, sec=universe.sector(s), cap=universe.market_cap(s), st=st))
+        tiles.append(dict(s=s, sec=universe.sector(s), cap=universe.tile_size(s), st=st))
     try:
         regime = json.loads(db.get_setting("regime") or "null")
     except Exception:
