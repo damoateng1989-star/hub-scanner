@@ -685,9 +685,25 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
             if 1 <= k <= engine.RETEST_MAX:
                 edge = pend["edge"]
                 j = len(c4) - 1
-                if engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float),
-                                       c4["High"].to_numpy(float), res["atr"].to_numpy(float),
-                                       i0, d, edge, j) == "retest":
+                rc = engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float),
+                                         c4["High"].to_numpy(float), res["atr"].to_numpy(float), i0, d, edge, j)
+                if rc is None:
+                    # Nov 20: the "back at the edge" heads-up — the latest candle pulled back to the edge (the
+                    # Today card's / map's "Retesting now"), but its close isn't the entry yet. Once per breakout.
+                    A0_ = float(res["atr"].iloc[i0])
+                    touched_ = (float(c4["Low"].iloc[j]) <= edge + engine.RETEST_TOUCH * A0_) if d == 1 else \
+                               (float(c4["High"].iloc[j]) >= edge - engine.RETEST_TOUCH * A0_)
+                    if touched_:
+                        left_ = engine.RETEST_MAX - k
+                        msg_ = (f"👀 {sym}: back at the edge {_money(edge)}\n"
+                                f"Retesting now: it {'broke out' if d == 1 else 'broke down'} {k} candle{'s' if k != 1 else ''} ago and pulled back to the hub. "
+                                f"A 4-hour close that holds just {'above' if d == 1 else 'below'} {_money(edge)} is the entry"
+                                f" ({left_} candle{'s' if left_ != 1 else ''} left in the window). Target {_money(pend['target'])}.")
+                        if db.add_alert(f"{sym}|retesting_now|{c4.index[i0].isoformat()}", sym, "retesting_now",
+                                        c4.index[j].isoformat(), msg_):
+                            notify.symbol_alert(sym, "retesting_now", msg_, None, candle_start=c4.index[j])
+                            sent.append(msg_)
+                if rc == "retest":
                     close2 = float(res["close"].iloc[j])
                     A2 = float(res["atr"].iloc[j])
                     grade = engine.retest_grade(pend, close2, A2)   # A setup or watch, Lab branch B
@@ -1024,7 +1040,7 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                     speech = None if sig["reached"] else (
                         f"Next Shelf. {phone.spell(sym)} closed {'above' if up else 'below'} its hub at 1 30. Early read. "
                         f"Close {_say_money(close)}. Hub edge {_say_money(sig['edge'])}. Target {_say_money(sig['target'])}.")
-                    notify.symbol_alert(sym, typ, msg, speech, candle_start=start)
+                    notify.symbol_alert(sym, "early", msg, speech, candle_start=start)   # its own type: admin-only (Nov 20)
                     sent.append(msg)
             except Exception as e:
                 log.warning("early read failed for %s: %s", sym, e)

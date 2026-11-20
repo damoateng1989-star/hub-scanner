@@ -12,6 +12,25 @@ import telegram_bot
 
 log = logging.getLogger("notify")
 PRO_ONLY_TYPES = {"preclose"}        # pre-close warnings are a Pro feature
+# Nov 20: members get the trade and nothing else — the breakout heads-up, the "back at the edge" heads-up, and the
+# retest itself (hub and double bottom/top). Hub formed, early read, unconfirmed, pre-close, premarket gap, the live
+# trigger-cross note, other-pattern alerts and the every-A digest are admin-only now. Their own price alerts and the
+# daily summaries go by other paths and are unaffected. MEMBER_ALERT_TYPES (comma list) overrides.
+import os as _os
+MEMBER_TYPES = set(filter(None, (_os.getenv("MEMBER_ALERT_TYPES") or
+                                 "breakout,breakdown,retesting_now,retest,retest_double").split(",")))
+MEMBER_BREAKOUT_STYLES = {"hub", "double", "gapfade"}    # breakouts of setups that have a trade plan (not triangles etc.)
+
+
+def member_wants(u: dict, alert_type: str, style: str) -> bool:
+    """Does this alert reach this member? Admins get everything."""
+    if u["is_admin"]:
+        return True
+    if alert_type not in MEMBER_TYPES:
+        return False
+    if alert_type in ("breakout", "breakdown") and style not in MEMBER_BREAKOUT_STYLES:
+        return False
+    return True
 
 
 def _pro(u: dict) -> bool:
@@ -55,6 +74,8 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea."""
     extra_cache = {}
     for u in db.watchers(symbol):
+        if not member_wants(u, alert_type, style):
+            continue
         if alert_type in PRO_ONLY_TYPES and not _pro(u):
             continue
         if style not in styles_of(u):
@@ -98,6 +119,8 @@ def every_a_alert(items: list[dict]):
     sent = 0
     for u in db.all_users():
         if not u.get("a_all"):
+            continue
+        if not u["is_admin"] and "every_a" not in MEMBER_TYPES:      # Nov 20: members get the trade only
             continue
         mine = set(db.user_symbols(u["id"]))
         late = all(late_close(x["entry_time"]) for x in fresh)
