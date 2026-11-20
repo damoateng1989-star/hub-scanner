@@ -9129,13 +9129,14 @@ html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.
   box-shadow: inset 0 1px 0 rgba(255,255,255,.20), inset 0 -1px 0 rgba(0,0,0,.35), 0 16px 40px rgba(0,0,0,.40) !important; }
 html:not([data-theme="light"]) body > nav:not(.bottom), html:not([data-theme="light"]) nav.bottom {
   background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)), #0B0D12 !important; border-color: rgba(255,255,255,.12) !important; }
+/* Nov 20: buttons flat, with sharp borders — solid fill, crisp 1px edge, square-ish corners, no sheen or inner glow */
 html:not([data-theme="light"]) :is(.btnx,.board-filter,.chip,.sk-pills button,.sp-alt,.theme-btn,.wl-pills button):not(.on):not(.active) {
-  background: radial-gradient(140% 90% at 30% 0%, rgba(160,220,255,.16), rgba(160,220,255,0) 60%), linear-gradient(180deg, #1A212C, #11161E) !important;
-  border: 1px solid rgba(190,230,255,.30) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.38), inset 0 -6px 12px -8px rgba(120,200,255,.40) !important; }
+  background: #141922 !important; border: 1px solid rgba(220,232,245,.38) !important; border-radius: 3px !important; box-shadow: none !important; }
+html:not([data-theme="light"]) :is(.btnx,.board-filter,.chip,.sk-pills button,.sp-alt,.theme-btn,.wl-pills button):not(.on):not(.active):hover { border-color: rgba(220,232,245,.6) !important; }
+html:not([data-theme="light"]) :is(#scanBtn,#addBtn,button.ghost) { background: #141922 !important; border: 1px solid rgba(220,232,245,.38) !important; border-radius: 3px !important; box-shadow: none !important; }
+.wl-section-head .wl-hot { border-radius: 3px !important; box-shadow: none !important; }
 html:not([data-theme="light"]) :is(.board-filter,.chip,.sk-pills button).active, html:not([data-theme="light"]) :is(.board-filter,.chip,.sk-pills button).on {
-  background: linear-gradient(180deg, #FFFFFF, #DCEEFF) !important; color: #071019 !important; border: 1px solid #fff !important;
-  box-shadow: inset 0 -6px 12px -8px rgba(90,170,240,.6), 0 0 16px rgba(160,220,255,.22) !important; }
+  background: #F2F5F9 !important; color: #071019 !important; border: 1px solid #F2F5F9 !important; border-radius: 3px !important; box-shadow: none !important; }
 /* the splash: a flash, four rings and droplets spraying out of the button, where you touch */
 .spl-clip { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
 .spl-rg { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%,-50%) scale(0);
