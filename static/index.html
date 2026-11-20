@@ -5112,18 +5112,18 @@ function mapVolProfile(chart, series, D, light) {
         const y1 = series.priceToCoordinate(lo + (k + 1) * step), y2 = series.priceToCoordinate(lo + k * step);
         if (y1 == null || y2 == null) continue;
         const top = Math.min(y1, y2) + .5, h = Math.max(1, Math.abs(y2 - y1) - 1), w = bins[k] / max * maxW;
-        g.fillStyle = k === poc ? (light ? "rgba(47,84,235,.45)" : "rgba(124,147,255,.55)") : `rgba(${base},${va.has(k) ? (light ? .16 : .22) : (light ? .08 : .11)})`;
+        g.fillStyle = k === poc ? "rgba(47,128,255,.75)" : `rgba(${base},${va.has(k) ? (light ? .16 : .22) : (light ? .08 : .11)})`;
         g.fillRect(0, top, w, h);
       }
       const pocPx = lo + (poc + .5) * step, yp = series.priceToCoordinate(pocPx);
       if (yp != null) {            // the POC as a solid line across the whole chart, with a solid tag on the left
-        const col = light ? "rgba(47,84,235,.95)" : "rgba(150,170,255,1)";
+        const col = "#2F80FF";
         g.save(); g.strokeStyle = col; g.lineWidth = 1.5;
         g.beginPath(); g.moveTo(0, Math.round(yp) + .5); g.lineTo(W, Math.round(yp) + .5); g.stroke(); g.restore();
         const txt = "POC " + money(pocPx); g.font = '700 10px "JetBrains Mono", ui-monospace, monospace';
         const tw = g.measureText(txt).width + 10, ty = Math.max(2, Math.min(H - 17, yp - 8));
         g.fillStyle = col; g.fillRect(2, ty, tw, 16);
-        g.fillStyle = light ? "#fff" : "#0B0D12"; g.fillText(txt, 7, ty + 12);
+        g.fillStyle = "#fff"; g.fillText(txt, 7, ty + 12);
       }
     } catch (e) {}
   };
