@@ -353,6 +353,26 @@ def grade_line(sym: str, d: int) -> str:
             f"({g['win']}% winners, {verb} per trade, {g['n']} trades, ~2y)")
 
 
+def retest_grade_line(sym: str, d: int, kind: str = "hub") -> str:
+    """Nov 20: the grade of the trade NextShelf takes — the A retest — so alerts match the shelf card.
+    Longs: the stock's own A retests, else the A record across all stocks. Shorts: watch only (tested negative)."""
+    name = "hub A retests" if kind == "hub" else "double bottom A retests"
+    if d != 1:
+        return f"Watch only: {'short breakdowns' if kind == 'hub' else 'double tops'} lost money in the two-year test"
+    try:
+        g = engine.setup_grade(_bt_retest_trades(sym, kind), 1)
+        on = f"on {sym}"
+        if g["grade"] == "?":
+            g, on = universe_a(kind), "across all stocks"
+        if not g or g.get("grade") in (None, "?"):
+            return ""
+        verb = f"made {g['avg']:+.2f}%" if g["avg"] > 0 else f"lost {abs(g['avg']):.2f}%"
+        return f"Setup grade {g['grade']} · {g['word']} if it retests as an A: {name} {on} {verb} per trade ({g['win']}% won, {g['n']} trades, ~2y)"
+    except Exception as e:
+        log.warning("retest grade for %s failed: %s", sym, e)
+        return ""
+
+
 def history_line(sym: str) -> str:
     """Kept for callers that want both directions together."""
     try:
@@ -521,7 +541,7 @@ def format_event(sym: str, e: dict) -> str:
         up = e["type"] == "breakout"
         edge = e["high"] if up else e["low"]
         d = 1 if up else -1
-        hist = grade_line(sym, d)
+        hist = retest_grade_line(sym, d)
         return (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
                 f"4H close {'above' if up else 'below'} the hub\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"
