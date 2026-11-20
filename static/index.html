@@ -2104,6 +2104,12 @@ html[data-theme="light"] body .board-state.board-state.near-res.near-res { color
 html body .board-state.board-state.new.new { border: 0 !important; border-radius: 4px !important; color: #7C93FF !important; background: rgba(124,147,255,.12) !important; }
 .board-table td .board-state.new { display: block !important; width: max-content; margin-top: 5px; padding: 1px 7px !important; font-size: 10.5px !important; letter-spacing: .06em; }
 html[data-theme="light"] body .board-state.board-state.new.new { border: 0 !important; border-radius: 4px !important; color: #2F54EB !important; background: rgba(47,84,235,.08) !important; }
+/* Patch 175: retest chips on live board rows — amber "at the edge" family for RETESTING NOW, neutral for the waiting count */
+.board-table td .board-state.rt { display: block !important; width: max-content; margin-top: 5px; padding: 1px 7px !important; font-size: 10.5px !important; letter-spacing: .06em; }
+html body .board-state.board-state.rt.rt-now { border: 0 !important; border-radius: 4px !important; color: #E8C476 !important; background: rgba(216,184,120,.13) !important; }
+html body .board-state.board-state.rt.rt-wait { border: 0 !important; border-radius: 4px !important; color: #9EACBB !important; background: rgba(158,172,187,.10) !important; }
+html[data-theme="light"] body .board-state.board-state.rt.rt-now { border: 0 !important; border-radius: 4px !important; color: #92600A !important; background: rgba(146,96,10,.09) !important; }
+html[data-theme="light"] body .board-state.board-state.rt.rt-wait { border: 0 !important; border-radius: 4px !important; color: #5B6B7D !important; background: rgba(91,107,125,.08) !important; }
 /* earnings: the light purple pill */
 /* Patch 50: earnings tag is a quiet violet line under the ticker, not a pill */
 html body .earn-tag.earn-tag.board-state.board-state { border: 0 !important; border-radius: 0 !important; padding: 0 !important; margin: 3px 0 0 !important; flex-basis: 100% !important;
@@ -6638,13 +6644,21 @@ function boardRows(){
 }
 function renderInstitutionalBoard(){
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     // Patch 67: in the Broke out view, fresh breakouts (0/10 candles) sort first, then by candle count ascending.
     // Not flipped by the column-sort direction; rows without a count sort last.
     if(BOARD_KIND==="live"&&a._kind==="live"&&b._kind==="live"){
       const ca=boardCandles(a)??99, cb=boardCandles(b)??99;
       if(ca!==cb) return ca-cb;
+    }
+    // Patch 175: in the Retesting view, names at the edge sort first, then by candles left
+    // in the window ascending (the Today card's order). Not flipped by the column-sort direction.
+    if(BOARD_KIND==="retesting"&&a._kind==="live"&&b._kind==="live"){
+      const na=a.retest&&a.retest.near?0:1, nb=b.retest&&b.retest.near?0:1;
+      if(na!==nb) return na-nb;
+      const la=a.retest?a.retest.candles_left:99, lb=b.retest?b.retest.candles_left:99;
+      if(la!==lb) return la-lb;
     }
     let av,bv;
     if(BOARD_SORT==="symbol"){av=a.symbol;bv=b.symbol;}
@@ -6663,13 +6677,13 @@ function renderInstitutionalBoard(){
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
-  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
+  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new"||BOARD_KIND==="retesting")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
   const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">No symbols match this view.</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
@@ -6767,6 +6781,7 @@ async function loadBoard() {
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
     '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
+    '<button class="board-filter" data-kind="retesting" onclick="filterInstitutionalBoard(\'retesting\')" title="Live breakouts and breakdowns inside their 5-candle retest window">Retesting</button>'+
     '<button class="board-filter" data-kind="new" onclick="filterInstitutionalBoard(\'new\')">New</button>'+
     '<button class="board-filter" data-kind="stacked" onclick="filterInstitutionalBoard(\'stacked\')" title="Live hub breakouts with their stacked score">Stacked</button>'+
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
