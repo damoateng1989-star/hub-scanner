@@ -76,6 +76,14 @@ with _lock:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (symbol, direction, breakout_date)
     );
+    CREATE TABLE IF NOT EXISTS flow_tape_day (
+        symbol TEXT, day TEXT,
+        call_buy_premium REAL, put_buy_premium REAL, net REAL,
+        trades INTEGER, classified INTEGER, unclassified INTEGER, contracts INTEGER,
+        provider TEXT, as_of TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (symbol, day)
+    );
     CREATE TABLE IF NOT EXISTS signals (
         id TEXT PRIMARY KEY, symbol TEXT, direction INTEGER,
         hub_low REAL, hub_high REAL, hub_sessions INTEGER,
@@ -319,6 +327,29 @@ def flow_signal_for(symbol: str, direction: int, breakout_date: str) -> dict | N
     try:
         r = _run("SELECT * FROM flow_signal WHERE symbol=? AND direction=? AND breakout_date=?",
                  (symbol, direction, breakout_date)).fetchone()
+        return dict(r) if r else None
+    except sqlite3.OperationalError:
+        return None
+
+
+def log_flow_tape(symbol: str, day: str, agg: dict, provider: str, as_of: str):
+    """First write wins, like log_flow_signal: a day's final tape, once
+    stored, is the stored measurement; a repost never overwrites it."""
+    _run("""INSERT OR IGNORE INTO flow_tape_day
+            (symbol, day, call_buy_premium, put_buy_premium, net,
+             trades, classified, unclassified, contracts, provider, as_of)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+         (symbol, day, agg["call_buy_premium"], agg["put_buy_premium"], agg["net"],
+          agg["trades"], agg["classified"], agg["unclassified"], agg["contracts"],
+          provider, as_of))
+
+
+def flow_tape_for(symbol: str, day: str) -> dict | None:
+    """The stored tape aggregate for one symbol-day, or None if the courier
+    has not supplied it (or the Terminal had no data for it)."""
+    try:
+        r = _run("SELECT * FROM flow_tape_day WHERE symbol=? AND day=?",
+                 (symbol, day)).fetchone()
         return dict(r) if r else None
     except sqlite3.OperationalError:
         return None

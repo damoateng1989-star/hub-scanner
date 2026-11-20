@@ -241,6 +241,19 @@ class LicensedProvider(FlowTapeProvider):
         return None
 
 
+class StoredTapeProvider(FlowTapeProvider):
+    """Reads the daily aggregates the PC courier stored in flow_tape_day
+    (Patch 177, flow-wiring spec). In the internal phase the courier is
+    the table's only writer and carries only Theta Terminal tape, so the
+    stamp stays truthful; this provider is removed when the licensed
+    feed lands and a real provider replaces the courier."""
+
+    name = "theta_terminal (via pc courier)"
+
+    def daily_aggregate(self, symbol: str, day: date) -> dict | None:
+        return db.flow_tape_for(symbol, day.isoformat())
+
+
 def get_provider() -> FlowTapeProvider | None:
     """Env FLOW_TAPE_PROVIDER: 'theta_terminal' (internal/dev) | 'licensed'
     (stub until Decision 1) | unset / anything else -> None, and the
@@ -295,7 +308,46 @@ def classify(provider: FlowTapeProvider, symbol: str, direction: int,
 
 
 # --- The post-close classification job ------------------------------------------
-def classify_recent(max_age_days: int = 10) -> int:
+def _live_breakouts(max_age_days: int = 10) -> list[tuple[str, int, str]]:
+    """(symbol, direction, breakout_date ISO) for the hub breakouts live on
+    the board — classify_recent's candidate derivation, unchanged: board()
+    live rows only, the breakout candle derived exactly as the scanner's
+    Patch 112 read derives it (retest.candles_since back from the last
+    candle of the symbol's 4H series), at most max_age_days old."""
+    import board
+    import scanner
+
+    out: list[tuple[str, int, str]] = []
+    try:
+        live = board.board().get("live") or []
+    except Exception as e:
+        log.warning("flow classify: board read failed: %s", e)
+        return out
+    today = datetime.now(NY).date()
+    for r in live:
+        sym = r.get("symbol")
+        try:
+            state = r.get("state")
+            if not sym or state not in ("breakout_up", "breakdown"):
+                continue
+            d = 1 if state == "breakout_up" else -1
+            k = (r.get("retest") or {}).get("candles_since")
+            if k is None:
+                continue
+            c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
+            i0 = len(c4) - 1 - int(k)
+            if i0 < 0:
+                continue
+            bdate = c4.index[i0].tz_convert("America/New_York").date()
+            if bdate > today or (today - bdate).days > max_age_days:
+                continue
+            out.append((sym, d, bdate.isoformat()))
+        except Exception as e:
+            log.warning("flow classify: breakout derivation failed for %s: %s", sym, e)
+    return out
+
+
+def classify_recent(max_age_days: int = 10, provider: FlowTapeProvider | None = None) -> int:
     """Store classifications for the hub breakouts live on the board.
 
     Runs post-close (app.py schedules it weekday evenings). Candidates are
@@ -315,41 +367,20 @@ def classify_recent(max_age_days: int = 10) -> int:
     step 8 in the patch) — a provider whose day is not final until the
     next morning delays classifications by a day, it does not corrupt
     them, because an unavailable day aborts the classification instead.
+
+    An explicit provider may be passed (the wiring patch's ingest endpoint
+    passes StoredTapeProvider); the default is unchanged.
     """
-    provider = get_provider()
+    if provider is None:
+        provider = get_provider()
     if provider is None:
         return 0
-    import board
-    import scanner
-
-    try:
-        live = board.board().get("live") or []
-    except Exception as e:
-        log.warning("flow classify: board read failed: %s", e)
-        return 0
-    today = datetime.now(NY).date()
     written = 0
-    for r in live:
-        sym = r.get("symbol")
+    for sym, d, iso in _live_breakouts(max_age_days):
         try:
-            state = r.get("state")
-            if not sym or state not in ("breakout_up", "breakdown"):
-                continue
-            d = 1 if state == "breakout_up" else -1
-            k = (r.get("retest") or {}).get("candles_since")
-            if k is None:
-                continue
-            c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
-            i0 = len(c4) - 1 - int(k)
-            if i0 < 0:
-                continue
-            bdate = c4.index[i0].tz_convert("America/New_York").date()
-            if bdate > today or (today - bdate).days > max_age_days:
-                continue
-            iso = bdate.isoformat()
             if db.flow_signal_for(sym, d, iso):
                 continue
-            res = classify(provider, sym, d, bdate)
+            res = classify(provider, sym, d, date.fromisoformat(iso))
             if res is None:
                 continue
             db.log_flow_signal(sym, d, iso, res["state"], res["flow_net"],
@@ -362,3 +393,23 @@ def classify_recent(max_age_days: int = 10) -> int:
     if written:
         log.info("flow classify: wrote %d classification(s)", written)
     return written
+
+
+def pending_breakouts(max_age_days: int = 10) -> list[dict]:
+    """The courier's work list (flow-wiring spec section 3): live breakouts
+    with no stored classification, each with the window + median days the
+    stored tape still lacks (days already in flow_tape_day are subtracted,
+    so repeat runs only fetch what is missing). A breakout whose days are
+    all stored but which classify() still cannot score — a day the
+    Terminal had no data for — comes back with an empty days_needed: it
+    stays visibly pending instead of being silently dropped."""
+    out = []
+    for sym, d, iso in _live_breakouts(max_age_days):
+        if db.flow_signal_for(sym, d, iso):
+            continue
+        window, median_days = flow_days_for_breakout(date.fromisoformat(iso))
+        needed = [x.isoformat() for x in window + median_days
+                  if not db.flow_tape_for(sym, x.isoformat())]
+        out.append(dict(symbol=sym, direction=d, breakout_date=iso,
+                        days_needed=needed))
+    return out

@@ -276,6 +276,10 @@ class SikaFindBody(BaseModel):
     limit: int = 8      # "show me all" asks for the whole list (capped at 60)
 
 
+class FlowAggregatesBody(BaseModel):
+    rows: list[dict] = []
+
+
 class SignupBody(BaseModel):
     email: str
     password: str
@@ -1280,6 +1284,70 @@ async def sika_find_endpoint(body: SikaFindBody, u: dict = User):
     except Exception as e:
         log.warning("Sika find unavailable for %s: %s", kind, type(e).__name__)
         raise HTTPException(503, "Sika couldn't answer that right now")
+
+
+def _flow_ingest_ok(request: Request) -> bool:
+    """The flow courier's shared secret (Patch 177, flow-wiring spec
+    section 3). App auth is session-cookie; a script on the PC has no
+    session, so these two endpoints take a dedicated token. It can do
+    exactly two things — read the work list, post aggregates — and the
+    endpoints are inert until FLOW_INGEST_TOKEN is set."""
+    tok = os.getenv("FLOW_INGEST_TOKEN", "")
+    if not tok:
+        return False
+    return secrets.compare_digest(request.headers.get("x-flow-token", ""), tok)
+
+
+@app.get("/api/flow/pending")
+def flow_pending(request: Request):
+    if not os.getenv("FLOW_INGEST_TOKEN"):
+        raise HTTPException(404, "Not found")
+    if not _flow_ingest_ok(request):
+        raise HTTPException(403, "Bad flow token")
+    return {"pending": flow_signal.pending_breakouts()}
+
+
+@app.post("/api/flow/aggregates")
+async def flow_aggregates(body: FlowAggregatesBody, request: Request):
+    """The PC courier posts daily tape aggregates; the server stores them
+    (first write wins) and classifies whatever the stored tape now
+    completes. Aggregates only — raw tape never leaves the PC."""
+    import re as _re
+    from datetime import date as _date
+    from datetime import datetime as _dt
+    from zoneinfo import ZoneInfo as _ZoneInfo
+
+    if not os.getenv("FLOW_INGEST_TOKEN"):
+        raise HTTPException(404, "Not found")
+    if not _flow_ingest_ok(request):
+        raise HTTPException(403, "Bad flow token")
+    rows = body.rows or []
+    if len(rows) > 2000:
+        raise HTTPException(400, "Too many rows")
+    sym_ok = _re.compile(r"^[A-Z.]{1,10}$")
+    stored = 0
+    for row in rows:
+        try:
+            sym = str(row["symbol"]).upper()
+            if not sym_ok.match(sym):
+                continue
+            day = _date.fromisoformat(str(row["day"])).isoformat()
+            agg = {k: float(row[k]) for k in ("call_buy_premium", "put_buy_premium", "net")}
+            agg.update({k: int(row[k]) for k in ("trades", "classified", "unclassified", "contracts")})
+            # premiums and counts are non-negative by construction; net is signed and exempt
+            if min(agg["call_buy_premium"], agg["put_buy_premium"], agg["trades"],
+                   agg["classified"], agg["unclassified"], agg["contracts"]) < 0:
+                continue
+            if db.flow_tape_for(sym, day):
+                continue
+            db.log_flow_tape(sym, day, agg, (str(row.get("provider", ""))[:40] or "theta_terminal"),
+                             _dt.now(_ZoneInfo("America/New_York")).isoformat())
+            stored += 1
+        except Exception:
+            continue
+    classified = await run_in_threadpool(
+        flow_signal.classify_recent, 10, flow_signal.StoredTapeProvider())
+    return {"stored": stored, "received": len(rows), "classified": classified}
 
 
 @app.get("/api/gamma/{symbol}")
