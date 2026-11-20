@@ -22,7 +22,7 @@ from apscheduler.schedulers.background import BackgroundScheduler  # noqa: E402
 from apscheduler.triggers.cron import CronTrigger  # noqa: E402
 from fastapi import Depends, FastAPI, HTTPException, Request  # noqa: E402
 from fastapi.concurrency import run_in_threadpool  # noqa: E402
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response  # noqa: E402
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response, StreamingResponse  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 import pandas as pd  # noqa: E402
@@ -36,6 +36,7 @@ import patterns  # noqa: E402
 import board  # noqa: E402
 import gamma  # noqa: E402
 import push  # noqa: E402
+import stream  # noqa: E402
 import brief  # noqa: E402
 import recap  # noqa: E402
 import data  # noqa: E402
@@ -939,6 +940,16 @@ def live_prices(symbols: str = ""):
     syms = [x.strip().upper() for x in symbols.split(",") if scanner.SYMBOL_RE.match(x.strip().upper())][:150]
     return dict(market_open=data.market_open(), as_of=pd.Timestamp.now(tz="UTC").isoformat(),
                 prices=data.latest_prices(syms) if syms else {})
+
+
+@app.get("/api/stream")
+async def stream_prices(request: Request, symbols: str = "", u: dict = User):
+    """Live trades, tick by tick, as Server-Sent Events (one Alpaca websocket on the server, shared by everyone)."""
+    syms = [x.strip().upper() for x in symbols.split(",") if scanner.SYMBOL_RE.match(x.strip().upper())][:40]
+    if not syms:
+        raise HTTPException(400, "no symbols")
+    return StreamingResponse(stream.events(request, syms), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no"})
 
 
 @app.get("/api/tickers")

@@ -4954,7 +4954,7 @@ function mapChart(P, chart, W) {
 }
 
 
-let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null, MAP_LWC_COUNT = 0; let MAP_LWC_KEY = null, MAP_LWC_HOSTEL = null, MAP_LWC_FOOT = null;
+let MAP_LWC_UPDN = null; let MAP_LWC_CHART = null, MAP_LWC_CANDLE = null, MAP_LWC_VOLUME = null, MAP_LWC_RO = null, MAP_LWC_COUNT = 0; let MAP_LWC_KEY = null, MAP_LWC_HOSTEL = null, MAP_LWC_FOOT = null;
 // On-chart map labels: the hub band + the Next shelf / Trigger / Stop cluster.
 const MAP_LABEL_GAP = 20;
 const MAP_LABEL_MIN_W = 560;
@@ -5204,6 +5204,7 @@ function initLightweightMapChart() {
     }
     const candles = chart.addSeries(L.CandlestickSeries,{upColor:up,downColor:down,borderVisible:false,wickUpColor:up,wickDownColor:down,priceLineVisible:false,lastValueVisible:true});
     candles.setData(D.cs.filter(x=>Number.isFinite(+x.time)&&Number.isFinite(+x.open)&&Number.isFinite(+x.high)&&Number.isFinite(+x.low)&&Number.isFinite(+x.close)).map(x=>({time:+x.time,open:+x.open,high:+x.high,low:+x.low,close:+x.close})));
+    MAP_LWC_UPDN = [up, down];
     const vol = chart.addSeries(L.HistogramSeries,{priceFormat:{type:"volume"},priceScaleId:"",lastValueVisible:false,priceLineVisible:false},1);
     const volPane = chart.panes()[1];
     if (volPane) volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
@@ -7672,18 +7673,81 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // The forming candle is the last bar in MAP_LWC_DATA.cs (mapFormingCandle appends it);
 // its time must match BRIEF_CHART.forming.time, the server's own forming-candle time,
 // so a new 4H block (or a closed market) never gets a live update meant for the old one.
-function liveCandleTick() {
-  if (!LIVE_OPEN || !BRIEF_SYM || !MAP_LWC_CANDLE || !MAP_LWC_DATA || !MAP_LWC_DATA.cs.length) return;
+function liveCandleTick(k) {
+  if (!LIVE_OPEN || !BRIEF_SYM || !MAP_LWC_CANDLE || !MAP_LWC_DATA || !MAP_LWC_DATA.cs.length || MAP_RP) return;
   const L = LIVE[BRIEF_SYM];
   if (!L || L.price == null) return;
   const px = +L.price;
   if (!Number.isFinite(px)) return;
+  const nowS = Date.now() / 1000, b = liveBucket(MAP_TF, new Date());
+  if (b == null) return;                                  // outside 9:30–4:00: the candles stand still
   const cs = MAP_LWC_DATA.cs, last = cs[cs.length - 1];
-  const fc = BRIEF_CHART && BRIEF_CHART.forming;
-  if (!fc || !last || last.time !== fc.time) return;   // new block / no forming candle: mapFormingPoll owns the rollover
-  const upd = {time: last.time, open: last.open, high: Math.max(last.high, px), low: Math.min(last.low, px), close: px};
-  cs[cs.length - 1] = {...last, ...upd};   // keep the in-memory bars in sync, so a repaint doesn't snap the candle back
-  MAP_LWC_CANDLE.update(upd);
+  const hi = k && Number.isFinite(+k.hi) ? Math.max(px, +k.hi) : px, lo = k && Number.isFinite(+k.lo) ? Math.min(px, +k.lo) : px;
+  const addV = k && LIVE_FEED === "sip" && +k.v > 0 ? +k.v : 0;   // IEX-only volume would be a sliver of the real thing
+  let c;
+  if (last.time === b) c = {...last, high: Math.max(+last.high, hi), low: Math.min(+last.low, lo), close: px, volume: last.volume == null ? last.volume : +last.volume + addV};
+  else if (last.time < b && k && etNowAsUtc() - b < 120) c = {time: b, open: px, high: hi, low: lo, close: px, volume: addV, forming: true};   // a new candle opened while watching
+  else return;
+  if (c.time === last.time) cs[cs.length - 1] = c; else cs.push(c);
+  MAP_LWC_CANDLE.update({time: c.time, open: +c.open, high: +c.high, low: +c.low, close: +c.close});
+  if (MAP_LWC_VOLUME && c.volume != null && MAP_LWC_UPDN) MAP_LWC_VOLUME.update({time: c.time, value: +c.volume, color: (+c.close >= +c.open ? MAP_LWC_UPDN[0] : MAP_LWC_UPDN[1]) + "99"});
+  if (MAP_LWC_DATA.P) MAP_LWC_DATA.P.px = px;
+}
+// "now" in New York, written as if it were UTC: the same clock the chart's candle times use (9:30 ET = 09:30Z)
+function etParts(now) {
+  return Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone: "America/New_York", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", weekday: "short"}).formatToParts(now).map(x => [x.type, x.value]));
+}
+function etNowAsUtc() { const p = etParts(new Date()); return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) / 1000; }
+// the start of the candle forming right now on this timeframe, or null outside regular hours
+function liveBucket(tf, now) {
+  const p = etParts(now);
+  if (p.weekday === "Sat" || p.weekday === "Sun") return null;
+  const m = (+p.hour % 24) * 60 + +p.minute; if (m < 570 || m >= 960) return null;
+  const day = Date.UTC(+p.year, +p.month - 1, +p.day) / 1000;
+  if (tf === "1d") return day;
+  const h = {"1h": 60, "2h": 120, "3h": 180, "4h": 240}[tf]; if (!h) return null;
+  return day + (570 + Math.floor((m - 570) / h) * h) * 60;
+}
+
+// ---------------------------------------------------------------- tick-by-tick prices (Server-Sent Events)
+// The server keeps one Alpaca stream open and forwards each trade (bundled every ~200 ms). The 30-second
+// poll above keeps running underneath as the fallback and for everything heavier than a price.
+let LIVE_ES = null, LIVE_ES_KEY = "", LIVE_FEED = null;
+function liveStreamSync() {
+  const syms = [...new Set([BRIEF_SYM, ...liveSymbols()].filter(Boolean))].slice(0, 40), key = syms.join(",");   // the open chart first (the free feed keeps 30)
+  const want = syms.length && ME && window.EventSource && document.visibilityState !== "hidden";
+  if (!want) { if (LIVE_ES) { LIVE_ES.close(); LIVE_ES = null; LIVE_ES_KEY = ""; } return; }
+  if (LIVE_ES && key === LIVE_ES_KEY && LIVE_ES.readyState !== 2) return;
+  if (LIVE_ES) LIVE_ES.close();
+  LIVE_ES_KEY = key;
+  LIVE_ES = new EventSource("/api/stream?symbols=" + encodeURIComponent(key));
+  LIVE_ES.addEventListener("hello", e => { try { LIVE_FEED = JSON.parse(e.data).feed || LIVE_FEED; } catch (_) {} });
+  LIVE_ES.onmessage = e => { let r; try { r = JSON.parse(e.data); } catch (_) { return; } liveTicks(r); };
+}
+setInterval(liveStreamSync, 2000);
+document.addEventListener("visibilitychange", liveStreamSync);
+function liveTicks(r) {
+  if (r.feed) LIVE_FEED = r.feed;
+  for (const k of r.ticks || []) {
+    const old = LIVE[k.S] || {}, prev = old.price;
+    LIVE[k.S] = {...old, price: k.p, change_pct: k.chg != null ? k.chg : old.change_pct};
+    liveTickPaint(k.S, prev, k.p);
+    if (k.S === BRIEF_SYM) liveCandleTick(k);
+  }
+}
+// only the price text moves on a tick (cheap); the full repaint stays on the 30-second poll
+function liveTickPaint(sym, prev, px) {
+  const flash = (el) => { if (!el || prev == null || px === prev) return; el.classList.remove("tk-up", "tk-dn"); void el.offsetWidth; el.classList.add(px > prev ? "tk-up" : "tk-dn"); };
+  const row = document.getElementById("c-" + sym), slot = row && row.querySelector(".s small");
+  if (slot && slot.querySelector(".live")) { slot.innerHTML = liveChip(sym); flash(slot.querySelector(".live")); }
+  if (sym !== BRIEF_SYM) return;
+  const L = LIVE[sym], ch = L.change_pct;
+  const hp = document.querySelector("#bfMap .mp-head .mp-px");
+  if (hp) { hp.innerHTML = money(px) + (ch == null ? "" : `<em class="${ch >= 0 ? "u" : "d"}">${ch >= 0 ? "+" : ""}${ch}%</em>`); flash(hp); }
+  const nw = document.querySelector("#bfMap .mp-c.c-now");
+  if (nw && LIVE_OPEN) { const bb = nw.querySelector("b"), ii = nw.querySelector("i"); if (bb) bb.textContent = money(px); if (ii && ch != null) ii.textContent = `${ch >= 0 ? "+" : ""}${ch}% today`; }
+  const bl = document.querySelector("#bfLive .live");
+  if (bl && LIVE_OPEN) { bl.outerHTML = liveChip(sym); flash(document.querySelector("#bfLive .live")); }
 }
 
 function nextCloseWhen(now) {
@@ -7711,7 +7775,7 @@ function liveVsHub(st, px) {
 function liveChip(sym) {
   const L = LIVE[sym]; if (!L) return "";
   const ch = L.change_pct, col = ch == null ? "#9AA0AC" : ch >= 0 ? "#3DD68C" : "#FF6B5E";
-  return `<span class="live" title="${LIVE_OPEN ? "Live price (IEX), refreshes every 30s" : "Latest trade. The market is closed"}"><i class="${LIVE_OPEN ? "on" : ""}"></i>${money(L.price)}${ch == null ? "" : ` <em style="color:${col}">${ch >= 0 ? "+" : ""}${ch}%</em>`}</span>`;
+  return `<span class="live" title="${LIVE_OPEN ? (LIVE_ES && LIVE_ES.readyState === 1 ? "Live price, tick by tick" : "Live price, refreshes every 30s") : "Latest trade. The market is closed"}"><i class="${LIVE_OPEN ? "on" : ""}"></i>${money(L.price)}${ch == null ? "" : ` <em style="color:${col}">${ch >= 0 ? "+" : ""}${ch}%</em>`}</span>`;
 }
 function paintLive() {
   // watchlist rows
@@ -8812,6 +8876,8 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-head { display: flex; align-items: center; gap: 12px; padding: 4px 2px 12px; flex-wrap: wrap; }
 .mp-head h3 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
 .mp-head .mp-px { font: 600 20px/1 var(--mono, ui-monospace, monospace); } .mp-head .mp-px em { font-style: normal; font-size: 15px; margin-left: 8px; }
+@keyframes tkUp { from { color: #3DD68C; text-shadow: 0 0 10px rgba(61,214,140,.6); } } @keyframes tkDn { from { color: #FF6B5E; text-shadow: 0 0 10px rgba(255,107,94,.6); } }
+.tk-up { animation: tkUp .6s ease-out; } .tk-dn { animation: tkDn .6s ease-out; }
 .mp-px em.u { color: var(--mp-shelf); } .mp-px em.d { color: var(--mp-obst); }
 .mp-ext b { font: 700 12.5px var(--mono, ui-monospace, monospace); color: var(--mp-ink, inherit); } .mp-ext b.u { color: #3DD68C; } .mp-ext b.d { color: #FF6B5E; }
 .mp-upd i.ext { background: #F2C14E; box-shadow: 0 0 8px rgba(242,193,78,.7); }
