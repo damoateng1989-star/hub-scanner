@@ -6440,10 +6440,9 @@ function renderPremarket() {
     <span class="go">${money(x.price)}</span></a>`;
   const group = (title, rows, up) => rows.length
     ? `<div class="week-head"><div class="week-k">${title}</div></div><div class="lrows">${rows.map(x => row(x, up)).join("")}</div>` : "";
-  const emptyNote = !PREMARKET ? "Data is temporarily unavailable."
-    : (!g.length && !l.length) ? "No qualifying trades have been reported yet." : "";
-  el.innerHTML = group("Top gainers", g, true) + group("Top losers", l, false)
-    + (emptyNote ? `<p class="mb-quiet">${emptyNote}</p>` : "");
+  // Nothing to list yet (or the data is unavailable): hide the card instead of a placeholder sentence.
+  if (!g.length && !l.length) { el.hidden = true; el.innerHTML = ""; return; }
+  el.innerHTML = group("Top gainers", g, true) + group("Top losers", l, false);
   el.hidden = false;
 }
 function renderToday() {
