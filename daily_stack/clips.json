@@ -1,0 +1,242 @@
+[
+ {
+  "id": "foggy-walk",
+  "category": "Street life",
+  "caption": "A lone walk through fog and lamplight.",
+  "place": null,
+  "seconds": 15,
+  "source_url": "https://www.pexels.com/video/misty-night-walk-in-foggy-cityscape-30340084/"
+ },
+ {
+  "id": "sunny-stroll",
+  "category": "Street life",
+  "caption": "A slow, confident stroll in the sun.",
+  "place": null,
+  "seconds": 13,
+  "source_url": "https://www.pexels.com/video/a-man-walking-outdoors-8296233/"
+ },
+ {
+  "id": "winter-street",
+  "category": "Street life",
+  "caption": "Bare trees and a winter street.",
+  "place": null,
+  "seconds": 9,
+  "source_url": "https://www.pexels.com/video/man-strolling-through-winter-urban-street-36062232/"
+ },
+ {
+  "id": "rickshaw-night",
+  "category": "Street life",
+  "caption": "Rickshaws and motorcycles stream through the night.",
+  "place": "India",
+  "seconds": 11,
+  "source_url": "https://www.pexels.com/video/bustling-night-traffic-with-auto-rickshaws-34779296/"
+ },
+ {
+  "id": "lamplit-street",
+  "category": "Street life",
+  "caption": "An empty street, lit soft at night.",
+  "place": null,
+  "seconds": 10,
+  "source_url": "https://www.pexels.com/video/quiet-night-street-with-soft-lamplight-35010963/"
+ },
+ {
+  "id": "jerusalem-tram",
+  "category": "Street life",
+  "caption": "A modern tram rolls through a busy street.",
+  "place": "Jerusalem",
+  "seconds": 14,
+  "source_url": "https://www.pexels.com/video/modern-tram-moving-through-busy-urban-street-34185367/"
+ },
+ {
+  "id": "produce-stall",
+  "category": "Markets & food",
+  "caption": "A produce stall piled high, the vendor at work.",
+  "place": null,
+  "seconds": 15,
+  "source_url": "https://www.pexels.com/video/busy-market-stall-selling-fresh-produce-36108514/"
+ },
+ {
+  "id": "fruit-wall",
+  "category": "Markets & food",
+  "caption": "A wall of fresh fruit, shot close.",
+  "place": null,
+  "seconds": 10,
+  "source_url": "https://www.pexels.com/video/khezez-25537954/"
+ },
+ {
+  "id": "thai-stall",
+  "category": "Markets & food",
+  "caption": "A traditional market stall, busy with vendors.",
+  "place": "Thailand",
+  "seconds": 13,
+  "source_url": "https://www.pexels.com/video/vibrant-traditional-market-stall-scene-29900352/"
+ },
+ {
+  "id": "istanbul-fish",
+  "category": "Markets & food",
+  "caption": "Fresh fish laid out at a market stall.",
+  "place": "Istanbul, Türkiye",
+  "seconds": 11,
+  "source_url": "https://www.pexels.com/video/fresh-fish-market-stall-in-istanbul-34268303/"
+ },
+ {
+  "id": "kolkata-food",
+  "category": "Markets & food",
+  "caption": "Street food on College Street — steam and crowds.",
+  "place": "Kolkata, India",
+  "seconds": 27,
+  "source_url": "https://www.pexels.com/video/vibrant-street-food-scene-at-kolkata-s-college-street-38906314/"
+ },
+ {
+  "id": "delhi-metro",
+  "category": "Trains & transit",
+  "caption": "A metro station at dawn, platforms quiet.",
+  "place": "Delhi, India",
+  "seconds": 15,
+  "source_url": "https://www.pexels.com/video/exploring-delhi-metro-station-at-dawn-31636370/"
+ },
+ {
+  "id": "milan-subway",
+  "category": "Trains & transit",
+  "caption": "A train pulls in underground.",
+  "place": "Milan",
+  "seconds": 18,
+  "source_url": "https://www.pexels.com/video/milan-underground-subway-arrival-34562613/"
+ },
+ {
+  "id": "kolkata-platform",
+  "category": "Trains & transit",
+  "caption": "Waiting on the platform as the train moves past.",
+  "place": "Kolkata, India",
+  "seconds": 10,
+  "source_url": "https://www.pexels.com/video/woman-in-saree-at-kolkata-train-station-35040390/"
+ },
+ {
+  "id": "moscow-subway",
+  "category": "Trains & transit",
+  "caption": "A grand underground station, lit like a hall.",
+  "place": "Moscow",
+  "seconds": 14,
+  "source_url": "https://www.pexels.com/video/train-stopping-at-subway-station-in-moscow-9910339/"
+ },
+ {
+  "id": "ferry-view",
+  "category": "Coast & water",
+  "caption": "From the deck of a ferry, turquoise water.",
+  "place": null,
+  "seconds": 35,
+  "source_url": "https://www.pexels.com/video/slow-motion-footage-of-ocean-waves-4425186/"
+ },
+ {
+  "id": "container-port",
+  "category": "Coast & water",
+  "caption": "A container ship at work in a busy port.",
+  "place": null,
+  "seconds": 25,
+  "source_url": "https://www.pexels.com/video/a-view-of-a-harbor-with-a-large-container-ship-28459798/"
+ },
+ {
+  "id": "harbour-sunset",
+  "category": "Coast & water",
+  "caption": "Ships resting under a moving sunset sky.",
+  "place": null,
+  "seconds": 32,
+  "source_url": "https://www.pexels.com/video/serene-harbor-at-sunset-with-dramatic-clouds-34766641/"
+ },
+ {
+  "id": "shoreline-waves",
+  "category": "Coast & water",
+  "caption": "Waves rolling in, close and calm.",
+  "place": null,
+  "seconds": 10,
+  "source_url": "https://www.pexels.com/video/serene-ocean-waves-crashing-on-shoreline-33684742/"
+ },
+ {
+  "id": "drone-sea",
+  "category": "Coast & water",
+  "caption": "The sea folding over itself, from above.",
+  "place": null,
+  "seconds": 11,
+  "source_url": "https://www.pexels.com/video/top-view-of-flowing-water-in-sea-12339462/"
+ },
+ {
+  "id": "mountain-clouds",
+  "category": "Nature & weather",
+  "caption": "Clouds streaming over snow-capped peaks.",
+  "place": null,
+  "seconds": 17,
+  "source_url": "https://www.pexels.com/video/majestic-mountain-landscape-timelapse-33950952/"
+ },
+ {
+  "id": "snowfall-forest",
+  "category": "Nature & weather",
+  "caption": "Snowfall over a quiet forest, in black and white.",
+  "place": null,
+  "seconds": 16,
+  "source_url": "https://www.pexels.com/video/black-and-white-video-of-a-snow-storm-15296877/"
+ },
+ {
+  "id": "cloud-build",
+  "category": "Nature & weather",
+  "caption": "Towering clouds, building and churning.",
+  "place": null,
+  "seconds": 14,
+  "source_url": "https://www.pexels.com/video/a-time-lapse-of-clouds-6175187/"
+ },
+ {
+  "id": "himalaya",
+  "category": "Nature & weather",
+  "caption": "Himalayan peaks under dramatic skies.",
+  "place": "Ladakh, India",
+  "seconds": 20,
+  "source_url": "https://www.pexels.com/video/majestic-himalayan-mountain-timelapse-38246027/"
+ },
+ {
+  "id": "foggy-forest",
+  "category": "Nature & weather",
+  "caption": "Mist rolling through a mountain forest.",
+  "place": null,
+  "seconds": 13,
+  "source_url": "https://www.pexels.com/video/time-lapse-video-of-foggy-mountain-forest-5600921/"
+ },
+ {
+  "id": "pottery",
+  "category": "Hands at work",
+  "caption": "Hands shaping clay on a spinning wheel.",
+  "place": null,
+  "seconds": 13,
+  "source_url": "https://www.pexels.com/video/close-up-video-of-hands-making-a-clay-pot-6694386/"
+ },
+ {
+  "id": "bread-making",
+  "category": "Hands at work",
+  "caption": "Dough kneaded and baked the traditional way.",
+  "place": null,
+  "seconds": 30,
+  "source_url": "https://www.pexels.com/video/traditional-bread-making-process-34421015/"
+ },
+ {
+  "id": "wood-planing",
+  "category": "Hands at work",
+  "caption": "A hand plane, and shavings curling off.",
+  "place": null,
+  "seconds": 19,
+  "source_url": "https://www.pexels.com/video/man-shaving-a-wooden-stick-with-hand-planes-5972923/"
+ },
+ {
+  "id": "coffee-pour",
+  "category": "Hands at work",
+  "caption": "A barista pours at the café counter.",
+  "place": null,
+  "seconds": 19,
+  "source_url": "https://www.pexels.com/video/a-man-pouring-coffee-on-a-coffee-cup-8936248/"
+ },
+ {
+  "id": "tailor",
+  "category": "Hands at work",
+  "caption": "A tailor's scissors through cloth.",
+  "place": null,
+  "seconds": 14,
+  "source_url": "https://www.pexels.com/video/a-tailor-cutting-a-fabric-6767035/"
+ }
+]

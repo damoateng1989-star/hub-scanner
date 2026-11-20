@@ -2682,6 +2682,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div class="week" id="week" hidden></div>
   <div class="today-stories" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div></div>
   <div class="retest" id="retest" hidden></div>
+  <div class="stack-entry" id="stackEntry" hidden></div>
   <div class="rule1" id="rule1"></div>
   <div class="mbrief" id="mbrief" hidden></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
@@ -6457,6 +6458,7 @@ function renderToday() {
   renderWeek();
   renderWaitingRoom();
   renderRetest();
+  renderStackEntry();
   renderRule();
   renderKpis();
   renderPhoneNudge();
@@ -9223,6 +9225,40 @@ html:not([data-theme="light"]) .wr-card { background: #07090D !important; border
 /* Nov 20: every card flat and page-dark (dark theme) — the Waiting Room look app-wide */
 html:not([data-theme="light"]) :is(.hz-card,.sk-hero,.wl-card,.board-table,.mkt,.ag-card,.agent,.rec-card,.ex-card,.sheet,.acct-card,.set-card,.mm-card,.hm-panel,.lab-card,.pricing-card) {
   background: #07090D !important; border-color: rgba(255,255,255,.10) !important; box-shadow: none !important; background-image: none !important; }
+/* The Daily Stack (Patch 179) */
+.stack-entry { background: #07090D; border: 1px solid rgba(255,255,255,.10); border-radius: 18px; overflow: hidden; margin: 16px 0; }
+html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,23,42,.1); }
+.se-banner { aspect-ratio: 16 / 7; background: #000 center 35% / cover no-repeat; }
+.se-body { padding: 14px 16px 16px; }
+.se-eyebrow { display: flex; justify-content: space-between; font: 600 11px/1 var(--mono, monospace); letter-spacing: .12em; color: #9AA3AF; margin-bottom: 10px; }
+.se-line { color: var(--ink); font-size: 15px; margin: 0 0 12px; }
+.se-go { width: 100%; padding: 12px; border-radius: 12px !important; background: #F4F6F9 !important; color: #0E0F12 !important; border: 0 !important; font-weight: 600; font-size: 15px; cursor: pointer; }
+.se-foot { margin-top: 12px; font: 600 10px/1 var(--mono, monospace); letter-spacing: .1em; color: #6B7380; }
+.stack-view { position: fixed; inset: 0; height: 100dvh; background: #000; z-index: 2000; color: #fff; }
+.stack-view[hidden] { display: none; }
+.stack-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3; padding: calc(10px + env(safe-area-inset-top)) 14px 10px; display: flex; align-items: center; gap: 12px;
+  background: linear-gradient(180deg, rgba(0,0,0,.65), rgba(0,0,0,0)); }
+.stack-x { width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,.3); background: rgba(0,0,0,.4); color: #fff; font-size: 18px; cursor: pointer; flex: 0 0 auto; }
+.stack-title { font: 600 11px/1 var(--mono, monospace); letter-spacing: .14em; flex: 1; }
+.stack-n { font: 600 12px/1 var(--mono, monospace); }
+.stack-bar { position: absolute; left: 14px; right: 14px; bottom: 2px; height: 2px; background: rgba(255,255,255,.18); border-radius: 2px; overflow: hidden; }
+.stack-bar i { display: block; height: 100%; background: #fff; width: 0; transition: width .25s; }
+.stack-track { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; overscroll-behavior: contain; scrollbar-width: none; }
+.stack-track::-webkit-scrollbar { display: none; }
+.stack-slide { height: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; background: #000; }
+.stack-slide video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stack-cap { position: absolute; left: 16px; right: 84px; bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 2; text-shadow: 0 1px 8px rgba(0,0,0,.7); }
+.stack-cat { font: 600 11px/1 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; opacity: .85; margin-bottom: 8px; }
+.stack-line { font-size: 16px; line-height: 1.45; margin: 0; }
+.stack-place { font: 400 26px/1.2 "Newsreader", Georgia, serif; margin: 0 0 6px; }
+.stack-rail { position: absolute; right: 14px; bottom: calc(30px + env(safe-area-inset-bottom)); z-index: 2; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.stack-rail button { width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-size: 12px; padding: 0; font-weight: 600; cursor: pointer; }
+.stack-rail button:disabled { opacity: .45; }
+.stack-play { position: absolute; inset: 0; margin: auto; width: 76px; height: 76px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.45); color: #fff; font-size: 26px; z-index: 2; cursor: pointer; }
+.stack-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #07090D; }
+.stack-end h3 { font: 400 30px/1.2 "Newsreader", Georgia, serif; margin: 0 0 10px; color: #fff; }
+.stack-end p { color: #9AA3AF; margin: 0 0 22px; }
+.stack-end button { padding: 12px 22px; border-radius: 12px; background: #F4F6F9; color: #0E0F12; border: 0; font-weight: 600; font-size: 15px; cursor: pointer; }
 </style>
 <script>
 /* Nov 20: the water splash on buttons — rings inside the button, droplets spraying out (fixed, so nothing clips them). */
@@ -9316,6 +9352,91 @@ async function wrGuess(host, choice, wrong) {
     else wrRenderGame(host, null, wrong.concat([choice]));
   } catch (e) {}
 }
+</script>
+<script>
+/* The Daily Stack (Patch 179): a finite, full-screen vertical feed of ten world clips. Silent; no likes, counts or streaks. */
+const STK = { data: null, built: false, io: null, cur: 0, manual: false, scrollY: 0 };
+function stkEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]); }
+const stkCalm = () => (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) || !!(navigator.connection && navigator.connection.saveData);
+async function renderStackEntry() {
+  const el = document.getElementById("stackEntry"); if (!el) return;
+  let d = null;
+  try { const r = await fetch("/api/stack", {credentials: "same-origin"}); if (r.status === 200) d = await r.json(); } catch (e) {}
+  if (!d || !Array.isArray(d.clips) || !d.clips.length) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!STK.data || STK.data.date !== d.date) { STK.data = d; STK.built = false; }
+  const day = new Date(d.date + "T12:00:00").toLocaleDateString([], {weekday: "short", month: "short", day: "numeric"});
+  const mins = Math.max(1, Math.round(d.clips.reduce((a, c) => a + (c.seconds || 15), 0) / 60));
+  el.innerHTML = `<div class="se-banner" style="background-image:url('${stkEsc(d.clips[0].poster)}')"></div>
+    <div class="se-body"><div class="se-eyebrow"><span>THE DAILY STACK</span><span>${stkEsc(day)}</span></div>
+    <p class="se-line">${d.count} clips from around the world · about ${mins} minute${mins === 1 ? "" : "s"}</p>
+    <button type="button" class="se-go" onclick="openStack()">Watch today's stack</button>
+    <div class="se-foot">Silent by design · A new stack every morning</div></div>`;
+  el.hidden = false;
+}
+function stkBuild() {
+  let v = document.getElementById("stackView");
+  if (!v) { v = document.createElement("div"); v.id = "stackView"; v.className = "stack-view"; v.hidden = true; document.body.appendChild(v); }
+  if (STK.built) return v;
+  const d = STK.data, calm = stkCalm(), n = d.clips.length;
+  v.innerHTML = `<div class="stack-top"><button class="stack-x" type="button" aria-label="Close" onclick="closeStack()">✕</button>
+      <span class="stack-title">THE DAILY STACK</span><span class="stack-n" id="stkN">1 / ${n}</span><div class="stack-bar"><i id="stkBar"></i></div></div>
+    <div class="stack-track" id="stkTrack">${d.clips.map((c, i) => `<section class="stack-slide" data-i="${i}" data-id="${stkEsc(c.id)}">
+        <video muted loop playsinline preload="none" poster="${stkEsc(c.poster)}" data-src="${stkEsc(c.video)}" aria-label="${stkEsc(c.caption)}"></video>
+        ${calm ? `<button class="stack-play" type="button" aria-label="Play">▶</button>` : ""}
+        <div class="stack-cap"><div class="stack-cat">${stkEsc(c.category)}</div><div class="stack-ans"></div><p class="stack-line">${stkEsc(c.caption)}</p></div>
+        <div class="stack-rail"><button type="button" class="stk-where">Where?</button><button type="button" class="stk-pp" aria-label="Pause">❚❚</button></div>
+      </section>`).join("")}
+      <section class="stack-slide stack-end" data-i="${n}"><h3>That's today's stack.</h3><p>A new stack tomorrow morning.</p><button type="button" onclick="closeStack()">Back to Today</button></section></div>`;
+  const track = v.querySelector("#stkTrack");
+  const vid = (s) => s && s.querySelector("video");
+  const play = (s) => { const x = vid(s); if (!x) return; if (!x.src && x.dataset.src) x.src = x.dataset.src; const p = x.play(); if (p && p.catch) p.catch(() => {}); };
+  v.querySelectorAll(".stack-slide video").forEach(x => x.addEventListener("error", () => { x.removeAttribute("src"); }, {once: true}));
+  v.querySelectorAll(".stack-play").forEach(b => b.onclick = () => { b.remove(); STK.manual = false; play(b.closest(".stack-slide")); });
+  v.querySelectorAll(".stk-pp").forEach(b => b.onclick = () => {
+    const s = b.closest(".stack-slide"), x = vid(s);
+    if (x.paused) { STK.manual = false; play(s); b.textContent = "❚❚"; b.setAttribute("aria-label", "Pause"); }
+    else { STK.manual = true; x.pause(); b.textContent = "▶"; b.setAttribute("aria-label", "Play"); }
+  });
+  v.querySelectorAll(".stk-where").forEach(b => b.onclick = async () => {
+    const s = b.closest(".stack-slide"); b.disabled = true;
+    try {
+      const r = await fetch("/api/stack/reveal", {method: "POST", credentials: "same-origin", headers: {"Content-Type": "application/json"}, body: JSON.stringify({id: s.dataset.id})});
+      const x = r.ok ? await r.json() : null;
+      s.querySelector(".stack-ans").innerHTML = `<p class="stack-place">${stkEsc(x && x.place ? x.place : "Somewhere in the world — the footage doesn't say.")}</p>`;
+    } catch (e) { b.disabled = false; }
+  });
+  if (STK.io) STK.io.disconnect();
+  STK.io = new IntersectionObserver(es => es.forEach(e => {
+    const s = e.target, i = +s.dataset.i;
+    if (e.isIntersecting && e.intersectionRatio >= .6) {
+      if (STK.cur !== i) STK.manual = false;
+      STK.cur = i;
+      v.querySelector("#stkN").textContent = `${Math.min(i + 1, n)} / ${n}`;
+      v.querySelector("#stkBar").style.width = `${Math.min(i + 1, n) / n * 100}%`;
+      if (!calm && !STK.manual) play(s);
+    } else { const x = vid(s); if (x) x.pause(); }
+  }), {root: track, threshold: [0, .6, 1]});
+  v.querySelectorAll(".stack-slide").forEach(s => STK.io.observe(s));
+  STK.built = true;
+  return v;
+}
+function openStack() {
+  if (!STK.data) return;
+  const v = stkBuild();
+  STK.scrollY = window.scrollY; STK.manual = false;
+  document.documentElement.style.overflow = "hidden";
+  v.hidden = false;
+  const t = v.querySelector("#stkTrack"); t.scrollTop = 0;
+}
+function closeStack() {
+  const v = document.getElementById("stackView"); if (!v) return;
+  v.querySelectorAll("video").forEach(x => { try { x.pause(); } catch (e) {} });
+  v.hidden = true;
+  v.querySelector("#stkTrack").scrollTop = 0;
+  document.documentElement.style.overflow = "";
+  window.scrollTo(0, STK.scrollY || 0);
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape") { const v = document.getElementById("stackView"); if (v && !v.hidden) closeStack(); } });
 </script>
 </body>
 </html>

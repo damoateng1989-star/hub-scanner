@@ -1410,6 +1410,44 @@ def waiting_room_guess(body: WRGuessBody, u: dict = User):
     db.save_wr_guess(u["id"], payload["date"], choice, r["correct"])
     return r
 
+
+# ---------------------------------------------------------------- The Daily Stack (Patch 179)
+class StackRevealBody(BaseModel):
+    id: str = ""
+
+
+@app.get("/stack-media/{name}")
+def stack_media(name: str):
+    """The stack's clips and posters — only the manifest's files (no directory listing, no other paths)."""
+    import daily_stack as ds
+    stem, _, ext = name.rpartition(".")
+    if ext not in ("mp4", "jpg") or stem not in {c["id"] for c in ds.POOL}:
+        raise HTTPException(404, "Not found")
+    f = ds.MEDIA / name
+    if not f.is_file():
+        raise HTTPException(404, "Not found")
+    return FileResponse(f, media_type="video/mp4" if ext == "mp4" else "image/jpeg",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/stack")
+def stack_today(u: dict = User):
+    import daily_stack as ds
+    today = _wr_today()
+    if not ds.media_ready(ds.stack_for_date(today)):
+        return Response(status_code=204)          # media not placed yet: the entry card stays hidden
+    return ds.public_payload(today)
+
+
+@app.post("/api/stack/reveal")
+def stack_reveal(body: StackRevealBody, u: dict = User):
+    import daily_stack as ds
+    today = _wr_today()
+    cid = str(body.id or "")[:60]
+    if cid not in {c["id"] for c in ds.stack_for_date(today)}:
+        raise HTTPException(400, "not in today's stack")
+    return {"id": cid, "place": ds.place_for(cid)}
+
 @app.get("/api/gamma/{symbol}")
 async def gamma_walls(symbol: str, u: dict = User):
     """Gamma walls for the Shelf card (one Cboe chain per symbol per day, cached). Fail-open: walls=None."""
