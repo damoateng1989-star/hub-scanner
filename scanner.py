@@ -643,7 +643,9 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     if early and early["type"] == e["type"]:      # already told them at 1:31 PM: confirm, don't ring again
                         msg = "✅ Confirmed with the full market data\n" + msg
                         speech = None
-                    notify.symbol_alert(sym, e["type"], msg, speech, pro_extra=extra, candle_start=e["time"])
+                    # Nov 20: members get heads-ups only for setups that can lead to a member alert — hub longs
+                    notify.symbol_alert(sym, e["type"], msg, speech, pro_extra=extra, candle_start=e["time"],
+                                        members=e["type"] != "breakdown")
                     sent.append(msg)
     try:      # other setups (triangles, channels, support & resistance): alert on new breaks only
         pa = patterns.analyze_all(c4, res, SETTINGS)
@@ -661,8 +663,11 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 if e["type"] in ("breakout", "breakdown"):
                     msg += regime_line(1 if e["type"] == "breakout" else -1)
                     msg += news.alert_line(sym, e["time"])
+                if e["kind"] == "gapfade" and e["type"] in ("breakout", "breakdown"):
+                    msg += "\nBeta: tested positive over 2 years, but not in the last 6 months."
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
-                    notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"])
+                    notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"],
+                                        members=e["kind"] != "double_top")     # Nov 20: double tops failed the Lab
                     sent.append(msg)
     except Exception as ex:
         log.warning("pattern scan failed for %s: %s", sym, ex)
@@ -701,7 +706,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                 f" ({left_} candle{'s' if left_ != 1 else ''} left in the window). Target {_money(pend['target'])}.")
                         if db.add_alert(f"{sym}|retesting_now|{c4.index[i0].isoformat()}", sym, "retesting_now",
                                         c4.index[j].isoformat(), msg_):
-                            notify.symbol_alert(sym, "retesting_now", msg_, None, candle_start=c4.index[j])
+                            notify.symbol_alert(sym, "retesting_now", msg_, None, candle_start=c4.index[j], members=d == 1)
                             sent.append(msg_)
                 if rc == "retest":
                     close2 = float(res["close"].iloc[j])
@@ -732,7 +737,9 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         extra = (lambda s_=sym, d_=d, c_=close2, ed_=edge, t_=pend["target"]: options.alert_line(s_, d_, c_, ed_, t_))
                     if db.add_alert(f"{sym}|retest|{c4.index[i0].isoformat()}", sym, "retest",
                                     c4.index[j].isoformat(), msg):
-                        notify.symbol_alert(sym, "retest", msg, speech, pro_extra=extra, candle_start=c4.index[j])
+                        # Nov 20: members get the one hub retest that passed the Lab — A grade, longs
+                        notify.symbol_alert(sym, "retest", msg, speech, pro_extra=extra, candle_start=c4.index[j],
+                                            members=bool(grade["is_a"]) and d == 1)
                         sent.append(msg)
     except Exception as ex:
         log.warning("retest check failed for %s: %s", sym, ex)
@@ -777,7 +784,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     if db.add_alert(f"{sym}|retest-double|{c4.index[i0].isoformat()}", sym, "retest_double",
                                     c4.index[j].isoformat(), msg):
                         notify.symbol_alert(sym, "retest_double", msg, speech, pro_extra=extra, style="double",
-                                            candle_start=c4.index[j])
+                                            candle_start=c4.index[j],
+                                            members=bool(grade["is_a"]) and dbl["kind"] == "double_bottom")
                         sent.append(msg)
     except Exception as ex:
         log.warning("double retest check failed for %s: %s", sym, ex)

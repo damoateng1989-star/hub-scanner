@@ -69,12 +69,14 @@ def late_close(candle_start) -> bool:
 
 
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
-                 pro_extra=None, candle_start=None):
+                 pro_extra=None, candle_start=None, members: bool = True):
     """Telegram to every watcher (Pro-only types to Pro users); texts to Pro users with a number; phone calls to Pro users with a number (preclose + breakouts only).
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea."""
     extra_cache = {}
     for u in db.watchers(symbol):
         if not member_wants(u, alert_type, style):
+            continue
+        if not members and not u["is_admin"]:      # this one failed the Lab (shorts, B grades, double tops): admin only
             continue
         if alert_type in PRO_ONLY_TYPES and not _pro(u):
             continue
