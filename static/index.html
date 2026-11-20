@@ -5072,7 +5072,17 @@ function mapCandleTimer(chart, series, D) {
     // the same countdown as a green pill in the chart's header (like LIVE), so it's easy to find
     const head = document.querySelector(".mp-chartcard .mp-prostatus");
     let pill = document.getElementById("mpCdPill");
-    if (head && !pill) { pill = document.createElement("span"); pill.id = "mpCdPill"; pill.className = "mp-cdpill"; head.after(pill); }
+    if (head && !pill) { const box = document.createElement("span"); box.className = "mp-clocks"; head.after(box);
+      pill = document.createElement("span"); pill.id = "mpCdPill"; pill.className = "mp-cdpill"; box.appendChild(pill); }
+    // a second LED clock beside it with the real Eastern time (11:16 AM), shown all day
+    let clk = document.getElementById("mpClkPill");
+    if (pill && !clk) { clk = document.createElement("span"); clk.id = "mpClkPill"; clk.className = "mp-cdpill mp-clk"; pill.after(clk); }
+    if (clk) {
+      const now = new Date(), [hm, ap] = now.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit", hour12: true }).split(" ");
+      const d = hm.length < 5 ? "!" + hm : hm, on = now.getSeconds() % 2 === 0;   // "!" is a blank digit in the LED font
+      clk.innerHTML = `<span class="lab">${ap}<br>ET</span><span class="dg"><span class="gh">88:88</span><span class="on">${d.replace(":", `<i style="opacity:${on ? 1 : .15}">:</i>`)}</span></span>`;
+      clk.setAttribute("aria-label", `${hm} ${ap} Eastern time`);
+    }
     if (left == null || y == null) { tag.hidden = true; if (pill) pill.hidden = true; return; }
     const hh = Math.floor(left / 3600), mm = Math.floor(left % 3600 / 60), ss = left % 60, p2 = (n) => String(n).padStart(2, "0");
     tag.textContent = (hh ? hh + ":" + p2(mm) : mm) + ":" + p2(ss);
@@ -9374,6 +9384,8 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
   background: #0E1512; color: #3DD68C; border: 1px solid rgba(61,214,140,.6); box-shadow: 0 0 10px rgba(61,214,140,.35); white-space: nowrap; }
 .mp-cdpill { display: inline-flex; align-items: center; gap: 9px; margin-left: 8px; padding: 6px 11px 6px 9px; border-radius: 12px; white-space: nowrap;
   background: #0B110E; border: 1px solid rgba(61,214,140,.45); }
+.mp-clocks { display: inline-flex; gap: 6px; flex-shrink: 0; margin-left: auto; }
+.mp-clocks .mp-cdpill { margin-left: 0; }
 .mp-cdpill .lab { color: #3DD68C; font: 600 9px/1.15 "JetBrains Mono", ui-monospace, monospace; letter-spacing: .12em; opacity: .85; }
 .mp-cdpill .dg { position: relative; display: inline-block; font: 700 19px/1 "DSEG7", ui-monospace, monospace; letter-spacing: 1px; }
 .mp-cdpill .gh { display: block; color: rgba(61,214,140,.10); }
