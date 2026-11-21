@@ -6566,15 +6566,18 @@ function renderRetest() {
   for (const r of (BOARD.live || [])) {
     if (r.retest && r.retest.candles_left > 0)
       rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge,
-                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near});
+                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
+                 tape_flow: r.tape_flow || null});   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
   }
   for (const r of (BOARD.setups || [])) {
     if (r.retest && r.retest.candles_left > 0)
       rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near});
   }
-  const now = rows.filter(x => x.near).sort((a, b) => a.left - b.left);
-  const wait = rows.filter(x => !x.near).sort((a, b) => a.left - b.left);
+  // Patch 184: tape-confirmed first inside each group, then fewest candles left (no tape_flow → today's order)
+  const byTape = (a, b) => ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
+  const now = rows.filter(x => x.near).sort(byTape);
+  const wait = rows.filter(x => !x.near).sort(byTape);
   if (!now.length && !wait.length) {
     el.innerHTML = '<div class="week-head"><div class="week-k">RETESTING NOW</div></div><p class="mb-quiet" style="margin:8px 0 0">No active retests right now. This section will update when a setup enters its retest window.</p>';
     el.hidden = false;
@@ -6586,7 +6589,7 @@ function renderRetest() {
       ? `${esc(x.label)} · at the edge ${money(x.edge)} · target ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
       : `${esc(x.label)} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
-      <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span></span><span class="go">›</span></a>`;
+      <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
   const group = (title, list, kind) => list.length
     ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
@@ -8990,6 +8993,9 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc-tape b { color: #8FA6FF; }
 .vol-chip.tape-chip { color: #8FA6FF; border-color: #2F54EB; background: rgba(47,84,235,.12); cursor: help; }
 .bf-tape { margin: 14px 0; }
+#retest .arow .tape-chip { display: block; width: max-content; margin: 6px 0 0; }
+#retest .rt-tape { display: block; margin-top: 5px; font-size: 12.5px; line-height: 1.45; color: var(--mp-mut, #9AA0AC); }
+#retest .rt-tape b { color: #8FA6FF; font-weight: 600; }
 .sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }
