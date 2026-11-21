@@ -10051,19 +10051,13 @@ function srPlay(id) {
 function srClose() { const v = $("srPlayer"); if (!v) return; v.hidden = true; v.innerHTML = ""; document.body.classList.remove("sr-open"); }   // removing the frame stops the film
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("srPlayer") && !$("srPlayer").hidden) srClose(); });
 async function renderTodayVideos() {
+  // The Daily Stack is off Today (films live in Cinema). Computers keep the Waiting Room; phones show nothing here.
   const host = $("waitingRoom"); if (!host) return;
-  if (!matchMedia("(max-width: 899px)").matches) {
-    if (host.dataset.mode === "stack") { host.dataset.mode = ""; host.dataset.day = ""; if (host._io) host._io.disconnect(); }
-    renderWaitingRoom(host); renderStackEntry(); return;
-  }
   const se = $("stackEntry"); if (se) { se.hidden = true; se.innerHTML = ""; }
-  if (host.dataset.mode === "stack" && STK.data && host.dataset.day === STK.data.date) return;   // already playing: a refresh doesn't restart it
-  if (host._wrIo) host._wrIo.disconnect();
-  const w = Math.min(innerWidth - 32, 560);
-  host.style.setProperty("--ssh", Math.round(Math.min(420, innerHeight * .5, (w - 32 - 150) * 16 / 9)) + "px");
-  host.dataset.mode = "stack";
-  await renderSideStack(host);
-  host.dataset.day = (STK.data && STK.data.date) || "";
+  if (host._io) host._io.disconnect();
+  if (host.dataset.mode === "stack") { host.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); host.dataset.mode = ""; host.dataset.day = ""; }
+  if (matchMedia("(max-width: 899px)").matches) { if (host._wrIo) host._wrIo.disconnect(); host.hidden = true; host.innerHTML = ""; return; }
+  renderWaitingRoom(host);
 }
 async function renderStackEntry() {
   const el = document.getElementById("stackEntry"); if (!el) return;
