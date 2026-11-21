@@ -104,6 +104,10 @@ with _lock:
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (symbol, direction, breakout_date)
     );
+    CREATE TABLE IF NOT EXISTS vix_day (
+        date TEXT PRIMARY KEY, close REAL, change_pct REAL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS flow_tape_day (
         symbol TEXT, day TEXT,
         call_buy_premium REAL, put_buy_premium REAL, net REAL,
@@ -362,6 +366,14 @@ def flow_signal_for(symbol: str, direction: int, breakout_date: str) -> dict | N
         return dict(r) if r else None
     except sqlite3.OperationalError:
         return None
+
+
+def log_vix_day(day: str, close: float, change_pct: float | None) -> None:
+    """Patch 190: one row per trading day, first write wins (banked for a later Lab split; no claim attached)."""
+    try:
+        _run("INSERT OR IGNORE INTO vix_day(date, close, change_pct) VALUES (?,?,?)", (day, close, change_pct))
+    except Exception:
+        pass
 
 
 def flow_signal_latest(symbol: str, direction: int, max_age_days: int = 10) -> dict | None:

@@ -15,6 +15,7 @@ import auth
 import board
 import db
 import engine
+import scanner
 import telegram_bot
 import universe
 
@@ -87,7 +88,8 @@ def build(u: dict | None) -> dict:
                 swept_day=swept.strftime("%a") if swept is not None else None,
                 universe_name=universe.describe(), live_count=len(b["live"]), near_count=len(b["near"]),
                 forming_count=len(forming), closest=closest if pro else [], in_play=in_play if pro else [],
-                resting=resting, mine=mine, watching=watching, updated=b.get("updated"))
+                resting=resting, mine=mine, watching=watching, updated=b.get("updated"),
+                vix=scanner.vix_stored(), vix_line=scanner.vix_line())      # Patch 190: context, never a gate
 
 
 def _mine_line(m: dict) -> str:
@@ -100,6 +102,8 @@ def _mine_line(m: dict) -> str:
 def text(d: dict) -> str:
     """Telegram version."""
     L = [f"☀️ NextShelf morning brief · {d['date']}"]
+    if d.get("vix_line"):
+        L.append(f"Market: {d['vix_line']}")
     if d.get("overnight"):
         L += ["No new 4-hour candles since last night's recap, so nothing has changed overnight.",
               "Today's decision points: the 1:30 PM and 4:00 PM ET closes.", ""]
@@ -154,6 +158,7 @@ def email_html(d: dict, footer: str) -> str:
                                 + "".join(f"<li style='margin:4px 0'>{i}</li>" for i in items) + "</ul>") if items else ""
     parts = [f'<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:auto;color:#111">',
              f'<p style="color:#16a34a;font-weight:700;margin:0">NextShelf morning brief</p><h2 style="margin:4px 0 6px">{e(d["date"])}</h2>',
+             (f'<p style="color:#111;margin:0 0 6px">Market: {e(d["vix_line"])}</p>' if d.get("vix_line") else ""),
              f'<p style="color:#555;margin:0">Last sweep: {d["universe"]} stocks · <b>{d["live_count"]}</b> breakout{"" if d["live_count"] == 1 else "s"} in play · <b>{d["near_count"]}</b> at the edge of a hub.</p>']
     if d["pro"]:
         parts.append(sec("🎯 Closest to a breakout today", [
@@ -195,6 +200,10 @@ def send_to(u: dict) -> dict:
 
 def send_all() -> int:
     """Scheduled: every member with the brief on (default) gets it."""
+    try:
+        scanner.vix_refresh()        # Patch 190: the VIX before the brief builds (fail-open: keeps the stored value)
+    except Exception:
+        pass
     n = 0
     for u in db.all_users():
         if u.get("brief", 1) == 0:

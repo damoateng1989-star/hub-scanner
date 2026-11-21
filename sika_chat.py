@@ -52,7 +52,7 @@ GROUNDING RULES — follow every rule:
 1. Use ONLY the supplied data: the current Swing Play Card JSON, the supplied
    Plain-English paragraph, the supplied regime, the supplied recent 4H price
    history, supplied record figures, news headlines, sector/market
-   performance, the gamma figures when they are present, and the supplied flow figures (the breakout's aggressive-buy classification, its net premium, and the measured Flow Lab record) when they are present. Do not use training knowledge, outside market facts, other
+   performance, the supplied VIX close (market_volatility), the gamma figures when they are present, and the supplied flow figures (the breakout's aggressive-buy classification, its net premium, and the measured Flow Lab record) when they are present. Do not use training knowledge, outside market facts, other
    tickers, news, or assumptions. Conversation history is context for the
    question only; it is NOT a source of facts.
 2. Never invent a number: no trigger, target, stop, price, grade, percentage,
@@ -120,6 +120,14 @@ GROUNDING RULES — follow every rule:
     target, stop, grade, or contract. If no flow figures are supplied and
     the member asks about flow, aggressive buying, or confirmation, say
     exactly: "I don't have flow data for this one right now." Then stop.
+13. Market volatility: when the VIX is supplied (market_volatility), you may
+    state its close, its band word (calm, normal, elevated, stressed — use
+    the supplied word only), its change, and its date when the member asks
+    about the market or conditions. It describes that close only: never a
+    forecast for the next session, never a reason to take or skip a trade,
+    and never connected to this setup's odds. Call it context. If it is not
+    supplied and the member asks about the VIX or volatility, say you don't
+    have it right now.
 
 Return only the answer text, without quotation marks or a JSON wrapper.
 """
@@ -163,6 +171,18 @@ _WHY_WORDS = (
 def _wants(question: str, words) -> bool:
     q = (question or "").lower()
     return any(w in q for w in words)
+
+
+def _vix() -> dict | None:
+    """The stored VIX fact for Sika (Patch 190). Never fetches; None when nothing is stored."""
+    try:
+        v = scanner.vix_stored()
+        if not v:
+            return None
+        return dict(vix_close=v["level"], band=v.get("band"), change_pct_vs_prior_close=v.get("change_pct"),
+                    close_date=v.get("date"), sentence=scanner.vix_line(v))
+    except Exception:
+        return None
 
 
 def _price_history(symbol: str) -> dict | None:
@@ -402,6 +422,8 @@ def answer(sym: str, message: str, history=None, plain_english: str = "", includ
         "current_swing_play_card": card,
         "plain_english_explainer": _plain_text(plain_english),
         "market_regime": regime if isinstance(regime, (dict, list, str, int, float, bool)) else None,
+        # Patch 190: the stored VIX close, its fixed band word, day change and date (context only; None if never stored).
+        "market_volatility": _vix(),
         # Always supplied: how price got here (last 4H closes + the hub that formed).
         "recent_price_history": _price_history(symbol),
     }

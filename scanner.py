@@ -593,6 +593,93 @@ def describe(sym: str, st: dict) -> str:
 WAREHOUSE_ONLY = os.getenv("WAREHOUSE_ONLY", "0").strip().lower() in ("1", "true", "yes", "on")
 
 
+# ---------------------------------------------------------------- the VIX, as context (Patch 190)
+# A fact with its date on it: never a gate, never a grade input, never a forecast (Patch 68's rule).
+# Fetched from Yahoo's chart API, stored as the "vix" setting, banked a row per trading day in vix_day.
+VIX_URL = "https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?interval=1d&range=5d"
+VIX_BANDS = ((15, "calm"), (20, "normal"), (30, "elevated"))     # 30 and over: "stressed"
+
+
+def vix_band(level) -> str | None:
+    """The fixed word for a VIX close: under 15 calm · 15–20 normal · 20–30 elevated · 30+ stressed."""
+    try:
+        x = float(level)
+    except (TypeError, ValueError):
+        return None
+    for hi, word in VIX_BANDS:
+        if x < hi:
+            return word
+    return "stressed"
+
+
+def _vix_parse(payload: dict, now=None) -> dict | None:
+    """The last two COMPLETED daily closes from a Yahoo chart payload (today's bar counts only after 4:15 PM ET)."""
+    res = (((payload or {}).get("chart") or {}).get("result") or [None])[0]
+    if not res:
+        return None
+    ts = res.get("timestamp") or []
+    closes = (((res.get("indicators") or {}).get("quote") or [{}])[0].get("close")) or []
+    now = now or pd.Timestamp.now(tz=engine.NY)
+    rows = []
+    for t, c in zip(ts, closes):
+        if c is None:
+            continue
+        day = pd.Timestamp(t, unit="s", tz="UTC").tz_convert(engine.NY).date()
+        if day == now.date() and (now.hour, now.minute) < (16, 15):
+            continue                      # today's bar is still live: not a close yet
+        rows.append((day, float(c)))
+    if len(rows) < 2:
+        return None
+    (pd_, prev), (d, level) = rows[-2], rows[-1]
+    return dict(level=round(level, 2), prev=round(prev, 2), change_pct=round((level / prev - 1) * 100, 1),
+                date=d.isoformat(), band=vix_band(level), as_of=now.isoformat())
+
+
+def vix_refresh() -> dict | None:
+    """Fetch and store the VIX. Fail-open: any failure keeps the stored value and never raises."""
+    try:
+        import requests
+        r = requests.get(VIX_URL, timeout=12, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"})
+        r.raise_for_status()
+        v = _vix_parse(r.json())
+        if not v:
+            return None
+        db.set_setting("vix", json.dumps(v))
+        db.log_vix_day(v["date"], v["level"], v["change_pct"])      # banked for a later Lab split; first write wins
+        return v
+    except Exception as e:
+        log.info("vix refresh failed (keeping the stored value): %s", e)
+        return None
+
+
+def vix_stored() -> dict | None:
+    """The stored VIX fact, or None. Never fetches."""
+    try:
+        v = json.loads(db.get_setting("vix") or "null")
+        return v if isinstance(v, dict) and v.get("level") is not None else None
+    except Exception:
+        return None
+
+
+def vix_line(v: dict | None = None, now=None) -> str | None:
+    """One sentence, the same everywhere: 'VIX 35.89 — stressed, up 26% Friday.' Describes the close it came from."""
+    v = v if v is not None else vix_stored()
+    if not v:
+        return None
+    try:
+        d = pd.Timestamp(v["date"])
+        now = now or pd.Timestamp.now(tz=engine.NY)
+        age = (now.date() - d.date()).days
+        when = d.strftime("%A") if age < 7 else d.strftime("%a %b %-d")
+        ch = v.get("change_pct")
+        move = "" if ch is None else (f", flat {when}" if abs(ch) < 0.05 else f", {'up' if ch > 0 else 'down'} {abs(ch):.0f}% {when}")
+        if not move:
+            move = f", {when} close"
+        return f"VIX {v['level']:.2f} — {v.get('band') or vix_band(v['level'])}{move}."
+    except Exception:
+        return None
+
+
 def regime_line(direction: int) -> str:
     """One line for an alert when the breakout fights the market regime.
     Empty when the breakout runs with the trend or no regime is stored yet.

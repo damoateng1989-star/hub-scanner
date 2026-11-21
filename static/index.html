@@ -6491,6 +6491,13 @@ function beforeWorkHTML(st) {
 let INFO = null, BOARD = null, WEEK = null;
 function etNow() { return new Date(new Date().toLocaleString("en-US", {timeZone: "America/New_York"})); }
 const fmtT = (hm) => { const [h, m] = hm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+// Patch 190: the stored VIX close as one plain-text segment (no direction colours), with its day when it isn't today's
+function vixSeg() {
+  const v = INFO && INFO.vix; if (!v || v.level == null) return "";
+  const todayET = new Date().toLocaleDateString("en-CA", {timeZone: "America/New_York"});
+  const day = v.date && v.date !== todayET ? ` (${new Date(v.date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short"})} close)` : "";
+  return ` · <span class="mkt-vix">VIX ${Number(v.level).toFixed(2)} · ${esc(v.band || "")}${day}</span>`;
+}
 function marketChip() {
   const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
   const weekday = wd >= 1 && wd <= 5, open = weekday && mins >= 570 && mins < 960;
@@ -6511,7 +6518,7 @@ function marketChip() {
     const w0 = events[0][1] === "pre-close warning" ? closeOf(events[0][0], true) : null, c0 = events[0][1] === "watchlist check" ? closeOf(events[0][0]) : null;
     label = `Next ${events[0][1]} <b>${dayName} ${fmtT(events[0][0])}</b>${w0 ? ` (before the ${w0} close)` : c0 ? ` (confirms the ${c0} candle)` : ""}`;
   }
-  return `<span class="mkt${open ? " open" : ""}" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
+  return `<span class="mkt${open ? " open" : ""}" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}${vixSeg()}</span>`;
 }
 let PREMARKET = null;
 let BOARD_ERR = null;
@@ -7679,7 +7686,7 @@ async function loadBrief() {
     : !ME.brief ? `<a href="#account">Turn on the morning brief</a> to get this before the open.`
     : ways.length ? `Arrives ${ways.join(" and ")} at ${t12} AM ET on weekdays.` : `<a href="#account">Connect Telegram</a> to get this at ${t12} AM ET every weekday.`;
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">☀️ Morning brief <span>${esc(d.date)}</span></div>
-      <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
+      ${d.vix_line ? `<div class="mb-s">Market: ${esc(d.vix_line)}</div>` : ""}<div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
     <div class="mb-cols"><div class="mb-col">${main.replace('<p class="mb-quiet">', '<div class="mb-k">Closest to a breakout today</div><p class="mb-quiet">')}</div>${d.pro ? `<div class="mb-col">${play || '<div class="mb-k">Breakouts still in play</div><p class="mb-quiet">None right now. The next 4-hour closes are 1:30 PM and 4:00 PM ET.</p>'}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
   el.hidden = false;
 }
@@ -9005,6 +9012,7 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc-flow b { color: #3DD68C; }
 .sc-tape { background: rgba(47,84,235,.07); border-color: #2F54EB; }
 .sc-tape b { color: #8FA6FF; }
+.mkt-vix { white-space: nowrap; }
 .vol-chip.tape-chip { color: #8FA6FF; border-color: #2F54EB; background: rgba(47,84,235,.12); cursor: help; }
 .bf-tape { margin: 14px 0; }
 #retest .arow .tape-chip { display: block; width: max-content; margin: 6px 0 0; }

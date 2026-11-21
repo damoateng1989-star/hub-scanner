@@ -312,6 +312,10 @@ def scan_board() -> int:
     if not _lock.acquire(blocking=False):      # a sweep is already running
         return 0
     try:
+        try:
+            scanner.vix_refresh()    # Patch 190: the VIX, refreshed with each board sweep (fail-open)
+        except Exception:
+            pass
         n = _scan_board()
     finally:
         SCAN.update(running=False, current=None, finished=pd.Timestamp.now(tz="UTC").isoformat())
