@@ -5097,11 +5097,13 @@ let MAP_TIMER = null;
 function mapCandleClose(tf, now) {
   const ny = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"})), dow = ny.getDay();
   const m = ny.getHours() * 60 + ny.getMinutes() + ny.getSeconds() / 60;
-  if (dow === 0 || dow === 6 || m < 570 || m >= 960) return null;              // 9:30-16:00 ET, weekdays
+  const iso = `${ny.getFullYear()}-${String(ny.getMonth() + 1).padStart(2, "0")}-${String(ny.getDate()).padStart(2, "0")}`;
+  const close = mktEarly(iso) ? 780 : 960;                                       // 1:00 PM on early-close days
+  if (dow === 0 || dow === 6 || mktClosed(iso) || m < 570 || m >= close) return null;   // 9:30 to the close, trading days
   let end;
-  if (tf === "1d") end = 960;
-  else if (tf === "4h") end = m < 810 ? 810 : 960;
-  else { const h = +tf[0] * 60; end = Math.min(960, 570 + (Math.floor((m - 570) / h) + 1) * h); }
+  if (tf === "1d") end = close;
+  else if (tf === "4h") end = Math.min(close, m < 810 ? 810 : 960);
+  else { const h = +tf[0] * 60; end = Math.min(close, 570 + (Math.floor((m - 570) / h) + 1) * h); }
   return Math.max(0, Math.round((end - m) * 60));
 }
 function mapCandleTimer(chart, series, D) {
@@ -6506,19 +6508,23 @@ function vixSeg() {
 }
 // The retest window as a plain deadline: the Nth upcoming 4-hour close (1:30 PM, 4:00 PM ET on weekdays) instead of
 // "N candles left". short=true gives "Tue 4 PM" for tight spots like the board badge.
+// the market calendar from /api/info (NYSE full-day closures and 1:00 PM early closes)
+const mktClosed = (iso) => !!(INFO && INFO.market_holidays && INFO.market_holidays.includes(iso));
+const mktEarly = (iso) => !!(INFO && INFO.early_closes && INFO.early_closes.includes(iso));
+const isoUTC = (dt) => dt.toISOString().slice(0, 10);
 function retestBy(left, short) {
   left = Number(left); if (!(left > 0)) return "";
   const p = etParts(new Date()), names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const base = Date.UTC(+p.year, +p.month - 1, +p.day), mins = (+p.hour % 24) * 60 + +p.minute;
   let k = 0;
   for (let step = 0; step < 30; step++) {
-    const dt = new Date(base + step * 864e5), wd = dt.getUTCDay();
-    if (wd < 1 || wd > 5) continue;
-    for (const c of [810, 960]) {
+    const dt = new Date(base + step * 864e5), wd = dt.getUTCDay(), iso = isoUTC(dt);
+    if (wd < 1 || wd > 5 || mktClosed(iso)) continue;                 // weekends and market holidays have no closes
+    for (const c of (mktEarly(iso) ? [780] : [810, 960])) {           // an early-close day has one close, at 1:00 PM
       if (step === 0 && c <= mins) continue;           // today's closes that already happened don't count
       if (++k === left) {
         const day = step === 0 ? "today" : step === 1 ? "tomorrow" : names[wd];
-        return `${day} ${c === 810 ? "1:30 PM" : short ? "4 PM" : "4:00 PM"}`;
+        return `${day} ${c === 780 ? (short ? "1 PM" : "1:00 PM") : c === 810 ? "1:30 PM" : short ? "4 PM" : "4:00 PM"}`;
       }
     }
   }

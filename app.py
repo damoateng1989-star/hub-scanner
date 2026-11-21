@@ -919,6 +919,7 @@ def info(u: dict | None = Maybe):
                 scan_times=SCAN_TIMES, preclose_times=PRECLOSE_TIMES if auth.is_pro(u) else [],
                 entry_times=ENTRY_TIMES, board_times=BOARD_TIMES,
                 vix=scanner.vix_stored(),      # Patch 190: the stored VIX fact for Today's market pill (context, never a gate)
+                market_holidays=sorted(flow_signal.NYSE_HOLIDAYS), early_closes=sorted(flow_signal.NYSE_EARLY_CLOSES),
                 settings=dict(min_sessions=s.min_sessions, min_candles=s.min_candles, k=s.k, horizon=s.horizon, target_atr=s.target_atr,
                               shelf_min_atr=s.shelf_min_atr))
 
