@@ -7,6 +7,10 @@ across both shelves, like the Waiting Room's date key), plus the catalog as two 
 The rights gate: a film is listed only with an archive.org identifier AND a stated public-domain basis
 (copied from the curation file, pd-stack/candidates.md). An entry missing either is dropped at load —
 no basis, no film.
+
+Patch 197, borrowed embeds: an entry may instead carry an https `embed_url` (the rights holder's own official
+upload, embedding enabled by them) AND a `rights_note` saying so, verified onto the curation file first. NextShelf
+never holds a copy; removing the film is deleting the entry. The player shows the rights_note verbatim.
 """
 from __future__ import annotations
 
@@ -28,11 +32,15 @@ def _load() -> list[dict]:
         return []
     out = []
     for f in raw if isinstance(raw, list) else []:
-        if not (isinstance(f, dict) and str(f.get("archive_id") or "").strip() and str(f.get("pd_basis") or "").strip()
-                and f.get("title") and f.get("vein") in VEINS):
-            continue                                   # the gate: no identifier or no public-domain basis, no film
+        if not (isinstance(f, dict) and f.get("title") and f.get("vein") in VEINS):
+            continue
+        pd = str(f.get("archive_id") or "").strip() and str(f.get("pd_basis") or "").strip()
+        borrowed = (str(f.get("embed_url") or "").strip().startswith("https://")
+                    and str(f.get("rights_note") or "").strip())
+        if not (pd or borrowed):
+            continue                                   # the gate: no PD basis and no rights-holder embed, no film
         f = dict(f)
-        f["id"] = f.get("id") or f["archive_id"]
+        f["id"] = f.get("id") or f.get("archive_id") or f.get("embed_url")
         f["shelf"] = "classics" if f["vein"] == "Classics" else "market"
         out.append(f)
     return out
@@ -64,13 +72,20 @@ def _poster(f: dict) -> str:
     p = f.get("poster")
     if p and (POSTERS / p).is_file():
         return f"/cinema-media/{p}"                     # self-hosted, cut from the film
-    return f"https://archive.org/services/img/{f['archive_id']}"   # until one is cut: archive.org's own item image
+    if f.get("poster_url"):
+        return f["poster_url"]                          # the provider's own thumbnail (borrowed embeds)
+    if f.get("archive_id"):
+        return f"https://archive.org/services/img/{f['archive_id']}"   # until one is cut: archive.org's own item image
+    return ""
 
 
 def _public(f: dict) -> dict:
     return dict(id=f["id"], title=f["title"], year=f.get("year"), runtime=f.get("runtime"), vein=f["vein"],
                 shelf=f["shelf"], description=f.get("description") or "", poster=_poster(f),
-                embed=f"https://archive.org/embed/{f['archive_id']}", basis=f["pd_basis"])
+                embed=f.get("embed_url") or f"https://archive.org/embed/{f['archive_id']}",
+                source="embed" if f.get("embed_url") else "archive",
+                rights_note=f.get("rights_note") or "" if f.get("embed_url") else "",
+                basis=f.get("pd_basis") or "")
 
 
 def payload(d: date) -> dict:

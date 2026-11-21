@@ -2804,7 +2804,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
 
 <!-- RESULTS -->
 <section data-view="cinema" hidden>
-  <div class="hello"><h1>Cinema<span>.</span></h1><p class="sub">Full-length public-domain films: market history and classics. One feature a day, the whole shelf any time.</p></div>
+  <div class="hello"><h1>Cinema<span>.</span></h1><p class="sub">Full-length films: market history and classics. One feature a day, the whole shelf any time.</p></div>
   <div class="wr-card sr-card cinema-room" id="cinemaRoom"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 <section data-view="results" hidden>
@@ -9225,6 +9225,7 @@ html[data-theme="light"] .sr-ft span { color: #3A3F47; }
 .sr-player { position: fixed; inset: 0; z-index: 2100; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; padding: 20px; }
 .sr-player[hidden] { display: none; }
 .sr-pbox { width: min(1100px, 100%); }
+.sr-ph b, html[data-theme="light"] .sr-ph b { color: #fff !important; } .sr-ph small { color: #B8BDC7; }
 .sr-ph { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: #fff; }
 .sr-ph b { display: block; font: 400 20px/1.2 "Newsreader", Georgia, serif; } .sr-ph small { font-size: 12px; color: #9AA0AC; }
 .sr-ph button { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.5); color: #fff; font-size: 18px; cursor: pointer; }
@@ -10043,8 +10044,8 @@ function srPlay(id) {
   let v = $("srPlayer"); if (!v) { v = document.createElement("div"); v.id = "srPlayer"; v.className = "sr-player"; document.body.appendChild(v); }
   v.innerHTML = `<div class="sr-pbox" role="dialog" aria-label="${esc(f.title)}">
       <div class="sr-ph"><div><b>${esc(f.title)}</b><small>${[f.year, f.runtime, f.vein].filter(Boolean).map(esc).join(" · ")}</small></div><button type="button" onclick="srClose()" aria-label="Close">✕</button></div>
-      <div class="sr-frame"><iframe src="${esc(f.embed)}" title="${esc(f.title)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>
-      <p class="sr-note">Plays from the Internet Archive. Public domain: ${esc(f.basis)}</p></div>`;
+      <div class="sr-frame"><iframe src="${esc(f.embed)}" title="${esc(f.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+      <p class="sr-note">${f.source === "embed" ? esc(f.rights_note) : `Plays from the Internet Archive. Public domain: ${esc(f.basis)}`}</p></div>`;
   v.hidden = false; document.body.classList.add("sr-open");
   v.onclick = (e) => { if (e.target === v) srClose(); };
 }
