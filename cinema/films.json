@@ -1,1 +1,128 @@
-[]
+[
+ {
+  "title": "A Corner in Wheat",
+  "year": 1909,
+  "runtime": "14 min",
+  "vein": "First Frames",
+  "archive_id": "a-corner-in-wheat-1909",
+  "pd_basis": "Pre-1930 film",
+  "description": "D. W. Griffith, 1909: a speculator corners the wheat market while the farmers who grew it and the bakers who need it pay. The first trading film ever made."
+ },
+ {
+  "title": "The Lady and the Stock Exchange",
+  "year": 1962,
+  "runtime": "28 min",
+  "vein": "The Pits",
+  "archive_id": "rpladyandthestockexchangethe",
+  "pd_basis": "Prelinger Collection (Merrill Lynch sponsored film)",
+  "description": "A Merrill Lynch comedy that ends where it matters — on the floor of the Exchange, under the big board, in the closing credits."
+ },
+ {
+  "title": "Understanding the Dollar",
+  "year": 1953,
+  "runtime": "10 min",
+  "vein": "Money School",
+  "archive_id": "Understandin_2",
+  "pd_basis": "Prelinger Collection (Coronet instructional film)",
+  "description": "A 1953 classroom film explains what a dollar is worth by putting it on a seesaw — and ends with it falling out of the sky as a giant coin."
+ },
+ {
+  "title": "Pursuit of Profit",
+  "year": 1965,
+  "runtime": "23 min",
+  "vein": "Money School",
+  "archive_id": "PursuitOfPro",
+  "pd_basis": "Prelinger Collection (Procter & Gamble sponsored film)",
+  "description": "A grocer works his margins on a whiteboard — fixed costs, variable costs, and the 1% that's actually profit — until the numbers make sense."
+ },
+ {
+  "title": "Story of a City: New York",
+  "year": 1947,
+  "runtime": "19 min",
+  "vein": "Old Wall Street",
+  "archive_id": "0534_Story_of_a_City_New_York_The_E01377_23_36_33_18",
+  "pd_basis": "Prelinger Collection",
+  "description": "A 1947 walk through the financial district — 30 Broad Street, the Exchange facade, and a street sign for Exchange Place."
+ },
+ {
+  "title": "Skyline New York",
+  "year": 1956,
+  "runtime": "26 min",
+  "vein": "Old Wall Street",
+  "archive_id": "0787_Skyline_New_York_01_00_56_00",
+  "pd_basis": "Prelinger Collection",
+  "description": "Manhattan from the air in 1956 — the skyline the trading day happens under."
+ },
+ {
+  "title": "Greed",
+  "year": 1924,
+  "runtime": "~2 h 20",
+  "vein": "Booms & Busts",
+  "archive_id": "Greed1924_201612",
+  "pd_basis": "Pre-1930 film",
+  "description": "Von Stroheim's silent epic: a lottery win lands on ordinary people, and money does the rest. The feature of the Market History shelf."
+ },
+ {
+  "title": "His Girl Friday",
+  "year": 1940,
+  "runtime": "1 h 32",
+  "vein": "Classics",
+  "archive_id": "his_girl_friday",
+  "pd_basis": "Copyright not renewed",
+  "description": "Cary Grant and Rosalind Russell trade the fastest dialogue in film history across a newsroom desk."
+ },
+ {
+  "title": "Detour",
+  "year": 1945,
+  "runtime": "~1 h 08",
+  "vein": "Classics",
+  "archive_id": "Detour_66",
+  "pd_basis": "Copyright not renewed",
+  "description": "A hitchhiker, a borrowed car, and the worst luck in film noir. Shot in six days; remembered for eighty years."
+ },
+ {
+  "title": "The Little Shop of Horrors",
+  "year": 1960,
+  "runtime": "~1 h 12",
+  "vein": "Classics",
+  "archive_id": "The_Little_Shop_of_Horrors.mpeg",
+  "pd_basis": "Public domain (archive.org feature_films collection)",
+  "description": "Roger Corman's two-day shoot: a florist, a man-eating plant, and a very young Jack Nicholson."
+ },
+ {
+  "title": "Carnival of Souls",
+  "year": 1962,
+  "runtime": "1 h 23",
+  "vein": "Classics",
+  "archive_id": "carnival_of_souls",
+  "pd_basis": "Released without a copyright notice",
+  "description": "A church organist walks away from a crash and can't shake the feeling the world has gone quiet around her."
+ },
+ {
+  "title": "The Last Man on Earth",
+  "year": 1964,
+  "runtime": "~1 h 26",
+  "vein": "Classics",
+  "archive_id": "the-last-man-on-earth-1964_202312",
+  "pd_basis": "Public domain (archive.org feature_films collection)",
+  "description": "Vincent Price, alone after a plague — the first filming of I Am Legend."
+ },
+ {
+  "title": "Night of the Living Dead",
+  "year": 1968,
+  "runtime": "~1 h 36",
+  "vein": "Classics",
+  "archive_id": "Night_Of_The_Living_Dead_raw_HD_WS",
+  "pd_basis": "Theatrical prints omitted the copyright notice",
+  "description": "George Romero's original: a farmhouse, one long night, and the dead outside. The film that started it all."
+ },
+ {
+  "title": "Plan 9 from Outer Space",
+  "year": 1959,
+  "runtime": "~1 h 19",
+  "vein": "Classics",
+  "archive_id": "plan.-9.-from.-outer.-space.-1957",
+  "pd_basis": "Copyright not renewed",
+  "description": "Ed Wood's masterpiece of sincerity over budget — flying saucers, hubcaps, and total conviction."
+ }
+]
