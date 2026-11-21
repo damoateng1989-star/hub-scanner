@@ -6955,7 +6955,11 @@ function bGroup(title, rows, kind, empty) {
   </div>` : `<div class="empty">${empty}</div>`}</div>`;
 }
 
-let BOARD_DATA = {}, BOARD_KIND = "setups", BOARD_SORT = "tier", BOARD_SORT_DIR = 1;
+let BOARD_DATA = {}, BOARD_KIND = "setups", BOARD_SORT = "tier", BOARD_SORT_DIR = 1, BOARD_SEL = [];
+// one board view or filter chip: does this row belong to it?
+function boardKindMatch(r, k) {
+  return k==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):k==="all"?r._kind!=="recent":k==="setups"?(r._kind==="live"||r._kind==="near"):k==="a"?(r._kind==="live"&&r.grade==="A"):k==="forming"?(r._kind==="forming"||r._kind==="near"):k==="new"?(r._kind==="live"&&boardCandles(r)===0):k==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):k==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):k===r._kind;
+}
 const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
 // Patch 182 follow-up: the stored tape classification, visible on the hub table row (confirmed only;
 // rows carry tape_flow only for viewers the flow gate allows) and as a block in the stock's panel
@@ -7096,12 +7100,13 @@ function boardRows(){
 function renderInstitutionalBoard(){
   const STALE_OF=boardStaleOf(BOARD_DATA);
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="setups"?(r._kind==="live"||r._kind==="near"):BOARD_KIND==="a"?(r._kind==="live"&&r.grade==="A"):BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  const sel=BOARD_SEL.length?BOARD_SEL:[BOARD_KIND];      // several chips: a stock must match every one of them
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=sel.every(k=>boardKindMatch(r,k));return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     // Patch 165: the default All view ("tier" sort): live setups first (grade A→B→C→D→?), then your
     // watchlist, then the rest by the size of the day's move. Returning 0 keeps the board's own order
     // inside a tier (live rows keep board()'s closest-to-target order). Column sorts replace this.
-    if(BOARD_SORT==="tier"&&(BOARD_KIND==="all"||BOARD_KIND==="setups"||BOARD_KIND==="a")){
+    if(BOARD_SORT==="tier"&&(BOARD_KIND==="all"||BOARD_KIND==="setups"||BOARD_KIND==="a"||BOARD_KIND==="multi")){
       const ta=a._kind==="live"?0:a.watching?1:2, tb=b._kind==="live"?0:b.watching?1:2;
       if(ta!==tb) return ta-tb;
       if(ta===0){ const gr={"A":0,"B":1,"C":2,"D":3}; const ga=gr[a.grade]??4, gb=gr[b.grade]??4; if(ga!==gb) return ga-gb; }
@@ -7114,9 +7119,9 @@ function renderInstitutionalBoard(){
       const ca=boardCandles(a)??99, cb=boardCandles(b)??99;
       if(ca!==cb) return ca-cb;
     }
-    // Patch 175: in the Retesting view, names at the edge sort first, then by candles left
+    // Patch 175: in the Retesting view (alone or stacked with other chips), names at the edge sort first, then by candles left
     // in the window ascending (the Today card's order). Not flipped by the column-sort direction.
-    if(BOARD_KIND==="retesting"&&a._kind==="live"&&b._kind==="live"){
+    if(sel.includes("retesting")&&a._kind==="live"&&b._kind==="live"){
       const na=a.retest&&a.retest.near?0:1, nb=b.retest&&b.retest.near?0:1;
       if(na!==nb) return na-nb;
       const la=a.retest?a.retest.candles_left:99, lb=b.retest?b.retest.candles_left:99;
@@ -7154,13 +7159,25 @@ function renderInstitutionalBoard(){
   if(ax){
     ax.innerHTML=as.length?'<div class="board-aextra"><div class="retest-sub">A double bottoms and gap fades · '+as.length+'</div>'+as.map(r=>'<a class="arow" href="#discover" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')" style="--c:var(--up)"><i></i><span class="t"><span class="tk">'+esc(r.symbol)+'</span><span>'+esc(r.name||r.kind)+' · <b class="sg-in ga">A</b> · target '+money(r.target)+(r.retest&&r.retest.candles_left>0?' · retest window closes '+retestBy(r.retest.candles_left):'')+'</span></span><span class="go">›</span></a>').join("")+'</div>':"";
     ax.hidden=!as.length;}
-  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">'+(BOARD_KIND==="a"?(as.length?'No A hub setups are live right now. The A double bottoms and gap fades are below.':'No A setups are live right now. Grades fill in after each sweep, and Today shows any A retest first.'):'No symbols match this view.')+'</div></td></tr>';
+  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">'+(BOARD_KIND==="multi"?'No stock matches all of these right now. Remove a chip to widen it.':BOARD_KIND==="a"?(as.length?'No A hub setups are live right now. The A double bottoms and gap fades are below.':'No A setups are live right now. Grades fill in after each sweep, and Today shows any A retest first.'):'No symbols match this view.')+'</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
-  document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
+  document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",BOARD_SEL.length?BOARD_SEL.includes(b.dataset.kind):b.dataset.kind===BOARD_KIND));
+  {const lab={stacked:"Stacked",a:"A only",new:"New",retesting:"Retesting",flow:"Flow confirmed",live:"Broke out",forming:"Inside a hub",recent:"Finished"};
+   let hint=$("boardSelHint");const bf=document.querySelector(".board-filters");
+   if(bf&&!hint){hint=document.createElement("div");hint.id="boardSelHint";hint.className="board-selhint";bf.after(hint);}
+   if(hint){hint.innerHTML=BOARD_SEL.length>1?'Showing stocks that match all of: <b>'+BOARD_SEL.map(k=>esc(lab[k]||k)).join(" + ")+'</b> · <button type="button" onclick="filterInstitutionalBoard(\'setups\')">Clear</button>':"";hint.hidden=BOARD_SEL.length<2;}}
   if(!window._bfScrolled){const bf=document.querySelector(".board-filters");if(bf){bf.scrollLeft=0;window._bfScrolled=true;}}   // the default chip is first and in view
 }
-function filterInstitutionalBoard(kind){if(kind)BOARD_KIND=kind;renderInstitutionalBoard();}
+// Setups and All are whole views (tapping one clears the filters); every other chip toggles, and they stack:
+// Stacked + Retesting + A only shows the stocks that are all three
+function filterInstitutionalBoard(kind){
+  if(!kind)return renderInstitutionalBoard();
+  if(kind==="setups"||kind==="all"){BOARD_SEL=[];BOARD_KIND=kind;}
+  else{const i=BOARD_SEL.indexOf(kind);if(i>=0)BOARD_SEL.splice(i,1);else BOARD_SEL.push(kind);
+    BOARD_KIND=BOARD_SEL.length===1?BOARD_SEL[0]:BOARD_SEL.length?"multi":"setups";}
+  renderInstitutionalBoard();
+}
 function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else{BOARD_SORT=key;BOARD_SORT_DIR=1;}renderInstitutionalBoard();}
 let BOARD_LOADING = false;
 // ---------------- market map: every stock as a tile, grouped by sector, coloured by where its setup stands
@@ -9175,6 +9192,10 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 #retest .rt-tape b { color: #8FA6FF; font-weight: 600; }
 .rt-watch { font-weight: 600; color: var(--mut, #9AA0AC); }
 .sc-grade { margin-left: 6px; font: 700 12px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; }
+.board-selhint { margin: 8px 2px 0; font-size: 13px; color: var(--mut, #9AA0AC); }
+.board-selhint[hidden] { display: none; }
+.board-selhint b { color: var(--ink, #EDEDED); font-weight: 600; }
+.board-selhint button { background: none; border: 0; color: #8FA6FF; cursor: pointer; font: inherit; padding: 0 0 0 4px; text-decoration: underline; }
 .board-aextra { margin: 14px 0 0; border: 1px solid var(--line, #22262E); border-radius: 14px; padding: 12px 14px; }
 .sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
