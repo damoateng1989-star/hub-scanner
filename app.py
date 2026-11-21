@@ -1051,6 +1051,10 @@ def board_data(u: dict | None = Maybe):
         for r in b["live"]:    # request path; warm_board_grades fills the cache after each sweep.
             d = 1 if r.get("state") == "breakout_up" else -1
             r["grade"] = sika_find._grade_for(r["symbol"], "hub", d, _time.monotonic()).get("grade") or "?"
+        for r in b.get("setups") or []:      # the same cache-only read for live double tops/bottoms and gap fades
+            if r.get("state") in ("breakout_up", "breakdown") and r.get("kind") in ("double_bottom", "double_top", "gapfade"):
+                d = 1 if r.get("state") == "breakout_up" else -1
+                r["grade"] = sika_find._grade_for(r["symbol"], r["kind"], d, _time.monotonic()).get("grade") or "?"
     except Exception:
         for r in b["live"]:
             r.setdefault("grade", "?")

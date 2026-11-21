@@ -222,9 +222,15 @@ def warm_board_grades() -> int:
     _grade; the board endpoint only ever reads the cache."""
     deadline = time.monotonic() + 600.0
     n = 0
-    for r in board.board().get("live") or []:
+    b = board.board()
+    for r in b.get("live") or []:
         _grade_for(r["symbol"], "hub", 1 if r.get("state") == "breakout_up" else -1, deadline)
         n += 1
+    # live double tops/bottoms and gap fades too, so Today and the board can show their letter and sort A first
+    for r in b.get("setups") or []:
+        if r.get("state") in ("breakout_up", "breakdown") and r.get("kind") in ("double_bottom", "double_top", "gapfade"):
+            _grade_for(r["symbol"], r["kind"], 1 if r.get("state") == "breakout_up" else -1, deadline)
+            n += 1
     return n
 
 

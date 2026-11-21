@@ -7104,7 +7104,14 @@ function renderInstitutionalBoard(){
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
   const lockRow=lockedN&&(BOARD_KIND==="setups"||BOARD_KIND==="a"||BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new"||BOARD_KIND==="retesting")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
-  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">'+(BOARD_KIND==="a"?'No A setups are live right now. Grades fill in after each sweep, and Today shows any A retest first.':'No symbols match this view.')+'</div></td></tr>';
+  // A only: the A double bottoms and gap fades live today sit under the hub table (their cards live on the setup tabs)
+  let ax=$("boardAExtra");const fr=document.querySelector(".board-frame");
+  if(fr&&!ax){ax=document.createElement("div");ax.id="boardAExtra";fr.after(ax);}
+  const as=BOARD_KIND==="a"?(BOARD_DATA.setups||[]).filter(r=>(r.state==="breakout_up"||r.state==="breakdown")&&r.grade==="A"&&r.kind!=="double_top"):[];
+  if(ax){
+    ax.innerHTML=as.length?'<div class="board-aextra"><div class="retest-sub">A double bottoms and gap fades · '+as.length+'</div>'+as.map(r=>'<a class="arow" href="#discover" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')" style="--c:var(--up)"><i></i><span class="t"><span class="tk">'+esc(r.symbol)+'</span><span>'+esc(r.name||r.kind)+' · <b class="sg-in ga">A</b> · target '+money(r.target)+(r.retest&&r.retest.candles_left>0?' · retest window, '+r.retest.candles_left+' candle'+(r.retest.candles_left===1?'':'s')+' left':'')+'</span></span><span class="go">›</span></a>').join("")+'</div>':"";
+    ax.hidden=!as.length;}
+  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">'+(BOARD_KIND==="a"?(as.length?'No A hub setups are live right now. The A double bottoms and gap fades are below.':'No A setups are live right now. Grades fill in after each sweep, and Today shows any A retest first.'):'No symbols match this view.')+'</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
   document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
@@ -7702,7 +7709,7 @@ function setupCard(x) {
         : x.kind.startsWith("double") && x.peak != null ? `Becomes an <b>A setup</b> on a 4:00 PM retest close, if the entry isn't past halfway to the target. Stop sits ${up ? "below" : "above"} the ${Number(x.peak) > Number(x.neck) ? "tops" : "lows"}, at <b>${money(x.peak)}</b>.` : `${x.sessions} sessions`);
   }
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small>${live && (gap || x.kind === "double_bottom") ? stkBadge(x.symbol, [gap ? "Stacked Gap Fade" : "Stacked Double Bottom"]) : ""}</div>
-      <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
+      <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}${live && x.grade && x.grade !== "?" ? `<span class="sg-in ${GRADE_CLS[x.grade]} sc-grade" title="Setup grade: this setup's two-year record across every stock NextShelf scans">${x.grade}</span>` : ""}</div></div>
     ${x.flow && (x.state === "breakout_up" || x.state === "breakdown") ? `<div class="sc-flow">📊 <b>Flow at the breakout: ${x.flow.side === "call" ? "unusual call volume" : x.flow.side === "put" ? "unusual put volume" : "no unusual flow"}</b>${x.flow.side === "none" ? "." : ` — ${x.flow.side === "call" ? Number(x.flow.call_voi).toFixed(1) : Number(x.flow.put_voi).toFixed(1)}× open interest on the ${new Date(x.flow.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})} ${x.flow.side === "call" ? "calls" : "puts"}.`}<small>Measured on ${new Date(x.flow.breakout_date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"})}, from the options chain. A past fact, not a live reading.</small></div>` : ""}
     ${x.tape_flow && x.tape_flow.line ? `<div class="sc-flow sc-tape">📊 <b>${esc(x.tape_flow.line)}</b><small>From the options tape, measured at the break. A past fact, not a live reading.</small></div>` : ""}
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
@@ -9124,6 +9131,8 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 #retest .rt-tape { display: block; margin-top: 5px; font-size: 12.5px; line-height: 1.45; color: var(--mp-mut, #9AA0AC); }
 #retest .rt-tape b { color: #8FA6FF; font-weight: 600; }
 .rt-watch { font-weight: 600; color: var(--mut, #9AA0AC); }
+.sc-grade { margin-left: 6px; font: 700 12px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; }
+.board-aextra { margin: 14px 0 0; border: 1px solid var(--line, #22262E); border-radius: 14px; padding: 12px 14px; }
 .sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }
