@@ -2722,6 +2722,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
     <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
   </div>
   <div class="today-stories ck-tiles" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div><div class="stack-entry" id="stackEntry" hidden></div></div>
+  <div class="wr-card sr-card" id="screening" hidden></div>
   <details class="ck-more" id="ckMore">
     <summary>Everything else the scanner sees</summary>
     <div class="retest" id="retestWait" hidden></div>
@@ -6856,6 +6857,7 @@ function renderToday() {
   renderPremarket();
   renderWeek();
   renderTodayVideos();
+  renderScreening();
   renderRetest();
   renderRule();
   renderKpis();
@@ -9192,6 +9194,33 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 #retest .rt-tape b { color: #8FA6FF; font-weight: 600; }
 .rt-watch { font-weight: 600; color: var(--mut, #9AA0AC); }
 .sc-grade { margin-left: 6px; font: 700 12px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; }
+/* the Screening Room (Patch 195) */
+.sr-card { margin: 16px 0; } .sr-card[hidden] { display: none; }
+.sr-feat { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; margin: 10px 0 4px; }
+.sr-fp { position: relative; aspect-ratio: 4 / 3; border-radius: 14px; background: #000 center / cover no-repeat; display: flex; align-items: center; justify-content: center; }
+.sr-play { width: 52px; height: 52px; border-radius: 50%; background: rgba(7,9,13,.6); border: 1px solid rgba(255,255,255,.4); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; padding-left: 3px; }
+.sr-ft { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sr-ft b { font: 400 22px/1.2 "Newsreader", Georgia, serif; color: var(--ink, #fff); }
+.sr-ft small { font: 600 11px/1.3 var(--mono, monospace); letter-spacing: .08em; text-transform: uppercase; color: var(--mut, #9AA0AC); }
+.sr-ft span { font-size: 14px; line-height: 1.45; color: var(--ink2, #C9CED6); }
+.sr-shelf { margin-top: 16px; }
+.sr-rail { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 4px; scrollbar-width: none; scroll-snap-type: x mandatory; }
+.sr-rail::-webkit-scrollbar { display: none; }
+.sr-tile { flex: none; width: 128px; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; }
+.sr-tp { display: block; aspect-ratio: 2 / 3; border-radius: 10px; background: #000 center / cover no-repeat; border: 1px solid rgba(255,255,255,.08); }
+.sr-tile b { font-size: 13px; line-height: 1.3; font-weight: 600; color: var(--ink, #EDEDED); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.sr-tile small { font-size: 11.5px; color: var(--mut, #9AA0AC); }
+.sr-player { position: fixed; inset: 0; z-index: 2100; background: rgba(0,0,0,.92); display: flex; align-items: center; justify-content: center; padding: 20px; }
+.sr-player[hidden] { display: none; }
+.sr-pbox { width: min(1100px, 100%); }
+.sr-ph { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; color: #fff; }
+.sr-ph b { display: block; font: 400 20px/1.2 "Newsreader", Georgia, serif; } .sr-ph small { font-size: 12px; color: #9AA0AC; }
+.sr-ph button { width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.5); color: #fff; font-size: 18px; cursor: pointer; }
+.sr-frame { position: relative; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; }
+.sr-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.sr-note { margin: 10px 0 0; font-size: 12px; color: #9AA0AC; }
+body.sr-open { overflow: hidden; }
+@media (max-width: 560px) { .sr-feat { grid-template-columns: 1fr; } .sr-player { padding: 12px; } }
 .board-selhint { margin: 8px 2px 0; font-size: 13px; color: var(--mut, #9AA0AC); }
 .board-selhint[hidden] { display: none; }
 .board-selhint b { color: var(--ink, #EDEDED); font-weight: 600; }
@@ -9964,6 +9993,39 @@ function stkEsc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => 
 const stkCalm = () => (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) || !!(navigator.connection && navigator.connection.saveData);
 // Today: phones get the Daily Stack playing right in the page (in the Waiting Room's spot, which phones no
 // longer show); computers keep the Waiting Room card and the "Watch today's stack" row
+// ---------------------------------------------------------------- the Screening Room (Patch 195)
+// Full-length public-domain films. The catalog and posters are ours; archive.org's embed streams the film, so
+// playback never loads this server. One feature a day for everyone, plus two finite shelves. With sound.
+let SR = null;
+async function renderScreening() {
+  const el = $("screening"); if (!el) return;
+  if (!SR) { try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); SR = r.status === 200 ? await r.json() : {}; } catch (e) { SR = {}; } }
+  const f = SR && SR.feature; if (!f) { el.hidden = true; return; }
+  const meta = (x) => [x.year, x.runtime, x.vein].filter(Boolean).map(esc).join(" · ");
+  const tile = (x) => `<button type="button" class="sr-tile" onclick="srPlay('${esc(x.id)}')" aria-label="Watch ${esc(x.title)}">
+      <span class="sr-tp" style="background-image:url('${esc(x.poster)}')"></span><b>${esc(x.title)}</b><small>${[x.year, x.runtime].filter(Boolean).map(esc).join(" · ")}</small></button>`;
+  el.innerHTML = `<div class="wr-eyebrow"><span>THE SCREENING ROOM</span><span>Today's feature</span></div>
+    <button type="button" class="sr-feat" onclick="srPlay('${esc(f.id)}')" aria-label="Watch ${esc(f.title)}">
+      <span class="sr-fp" style="background-image:url('${esc(f.poster)}')"><span class="sr-play">▶</span></span>
+      <span class="sr-ft"><b>${esc(f.title)}</b><small>${meta(f)}</small>${f.description ? `<span>${esc(f.description)}</span>` : ""}</span>
+    </button>
+    ${(SR.shelves || []).filter(sh => sh.films.length).map(sh => `<div class="sr-shelf"><div class="retest-sub">${esc(sh.title)} · ${sh.films.length}</div><div class="sr-rail">${sh.films.map(tile).join("")}</div></div>`).join("")}
+    <div class="wr-foot"><span>Public-domain films</span><span>Streams from the Internet Archive</span></div>`;
+  el.hidden = false;
+}
+function srFind(id) { if (!SR) return null; if (SR.feature && SR.feature.id === id) return SR.feature; for (const sh of SR.shelves || []) for (const x of sh.films) if (x.id === id) return x; return null; }
+function srPlay(id) {
+  const f = srFind(id); if (!f) return;
+  let v = $("srPlayer"); if (!v) { v = document.createElement("div"); v.id = "srPlayer"; v.className = "sr-player"; document.body.appendChild(v); }
+  v.innerHTML = `<div class="sr-pbox" role="dialog" aria-label="${esc(f.title)}">
+      <div class="sr-ph"><div><b>${esc(f.title)}</b><small>${[f.year, f.runtime, f.vein].filter(Boolean).map(esc).join(" · ")}</small></div><button type="button" onclick="srClose()" aria-label="Close">✕</button></div>
+      <div class="sr-frame"><iframe src="${esc(f.embed)}" title="${esc(f.title)}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+      <p class="sr-note">Plays from the Internet Archive. Public domain: ${esc(f.basis)}</p></div>`;
+  v.hidden = false; document.body.classList.add("sr-open");
+  v.onclick = (e) => { if (e.target === v) srClose(); };
+}
+function srClose() { const v = $("srPlayer"); if (!v) return; v.hidden = true; v.innerHTML = ""; document.body.classList.remove("sr-open"); }   // removing the frame stops the film
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("srPlayer") && !$("srPlayer").hidden) srClose(); });
 async function renderTodayVideos() {
   const host = $("waitingRoom"); if (!host) return;
   if (!matchMedia("(max-width: 899px)").matches) {

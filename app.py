@@ -1467,6 +1467,27 @@ def stack_today(u: dict = User):
     return ds.public_payload(today)
 
 
+@app.get("/cinema-media/{name}")
+def cinema_media(name: str):
+    """Screening Room posters only: the catalog's own files (the films themselves stream from archive.org)."""
+    import cinema
+    if name not in cinema.poster_names() or not name.endswith((".jpg", ".png", ".webp")):
+        raise HTTPException(404, "Not found")
+    f = cinema.POSTERS / name
+    if not f.is_file():
+        raise HTTPException(404, "Not found")
+    return FileResponse(f, headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/cinema")
+def cinema_today(u: dict = User):
+    """Patch 195: today's featured film and the two shelves (members only, like the Stack). 204 while the catalog is empty."""
+    import cinema
+    if not cinema.FILMS:
+        return Response(status_code=204)
+    return cinema.payload(_wr_today())
+
+
 @app.post("/api/stack/reveal")
 def stack_reveal(body: StackRevealBody, u: dict = User):
     import daily_stack as ds
