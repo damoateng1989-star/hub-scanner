@@ -2890,8 +2890,8 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
-<button class="bf-wr-tab" id="bfWrTab" type="button" hidden onclick="briefSideToggle(true)" aria-label="Show the videos">▶ Videos</button>
-<div class="bf-wr" id="bfWr" hidden><div class="bf-wr-top"><button type="button" onclick="briefSideToggle(false)">‹ Hide videos, bigger chart</button></div><div class="wr-card bf-stk" id="bfStk" hidden></div><div class="wr-card" id="bfWrRoom"></div></div>
+<button class="bf-wr-tab" id="bfWrTab" type="button" hidden onclick="briefSideToggle(true)" aria-label="Show the movies">▶ Movies</button>
+<div class="bf-wr" id="bfWr" hidden><div class="bf-wr-top"><button type="button" onclick="briefSideToggle(false)">‹ Hide movies, bigger chart</button></div><div class="wr-card sr-card bf-sr" id="bfSR" hidden></div><div class="wr-card bf-stk" id="bfStk" hidden></div><div class="wr-card" id="bfWrRoom" hidden></div></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
   <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
 </button>
@@ -6333,7 +6333,7 @@ function briefSideRoom() {
   const w = Math.min(560, gap - 40); el.style.width = w + "px"; el.style.left = Math.round((gap - w) / 2) + "px";
   el.style.setProperty("--ssh", Math.round(Math.min(420, innerHeight * .46, (w - 32 - 150) * 16 / 9)) + "px");   // the clip shrinks on narrow columns so the caption keeps ~150px
   el.hidden = false;
-  if (!el.dataset.on) { el.dataset.on = "1"; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
+  if (!el.dataset.on) { el.dataset.on = "1"; sideMovies(); }
 }
 window.addEventListener("resize", () => { clearTimeout(window._bsrT); window._bsrT = setTimeout(briefSideRoom, 200); });
 // the card changes width while it loads (and when the heat map comes and goes): keep the videos beside it
@@ -9196,10 +9196,12 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 .sc-grade { margin-left: 6px; font: 700 12px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; }
 /* the Screening Room (Patch 195) */
 .sr-card { margin: 16px 0; } .sr-card[hidden] { display: none; }
+.bf-sr { margin: 0; } .bf-sr .sr-feat { grid-template-columns: 1fr; } .bf-sr .sr-fp { aspect-ratio: 16 / 10; }
 .sr-feat { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; margin: 10px 0 4px; }
 .sr-fp { position: relative; aspect-ratio: 4 / 3; border-radius: 14px; background: #000 center / cover no-repeat; display: flex; align-items: center; justify-content: center; }
 .sr-play { width: 52px; height: 52px; border-radius: 50%; background: rgba(7,9,13,.6); border: 1px solid rgba(255,255,255,.4); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; padding-left: 3px; }
-.sr-ft { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sr-ft { display: flex; flex-direction: column; gap: 6px; min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.sr-feat, .sr-tile { white-space: normal; font: inherit; }
 .sr-ft b { font: 400 22px/1.2 "Newsreader", Georgia, serif; color: var(--ink, #fff); }
 .sr-ft small { font: 600 11px/1.3 var(--mono, monospace); letter-spacing: .08em; text-transform: uppercase; color: var(--mut, #9AA0AC); }
 .sr-ft span { font-size: 14px; line-height: 1.45; color: var(--ink2, #C9CED6); }
@@ -9997,8 +9999,13 @@ const stkCalm = () => (window.matchMedia && matchMedia("(prefers-reduced-motion:
 // Full-length public-domain films. The catalog and posters are ours; archive.org's embed streams the film, so
 // playback never loads this server. One feature a day for everyone, plus two finite shelves. With sound.
 let SR = null;
-async function renderScreening() {
-  const el = $("screening"); if (!el) return;
+// beside the stock panel on computers: the Screening Room (the Stack and the Waiting Room only if there are no films)
+async function sideMovies() {
+  await renderScreening($("bfSR"));
+  if ($("bfSR").hidden) { $("bfWrRoom").hidden = false; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
+}
+async function renderScreening(host) {
+  const el = host || $("screening"); if (!el) return;
   if (!SR) { try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); SR = r.status === 200 ? await r.json() : {}; } catch (e) { SR = {}; } }
   const f = SR && SR.feature; if (!f) { el.hidden = true; return; }
   const meta = (x) => [x.year, x.runtime, x.vein].filter(Boolean).map(esc).join(" · ");
