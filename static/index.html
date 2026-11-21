@@ -6596,7 +6596,9 @@ function renderRetest() {
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null});
   }
   // Patch 184: tape-confirmed first inside each group, then fewest candles left (no tape_flow → today's order)
-  const byTape = (a, b) => ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
+  // A grades first (the setups the app trades), then tape-confirmed (Patch 184), then fewest candles left
+  const isA = (x) => x.grade === "A" ? 1 : 0;
+  const byTape = (a, b) => (isA(b) - isA(a)) || ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
   const now = rows.filter(x => x.near).sort(byTape);
   const wait = rows.filter(x => !x.near).sort(byTape);
   renderCkChips(now.length, wait.length);
@@ -6615,7 +6617,9 @@ function renderRetest() {
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
   // Patch 191: the first row of the existing order is the hero card; the rest render as today
-  const heroRow = now[0] || wait[0], heroKind = now.length ? "now" : "wait";
+  // the hero is the best A: at the edge first, else an A still waiting; with no A anywhere, the first row as before
+  const heroRow = now.find(x => x.grade === "A") || wait.find(x => x.grade === "A") || now[0] || wait[0];
+  const heroKind = now.includes(heroRow) ? "now" : "wait";
   const hero = (x, kind) => {
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null;
     const conf = !!(x.hub && x.tape_flow && x.tape_flow.line);
@@ -6626,7 +6630,7 @@ function renderRetest() {
       ${conf ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b></small><small class="ckh-rec" data-sym="${esc(x.sym)}"></small>` : ""}
     </a>`;
   };
-  const restNow = now.filter(x => x !== heroRow);
+  const restNow = now.filter(x => x !== heroRow);   // (a waiting hero still appears in the full waiting list below)
   const sub = (title, list, kind) => list.length ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
   const footer = (ME && !ME.a_all)
     ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>` : "";
@@ -7044,12 +7048,12 @@ function boardRows(){
 function renderInstitutionalBoard(){
   const STALE_OF=boardStaleOf(BOARD_DATA);
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="setups"?(r._kind==="live"||r._kind==="near"):BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="setups"?(r._kind==="live"||r._kind==="near"):BOARD_KIND==="a"?(r._kind==="live"&&r.grade==="A"):BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     // Patch 165: the default All view ("tier" sort): live setups first (grade A→B→C→D→?), then your
     // watchlist, then the rest by the size of the day's move. Returning 0 keeps the board's own order
     // inside a tier (live rows keep board()'s closest-to-target order). Column sorts replace this.
-    if(BOARD_SORT==="tier"&&(BOARD_KIND==="all"||BOARD_KIND==="setups")){
+    if(BOARD_SORT==="tier"&&(BOARD_KIND==="all"||BOARD_KIND==="setups"||BOARD_KIND==="a")){
       const ta=a._kind==="live"?0:a.watching?1:2, tb=b._kind==="live"?0:b.watching?1:2;
       if(ta!==tb) return ta-tb;
       if(ta===0){ const gr={"A":0,"B":1,"C":2,"D":3}; const ga=gr[a.grade]??4, gb=gr[b.grade]??4; if(ga!==gb) return ga-gb; }
@@ -7094,8 +7098,8 @@ function renderInstitutionalBoard(){
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
-  const lockRow=lockedN&&(BOARD_KIND==="setups"||BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new"||BOARD_KIND==="retesting")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
-  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">No symbols match this view.</div></td></tr>';
+  const lockRow=lockedN&&(BOARD_KIND==="setups"||BOARD_KIND==="a"||BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new"||BOARD_KIND==="retesting")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
+  const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">'+(BOARD_KIND==="a"?'No A setups are live right now. Grades fill in after each sweep, and Today shows any A retest first.':'No symbols match this view.')+'</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
   document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
@@ -7200,6 +7204,7 @@ async function loadBoard() {
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
     '<div class="board-filters"><button class="board-filter active" data-kind="setups" onclick="filterInstitutionalBoard(\'setups\')" title="Live breakouts and breakdowns (including those retesting) and hubs at the edge: what can become a trade">Setups</button>'+
     '<button class="board-filter" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
+    '<button class="board-filter" data-kind="a" onclick="filterInstitutionalBoard(\'a\')" title="Live breakouts and breakdowns whose setup grades A">A only</button>'+
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
     '<button class="board-filter" data-kind="retesting" onclick="filterInstitutionalBoard(\'retesting\')" title="Live breakouts and breakdowns inside their 5-candle retest window">Retesting</button>'+
     ((b.live||[]).some(r=>r.tape_flow)?'<button class="board-filter" data-kind="flow" onclick="filterInstitutionalBoard(\'flow\')" title="Live breakouts and breakdowns whose breakout aggressive flow confirmed (options tape)">Flow confirmed</button>':'')+

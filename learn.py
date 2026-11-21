@@ -249,6 +249,24 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
           1, "Cheap, far out-of-the-money, short-dated options need a big fast move and usually expire worthless.")),
     ]),
     ("The trader with a day job", "Making the method fit your life.", [
+        ("find-a-setups", "Where to find A setups when you log in", 3, """
+<p>You open NextShelf with five minutes to spare. Here's where to look, in order.</p>
+<h2>1. The hero card on Today</h2>
+<p>Today is the first screen after you log in. Under the brief and the three chips (VIX, Retesting now, Waiting) sits one larger card: the <b>hero</b>. When any setup grades <b>A</b>, the best one is the hero: one at the edge right now first, otherwise one still waiting for its retest. The letter in the hero's top-right corner is the grade.</p>
+<h2>2. The rest of "Retesting now"</h2>
+<p>Under the hero are the other setups at the edge, with A grades listed first. Each one is a tap away from its chart and its plan. "At the edge" means the next 4-hour close decides it.</p>
+<h2>3. The A only chip on the board</h2>
+<p>On the board (Browse setups), tap <b>A only</b> to see just the live breakouts and breakdowns whose setup grades A. <b>Setups</b>, the default chip, shows everything that can become a trade; <b>All</b> shows the whole table.</p>
+<h2>What the A means</h2>
+<p>The grade is the setup's measured past record across every stock NextShelf scans, not a guess about this one stock. A is the best-measured. It describes what similar setups did before; it doesn't promise what this one will do, which is why every A still comes with a stop.</p>
+<h2>Or let it come to you</h2>
+<p>Turn on <b>Every A setup</b> (under Retesting now, or in Account) and NextShelf messages you whenever an A setup confirms on any stock it scans, not just your watchlist: about 8 a week. That's the version for a busy day.</p>""",
+         ["Today's hero card shows the best A setup first, with its grade in the corner.",
+          "Retesting now lists the others at the edge, A grades first; the board's A only chip filters to A.",
+          "The grade is a past record across all stocks, not a promise. Every A still has a stop."],
+         ("You log in at lunch. Where's the quickest place to see the best A setup?",
+          ["The market map", "The hero card at the top of Today", "The Lab"],
+          1, "Today's hero card puts the best A setup first, right under the brief and the chips.")),
         ("set-it-before-work", "Set it before work: bracket orders", 4, """
 <p>You can't watch the 1:30 PM or 4:00 PM close from a meeting. One way around that is to place the order in the morning and let your broker handle it.</p>
 <h2>The bracket order</h2>
