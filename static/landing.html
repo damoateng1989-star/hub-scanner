@@ -451,6 +451,9 @@ html[data-theme="light"] .hero.ns.hcx .hx-ghost{
 }
 html[data-theme="light"] footer .ft-giant{color:rgba(58,70,86,.10);background:radial-gradient(60% 95% at 50% 100%,rgba(37,99,235,.14),rgba(37,99,235,0) 70%);text-shadow:0 0 55px rgba(37,99,235,.12)}
 
+.rec .stat[hidden] { display: none; }
+.rec .rec-young { grid-column: span 2; display: flex; align-items: center; }
+.rec .rec-young .cap { font-size: 15px; color: var(--ink2, #B9B8B0); }
 </style>
 <style>
 /* the hub-to-alert animation (kept from the previous landing page) */
@@ -1195,14 +1198,14 @@ window.nsStamp = (s) => { if (!s) return ""; const d = new Date(String(s).replac
         $("hxTrack").innerHTML = half + half;
         $("hxTrack").style.animationDuration = Math.max(24, s.recent.length * reps * 3.2) + "s";
       } else if ($("hxTrack")) $("hxTrack").classList.add("static");
-      $("bpHubs").textContent = n(inPlay);
+      if ($("bpHubs")) $("bpHubs").textContent = n(inPlay);      // these three left the page in a redesign: guard, or the record below never fills
       if ($("hxSika")) $("hxSika").innerHTML = `swept <b>${n(s.universe)}</b> stocks at the last 4-hour close · <b class="g">${n(s.live)}</b> breakouts · <b>${n(s.near)}</b> at a hub edge`;
-      $("bpLine").innerHTML = `Swept <b>${n(s.universe)}</b> stocks: <b class="g">${n(s.live)}</b> breaking out now, <b>${n(inPlay)}</b> hubs in play (${n(s.forming)} resting + ${n(s.live)} breaking out) · <b class="y">${n(s.near)}</b> of the resting ones at a hub edge.`;
+      if ($("bpLine")) $("bpLine").innerHTML = `Swept <b>${n(s.universe)}</b> stocks: <b class="g">${n(s.live)}</b> breaking out now, <b>${n(inPlay)}</b> hubs in play (${n(s.forming)} resting + ${n(s.live)} breaking out) · <b class="y">${n(s.near)}</b> of the resting ones at a hub edge.`;
     }
     if (s.next) {
       const d = new Date(s.next), ny = {timeZone: "America/New_York"};
       const day = d.toLocaleDateString("en-US", {...ny, weekday: "short"}) === new Date().toLocaleDateString("en-US", {...ny, weekday: "short"}) ? "today" : d.toLocaleDateString("en-US", {...ny, weekday: "long"});
-      $("bpNext").textContent = `Next board sweep ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
+      if ($("bpNext")) $("bpNext").textContent = `Next board sweep ${day} ${d.toLocaleTimeString("en-US", {...ny, hour: "numeric", minute: "2-digit"})} ET.`;
     }
     if (s.tested && s.tested.rows && s.tested.rows.length) {
       const T = s.tested, mo = (t) => t ? new Date(t).toLocaleDateString("en-US", {month: "short", year: "numeric"}) : "";
@@ -1212,17 +1215,25 @@ window.nsStamp = (s) => { if (!s) return ""; const d = new Date(String(s).replac
       if (T.rows.length < 3) $("recTestRow").classList.add("two");
       $("recTest").hidden = false;
     }
+    // Patch 186: a young live log reads as young, never as bare dashes; the started note shows until 50 closed
+    const closed = Number(s.closed || 0), since = s.since ? new Date(String(s.since).length === 10 ? s.since + "T12:00:00" : s.since).toLocaleDateString("en-US", {month: "long", day: "numeric"}) : "launch";
     if (s.signals) {
       $("recN").textContent = n(s.signals);
-      $("recNc").textContent = `trades logged · ${n(s.open)} still open · ${n(s.reached)} of ${n(s.closed)} closed reached the target`;
+      $("recNc").textContent = `trades logged · ${n(s.open)} still open · ${closed ? `${n(s.reached)} of ${n(closed)} closed reached the target` : "none closed yet"}`;
       if (s.updated) $("recNote").insertAdjacentHTML("afterbegin", `Updated ${nsStamp(s.updated)}. `);
+    } else {
+      $("recN").textContent = "0"; $("recNc").textContent = "trades logged so far";
+    }
+    if (closed && (s.reached_pct != null || s.avg_ret != null)) {
       $("recHit").textContent = s.reached_pct == null ? "–" : s.reached_pct + "%";
       $("recAvg").textContent = s.avg_ret == null ? "–" : (s.avg_ret > 0 ? "+" : "") + s.avg_ret + "%";
       if (s.avg_ret != null) $("recAvg").style.color = s.avg_ret >= 0 ? "var(--up)" : "var(--down)";
-    } else {
-      $("recN").textContent = "0"; $("recNc").textContent = "trades logged so far";
-      $("recNote").insertAdjacentHTML("afterbegin", "This record started on " + (s.since ? new Date(s.since).toLocaleDateString("en-US", {month: "long", day: "numeric"}) : "launch") + " and fills in as trades close. Until it has 50 or more, the two-year test above is the better guide. ");
+    } else {        // no closed trades: one line where the two rate cells would be
+      const hit = $("recHit").parentElement, avg = $("recAvg").parentElement;
+      hit.hidden = true; avg.hidden = true;
+      if (!$("recYoung")) hit.insertAdjacentHTML("beforebegin", `<div class="stat rec-young" id="recYoung"><div class="cap">No closed trades yet — the first closes land here.</div></div>`);
     }
+    if (closed < 50) $("recNote").insertAdjacentHTML("afterbegin", `This record started on ${since} and fills in as trades close. Until it has 50 or more, the two-year test above is the better guide. `);
   }).catch(() => {});
 
   // ---- waitlist sign-up
