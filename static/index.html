@@ -3130,7 +3130,7 @@ function summary(sym, st, key) {
     case "breakout_up": case "breakdown": {
       const isUp = key === "breakout_up", edge = isUp ? h.high : h.low;
       const rt = st.retest && st.retest.candles_left > 0
-        ? ` Waiting for the retest: entry on a 4H close back near ${money(edge)} that holds ${isUp ? "above" : "below"} it (${st.retest.candles_left} candle${st.retest.candles_left === 1 ? "" : "s"} left).${st.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}`
+        ? ` Waiting for the retest: entry on a 4H close back near ${money(edge)} that holds ${isUp ? "above" : "below"} it (window closes ${retestBy(st.retest.candles_left)}).${st.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}`
         : "";
       if (st.target_kind === "atr" && st.target_zone) {
         const z = st.target_zone;
@@ -3183,7 +3183,7 @@ function oneLine(st, key) {
     case "error": return esc(st.error || "Couldn't load");
     default: {
       const live = (st.setups || []).find(x => x.state === "breakout_up" || x.state === "breakdown");
-      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${live.state === "breakout_up" ? "Broke out ↑" : "Broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}${live.retest && live.retest.candles_left > 0 ? ` · waiting for the retest (${live.retest.candles_left} candle${live.retest.candles_left === 1 ? "" : "s"} left)` : ""}`;
+      if (live) return `<b class="u-${live.state === "breakout_up" ? "up" : "down"}">${live.state === "breakout_up" ? "Broke out ↑" : "Broke down ↓"}</b> through ${money(live.edge)} · aiming for ${money(live.target)}${live.retest && live.retest.candles_left > 0 ? ` · waiting for the retest (window closes ${retestBy(live.retest.candles_left)})` : ""}`;
       return up || dn ? `Nearest shelves ${[up && money(up.level) + " above", dn && money(dn.level) + " below"].filter(Boolean).join(" / ")}` : "";
     }
   }
@@ -3199,7 +3199,7 @@ function setupSummary(sym, x, st) {
       + (x.candles != null ? ` (day ${x.candles + 1} of 10)` : "") + ".";
   } else if (x.kind === "double_bottom") {
     t = `${sym} closed <b class="u-up">above its double-bottom neckline ${money(x.edge)}</b>. That's the heads-up, not the entry: `
-      + (x.retest && x.retest.candles_left > 0 ? `the entry is a 4-hour close back near ${money(x.retest.edge)} that holds above it (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left), an A setup if it's the 4:00 PM close. ` : `the retest window has passed, so there's no entry now. `)
+      + (x.retest && x.retest.candles_left > 0 ? `the entry is a 4-hour close back near ${money(x.retest.edge)} that holds above it (window closes ${retestBy(x.retest.candles_left)}), an A setup if it's the 4:00 PM close. ` : `the retest window has passed, so there's no entry now. `)
       + `Target <b>${money(x.target)}</b>${dist}${x.far != null ? `; the stop would sit below the lows, at <b>${money(x.far)}</b>` : ""}.`;
   } else if (x.kind === "double_top") {
     t = `${sym} closed <b class="u-down">below its double-top neckline ${money(x.edge)}</b>. Watch only: double tops lost money in the two-year test, so there's no entry plan on the short side. Target ${money(x.target)}${dist}.`;
@@ -4909,7 +4909,7 @@ function mapPlan(sym, st) {
       steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2,
        retest: d === 1 && rt && rt.candles_left > 0 ? {edge: rt.edge, near: !!rt.near} : null});
     if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
-      P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (${rt.candles_left} candle${rt.candles_left === 1 ? "" : "s"} left).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
+      P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (window closes ${retestBy(rt.candles_left)}).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
     else { P.status = "Broke down · watch only"; P.sub = "Short breakdowns lost money in the two-year test, so there's no entry plan."; P.tone = "bad"; }
   } else if (other && other.kind.startsWith("double")) {
     mapDoublePlan(P, other);
@@ -6438,7 +6438,7 @@ function briefHTML(sym, st, chart) {
   const setupsHTML = others.length ? `<p class="beta-line">Only the measured setups are shown: hubs, double tops &amp; bottoms, and gap fade &amp; rip.</p><div class="gp">${others.map(x => {
       const [w, c] = setupWord(x), col = {up: "#3DD68C", down: "#FF6B5E", near: "#F2C14E", "near-sup": "#00C898", "near-res": "#F00060", hub: "#9fb3ff"}[c];
       let t;
-      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.strength ? ` ${strengthChip(x.strength, x.state === "breakout_up")}` : ""}${x.kind === "flush" ? ` Wrong on a daily close back below ${money(x.edge)}.` : x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}${x.retest && x.retest.candles_left > 0 ? ` Waiting for the retest: entry on a 4H close back near the neckline ${money(x.retest.edge)} that holds ${x.state === "breakout_up" ? "above" : "below"} it (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left).${x.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}` : ""}`;
+      if (x.state === "breakout_up" || x.state === "breakdown") t = `<b>${esc(x.name)}: ${w.toLowerCase()}</b>. Closed ${x.state === "breakout_up" ? "above" : "below"} ${money(x.edge)}, aiming for <b>${money(x.target)}</b> (${pctFrom(x.target, p)}).${x.strength ? ` ${strengthChip(x.strength, x.state === "breakout_up")}` : ""}${x.kind === "flush" ? ` Wrong on a daily close back below ${money(x.edge)}.` : x.stop != null && x.kind !== "gapfade" ? ` Wrong on a close ${x.state === "breakout_up" ? "below" : "above"} the fake-out ${x.state === "breakout_up" ? "low" : "high"} ${money(x.stop)}.` : ""}${x.retest && x.retest.candles_left > 0 ? ` Waiting for the retest: entry on a 4H close back near the neckline ${money(x.retest.edge)} that holds ${x.state === "breakout_up" ? "above" : "below"} it (window closes ${retestBy(x.retest.candles_left)}).${x.retest.near ? " Price is back at the edge now — the next 4H close decides it." : ""}` : ""}`;
       else if (x.kind === "sr") t = `<b>Support &amp; resistance</b>: ${x.upper != null ? `resistance <b>${money(x.upper)}</b> (${x.upper_touches} touches)` : ""}${x.upper != null && x.lower != null ? ", " : ""}${x.lower != null ? `support <b>${money(x.lower)}</b> (${x.lower_touches} touches)` : ""}.${x.near ? ` Price is <b>testing ${x.near}</b>.` : ""}`;
       else if (x.kind.startsWith("double")) t = x.kind === "double_top"
         ? `<b>Double top</b>: two peaks near <b>${money(x.peak)}</b>. A 4-hour close <b>below the neckline ${money(x.neck)}</b> is the short setup.`
@@ -6503,6 +6503,26 @@ function vixSeg() {
   const todayET = new Date().toLocaleDateString("en-CA", {timeZone: "America/New_York"});
   const day = v.date && v.date !== todayET ? ` (${new Date(v.date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short"})} close)` : "";
   return ` · <span class="mkt-vix">VIX ${Number(v.level).toFixed(2)} · ${esc(v.band || "")}${day}</span>`;
+}
+// The retest window as a plain deadline: the Nth upcoming 4-hour close (1:30 PM, 4:00 PM ET on weekdays) instead of
+// "N candles left". short=true gives "Tue 4 PM" for tight spots like the board badge.
+function retestBy(left, short) {
+  left = Number(left); if (!(left > 0)) return "";
+  const p = etParts(new Date()), names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const base = Date.UTC(+p.year, +p.month - 1, +p.day), mins = (+p.hour % 24) * 60 + +p.minute;
+  let k = 0;
+  for (let step = 0; step < 30; step++) {
+    const dt = new Date(base + step * 864e5), wd = dt.getUTCDay();
+    if (wd < 1 || wd > 5) continue;
+    for (const c of [810, 960]) {
+      if (step === 0 && c <= mins) continue;           // today's closes that already happened don't count
+      if (++k === left) {
+        const day = step === 0 ? "today" : step === 1 ? "tomorrow" : names[wd];
+        return `${day} ${c === 810 ? "1:30 PM" : short ? "4 PM" : "4:00 PM"}`;
+      }
+    }
+  }
+  return "";
 }
 function marketChip() {
   const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
@@ -6615,8 +6635,8 @@ function renderRetest() {
   const row = (x, kind) => {
     const up = x.state !== "breakdown";
     const txt = kind === "now"
-      ? `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
-      : `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
+      ? `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · retest window closes ${retestBy(x.left)} — the next 4H close decides it`
+      : `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · retest window closes ${retestBy(x.left)}`;
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
@@ -6631,7 +6651,7 @@ function renderRetest() {
     return `<a class="ck-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
       <div class="ckh-top"><span class="ckh-k">${kind === "now" ? "At the edge now" : "Retest coming"}</span>${g ? `<span class="sg-in ${GRADE_CLS[g]} ckh-g">${g}</span>` : ""}</div>
       <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
-      <div class="ckh-line">${kind === "now" ? `At the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · the next 4H close decides it` : `Pullback not at the edge yet · edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}`} · ${x.left} candle${x.left === 1 ? "" : "s"} left</div>
+      <div class="ckh-line">${kind === "now" ? `At the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · the next 4H close decides it` : `Pullback not at the edge yet · edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}`} · retest window closes ${retestBy(x.left)}</div>
       ${conf ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b></small><small class="ckh-rec" data-sym="${esc(x.sym)}"></small>` : ""}
     </a>`;
   };
@@ -7097,7 +7117,7 @@ function renderInstitutionalBoard(){
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     const rStale=STALE_OF(r);
     return '<tr'+(rStale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(rStale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait" title="The retest window closes '+retestBy(r.retest.candles_left)+' ET">RETEST · UNTIL '+retestBy(r.retest.candles_left,true).toUpperCase()+'</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(rStale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -7109,7 +7129,7 @@ function renderInstitutionalBoard(){
   if(fr&&!ax){ax=document.createElement("div");ax.id="boardAExtra";fr.after(ax);}
   const as=BOARD_KIND==="a"?(BOARD_DATA.setups||[]).filter(r=>(r.state==="breakout_up"||r.state==="breakdown")&&r.grade==="A"&&r.kind!=="double_top"):[];
   if(ax){
-    ax.innerHTML=as.length?'<div class="board-aextra"><div class="retest-sub">A double bottoms and gap fades · '+as.length+'</div>'+as.map(r=>'<a class="arow" href="#discover" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')" style="--c:var(--up)"><i></i><span class="t"><span class="tk">'+esc(r.symbol)+'</span><span>'+esc(r.name||r.kind)+' · <b class="sg-in ga">A</b> · target '+money(r.target)+(r.retest&&r.retest.candles_left>0?' · retest window, '+r.retest.candles_left+' candle'+(r.retest.candles_left===1?'':'s')+' left':'')+'</span></span><span class="go">›</span></a>').join("")+'</div>':"";
+    ax.innerHTML=as.length?'<div class="board-aextra"><div class="retest-sub">A double bottoms and gap fades · '+as.length+'</div>'+as.map(r=>'<a class="arow" href="#discover" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')" style="--c:var(--up)"><i></i><span class="t"><span class="tk">'+esc(r.symbol)+'</span><span>'+esc(r.name||r.kind)+' · <b class="sg-in ga">A</b> · target '+money(r.target)+(r.retest&&r.retest.candles_left>0?' · retest window closes '+retestBy(r.retest.candles_left):'')+'</span></span><span class="go">›</span></a>').join("")+'</div>':"";
     ax.hidden=!as.length;}
   const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">'+(BOARD_KIND==="a"?(as.length?'No A hub setups are live right now. The A double bottoms and gap fades are below.':'No A setups are live right now. Grades fill in after each sweep, and Today shows any A retest first.'):'No symbols match this view.')+'</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
@@ -7166,7 +7186,7 @@ function paintHeatmap() {
       const rt = typeof rtItem === "function" ? rtItem(t.s) : null,
             rtc = rt ? (rt.near ? " hm-rt" : " hm-rtw") + (rt.d === -1 ? " hm-dn" : "") + (t.w < 56 || t.h < 30 ? " hm-xs" : "") : "";
       if (rtc) { const ck = rt.near ? (rt.d === -1 ? "rtdn" : "rt") : "rtw"; counts[ck] = (counts[ck] || 0) + 1; }
-      html += `<button class="hm-t ${cls}${skc}${rtc}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}${sk ? ` · ${esc(sk.name)} ${sk.passed}/${sk.total}` : ""}${rt ? ` · ${rt.near ? "retesting the edge" : "in its retest window"} · ${rt.left} candle${rt.left === 1 ? "" : "s"} left` : ""}"
+      html += `<button class="hm-t ${cls}${skc}${rtc}" style="left:${t.x}px;top:${t.y}px;width:${t.w}px;height:${t.h}px" data-s="${esc(t.s)}" data-tip="${esc(t.s)} · ${esc(S.k)} · ${lab}${sk ? ` · ${esc(sk.name)} ${sk.passed}/${sk.total}` : ""}${rt ? ` · ${rt.near ? "retesting the edge" : "in its retest window"} · retest window closes ${retestBy(rt.left)}` : ""}"
         onclick="openBrief('${esc(t.s)}')">${fit >= 10 ? `<span style="font-size:${fs.toFixed(1)}px">${esc(t.s)}</span>` : ""}</button>`;
     }
     html += `</div>`;
@@ -7698,7 +7718,7 @@ function setupCard(x) {
     const reached = (P - x.target) * (up ? 1 : -1) >= 0;
     pos = reached ? "At the target" : pct(x.target, P) + " to the target";
     meta = (gap ? `<b>Plan:</b> out on a daily close below <b>${money(x.stop)}</b> · target <b>${money(x.target)}</b> (2× the risk) · day ${x.candles + 1} of 10` : `Target <b>${money(x.target)}</b>`) + (gap ? "" : `${x.far != null ? ` · wrong past ${money(x.far)}` : ""} · ${x.candles}/10 candles`)
-      + (x.retest && x.retest.candles_left > 0 ? `<br>Wait for the retest: a 4H close back near <b>${money(x.retest.edge)}</b> that holds (${x.retest.candles_left} candle${x.retest.candles_left === 1 ? "" : "s"} left)${x.retest.near ? ". Price is back at it now" : ""}.` : "");
+      + (x.retest && x.retest.candles_left > 0 ? `<br>Wait for the retest: a 4H close back near <b>${money(x.retest.edge)}</b> that holds (window closes ${retestBy(x.retest.candles_left)})${x.retest.near ? ". Price is back at it now" : ""}.` : "");
   } else {
     const d = Math.abs((trig / P - 1) * 100);
     const dd = Math.abs(trig - P).toFixed(2);
