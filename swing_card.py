@@ -375,10 +375,10 @@ def _flow_lines(fx, d):
 
     Phase 1 composes at most one line, here in code — never by the model.
     'confirmed' states the classification and cites the measured record;
-    'against' does the same with its own side of the record (Decision 2:
-    visible, the spec's proposed default — the record shows both sides or
-    neither; making it silent is deleting the 'against' branch below and
-    nothing else). 'none' composes no line: it is the majority state, and
+    'against' composes no line. Revised Nov 21 (Patch 182): the stacked ×
+    flow test showed the state positive-but-unstable (+0.77%/PF 1.57 against
+    the primary's −0.49%/PF 0.74), not reliably bad; the facts stay on the
+    card for chat, the warning line goes. 'none' composes no line: it is the majority state, and
     a 'nothing happened' line on most plays is noise — the facts stay on
     the card for chat. The only variable in the wording is the net
     premium, in the app's M format (Patch 167, via _gex_size)."""
@@ -394,15 +394,22 @@ def _flow_lines(fx, d):
                     f"premium over the two sessions into the break. {record}"]
         return [f"Flow: aggressive put buying confirmed this breakdown — net aggressive-buy "
                 f"premium of −{net} over the two sessions into the break. {record}"]
-    if fx["state"] == "against":
-        record = (f"In the Flow Lab test, retests with flow against them measured "
-                  f"{_flow_pct(a['avg_pct'])} per trade ({a['n']} trades, PF {a['pf']:.2f}).")
-        if d == 1:
-            return [f"Flow: aggressive buying ran against this breakout — net aggressive-buy "
-                    f"premium of −{net} over the two sessions into the break. {record}"]
-        return [f"Flow: aggressive call buying ran against this breakdown — net aggressive-buy "
-                f"premium of +{net} over the two sessions into the break. {record}"]
     return []
+
+
+def tape_short_line(row, d):
+    """Patch 182: the board card's (and the retest alert's) one-line form of a
+    stored classification. Confirmed only — 'none' is the majority state and a
+    nothing-happened line is noise; 'against' composes no line anywhere (see
+    _flow_lines). Fact only, no record: the swing card carries the citation."""
+    if not row or row.get("state") != "confirmed":
+        return None
+    net = _gex_size(row["flow_net"])          # already "$x.xxM", as in _flow_lines
+    if d == 1:
+        return (f"Tape flow: aggressive buying confirmed this breakout — "
+                f"{net} net aggressive-buy premium over the two sessions into the break.")
+    return (f"Tape flow: aggressive put buying confirmed this breakdown — "
+            f"net aggressive-buy premium of −{net} over the two sessions into the break.")
 
 
 def _wall_beyond(sh, d, level):

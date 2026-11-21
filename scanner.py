@@ -717,6 +717,13 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
             if 1 <= k <= engine.RETEST_MAX:
                 edge = pend["edge"]
                 j = len(c4) - 1
+                tape_ = None     # Patch 182: the stored tape classification of THIS breakout (confirmed only)
+                try:             # — the breakout alert never has it: its tape isn't couriered until that night
+                    import swing_card
+                    bd_ = c4.index[i0].tz_convert("America/New_York").date().isoformat()
+                    tape_ = swing_card.tape_short_line(db.flow_signal_for(sym, d, bd_), d)
+                except Exception:
+                    tape_ = None
                 rc = engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float),
                                          c4["High"].to_numpy(float), res["atr"].to_numpy(float), i0, d, edge, j)
                 if rc is None:
@@ -733,7 +740,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                 f" ({left_} candle{'s' if left_ != 1 else ''} left in the window). Target {_money(pend['target'])}.")
                         if db.add_alert(f"{sym}|retesting_now|{c4.index[i0].isoformat()}", sym, "retesting_now",
                                         c4.index[j].isoformat(), msg_):
-                            notify.symbol_alert(sym, "retesting_now", msg_, None, candle_start=c4.index[j], members=d == 1)
+                            notify.symbol_alert(sym, "retesting_now", msg_, None, candle_start=c4.index[j], members=d == 1,
+                                                flow_extra=tape_)
                             sent.append(msg_)
                 if rc == "retest":
                     close2 = float(res["close"].iloc[j])
@@ -766,7 +774,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                     c4.index[j].isoformat(), msg):
                         # Nov 20: members get the one hub retest that passed the Lab — A grade, longs
                         notify.symbol_alert(sym, "retest", msg, speech, pro_extra=extra, candle_start=c4.index[j],
-                                            members=bool(grade["is_a"]) and d == 1)
+                                            members=bool(grade["is_a"]) and d == 1, flow_extra=tape_)
                         sent.append(msg)
     except Exception as ex:
         log.warning("retest check failed for %s: %s", sym, ex)

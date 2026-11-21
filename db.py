@@ -364,6 +364,22 @@ def flow_signal_for(symbol: str, direction: int, breakout_date: str) -> dict | N
         return None
 
 
+def flow_signal_latest(symbol: str, direction: int, max_age_days: int = 10) -> dict | None:
+    """The newest flow_signal row for a symbol+direction whose breakout is
+    inside the classifier's own window (flow_signal._live_breakouts uses the
+    same 10 days). A live board row's breakout is the only classification
+    that can be in-window for it, so latest-in-window IS that breakout's
+    row. None when unclassified — unknown, never guessed (Patch 174/182)."""
+    try:
+        r = _run("""SELECT * FROM flow_signal WHERE symbol=? AND direction=?
+                    AND breakout_date >= date('now', ?)
+                    ORDER BY breakout_date DESC LIMIT 1""",
+                 (symbol, direction, f"-{int(max_age_days)} days")).fetchone()
+        return dict(r) if r else None
+    except Exception:
+        return None
+
+
 def log_flow_tape(symbol: str, day: str, agg: dict, provider: str, as_of: str):
     """First write wins, like log_flow_signal: a day's final tape, once
     stored, is the stored measurement; a repost never overwrites it."""

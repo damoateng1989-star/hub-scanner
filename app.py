@@ -1059,6 +1059,17 @@ def board_data(u: dict | None = Maybe):
         b["live"], b["near"] = [], []
         b["setups_locked"] = sum(1 for x in b["setups"] if x["state"] in ("breakout_up", "breakdown", "testing"))
         b["setups"] = [x for x in b["setups"] if x["state"] not in ("breakout_up", "breakdown", "testing")]
+    try:      # Patch 182: the real tape classification (Patch 174/177) on live
+        import swing_card as _sc   # board rows, behind the same visibility gate
+        if _sc.flow_allowed(u):    # as the swing card. Stored rows only; never the proxy's "flow" key.
+            for r in b["live"]:
+                d = 1 if r.get("state") == "breakout_up" else -1
+                row = db.flow_signal_latest(r["symbol"], d)
+                if row:
+                    r["tape_flow"] = dict(state=row["state"], net=row["flow_net"],
+                                          line=_sc.tape_short_line(row, d))
+    except Exception:
+        pass
     for x in b["setups"]:
         x["watching"] = x["symbol"] in mine
     for group in ("live", "near", "forming", "recent", "setups"):   # for the Webull / Robinhood links

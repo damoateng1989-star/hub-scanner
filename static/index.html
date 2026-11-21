@@ -6950,7 +6950,7 @@ function boardRows(){
 }
 function renderInstitutionalBoard(){
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     // Patch 165: the default All view ("tier" sort): live setups first (grade A→B→C→D→?), then your
     // watchlist, then the rest by the size of the day's move. Returning 0 keeps the board's own order
@@ -7105,6 +7105,7 @@ async function loadBoard() {
     '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
     '<button class="board-filter" data-kind="retesting" onclick="filterInstitutionalBoard(\'retesting\')" title="Live breakouts and breakdowns inside their 5-candle retest window">Retesting</button>'+
+    ((b.live||[]).some(r=>r.tape_flow)?'<button class="board-filter" data-kind="flow" onclick="filterInstitutionalBoard(\'flow\')" title="Live breakouts and breakdowns whose breakout aggressive flow confirmed (options tape)">Flow confirmed</button>':'')+
     '<button class="board-filter" data-kind="new" onclick="filterInstitutionalBoard(\'new\')">New</button>'+
     '<button class="board-filter" data-kind="stacked" onclick="filterInstitutionalBoard(\'stacked\')" title="Live hub breakouts with their stacked score">Stacked</button>'+
     '<button class="board-filter" data-kind="forming" onclick="filterInstitutionalBoard(\'forming\')">Inside a hub</button>'+
@@ -7596,6 +7597,7 @@ function setupCard(x) {
   return `<div class="sc"><div class="sc-top"><div class="board-symbol"><a href="/t/${encodeURIComponent(x.symbol)}" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</a><small>${gap ? "1D" : "4H"}</small>${live && (gap || x.kind === "double_bottom") ? stkBadge(x.symbol, [gap ? "Stacked Gap Fade" : "Stacked Double Bottom"]) : ""}</div>
       <div class="sc-st"><span class="board-state ${c}">${w}</span>${live && boardCandles(x) === 0 ? '<span class="board-state new new">NEW</span>' : ""}</div></div>
     ${x.flow && (x.state === "breakout_up" || x.state === "breakdown") ? `<div class="sc-flow">📊 <b>Flow at the breakout: ${x.flow.side === "call" ? "unusual call volume" : x.flow.side === "put" ? "unusual put volume" : "no unusual flow"}</b>${x.flow.side === "none" ? "." : ` — ${x.flow.side === "call" ? Number(x.flow.call_voi).toFixed(1) : Number(x.flow.put_voi).toFixed(1)}× open interest on the ${new Date(x.flow.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"})} ${x.flow.side === "call" ? "calls" : "puts"}.`}<small>Measured on ${new Date(x.flow.breakout_date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"})}, from the options chain. A past fact, not a live reading.</small></div>` : ""}
+    ${x.tape_flow && x.tape_flow.line ? `<div class="sc-flow sc-tape">📊 <b>${esc(x.tape_flow.line)}</b><small>From the options tape, measured at the break. A past fact, not a live reading.</small></div>` : ""}
     <div class="sc-mid"><b class="sc-px">${money(P)}</b><span class="sc-pos">${pos}</span></div>
     <div class="sc-kind"><b>${esc(x.name)}</b> · ${up ? "long" : "short"} setup${x.kind === "double_top" ? ' <span class="beta-tag">beta</span>' : ""}${live ? strengthChip(x.strength, up) : ""}</div>
     ${gap && x.next_pct != null && x.next_pct < 0 ? `<div class="sc-faded">▼ Faded the next day: −${Math.abs(x.next_pct).toFixed(1)}%</div>` : ""}
@@ -8972,6 +8974,8 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc { border: 1px solid var(--line, #26272B); border-radius: 18px; padding: 18px 18px 16px; background: #15161A; min-width: 0; }
 .sc-flow { margin-top: 14px; background: rgba(34,163,92,.07); border: 1px solid #1E7A3C; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.55; color: var(--mp-ink, #E9EBEF); }
 .sc-flow b { color: #3DD68C; }
+.sc-tape { background: rgba(47,84,235,.07); border-color: #2F54EB; }
+.sc-tape b { color: #8FA6FF; }
 .sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }

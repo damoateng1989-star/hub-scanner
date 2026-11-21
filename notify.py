@@ -69,7 +69,7 @@ def late_close(candle_start) -> bool:
 
 
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
-                 pro_extra=None, candle_start=None, members: bool = True):
+                 pro_extra=None, candle_start=None, members: bool = True, flow_extra: str | None = None):
     """Telegram to every watcher (Pro-only types to Pro users); texts to Pro users with a number; phone calls to Pro users with a number (preclose + breakouts only).
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea."""
     extra_cache = {}
@@ -94,11 +94,19 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
                     extra_cache["v"] = None
             if extra_cache["v"]:
                 msg = f"{text}\n{extra_cache['v']}"
+        rich = msg                       # Patch 182: the tape line, for recipients the flow gate allows
+        if flow_extra:
+            try:
+                import swing_card
+                if swing_card.flow_allowed(u):
+                    rich = f"{msg}\n{flow_extra}"
+            except Exception:
+                pass                     # never delays or blocks the alert
         if u["telegram_chat"]:
-            telegram_bot.send(msg, u["telegram_chat"], silent=quiet)
-        _push(u["id"], msg, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
+            telegram_bot.send(rich, u["telegram_chat"], silent=quiet)
+        _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
         if _pro(u) and u["phone"] and not quiet:
-            phone.safe_text(msg, to=u["phone"])
+            phone.safe_text(msg, to=u["phone"])     # texts and calls never carry the tape line
         if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
             phone.safe_call(speech, to=u["phone"])
 

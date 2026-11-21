@@ -278,6 +278,8 @@ html[data-theme="light"] #swingPlay .sw-ctx { color:#78350f; background:#fffbeb;
 #optionsSwing .ox-rules-title { margin:18px 0 6px; font:700 15px var(--sans); } #optionsSwing .ox-rules { margin:4px 0 12px; padding-left:22px; } #optionsSwing .ox-rules li { padding:8px 0; color:var(--muted); } #optionsSwing .ox-rules b { color:var(--ink); } #optionsSwing .ox-disclaimer { margin:12px 0 0; color:var(--muted); font-size:12px; line-height:1.55; }
 html[data-theme="light"] #optionsSwing .oc-rows > div b { color:#0d1117; } html[data-theme="light"] #optionsSwing .oc-rows em.up,html[data-theme="light"] #optionsSwing .oc-rows > div b.oc-gain { color:#15803d; } html[data-theme="light"] #optionsSwing .oc-rows em.dn,html[data-theme="light"] #optionsSwing .oc-rows > div b.oc-lossv { color:#b91c1c; }
 @media(max-width:600px) { #optionsSwing .oc-t b { font-size:18px; } #optionsSwing .oc-rows > div { font-size:13.5px; padding:12px 0; } }
+.sw-flow{margin-top:10px;padding-top:9px;border-top:1px solid rgba(128,128,128,.28);font-size:12.5px;line-height:1.5;opacity:.82}
+.sw-flow p{margin:0}.sw-flow p+p{margin-top:3px}
 </style>
 
 <style>
@@ -846,7 +848,9 @@ function renderSwingCard(c) {
   if (!c) return '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
   const head = `<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>${c.setup ? `<span class="sw-setup">${esc(c.setup)}</span>` : ""}${c.grade ? `<span class="sw-grade">${esc(c.grade)}</span>` : ""}</div>`;
   const asof = c.as_of ? `<p class="sw-foot">As of ${new Date(c.as_of).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}. For education only, not financial advice.</p>` : `<p class="sw-foot">For education only, not financial advice.</p>`;
-  const ctx = (c.context || []).map(x => `<p class="sw-ctx">${esc(x)}</p>`).join("");
+  const ctx = (c.context || []).map(x => `<p class="sw-ctx">${esc(x)}</p>`).join("")
+    + ((c.flow && Array.isArray(c.flow.lines) && c.flow.lines.length)      // Patch 182: the stored tape classification's line(s)
+      ? `<div class="sw-flow">${c.flow.lines.map(t => `<p>${esc(t)}</p>`).join("")}</div>` : "");
   if (c.state === "in_between" && c.in_between) {
     return head + `<p class="sw-note">${esc(c.in_between.text)}</p>` + ctx + asof;
   }
