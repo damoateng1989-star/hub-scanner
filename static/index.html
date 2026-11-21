@@ -2708,14 +2708,14 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
     <h1 id="hello">Welcome</h1>
     <div id="mkt"></div>
   </div>
+  <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
+  <div class="ck-chips" id="ckChips" hidden></div>
+  <div class="retest" id="retest" hidden></div>
   <div class="mbrief" id="mbrief" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
     <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div id="phoneNudge"></div>
-  <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
-  <div class="ck-chips" id="ckChips" hidden></div>
-  <div class="retest" id="retest" hidden></div>
   <div id="ckClosest" hidden></div>
   <div class="panel" id="attnPanel">
     <div class="ph"><h2>Your watchlist</h2><a href="#list" class="more-link">Watchlist →</a></div>
@@ -6586,19 +6586,23 @@ function renderRetest() {
       rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
                  tape_flow: r.tape_flow || null,   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
-                 grade: r.grade || null, hub: true, shelf: r.target_kind !== "atr"});
+                 grade: r.grade || null, hub: true, shelf: r.target_kind !== "atr", kind: "hub"});
   }
   // Patch 185: one symbol, one row — the live hub row wins; a setups row only when the symbol has no row yet
   const seen = new Set(rows.map(x => x.sym));
   for (const r of (BOARD.setups || [])) {
     if (r.retest && r.retest.candles_left > 0 && !seen.has(r.symbol) && seen.add(r.symbol))
       rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge,
-                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null});
+                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null, kind: r.kind});
   }
   // Patch 184: tape-confirmed first inside each group, then fewest candles left (no tape_flow → today's order)
   // A grades first (the setups the app trades), then tape-confirmed (Patch 184), then fewest candles left
   const isA = (x) => x.grade === "A" ? 1 : 0;
-  const byTape = (a, b) => (isA(b) - isA(a)) || ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
+  // what you can trade: hub longs, double bottoms, gap fades. Short breakdowns and double tops are watch only
+  // (they lost money in the two-year test): listed and labelled, never the hero
+  const canTrade = (x) => x.state !== "breakdown" && x.kind !== "double_top";
+  rows.forEach(x => { x.watch = !canTrade(x); });
+  const byTape = (a, b) => ((b.watch ? 0 : 1) - (a.watch ? 0 : 1)) || (isA(b) - isA(a)) || ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
   const now = rows.filter(x => x.near).sort(byTape);
   const wait = rows.filter(x => !x.near).sort(byTape);
   renderCkChips(now.length, wait.length);
@@ -6611,15 +6615,16 @@ function renderRetest() {
   const row = (x, kind) => {
     const up = x.state !== "breakdown";
     const txt = kind === "now"
-      ? `${esc(x.label)} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
-      : `${esc(x.label)} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
+      ? `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
+      : `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
   // Patch 191: the first row of the existing order is the hero card; the rest render as today
   // the hero is the best A: at the edge first, else an A still waiting; with no A anywhere, the first row as before
-  const heroRow = now.find(x => x.grade === "A") || wait.find(x => x.grade === "A") || now[0] || wait[0];
-  const heroKind = now.includes(heroRow) ? "now" : "wait";
+  const ok = (x) => !x.watch;
+  const heroRow = now.find(x => ok(x) && x.grade === "A") || wait.find(x => ok(x) && x.grade === "A") || now.find(ok) || wait.find(ok) || null;
+  const heroKind = heroRow && now.includes(heroRow) ? "now" : "wait";
   const hero = (x, kind) => {
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null;
     const conf = !!(x.hub && x.tape_flow && x.tape_flow.line);
@@ -6634,13 +6639,13 @@ function renderRetest() {
   const sub = (title, list, kind) => list.length ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
   const footer = (ME && !ME.a_all)
     ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>` : "";
-  el.innerHTML = head + hero(heroRow, heroKind) + sub("At the edge", restNow, "now") + (wait.length && !now.length ? "" : "") + footer;
+  el.innerHTML = head + (heroRow ? hero(heroRow, heroKind) : "") + sub("At the edge", restNow, "now") + (wait.length && !now.length ? "" : "") + footer;
   el.hidden = false;
   if (wel) {   // the waiting list, all rows as today, inside "Everything else the scanner sees"
     wel.innerHTML = wait.length ? `<div class="week-head"><div class="week-k">WAITING FOR THE RETEST · ${wait.length}</div></div>${wait.map(x => row(x, "wait")).join("")}` : "";
     wel.hidden = !wait.length;
   }
-  if (heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
+  if (heroRow && heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
 }
 // the hero's record line: the measured Flow Lab record, read from the swing card payload that already carries it
 async function ckHeroRecord(sym) {
@@ -9112,6 +9117,7 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 #retest .arow .tape-chip { display: block; width: max-content; margin: 6px 0 0; }
 #retest .rt-tape { display: block; margin-top: 5px; font-size: 12.5px; line-height: 1.45; color: var(--mp-mut, #9AA0AC); }
 #retest .rt-tape b { color: #8FA6FF; font-weight: 600; }
+.rt-watch { font-weight: 600; color: var(--mut, #9AA0AC); }
 .sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }
