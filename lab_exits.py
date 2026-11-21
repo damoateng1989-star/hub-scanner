@@ -1122,7 +1122,13 @@ def tested_public() -> dict | None:
         if not rows:
             return None
         days = int(st.get("days") or 720)
-        yrs = 2 if days <= 730 else round(days / 365)
+        try:      # Patch 185: name the period from the run's own first–last dates, so the word and the dates always agree
+            span = (pd.Timestamp(st["last"]) - pd.Timestamp(st["first"])).days
+            if span > 0:
+                days = span
+        except Exception:
+            pass
+        yrs = max(1, 2 if days <= 760 else round(days / 365))
         return dict(rows=rows, symbols=st.get("symbols"), first=st.get("first"), last=st.get("last"), finished=st.get("finished"),
                     days=days, period=f"{['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten'][yrs] if yrs <= 10 else yrs}-year")
     except Exception:

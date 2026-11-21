@@ -1153,6 +1153,8 @@ html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-g
   <a class="sp-open" href="/board">See today's setups →</a>
 </div>
 
+<script>/* Patch 185: one "updated" stamp, rendered one way everywhere: absolute, ET, with the date */
+window.nsStamp = (s) => { if (!s) return ""; const d = new Date(String(s).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(s)) ? "" : "Z")); return isNaN(d) ? "" : d.toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) + " ET"; };</script>
 <script>
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -1213,7 +1215,7 @@ html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-g
     if (s.signals) {
       $("recN").textContent = n(s.signals);
       $("recNc").textContent = `trades logged · ${n(s.open)} still open · ${n(s.reached)} of ${n(s.closed)} closed reached the target`;
-      if (s.updated) $("recNote").insertAdjacentHTML("afterbegin", `Updated ${new Date(String(s.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})} ET. `);
+      if (s.updated) $("recNote").insertAdjacentHTML("afterbegin", `Updated ${nsStamp(s.updated)}. `);
       $("recHit").textContent = s.reached_pct == null ? "–" : s.reached_pct + "%";
       $("recAvg").textContent = s.avg_ret == null ? "–" : (s.avg_ret > 0 ? "+" : "") + s.avg_ret + "%";
       if (s.avg_ret != null) $("recAvg").style.color = s.avg_ret >= 0 ? "var(--up)" : "var(--down)";
@@ -1247,14 +1249,14 @@ html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-g
   const root = document.getElementById("flowDemo"); if (!root) return;
   const svg = document.getElementById("flSvg");
   const STEPS = [
-    {t: "After every 4H close", k: "Sika sweeps", pill: true, p: "400 stocks swept about 20 minutes after each 4-hour close, from a 543-stock universe.", ph: "1:52"},
+    {t: "After every 4H close", k: "Sika sweeps", pill: true, p: "Every stock in the universe swept about 20 minutes after each 4-hour close.", ph: "1:52"},
     {t: "Day 1–2", k: "A hub forms", p: "Price coils in a tight range for 4+ four-hour candles.", ph: "4:22"},
     {t: "3:45 PM", k: "15 minutes to the close", p: "Price is outside the hub. Pro members get a heads-up.", ph: "3:45"},
     {t: "4:00 PM", k: "The candle closes", p: "Breakout confirmed, aiming for the next shelf.", ph: "4:00"},
     {t: "Next sessions", k: "Next shelf", p: "Target reached, and logged in the track record.", ph: "11:31"},
   ];
   const NOTES = [
-    {h: "Sika", t: "Swept 400 stocks", b: "3 breakouts · 6 at a hub edge · 41 resting in hubs.", live: true},
+    {h: "Sika", t: "Swept the market", b: "Breakouts, hub edges and resting hubs, counted after every close.", live: true},
     {h: "Telegram", t: "🟦 AMD: new hub", b: "4H closes held $176.80–$178.01 for 6 sessions. Watching for a close outside."},
     {h: "Telegram", t: "⚠️ AMD: trading above hub, ~15 min before the 4H close", b: "Now $179.40. If the candle closes above $178.01, that's the breakout.", pro: true},
     {h: "Telegram", t: "🚀 AMD: 4H close above hub", b: "Close $179.76 · next shelf $186.10 (+3.5%) · wrong if it closes back below $178.01."},
@@ -1263,6 +1265,7 @@ html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-g
   // the first notification uses today's real counts, so it matches the board line above
   const liveNote = () => { const L = window.NS_SUMMARY; if (!L || !L.universe) return;
     NOTES[0].t = `Swept ${Number(L.universe).toLocaleString()} stocks`;
+    STEPS[0].p = `${Number(L.universe).toLocaleString()} stocks swept about 20 minutes after each 4-hour close.`;
     NOTES[0].b = `${L.live} breakout${L.live === 1 ? "" : "s"} · ${L.near} at a hub edge · ${L.forming} resting in hubs.`; };
   liveNote(); document.addEventListener("ns-summary", () => { liveNote(); try { show(cur); } catch (e) {} });
   // ---- draw the chart once; layers fade in by step
@@ -1338,11 +1341,13 @@ html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-g
   const esc = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
   const shelf = (sym) => "/app?shelf=" + encodeURIComponent(sym) + "#discover";
   let B = null, loaded = false, ME = null;
+  document.addEventListener("ns-summary", () => { try { render(); } catch (e) {} });   // the universe number arrives with the summary
   function render() {
-    if (!B || !B.universe) { $("spLine").innerHTML = "I check <b>400</b> stocks after every 4-hour close, from a 543-stock universe, for tight ranges that are about to break. Ask me about any stock."; return; }
+    const U = (window.NS_SUMMARY && window.NS_SUMMARY.universe) || null;   // one universe number: the summary's (the heatmap's list)
+    if (!B || !U) { $("spLine").innerHTML = `I check ${U ? "<b>" + Number(U).toLocaleString() + "</b>" : "every"} stocks after every 4-hour close for tight ranges that are about to break. Ask me about any stock.`.replace("every stocks", "every stock in the universe"); return; }
     const live = B.locked ? B.live_count : B.live.length, near = B.locked ? B.near_count : B.near.length, hubs = B.forming_count ?? B.forming.length;
-    const when = B.updated ? new Date(B.updated).toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) : "";
-    $("spLine").innerHTML = `I swept <b>${B.universe}</b> stocks${when ? " at the last 4-hour close (" + esc(when) + " ET)" : ""}: <b>${live}</b> breakout${live === 1 ? "" : "s"}, <b>${near}</b> at the edge of a hub, and <b>${hubs}</b> resting in hubs.`;
+    const when = B.updated ? nsStamp(B.updated).replace(/ ET$/, "") : "";
+    $("spLine").innerHTML = `I swept <b>${Number(U).toLocaleString()}</b> stocks${when ? " at the last 4-hour close (" + esc(when) + " ET)" : ""}: <b>${live}</b> breakout${live === 1 ? "" : "s"}, <b>${near}</b> at the edge of a hub, and <b>${hubs}</b> resting in hubs.`;
     const rows = (B.locked ? B.forming.filter(r => !r.near_edge) : B.near.concat(B.forming.filter(r => !r.near_edge))).slice(0, 5);
     $("spK").hidden = !rows.length; $("spK").textContent = B.locked ? "Resting in a hub right now" : "Closest to a breakout";
     $("spRes").innerHTML = rows.map(r => { const h = r.hub || {}; return `<a class="sp-row" href="${shelf(r.symbol)}">${esc(r.symbol)}<span>${h.sessions ? h.sessions + " sessions in a hub" : "in a hub"}</span></a>`; }).join("");
@@ -1539,7 +1544,7 @@ document.querySelectorAll(".lm").forEach(function (m) {
                fetch("/auth/config").then(r => r.json()).catch(() => ({}))]).then(([h, me, c]) => {
     HEAT = h; member = !!(me && !me.guest); open = c.signups_open === true;
     try { sides(h); } catch (e) {}
-    if (h.updated) $("pkWhen").textContent = "The board · " + new Date(String(h.updated).replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit"}) + " ET";
+    if (h.updated) $("pkWhen").textContent = "The board · " + nsStamp(h.updated);
     if (!h.tiles || !h.tiles.length) { $("pkMap").innerHTML = '<span class="pk-load">The board fills in after the next 4-hour close.</span>'; return; }
     paint();
   }).catch(() => { $("pkMap").innerHTML = '<span class="pk-load">The board is loading slowly. Try again in a minute.</span>'; });

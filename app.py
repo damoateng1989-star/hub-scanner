@@ -1185,7 +1185,7 @@ def public_summary():
         recent += [dict(symbol=x["symbol"], direction=x.get("direction"), outcome=x["outcome"], setup="Hub breakdown" if x.get("direction") == -1 else "Hub breakout")
                    for x in old[:16 - len(recent)]]
     import lab_exits
-    return dict(tested=lab_exits.tested_public(), recent=recent, updated=b.get("updated"), universe=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
+    return dict(tested=lab_exits.tested_public(), recent=recent, updated=b.get("updated"), universe=len(universe.board_universe()), board_rows=b.get("universe"), forming=len(b["forming"]), live=len(b["live"]), near=len(b["near"]),
                 signals=rec.get("signals"), closed=closed, open=rec.get("open"), reached=by.get("follow-through", 0),
                 reached_pct=round(100 * by.get("follow-through", 0) / closed) if closed else None,
                 win_rate=rec.get("win_rate"), avg_ret=rec.get("avg_ret"), since=tr.get("since"), next=_next_sweep(), times=sorted(BOARD_TIMES))

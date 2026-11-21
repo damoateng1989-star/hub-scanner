@@ -158,7 +158,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
     if (b && b.universe) {
       const live = b.live_count ?? (b.live || []).length, near = b.near_count ?? (b.near || []).length, hubs = b.forming_count ?? (b.forming || []).length;
       $("tLive").textContent = n(live); $("tNear").textContent = n(near); $("tHub").textContent = n(hubs); $("tUni").textContent = n(b.universe);
-      if (b.updated) $("liveWhen").textContent = "Updated " + new Date(b.updated.replace(" ", "T") + "Z").toLocaleString("en-US", {...ny, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) + " ET";
+      if (b.updated) $("liveWhen").textContent = "Updated " + new Date(b.updated.replace(" ", "T") + "Z").toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) + " ET";   // Patch 185: one stamp format
     }
     if (s && s.next) $("tNext").textContent = "Next check " + new Date(s.next).toLocaleString("en-US", {...ny, weekday: "long", hour: "numeric", minute: "2-digit"}) + " ET, about 20 minutes after the 4-hour close.";
     const member = me && !me.guest;

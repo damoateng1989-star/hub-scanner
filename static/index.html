@@ -2928,6 +2928,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":
 const money = (x) => x == null ? "–" : "$" + Number(x).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const when = (iso) => iso ? new Date(iso).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : "";
 const day = (iso) => iso ? new Date(iso).toLocaleDateString(undefined, {month: "short", day: "numeric"}) : "";
+// Patch 185: the board's "updated" stamp, one way everywhere: absolute, New York time, with the date (the stored
+// value is UTC "YYYY-MM-DD HH:MM:SS"; Safari can't parse it with a space, so it becomes ISO with a Z first)
+const boardStamp = (s) => { if (!s) return ""; const d = new Date(String(s).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(s)) ? "" : "Z")); return isNaN(d) ? "" : d.toLocaleString("en-US", {timeZone: "America/New_York", weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) + " ET"; };
 const TV_ICON = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 4v16M6 8h-2v6h2M12 6v14M12 9h-2v7h2M18 3v15M18 6h-2v6h2"/><path d="M15 21h6v-6" opacity=".0"/></svg>`;
 const IS_ANDROID = /Android/i.test(navigator.userAgent || "");
 // On Android, open the broker's app when it's installed and fall back to the website when it isn't
@@ -4624,7 +4627,7 @@ function briefHead(sym, st) {
     else if (other) tag = `<span class="bf-tag" style="--c:${stateColor(other.state)}">${esc(other.name)}: ${brokeWord(other.state === "breakout_up").toLowerCase()}</span>${strengthChip(other.strength, other.state === "breakout_up")}` + hubNote;
     else if (k === "forming" || k === "watching") {
       const hh = st.hub, px = (LIVE[sym] && LIVE[sym].price) || st.last_close, inside = hh && px >= hh.low && px <= hh.high;
-      tag = `<span class="bf-tag rest">${inside || k === "forming" ? "Inside a hub" : STATE_WORD[k]} · no trade yet</span>`; }
+      tag = `<span class="bf-tag rest">${hh ? hubWhere(hh, px) : STATE_WORD[k]} · no trade yet</span>`; }
     else tag = `<span class="bf-tag rest">No setup in play</span>`;
     if (!hubLive && ["follow-through", "snap-back", "stalled"].includes(k)) tag += `<p class="bf-prev">Last hub breakout: ${STATE_WORD[k].toLowerCase()}</p>`;
   }
@@ -6492,19 +6495,21 @@ function marketChip() {
   const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
   const weekday = wd >= 1 && wd <= 5, open = weekday && mins >= 570 && mins < 960;
   const events = [];
-  ((INFO && INFO.preclose_times) || []).forEach(t => events.push([t, "15-min warning"]));
-  ((INFO && INFO.scan_times) || ["13:47", "16:17"]).forEach(t => events.push([t, "closing check"]));
+  // Patch 185: each time names its own event (these are not the board sweep, which Sika and the scanner card show)
+  ((INFO && INFO.preclose_times) || []).forEach(t => events.push([t, "pre-close warning"]));
+  ((INFO && INFO.scan_times) || ["13:47", "16:17"]).forEach(t => events.push([t, "watchlist check"]));
   events.sort();
   const toMin = (t) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
   let next = weekday ? events.find(([t]) => toMin(t) > mins) : null, label;
   if (next) {
     const d = toMin(next[0]) - mins;
-    const c = next[1] === "closing check" ? closeOf(next[0]) : null;
-    label = `Next ${next[1]} <b>${fmtT(next[0])}</b>${c ? ` (confirms the ${c} candle)` : ""} · in ${d >= 60 ? Math.floor(d / 60) + "h " : ""}${d % 60}m`;
+    const c = next[1] === "watchlist check" ? closeOf(next[0]) : null, w = next[1] === "pre-close warning" ? closeOf(next[0], true) : null;
+    label = `Next ${next[1]} <b>${fmtT(next[0])}</b>${c ? ` (confirms the ${c} candle)` : w ? ` (before the ${w} close)` : ""} · in ${d >= 60 ? Math.floor(d / 60) + "h " : ""}${d % 60}m`;
   } else {
     const days = wd === 5 ? 3 : wd === 6 ? 2 : 1;
     const dayName = new Date(n.getTime() + days * 864e5).toLocaleDateString("en-US", {weekday: "long"});
-    label = `Next ${events[0][1]} <b>${dayName} ${fmtT(events[0][0])}</b>`;
+    const w0 = events[0][1] === "pre-close warning" ? closeOf(events[0][0], true) : null, c0 = events[0][1] === "watchlist check" ? closeOf(events[0][0]) : null;
+    label = `Next ${events[0][1]} <b>${dayName} ${fmtT(events[0][0])}</b>${w0 ? ` (before the ${w0} close)` : c0 ? ` (confirms the ${c0} candle)` : ""}`;
   }
   return `<span class="mkt${open ? " open" : ""}" style="--c:var(${open ? "--up" : "--idle"})"><i></i><b>${open ? "Market open" : "Market closed"}</b>· ${label}</span>`;
 }
@@ -6569,8 +6574,10 @@ function renderRetest() {
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
                  tape_flow: r.tape_flow || null});   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
   }
+  // Patch 185: one symbol, one row — the live hub row wins; a setups row only when the symbol has no row yet
+  const seen = new Set(rows.map(x => x.sym));
   for (const r of (BOARD.setups || [])) {
-    if (r.retest && r.retest.candles_left > 0)
+    if (r.retest && r.retest.candles_left > 0 && !seen.has(r.symbol) && seen.add(r.symbol))
       rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near});
   }
@@ -6878,9 +6885,15 @@ function strengthChip(g, up) {      // strong = volume 1.2x+ AND the close clear
   return `<span class="str-chip ${g.word}" title="${esc(tip)}">${strong ? "💪 Strong" : "⚠️ Weak"} ${what}</span>`;
 }
 const brokeWord=(up,kind)=>(up?"Broke out":"Broke down")+" · heading to "+(kind==="atr"?"target":"next shelf");
+// Patch 185: the pill says where the price actually is relative to its hub (the same price the position line uses)
+function hubWhere(h, px) {
+  px = Number(px);
+  if (!h || !Number.isFinite(px) || !(Number(h.low) > 0)) return "Inside a hub";
+  return px < Number(h.low) ? "Below its hub" : px > Number(h.high) ? "Above its hub" : "Inside a hub";
+}
 function boardStatus(r,kind){
   if(kind==="live") return r.state==="breakdown"?[brokeWord(false,r.target_kind),"down"]:[brokeWord(true,r.target_kind),"up"];
-  if(kind==="near"||kind==="forming") return ["Inside a hub","hub"];
+  if(kind==="near"||kind==="forming") return [hubWhere(r.hub, (typeof LIVE!=="undefined"&&LIVE[r.symbol]&&LIVE[r.symbol].price)||r.last_close),"hub"];   // Patch 185: from the price, like the distance
   const map={"follow-through":["Reached target","up"],"snap-back":["Failed","down"],stalled:["Timed out","neutral"],watching:["Hub ended","neutral"]};
   return map[r.state]||[String(r.state||"No setup").replaceAll("_"," "),"neutral"];
 }
@@ -7110,7 +7123,7 @@ async function loadBoard() {
   BOARD = b; renderStrip(); if (!$("agent").classList.contains("run")) renderAgent({running: false, next: AGENT_NEXT});
   const rg = b.regime, rgTxt = rg && rg.regime ? ` · Market: ${rg.regime === "up" ? "uptrend" : "downtrend"} · ${rg.index} ${money(rg.close)} vs ${rg.days || 50}-day ${money(rg.sma)} · alerts on longs and shorts` : "";
   const staleN=["live","near","forming","recent"].reduce((n,g)=>n+(b[g]||[]).filter(r=>r.stale).length,0);
-  $("bMeta").textContent = b.universe ? `${b.universe} stocks · updated ${when(b.updated + "Z")}${staleN?` · ${staleN} row${staleN===1?"":"s"} from an earlier sweep`:""}${rgTxt}` : "";
+  $("bMeta").textContent = b.universe ? `${b.universe} stocks on the board · updated ${boardStamp(b.updated)}${staleN?` · ${staleN} row${staleN===1?"":"s"} from an earlier sweep`:""}${rgTxt}` : "";
   if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
   try { paintHeatmap(); } catch (e) {}      // Patch 176: the retest outlines need the board rows
@@ -8641,8 +8654,9 @@ async function scoutSweep() {
 let AGENT_T = null, AGENT_WAS_RUNNING = false, AGENT_NEXT = null;
 const FIND_C = { breakout: "#3DD68C", breakdown: "#FF6B5E", "at edge": "#F2C14E", "in hub": "#7C93FF" };
 function agTime(iso) { return iso ? new Date(iso).toLocaleTimeString([], {hour: "numeric", minute: "2-digit"}) : ""; }
-function closeOf(hm) {          // "16:17" -> "4:00 PM": the 4-hour candle a check reads
+function closeOf(hm, upcoming) {          // "16:17" -> "4:00 PM": the 4-hour candle a check reads
   const [h, m] = hm.split(":").map(Number), t = h * 60 + m;
+  if (upcoming) return t < 810 ? "1:30 PM" : t < 960 ? "4:00 PM" : null;   // a pre-close warning: the close it comes before
   return t >= 960 ? "4:00 PM" : t >= 810 ? "1:30 PM" : null;
 }
 function etHM(iso) { const d = new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/New_York"})); return d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); }
