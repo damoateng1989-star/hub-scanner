@@ -626,8 +626,14 @@ def card(sym, include_flow=False):
             # Spec §4.2: the favored side is only set for a live setup graded A or B.
             # A live setup graded C, D or "?" is watch only — the card says so instead of
             # presenting it as a favored play.
-            out["message"] = (f"Live {setup_name} {'breakout' if d == 1 else 'breakdown'}, "
-                              f"graded {g.get('grade')} ({g.get('word')}) — watch only, no favored side.")
+            move = 'breakout' if d == 1 else 'breakdown'
+            if g.get("grade") in (None, "?"):      # never show a bare "?" to a person
+                out["message"] = (f"Live {setup_name} {move}. This setup hasn't traded enough times on "
+                                  f"{sym} to grade yet, so it's watch only, with no favored side.")
+            else:
+                word = str(g.get("word") or "").strip()
+                out["message"] = (f"Live {setup_name} {move}, graded {g.get('grade')}"
+                                  f"{f' ({word})' if word else ''}. Watch only, no favored side.")
         return out
 
     if state == "forming" and st.get("hub"):
