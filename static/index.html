@@ -259,7 +259,7 @@
   @media (max-width: 760px) {
     .toptabs { display: none; }
     body { padding-bottom: 76px; }
-    nav.bottom { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 15;
+    nav.bottom { display: grid; grid-template-columns: repeat(6, 1fr); position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 15;
                  height: auto; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); border-bottom: 0;
                  background: color-mix(in srgb, var(--bg) 92%, transparent); }
     nav.bottom a { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 0; font-size: 11px; font-weight: 500;
@@ -2691,7 +2691,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
 </aside>
 <nav><div class="wrap">
   <a class="brand ns-logo" href="/" title="NextShelf home">Next<span>Shelf</span></a>
-  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#results" data-tab="results">Results</a><a href="#account" data-tab="account">Account</a></div>
+  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#cinema" data-tab="cinema">Cinema</a><a href="#results" data-tab="results">Results</a><a href="#account" data-tab="account">Account</a></div>
   <div class="navr">
     <button type="button" class="theme-btn top-theme" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     <a href="#guide" class="helpbtn" title="How it works" aria-label="How it works">?</a>
@@ -2722,7 +2722,6 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
     <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
   </div>
   <div class="today-stories ck-tiles" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div><div class="stack-entry" id="stackEntry" hidden></div></div>
-  <div class="wr-card sr-card" id="screening" hidden></div>
   <details class="ck-more" id="ckMore">
     <summary>Everything else the scanner sees</summary>
     <div class="retest" id="retestWait" hidden></div>
@@ -2803,6 +2802,10 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
 </section>
 
 <!-- RESULTS -->
+<section data-view="cinema" hidden>
+  <div class="hello"><h1>Cinema<span>.</span></h1><p class="sub">Full-length public-domain films: market history and classics. One feature a day, the whole shelf any time.</p></div>
+  <div class="wr-card sr-card cinema-room" id="cinemaRoom"><div class="loading"><span class="spin"></span>Loading…</div></div>
+</section>
 <section data-view="results" hidden>
   <div class="vh"><h1>An honest <em>record.</em></h1><p>How every setup turned out. Nothing is removed.</p></div>
   <div id="record"><div class="loading"><span class="spin"></span>Loading…</div></div>
@@ -2911,7 +2914,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   <p class="ask-foot">Sika's read — not financial advice.</p>
 </div>
 
-<nav class="bottom" aria-label="Main"><a href="#today" data-tab="today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Today</span></a><a href="#discover" data-tab="discover"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Setups</span></a><a href="#list" data-tab="list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6L3.3 9.2l6.1-.6z"/></svg><span>Watchlist</span></a><a href="#results" data-tab="results"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg><span>Results</span></a><a href="#account" data-tab="account"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Account</span></a></nav>
+<nav class="bottom" aria-label="Main"><a href="#today" data-tab="today"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg><span>Today</span></a><a href="#discover" data-tab="discover"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span>Setups</span></a><a href="#list" data-tab="list"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.6 5.6 6.1.6-4.6 4.1 1.3 6-5.4-3.1-5.4 3.1 1.3-6L3.3 9.2l6.1-.6z"/></svg><span>Watchlist</span></a><a href="#cinema" data-tab="cinema"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18M7 5v4M12 5v4M17 5v4"/><path d="m10.5 12.5 4 2-4 2z"/></svg><span>Cinema</span></a><a href="#results" data-tab="results"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg><span>Results</span></a><a href="#account" data-tab="account"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Account</span></a></nav>
 <div id="sheet" hidden><div class="sheet-card"><button class="x" onclick="closeSheet()" aria-label="Close">×</button><div id="sheetBody"></div></div></div>
 
 <script>
@@ -3769,7 +3772,7 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results" };
-const VIEWS = ["today", "list", "discover", "results", "alerts", "account", "paper", "guide", "lab", "journal", "admin"];
+const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "account", "paper", "guide", "lab", "journal", "admin"];
 const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account", journal: "account", admin: "account" };
 let CUR = "today";
 function showTab() {
@@ -3784,6 +3787,7 @@ function showTab() {
   if (CUR === "today") loadToday();
   if (CUR === "discover") { loadBoard(); pollAgent(); loadStacked(); }
   if (CUR === "results") loadRecord();
+  if (CUR === "cinema") loadCinema();
   if (CUR === "paper") loadPaper();
   if (CUR === "account") loadAccount();
   if (CUR === "guide") renderGloss();
@@ -6857,7 +6861,6 @@ function renderToday() {
   renderPremarket();
   renderWeek();
   renderTodayVideos();
-  renderScreening();
   renderRetest();
   renderRule();
   renderKpis();
@@ -9196,6 +9199,11 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 .sc-grade { margin-left: 6px; font: 700 12px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; }
 /* the Screening Room (Patch 195) */
 .sr-card { margin: 16px 0; } .sr-card[hidden] { display: none; }
+.cinema-room .sr-feat { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.cinema-room .sr-fp { aspect-ratio: 16 / 10; }
+.cinema-room .sr-rail { flex-wrap: wrap; overflow: visible; }
+.cinema-room .sr-tile { width: 150px; }
+@media (max-width: 560px) { .cinema-room .sr-feat { grid-template-columns: 1fr; } .cinema-room .sr-rail { flex-wrap: nowrap; overflow-x: auto; } .cinema-room .sr-tile { width: 128px; } }
 .bf-sr { margin: 0; } .bf-sr .sr-feat { grid-template-columns: 1fr; } .bf-sr .sr-fp { aspect-ratio: 16 / 10; }
 .sr-feat { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 14px; width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; margin: 10px 0 4px; }
 .sr-fp { position: relative; aspect-ratio: 4 / 3; border-radius: 14px; background: #000 center / cover no-repeat; display: flex; align-items: center; justify-content: center; }
@@ -9999,6 +10007,13 @@ const stkCalm = () => (window.matchMedia && matchMedia("(prefers-reduced-motion:
 // Full-length public-domain films. The catalog and posters are ours; archive.org's embed streams the film, so
 // playback never loads this server. One feature a day for everyone, plus two finite shelves. With sound.
 let SR = null;
+// the Cinema section: the Screening Room as its own page
+async function loadCinema() {
+  const el = $("cinemaRoom"); if (!el) return;
+  if (!ME) { el.innerHTML = '<p class="mb-quiet">Sign in to watch. <a href="/login">Sign in →</a></p>'; el.hidden = false; return; }
+  await renderScreening(el);
+  if (el.hidden) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">The films are being set up. Check back soon.</p>'; }
+}
 // beside the stock panel on computers: the Screening Room (the Stack and the Waiting Room only if there are no films)
 async function sideMovies() {
   await renderScreening($("bfSR"));
