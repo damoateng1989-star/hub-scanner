@@ -9640,6 +9640,8 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
 .stack-track::-webkit-scrollbar { display: none; }
 .stack-slide { height: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; background: #000; }
 .stack-slide video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.stack-poster, .ss-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; pointer-events: none; transition: opacity .25s; }
+.stack-slide.is-playing .stack-poster, .ss-win.is-playing .ss-poster { opacity: 0; }
 .stack-cap { position: absolute; left: 16px; right: 84px; bottom: calc(26px + env(safe-area-inset-bottom)); z-index: 2; text-shadow: 0 1px 8px rgba(0,0,0,.7); }
 .stack-cat { font: 600 11px/1 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; opacity: .85; margin-bottom: 8px; }
 .stack-line { font-size: 16px; line-height: 1.45; margin: 0; }
@@ -9813,6 +9815,7 @@ function stkBuild() {
       <span class="stack-title">THE DAILY STACK</span><span class="stack-n" id="stkN">1 / ${n}</span><div class="stack-bar"><i id="stkBar"></i></div></div>
     <div class="stack-track" id="stkTrack">${d.clips.map((c, i) => `<section class="stack-slide" data-i="${i}" data-id="${stkEsc(c.id)}">
         <video muted playsinline preload="none" poster="${stkEsc(c.poster)}" data-src="${stkEsc(c.video)}" aria-label="${stkEsc(c.caption)}"></video>
+        <img class="stack-poster" src="${stkEsc(c.poster)}" alt="" aria-hidden="true">
         ${i === 0 ? `<div class="stack-hint">Swipe up for the next clip ↑</div>` : ""}
         ${calm ? `<button class="stack-play" type="button" aria-label="Play">▶</button>` : ""}
         <div class="stack-cap"><div class="stack-cat">${stkEsc(c.category)}</div><div class="stack-ans"></div><p class="stack-line">${stkEsc(c.caption)}</p></div>
@@ -9821,8 +9824,42 @@ function stkBuild() {
       <section class="stack-slide stack-end" data-i="${n}"><h3>That's today's stack.</h3><p>A new stack tomorrow morning.</p><button type="button" onclick="closeStack()">Back to Today</button></section></div>`;
   const track = v.querySelector("#stkTrack");
   const vid = (s) => s && s.querySelector("video");
-  const play = (s) => { const x = vid(s); if (!x) return; if (!x.src && x.dataset.src) x.src = x.dataset.src; const p = x.play(); if (p && p.catch) p.catch(() => {}); };
-  v.querySelectorAll(".stack-slide video").forEach(x => x.addEventListener("error", () => { x.removeAttribute("src"); }, {once: true}));
+  // Patch 188: a clip that isn't playing looks like its poster (never black); a refused or failed start leaves a ▶ to tap
+  const playBtn = (s) => { if (!s || s.querySelector(".stack-play")) return; const b = document.createElement("button"); b.type = "button"; b.className = "stack-play"; b.setAttribute("aria-label", "Play"); b.textContent = "▶";
+    b.onclick = (e) => { e.stopPropagation(); b.remove(); STK.manual = false; play(s); }; s.appendChild(b); };
+  const play = (s) => { const x = vid(s); if (!x) return;
+    if ((!x.getAttribute("src") || x.error) && x.dataset.src) { x.src = x.dataset.src; x.load(); }   // a failed clip reloads on the next try
+    const p = x.play(); if (p && p.catch) p.catch(() => { if (x.paused) playBtn(s); }); };
+  v.querySelectorAll(".stack-slide video").forEach(x => {
+    const s = x.closest(".stack-slide");
+    x.addEventListener("playing", () => { s.classList.add("is-playing"); const b = s.querySelector(".stack-play"); if (b) b.remove(); });
+    x.addEventListener("pause", () => s.classList.remove("is-playing"));
+    x.addEventListener("emptied", () => s.classList.remove("is-playing"));
+    x.addEventListener("error", () => {      // retry once from data-src; a second failure shows the poster with a ▶
+      s.classList.remove("is-playing");
+      if (!x.dataset.retried) { x.dataset.retried = "1"; x.src = x.dataset.src; x.load(); if (STK.cur === +s.dataset.i && !STK.manual && !calm) { const p = x.play(); if (p && p.catch) p.catch(() => playBtn(s)); } }
+      else { delete x.dataset.retried; playBtn(s); }
+    });
+  });
+  const nearest = () => track.children[Math.max(0, Math.min(track.children.length - 1, Math.round(track.scrollTop / (track.clientHeight || 1))))];
+  const settle = () => {                    // after any scroll settles, the slide in view plays (in addition to the observer)
+    const s = nearest(); if (!s) return; const i = +s.dataset.i;
+    if (STK.cur !== i) STK.manual = false;
+    STK.cur = i;
+    v.querySelector("#stkN").textContent = `${Math.min(i + 1, n)} / ${n}`;
+    v.querySelector("#stkBar").style.width = `${Math.min(i + 1, n) / n * 100}%`;
+    track.querySelectorAll(".stack-slide video").forEach(x => { if (x.closest(".stack-slide") !== s && !x.paused) x.pause(); });
+    if (!calm && !STK.manual && vid(s) && vid(s).paused) play(s);
+  };
+  let settleT = null;
+  track.addEventListener("scroll", () => { clearTimeout(settleT); settleT = setTimeout(settle, 140); }, {passive: true});
+  // a tap on the clip itself plays or pauses it (the way back from a refused autoplay)
+  track.addEventListener("click", (e) => {
+    if (e.target.closest("button")) return;
+    const s = e.target.closest(".stack-slide"), x = vid(s); if (!x) return;
+    if (x.paused) { STK.manual = false; play(s); const b = s.querySelector(".stk-pp"); if (b) { b.textContent = "❚❚"; b.setAttribute("aria-label", "Pause"); } }
+    else { STK.manual = true; x.pause(); const b = s.querySelector(".stk-pp"); if (b) { b.textContent = "▶"; b.setAttribute("aria-label", "Play"); } }
+  });
   // when a clip finishes, move on to the next one by itself (a paused clip stays put)
   v.querySelectorAll(".stack-slide video").forEach(x => x.addEventListener("ended", () => {
     const s = x.closest(".stack-slide"), nx = s && s.nextElementSibling;
@@ -9840,7 +9877,7 @@ function stkBuild() {
     if (Math.abs(dy) > 40 || (Math.abs(dy) > 15 && Date.now() - tt < 250)) go(dy > 0 ? 1 : -1);
   }, {passive: true});
   v.addEventListener("keydown", e => { if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); go(1); } if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); go(-1); } });
-  v.querySelectorAll(".stack-play").forEach(b => b.onclick = () => { b.remove(); STK.manual = false; play(b.closest(".stack-slide")); });
+  v.querySelectorAll(".stack-play").forEach(b => b.onclick = (e) => { e.stopPropagation(); b.remove(); STK.manual = false; play(b.closest(".stack-slide")); });
   v.querySelectorAll(".stk-pp").forEach(b => b.onclick = () => {
     const s = b.closest(".stack-slide"), x = vid(s);
     if (x.paused) { STK.manual = false; play(s); b.textContent = "❚❚"; b.setAttribute("aria-label", "Pause"); }
@@ -9884,14 +9921,25 @@ async function renderSideStack(host) {
   const d = STK.data; if (!d || !Array.isArray(d.clips) || !d.clips.length) { host.hidden = true; return; }
   const n = d.clips.length, calm = stkCalm(), day = new Date(d.date + "T12:00:00").toLocaleDateString([], {weekday: "short", month: "short", day: "numeric"});
   host.innerHTML = `<div class="wr-eyebrow"><span>THE DAILY STACK</span><span class="ss-n">1 / ${n}</span></div>
-    <div class="ss-row"><div class="ss-win"><button type="button" class="vid-expand ss-big" aria-label="Watch big">⤢</button><div class="ss-bar">${d.clips.map(() => "<i></i>").join("")}</div><video muted playsinline preload="none"></video></div>
+    <div class="ss-row"><div class="ss-win"><button type="button" class="vid-expand ss-big" aria-label="Watch big">⤢</button><div class="ss-bar">${d.clips.map(() => "<i></i>").join("")}</div><video muted playsinline preload="none"></video><img class="ss-poster" alt="" aria-hidden="true"></div>
     <div class="ss-side"><div class="ss-cat"></div><p class="ss-line"></p><div class="ss-ans"></div>
     <div class="ss-ctl"><button type="button" class="ss-prev" aria-label="Previous clip">‹</button><button type="button" class="ss-pp" aria-label="Pause">❚❚</button><button type="button" class="ss-next" aria-label="Next clip">›</button><button type="button" class="ss-where">Where?</button></div></div></div>
     <div class="wr-foot"><span>${stkEsc(day)} · ${n} CLIPS</span><span>Silent by design</span></div>`;
   host.hidden = false;
   const v = host.querySelector("video"), win = host.querySelector(".ss-win"), pp = host.querySelector(".ss-pp");
   let i = 0, paused = calm, seen = false;
-  const play = () => { if (paused || !seen) return; const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  // Patch 188: the clip shows its poster until it's actually playing; a refused start shows ▶ on the pause button
+  const poster = host.querySelector(".ss-poster");
+  const refused = () => { if (v.paused) { paused = true; pp.textContent = "▶"; pp.setAttribute("aria-label", "Play"); } };
+  const play = () => { if (paused || !seen) return; if (v.error) { v.src = d.clips[i].video; v.load(); } const p = v.play(); if (p && p.catch) p.catch(refused); };
+  v.addEventListener("playing", () => win.classList.add("is-playing"));
+  v.addEventListener("pause", () => win.classList.remove("is-playing"));
+  v.addEventListener("emptied", () => win.classList.remove("is-playing"));
+  v.addEventListener("error", () => {      // retry once; then the poster with ▶, never black
+    win.classList.remove("is-playing");
+    if (!v.dataset.retried) { v.dataset.retried = "1"; v.src = d.clips[i].video; v.load(); play(); }
+    else { delete v.dataset.retried; refused(); }
+  });
   const show = (k) => {
     const end = win.querySelector(".ss-end"); if (end) end.remove();
     i = Math.max(0, Math.min(n - 1, k)); const c = d.clips[i];
@@ -9900,7 +9948,8 @@ async function renderSideStack(host) {
     host.querySelector(".ss-cat").textContent = c.category || ""; host.querySelector(".ss-line").textContent = c.caption || "";
     host.querySelector(".ss-ans").innerHTML = ""; const w = host.querySelector(".ss-where"); w.disabled = false;
     host.querySelector(".ss-prev").disabled = i === 0;
-    v.poster = c.poster || ""; v.src = c.video; play();
+    v.poster = c.poster || ""; poster.src = c.poster || ""; win.classList.remove("is-playing"); delete v.dataset.retried;
+    v.src = c.video; v.load(); play();
   };
   v.addEventListener("ended", () => {
     if (i < n - 1) return show(i + 1);
