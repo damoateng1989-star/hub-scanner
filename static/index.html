@@ -5211,7 +5211,7 @@ function paintHeaderClocks() {
   pill.hidden = false;
 }
 setInterval(() => { if (document.body.classList.contains("brief-open")) paintHeaderClocks(); }, 1000);
-addEventListener("DOMContentLoaded", () => { const m = $("bfMap"); if (m && "MutationObserver" in window) new MutationObserver(() => paintHeaderClocks()).observe(m, {childList: true}); });
+addEventListener("DOMContentLoaded", () => { const m = $("bfMap"); if (m && "MutationObserver" in window) new MutationObserver(() => { paintHeaderClocks(); try { paintTapeBlock(); } catch (e) {} }).observe(m, {childList: true}); });
 function mapVolProfile(chart, series, D, light) {
   const el = chart.chartElement(); if (!el) return;
   el.style.position = "relative";
@@ -6838,6 +6838,18 @@ function bGroup(title, rows, kind, empty) {
 
 let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "tier", BOARD_SORT_DIR = 1;
 const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
+// Patch 182 follow-up: the stored tape classification, visible on the hub table row (confirmed only;
+// rows carry tape_flow only for viewers the flow gate allows) and as a block in the stock's panel
+function tapeChip(r) { const t = r && r.tape_flow; return t && t.line ? `<span class="vol-chip tape-chip" title="${esc(t.line)} From the options tape, measured at the break. A past fact, not a live reading.">📊 Tape confirmed</span>` : ""; }
+function paintTapeBlock() {
+  const card = document.querySelector("#bfMap .mp-chartcard"); if (!card) return;
+  const r = BRIEF_SYM && BOARD_DATA && (BOARD_DATA.live || []).find(x => x.symbol === BRIEF_SYM), t = r && r.tape_flow;
+  let el = document.getElementById("bfTape");
+  if (!t || !t.line) { if (el) el.remove(); return; }
+  if (!el || el.previousElementSibling !== card) { if (el) el.remove(); el = document.createElement("div"); el.id = "bfTape"; card.after(el); }
+  el.className = "sc-flow sc-tape bf-tape";
+  el.innerHTML = `📊 <b>${esc(t.line)}</b><small>From the options tape, measured at the break. A past fact, not a live reading.</small>`;
+}
 function volChip(r) { const w = rvolWord(r); return w ? `<span class="vol-chip ${w}" title="Breakout-candle volume vs a normal candle at that time of day">Vol ${Number(r).toFixed(2)}× · ${w}</span>` : ""; }
 const gradeWord = (h) => h && h.grade ? `${h.grade === "warehouse" ? "Warehouse" : "Ledge"} · ${h.score}/6` : "";
 function gradeSplit(v) {
@@ -6993,7 +7005,7 @@ function renderInstitutionalBoard(){
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -8976,6 +8988,8 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc-flow b { color: #3DD68C; }
 .sc-tape { background: rgba(47,84,235,.07); border-color: #2F54EB; }
 .sc-tape b { color: #8FA6FF; }
+.vol-chip.tape-chip { color: #8FA6FF; border-color: #2F54EB; background: rgba(47,84,235,.12); cursor: help; }
+.bf-tape { margin: 14px 0; }
 .sc-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .sc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sc .board-symbol { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-height: 0; }
