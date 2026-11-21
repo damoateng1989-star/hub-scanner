@@ -2708,17 +2708,37 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
     <h1 id="hello">Welcome</h1>
     <div id="mkt"></div>
   </div>
+  <div class="mbrief" id="mbrief" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
     <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div id="phoneNudge"></div>
+  <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
+  <div class="ck-chips" id="ckChips" hidden></div>
+  <div class="retest" id="retest" hidden></div>
+  <div id="ckClosest" hidden></div>
+  <div class="panel" id="attnPanel">
+    <div class="ph"><h2>Your watchlist</h2><a href="#list" class="more-link">Watchlist →</a></div>
+    <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
+  </div>
+  <div class="today-stories ck-tiles" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div><div class="stack-entry" id="stackEntry" hidden></div></div>
+  <details class="ck-more" id="ckMore">
+    <summary>Everything else the scanner sees</summary>
+    <div class="retest" id="retestWait" hidden></div>
+  <div class="panel" id="stkPanel">
+    <div class="ph"><h2>Stacked</h2><span class="more-link" id="stkSub"></span></div>
+    <div class="sk-pills" id="stkPills"></div>
+    <div id="stacked"><div class="loading"><span class="spin"></span>Checking the levels…</div></div>
+  </div>
+  <div class="panel">
+    <div class="ph"><h2>Worth a look</h2><a href="#discover" class="more-link">Browse setups →</a></div>
+    <div id="worth"><div class="loading"><span class="spin"></span>Loading…</div></div>
+  </div>
+  </details>
+  <div id="setup"></div>
   <div id="premarket" hidden></div>
   <div class="week" id="week" hidden></div>
-  <div class="today-stories" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div></div>
-  <div class="retest" id="retest" hidden></div>
-  <div class="stack-entry" id="stackEntry" hidden></div>
   <div class="rule1" id="rule1"></div>
-  <div class="mbrief" id="mbrief" hidden></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
   <div class="lesson" id="lesson" hidden style="display:none">
     <div class="lh">
@@ -2736,20 +2756,6 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
     </div>
   </div>
   <div class="kpis" id="kpis"></div>
-  <div id="setup"></div>
-  <div class="panel">
-    <div class="ph"><h2>Needs your attention</h2><a href="#list" class="more-link">Watchlist →</a></div>
-    <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
-  </div>
-  <div class="panel" id="stkPanel">
-    <div class="ph"><h2>Stacked</h2><span class="more-link" id="stkSub"></span></div>
-    <div class="sk-pills" id="stkPills"></div>
-    <div id="stacked"><div class="loading"><span class="spin"></span>Checking the levels…</div></div>
-  </div>
-  <div class="panel">
-    <div class="ph"><h2>Worth a look</h2><a href="#discover" class="more-link">Browse setups →</a></div>
-    <div id="worth"><div class="loading"><span class="spin"></span>Loading…</div></div>
-  </div>
   <div class="panel">
     <div class="ph"><h2>Latest alerts</h2><a href="#alerts" class="more-link">All alerts →</a></div>
     <div id="latest"></div>
@@ -6572,48 +6578,91 @@ function renderWeek() {
   el.hidden = false;
 }
 function renderRetest() {
-  const el = $("retest"); if (!el) return;
-  if (!BOARD) { el.hidden = true; el.innerHTML = ""; return; }
+  const el = $("retest"), wel = $("retestWait"); if (!el) return;
+  if (!BOARD) { el.hidden = true; el.innerHTML = ""; if (wel) { wel.hidden = true; wel.innerHTML = ""; } renderCkChips(0, 0); return; }
   const rows = [];
   for (const r of (BOARD.live || [])) {
     if (r.retest && r.retest.candles_left > 0)
       rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
-                 tape_flow: r.tape_flow || null});   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
+                 tape_flow: r.tape_flow || null,   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
+                 grade: r.grade || null, hub: true, shelf: r.target_kind !== "atr"});
   }
   // Patch 185: one symbol, one row — the live hub row wins; a setups row only when the symbol has no row yet
   const seen = new Set(rows.map(x => x.sym));
   for (const r of (BOARD.setups || [])) {
     if (r.retest && r.retest.candles_left > 0 && !seen.has(r.symbol) && seen.add(r.symbol))
       rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge,
-                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near});
+                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null});
   }
   // Patch 184: tape-confirmed first inside each group, then fewest candles left (no tape_flow → today's order)
   const byTape = (a, b) => ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
   const now = rows.filter(x => x.near).sort(byTape);
   const wait = rows.filter(x => !x.near).sort(byTape);
+  renderCkChips(now.length, wait.length);
+  const head = '<div class="week-head"><div class="week-k">RETESTING NOW</div></div>';
   if (!now.length && !wait.length) {
-    el.innerHTML = '<div class="week-head"><div class="week-k">RETESTING NOW</div></div><p class="mb-quiet" style="margin:8px 0 0">No active retests right now. This section will update when a setup enters its retest window.</p>';
-    el.hidden = false;
+    el.innerHTML = head + '<p class="mb-quiet" style="margin:8px 0 0">No active retests right now. This section will update when a setup enters its retest window.</p>';
+    el.hidden = false; if (wel) { wel.hidden = true; wel.innerHTML = ""; }
     return;
   }
   const row = (x, kind) => {
     const up = x.state !== "breakdown";
     const txt = kind === "now"
-      ? `${esc(x.label)} · at the edge ${money(x.edge)} · target ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
+      ? `${esc(x.label)} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · ${x.left} candle${x.left === 1 ? "" : "s"} left — the next 4H close decides it`
       : `${esc(x.label)} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · ${x.left} candle${x.left === 1 ? "" : "s"} left`;
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
-  const group = (title, list, kind) => list.length
-    ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
+  // Patch 191: the first row of the existing order is the hero card; the rest render as today
+  const heroRow = now[0] || wait[0], heroKind = now.length ? "now" : "wait";
+  const hero = (x, kind) => {
+    const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null;
+    const conf = !!(x.hub && x.tape_flow && x.tape_flow.line);
+    return `<a class="ck-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
+      <div class="ckh-top"><span class="ckh-k">${kind === "now" ? "At the edge now" : "Retest coming"}</span>${g ? `<span class="sg-in ${GRADE_CLS[g]} ckh-g">${g}</span>` : ""}</div>
+      <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
+      <div class="ckh-line">${kind === "now" ? `At the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · the next 4H close decides it` : `Pullback not at the edge yet · edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}`} · ${x.left} candle${x.left === 1 ? "" : "s"} left</div>
+      ${conf ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b></small><small class="ckh-rec" data-sym="${esc(x.sym)}"></small>` : ""}
+    </a>`;
+  };
+  const restNow = now.filter(x => x !== heroRow);
+  const sub = (title, list, kind) => list.length ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
   const footer = (ME && !ME.a_all)
-    ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>`
-    : "";
-  el.innerHTML = `<div class="week-head"><div class="week-k">RETESTING NOW</div></div>`
-    + group("At the edge", now, "now")
-    + group("Waiting for the retest", wait, "wait")
-    + footer;
+    ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>` : "";
+  el.innerHTML = head + hero(heroRow, heroKind) + sub("At the edge", restNow, "now") + (wait.length && !now.length ? "" : "") + footer;
+  el.hidden = false;
+  if (wel) {   // the waiting list, all rows as today, inside "Everything else the scanner sees"
+    wel.innerHTML = wait.length ? `<div class="week-head"><div class="week-k">WAITING FOR THE RETEST · ${wait.length}</div></div>${wait.map(x => row(x, "wait")).join("")}` : "";
+    wel.hidden = !wait.length;
+  }
+  if (heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
+}
+// the hero's record line: the measured Flow Lab record, read from the swing card payload that already carries it
+async function ckHeroRecord(sym) {
+  try {
+    const c = await api("/api/swing-card/" + encodeURIComponent(sym));
+    const rec = c && c.flow && c.flow.record && c.flow.record.confirmed;
+    const elx = document.querySelector(`.ckh-rec[data-sym="${CSS.escape(sym)}"]`);
+    if (rec && elx) elx.textContent = `Confirmed retests: ${rec.avg_pct > 0 ? "+" : ""}${Number(rec.avg_pct).toFixed(2)}% avg · n ${rec.n} · PF ${Number(rec.pf).toFixed(2)}`;
+  } catch (e) {}
+}
+// Patch 191: the stat chips — VIX (only when Patch 190 stored one), Retesting now, Waiting
+function renderCkChips(nNow, nWait) {
+  const el = $("ckChips"); if (!el) return;
+  const v = INFO && INFO.vix, chips = [];
+  if (v && v.level != null) chips.push(`<div class="ck-chip"><small>VIX</small><b>${Number(v.level).toFixed(2)}</b><span>${esc(v.band || "")}</span></div>`);
+  chips.push(`<div class="ck-chip"><small>Retesting now</small><b>${nNow}</b><span>at the edge</span></div>`);
+  chips.push(`<div class="ck-chip"><small>Waiting</small><b>${nWait}</b><span>for the retest</span></div>`);
+  el.innerHTML = chips.join(""); el.hidden = !BOARD;
+}
+// Patch 191: one quiet card for the name closest to a breakout (the brief's own pick)
+function renderCkClosest(d) {
+  const el = $("ckClosest"); if (!el) return;
+  const c = d && d.pro && d.closest && d.closest[0];
+  if (!c) { el.hidden = true; el.innerHTML = ""; return; }
+  el.innerHTML = `<a class="arow ck-quiet" href="#today" onclick="event.preventDefault();openBrief('${esc(c.symbol)}')" style="--c:var(${c.side === "up" ? "--up" : "--down"})"><i></i>
+    <span class="t"><span class="tk">${esc(c.symbol)}</span><span>Closest to a breakout · ${c.dist < 0.05 ? `right at the ${c.side === "up" ? "top" : "bottom"} of its hub` : `${c.dist}% to a ${c.side === "up" ? "breakout" : "breakdown"}`} · hub ${money(c.low)}–${money(c.high)}${c.shelf ? ` · next shelf ${money(c.shelf)}` : ""}</span></span><span class="go">›</span></a>`;
   el.hidden = false;
 }
 async function loadWeek() {
@@ -6794,7 +6843,7 @@ function renderToday() {
       <span class="t"><span class="tk">${esc(t.symbol)}</span><span>${oneLine(t.status || {}, liveOther(t.status) ? "setup" : st(t))}</span></span><span class="go">›</span></a>`;
   }).join("") : `<div class="empty">${!TICKERS.length
       ? `Nothing yet. Add a few stocks to your <a href="#list">Watchlist</a> and we'll tell you here when one sets up.`
-      : `All quiet on your watchlist. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
+      : `Nothing changed state on your watchlist. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
 
   if (TICKERS_ERR) $("attn").innerHTML = failedHTML("your watchlist", TICKERS_ERR, "loadTickers()");
   // worth a look (board)
@@ -6804,8 +6853,9 @@ function renderToday() {
     let picks = [...(BOARD.live || []), ...(BOARD.near || [])].filter(r => !mine.has(r.symbol)).slice(0, 4);
     const kind = (r) => r.state === "breakout_up" || r.state === "breakdown" ? "live" : "near";
     if (!picks.length) picks = (BOARD.forming || []).filter(r => !mine.has(r.symbol)).slice(0, 4);
-    const txt = (r) => r.state === "breakout_up" ? `<b class="u-up">Broke out ↑</b> · target ${money(r.target)}`
-      : r.state === "breakdown" ? `<b class="u-down">Broke down ↓</b> · target ${money(r.target)}`
+    const tw = (r) => r.target_kind === "atr" ? "target" : "next shelf";      // Patch 191: one word for a shelf
+    const txt = (r) => r.state === "breakout_up" ? `<b class="u-up">Broke out ↑</b> · ${tw(r)} ${money(r.target)}`
+      : r.state === "breakdown" ? `<b class="u-down">Broke down ↓</b> · ${tw(r)} ${money(r.target)}`
       : r.near_edge ? `Pressing the ${r.near_edge === "up" ? "top" : "bottom"} of its range`
       : `Resting in a range for ${r.hub.sessions} days`;
     $("worth").innerHTML = (picks.length ? picks.map(r => `<a class="arow" href="/t/${encodeURIComponent(r.symbol)}" onclick="event.preventDefault();openBrief('${esc(r.symbol)}')" style="--c:var(${kind(r) === "live" ? (r.state === "breakdown" ? "--down" : "--up") : "--hub"})"><i></i>
@@ -6853,7 +6903,7 @@ function bGroup(title, rows, kind, empty) {
   </div>` : `<div class="empty">${empty}</div>`}</div>`;
 }
 
-let BOARD_DATA = {}, BOARD_KIND = "all", BOARD_SORT = "tier", BOARD_SORT_DIR = 1;
+let BOARD_DATA = {}, BOARD_KIND = "setups", BOARD_SORT = "tier", BOARD_SORT_DIR = 1;
 const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
 // Patch 182 follow-up: the stored tape classification, visible on the hub table row (confirmed only;
 // rows carry tape_flow only for viewers the flow gate allows) and as a block in the stock's panel
@@ -6976,6 +7026,14 @@ function boardDayPctHTML(r,px){
   const cls=t>0?"u-up":t<0?"u-down":"";
   return '<small class="board-daypct '+cls+'">'+(t>0?"+":"")+t.toFixed(1)+'%</small>';
 }
+// Patch 191: Stale only when it's an anomaly — the row is more than 90 minutes older than the newest row (one sweep
+// writes its rows over minutes; sweeps are hours apart). A whole board from the last sweep (weekend, overnight) wears none.
+const _ts = (t) => t ? Date.parse(String(t).replace(" ", "T") + (/[zZ]|[+-]\d\d:?\d\d$/.test(String(t)) ? "" : "Z")) : NaN;
+function boardStaleOf(b) {
+  const all = ["live", "near", "forming", "recent"].flatMap(g => (b && b[g]) || []);
+  const newest = Math.max(...all.map(r => _ts(r.updated_at)).filter(Number.isFinite));
+  return (r) => { if (!r || !r.stale) return false; const t = _ts(r.updated_at); return !Number.isFinite(t) || (Number.isFinite(newest) && newest - t > 90 * 60e3); };
+}
 function boardRows(){
   const rows=[];
   const seen=new Set();   // a stock "at the edge" is also "in a hub": list it once, under its most urgent state
@@ -6984,13 +7042,14 @@ function boardRows(){
   return rows;
 }
 function renderInstitutionalBoard(){
+  const STALE_OF=boardStaleOf(BOARD_DATA);
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=BOARD_KIND==="stacked"?(r._kind==="live"&&!!stkItem(r.symbol,["Stacked Shelf"])):BOARD_KIND==="all"?r._kind!=="recent":BOARD_KIND==="setups"?(r._kind==="live"||r._kind==="near"):BOARD_KIND==="forming"?(r._kind==="forming"||r._kind==="near"):BOARD_KIND==="new"?(r._kind==="live"&&boardCandles(r)===0):BOARD_KIND==="retesting"?(r._kind==="live"&&!!(r.retest&&r.retest.candles_left>0)):BOARD_KIND==="flow"?(r._kind==="live"&&!!(r.tape_flow&&r.tape_flow.state==="confirmed")):BOARD_KIND===r._kind;return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
   rows.sort((a,b)=>{
     // Patch 165: the default All view ("tier" sort): live setups first (grade A→B→C→D→?), then your
     // watchlist, then the rest by the size of the day's move. Returning 0 keeps the board's own order
     // inside a tier (live rows keep board()'s closest-to-target order). Column sorts replace this.
-    if(BOARD_SORT==="tier"&&BOARD_KIND==="all"){
+    if(BOARD_SORT==="tier"&&(BOARD_KIND==="all"||BOARD_KIND==="setups")){
       const ta=a._kind==="live"?0:a.watching?1:2, tb=b._kind==="live"?0:b.watching?1:2;
       if(ta!==tb) return ta-tb;
       if(ta===0){ const gr={"A":0,"B":1,"C":2,"D":3}; const ga=gr[a.grade]??4, gb=gr[b.grade]??4; if(ga!==gb) return ga-gb; }
@@ -7027,18 +7086,20 @@ function renderInstitutionalBoard(){
     const rangeCell=boardGauge(r,kind,status[1])+(metaLine?'<div class="msc-meta">'+metaLine+'</div>':"");
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
-    return '<tr'+(r.stale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(r.stale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+    const rStale=STALE_OF(r);
+    return '<tr'+(rStale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait">RETEST · '+r.retest.candles_left+' LEFT</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(rStale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
   }).join("");
   const B_=BOARD_DATA||{},lockedN=B_.locked?(B_.live_count||0):0;
-  const lockRow=lockedN&&(BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new"||BOARD_KIND==="retesting")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
+  const lockRow=lockedN&&(BOARD_KIND==="setups"||BOARD_KIND==="all"||BOARD_KIND==="live"||BOARD_KIND==="new"||BOARD_KIND==="retesting")?'<tr><td colspan="11"><div class="board-empty board-lockrow">🔒 <b>'+lockedN+' stock'+(lockedN===1?' is':'s are')+' breaking out now</b> and '+(B_.near_count||0)+' '+((B_.near_count||0)===1?'is':'are')+' at a hub edge. Those rows are on Pro. <a href="#account">See Pro →</a></div></td></tr>':'';
   const tbody=$("boardRows");if(tbody)tbody.innerHTML=(lockRow+html)||'<tr><td colspan="11"><div class="board-empty">No symbols match this view.</div></td></tr>';
   const count=$("boardCount");if(count)count.textContent=rows.length+" matching instruments";
   labelTable($("hubBoard"));
   document.querySelectorAll(".board-filter").forEach(b=>b.classList.toggle("active",b.dataset.kind===BOARD_KIND));
+  if(!window._bfScrolled){const bf=document.querySelector(".board-filters");if(bf){bf.scrollLeft=0;window._bfScrolled=true;}}   // the default chip is first and in view
 }
 function filterInstitutionalBoard(kind){if(kind)BOARD_KIND=kind;renderInstitutionalBoard();}
 function sortInstitutionalBoard(key){if(BOARD_SORT===key)BOARD_SORT_DIR*=-1;else{BOARD_SORT=key;BOARD_SORT_DIR=1;}renderInstitutionalBoard();}
@@ -7129,7 +7190,7 @@ async function loadBoard() {
   } finally { clearTimeout(slow); BOARD_LOADING = false; }
   BOARD = b; renderStrip(); if (!$("agent").classList.contains("run")) renderAgent({running: false, next: AGENT_NEXT});
   const rg = b.regime, rgTxt = rg && rg.regime ? ` · Market: ${rg.regime === "up" ? "uptrend" : "downtrend"} · ${rg.index} ${money(rg.close)} vs ${rg.days || 50}-day ${money(rg.sma)} · alerts on longs and shorts` : "";
-  const staleN=["live","near","forming","recent"].reduce((n,g)=>n+(b[g]||[]).filter(r=>r.stale).length,0);
+  const isStale=boardStaleOf(b), staleN=["live","near","forming","recent"].reduce((n,g)=>n+(b[g]||[]).filter(isStale).length,0);
   $("bMeta").textContent = b.universe ? `${b.universe} stocks on the board · updated ${boardStamp(b.updated)}${staleN?` · ${staleN} row${staleN===1?"":"s"} from an earlier sweep`:""}${rgTxt}` : "";
   if (!b.universe) { $("board").innerHTML = loadingHTML("The first market scan is running. It takes a few minutes, and this page will fill in by itself…"); setTimeout(() => { if (CUR === "discover") loadBoard(); }, 20000); return; }
   BOARD_DATA = b;
@@ -7137,7 +7198,8 @@ async function loadBoard() {
   $("board").innerHTML = setupTabs(b) + '<div id="setupBoard" hidden></div><div id="hubBoard">' +
     (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
     '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
-    '<div class="board-filters"><button class="board-filter active" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
+    '<div class="board-filters"><button class="board-filter active" data-kind="setups" onclick="filterInstitutionalBoard(\'setups\')" title="Live breakouts and breakdowns (including those retesting) and hubs at the edge: what can become a trade">Setups</button>'+
+    '<button class="board-filter" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
     '<button class="board-filter" data-kind="live" onclick="filterInstitutionalBoard(\'live\')">Broke out</button>'+
     '<button class="board-filter" data-kind="retesting" onclick="filterInstitutionalBoard(\'retesting\')" title="Live breakouts and breakdowns inside their 5-candle retest window">Retesting</button>'+
     ((b.live||[]).some(r=>r.tape_flow)?'<button class="board-filter" data-kind="flow" onclick="filterInstitutionalBoard(\'flow\')" title="Live breakouts and breakdowns whose breakout aggressive flow confirmed (options tape)">Flow confirmed</button>':'')+
@@ -7152,7 +7214,7 @@ async function loadBoard() {
     '<th class="th-pos"><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Position ↕</button></th><th class="th-rng">Hub range</th><th>Hub low</th><th>Hub high</th><th><button class="board-sort" onclick="sortInstitutionalBoard(\'distance\')">Distance to edge ↕</button></th>'+
     '<th class="nowrap-th">Next shelf</th><th>4H context</th><th>Actions</th></tr></thead><tbody id="boardRows"></tbody></table></div></div>'+
     '<div class="note" style="margin-top:10px">Distance to edge is a proximity measure, not a prediction. A breakout is confirmed only by the scanner’s 4-hour close rule. Shelf values are scanner-derived levels.</div></div>';
-  BOARD_KIND="all";BOARD_SORT="tier";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
+  BOARD_KIND="setups";BOARD_SORT="tier";BOARD_SORT_DIR=1;renderInstitutionalBoard(); pickSetupTab(SETUP_TAB);
 }
 async function boardWatch(s, btn) {
   btn.disabled = true; btn.textContent = "Adding…";
@@ -7668,8 +7730,8 @@ async function loadRecapCard() {
   return true;
 }
 async function loadBrief() {
-  if (eveningNow() && await loadRecapCard()) return;
-  let d; try { d = await api("/api/brief"); } catch (e) { const el = $("mbrief"); if (el) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">Couldn\'t load the brief. <a href="#" onclick="loadBrief();return false">Tap to retry</a>.</p>'; } return; }
+  if (eveningNow() && await loadRecapCard()) { api("/api/brief").then(renderCkClosest).catch(() => {}); return; }   // the closest card still comes from the brief
+  let d; try { d = await api("/api/brief"); renderCkClosest(d); } catch (e) { const el = $("mbrief"); if (el) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">Couldn\'t load the brief. <a href="#" onclick="loadBrief();return false">Tap to retry</a>.</p>'; } return; }
   const el = $("mbrief"); if (!el) return;
   const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
   let main;
@@ -9013,6 +9075,33 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc-tape { background: rgba(47,84,235,.07); border-color: #2F54EB; }
 .sc-tape b { color: #8FA6FF; }
 .mkt-vix { white-space: nowrap; }
+/* Patch 191: the Cockpit */
+.ck-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; margin: 14px 0 6px; }
+.ck-chips[hidden] { display: none; }
+.ck-chip { border: 1px solid var(--line, #22262E); border-radius: 14px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.ck-chip small { font: 600 10.5px/1.2 var(--mono, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--mut, #9AA0AC); }
+.ck-chip b { font: 700 22px/1.15 var(--sans, Inter, sans-serif); color: var(--ink, #EDEDED); }
+.ck-chip span { font-size: 12px; color: var(--mut, #9AA0AC); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ck-hero { display: block; margin: 10px 0 12px; padding: 16px 16px 14px; border-radius: 16px; border: 1.5px solid #2F54EB; background: rgba(47,84,235,.06); text-decoration: none; color: inherit; }
+.ckh-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ckh-k { font: 600 10.5px/1.2 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; color: #8FA6FF; }
+.ckh-g { font: 700 13px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 8px; padding: 4px 8px; }
+.ckh-sym { font: 700 24px/1.2 var(--sans, Inter, sans-serif); margin: 8px 0 4px; color: var(--ink, #EDEDED); }
+.ckh-sym small { font-size: 13px; font-weight: 500; color: var(--mut, #9AA0AC); margin-left: 6px; }
+.ckh-line { font-size: 14px; line-height: 1.45; color: var(--ink2, #C9CED6); }
+.ck-hero .tape-chip { display: block; width: max-content; margin: 10px 0 0; }
+.ck-hero .rt-tape { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--mut, #9AA0AC); } .ck-hero .rt-tape b { color: #8FA6FF; font-weight: 600; }
+.ckh-rec { display: block; margin-top: 4px; font: 600 12px/1.4 var(--mono, monospace); color: var(--ink2, #C9CED6); } .ckh-rec:empty { display: none; }
+#ckClosest { margin: 0 0 12px; } #ckClosest[hidden] { display: none; }
+.ck-quiet { border: 1px solid var(--line, #22262E); border-radius: 14px; padding: 12px 14px; }
+.ck-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; align-items: start; }
+.ck-tiles > [hidden] { display: none !important; }
+.ck-more { margin: 16px 0; border: 1px solid var(--line, #22262E); border-radius: 16px; padding: 0 14px; }
+.ck-more > summary { cursor: pointer; list-style: none; padding: 14px 0; font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+.ck-more > summary::-webkit-details-marker { display: none; }
+.ck-more > summary::after { content: "+"; font-size: 20px; color: var(--mut, #9AA0AC); }
+.ck-more[open] > summary::after { content: "–"; }
+.ck-more > .retest, .ck-more > .panel { margin: 0 0 14px; }
 .vol-chip.tape-chip { color: #8FA6FF; border-color: #2F54EB; background: rgba(47,84,235,.12); cursor: help; }
 .bf-tape { margin: 14px 0; }
 #retest .arow .tape-chip { display: block; width: max-content; margin: 6px 0 0; }

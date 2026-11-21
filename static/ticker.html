@@ -280,6 +280,13 @@ html[data-theme="light"] #optionsSwing .oc-rows > div b { color:#0d1117; } html[
 @media(max-width:600px) { #optionsSwing .oc-t b { font-size:18px; } #optionsSwing .oc-rows > div { font-size:13.5px; padding:12px 0; } }
 .sw-flow{margin-top:10px;padding-top:9px;border-top:1px solid rgba(128,128,128,.28);font-size:12.5px;line-height:1.5;opacity:.82}
 .sw-flow p{margin:0}.sw-flow p+p{margin-top:3px}
+details.tk-sec { margin: 18px 0 0; border: 1px solid var(--line, #22262E); border-radius: 14px; padding: 0 14px; }
+details.tk-sec > summary { cursor: pointer; list-style: none; padding: 14px 0; font-weight: 600; font-size: 16px; display: flex; justify-content: space-between; align-items: center; }
+details.tk-sec > summary::-webkit-details-marker { display: none; }
+details.tk-sec > summary::after { content: "+"; font-size: 20px; opacity: .6; }
+details.tk-sec[open] > summary::after { content: "–"; }
+details.tk-sec > .card { margin: 0 0 14px; }
+details.tk-sec:has(> #gexShelves[hidden]) { display: none; }
 </style>
 
 <style>
@@ -597,6 +604,7 @@ function render(d) {
         </span></span>
     </header>
     <p class="sum">${summary(st)}</p>
+    <div class="wr-row"><div id="swingPlay" class="card"></div></div>
     <div class="card"><div id="chart"></div>
       <div class="legend">
         <span style="--c:var(--hub)"><i></i>Hubs</span>
@@ -614,9 +622,10 @@ function render(d) {
     </div>
     <div style="margin-top:14px">${d.watching ? `<button class="sec" disabled>✓ On your watchlist</button>` : `<button id="watch">+ Add to watchlist</button>`}</div>
     <div class="broker-row">${brokerLinks(SYM, d.exchange)}</div>
-    <div class="wr-row"><div id="swingPlay" class="card"></div></div>
-    <div id="gexShelves" class="card gex-shelf-card" hidden></div>
-    <div id="optionsSwing" class="card"></div>
+    <!-- Patch 191: the plan and the chart open; the rest one tap down, in a fixed order -->
+    <details class="tk-sec" id="secOptions"><summary>Options</summary><div id="optionsSwing" class="card"></div></details>
+    <details class="tk-sec" id="secGex"><summary>Gamma / GEX</summary><div id="gexShelves" class="card gex-shelf-card" hidden></div></details>
+    <details class="tk-sec" id="secResults"><summary>Past results</summary>
     <h2>Past <em>results</em></h2>
     <p class="scope">This ticker only · 4H breakouts</p>
     ${s.n ? `<div class="kv hero">
@@ -644,7 +653,10 @@ function render(d) {
       <div><small>Reached shelf</small><b>${d.tightening_stats["follow-through"]}%</b></div>
       <div><small>Win rate</small><b>${d.tightening_stats.win_rate ?? "–"}%</b></div>
       <div><small>Avg per trade</small><b>${sign(d.tightening_stats.expectancy_pct)}</b></div></div>
-      <p class="note">Test mode, visible only to admins. Members don't see tightening hubs or get alerts for them.</p>` : ""}`;
+      <p class="note">Test mode, visible only to admins. Members don't see tightening hubs or get alerts for them.</p>` : ""}
+    </details>`;
+  // a section drawn while collapsed redraws at its real width when opened
+  document.querySelectorAll("details.tk-sec").forEach(dt => dt.addEventListener("toggle", () => { if (dt.open) window.dispatchEvent(new Event("resize")); }));
 
   document.querySelectorAll(".seg button").forEach(b => {
     b.onclick = () => { if (b.dataset.tf !== TF) { b.disabled = true; load(b.dataset.tf); } };
@@ -848,7 +860,7 @@ function renderSwingCard(c) {
   if (!c) return '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
   const head = `<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>${c.setup ? `<span class="sw-setup">${esc(c.setup)}</span>` : ""}${c.grade ? `<span class="sw-grade">${esc(c.grade)}</span>` : ""}</div>`;
   const asof = c.as_of ? `<p class="sw-foot">As of ${new Date(c.as_of).toLocaleString(undefined, {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}. For education only, not financial advice.</p>` : `<p class="sw-foot">For education only, not financial advice.</p>`;
-  const ctx = (c.context || []).map(x => `<p class="sw-ctx">${esc(x)}</p>`).join("")
+  const ctx = (c.context || []).filter(x => !/IV crush/.test(x)).map(x => `<p class="sw-ctx">${esc(x)}</p>`).join("")   // Patch 191: the warning lives once, in Options
     + ((c.flow && Array.isArray(c.flow.lines) && c.flow.lines.length)      // Patch 182: the stored tape classification's line(s)
       ? `<div class="sw-flow">${c.flow.lines.map(t => `<p>${esc(t)}</p>`).join("")}</div>` : "");
   if (c.state === "in_between" && c.in_between) {
@@ -908,7 +920,7 @@ function renderOptionsPanel(o) {
   const plans = o.plans.map(p => {
     const up = p.direction === 1, h = p.history || {}, cond = p.mode === "prep" ? "If a 4-hour candle closes " + (up ? "above the hub top" : "below the hub bottom") + " (" + money(p.edge) + ")" : esc(p.setup || "Setup") + " " + (up ? "breakout" : "breakdown") + " is live · " + (up ? "bullish" : "bearish");
     const cs = p.contracts || [], primary = cs[0], alternates = cs.slice(1);
-    const earn = o.earnings && o.earnings.date && p.expiry && o.earnings.date <= p.expiry ? '<p class="oc-earn">⚠ Earnings ' + esc(o.earnings.label || day(o.earnings.date)) + ', before this contract expires. Options usually lose value right after earnings, even when the stock moves your way.</p>' : "";
+    const earn = !earnings && o.earnings && o.earnings.date && p.expiry && o.earnings.date <= p.expiry ? '<p class="oc-earn">⚠ Earnings ' + esc(o.earnings.label || day(o.earnings.date)) + ', before this contract expires. Options usually lose value right after earnings, even when the stock moves your way.</p>' : "";
     return '<div class="ox2">' + contract(primary,p,up,cond,h) + earn + alternates.map(c => '<details class="oc-alt"><summary>Compare: $' + esc(c.strike) + " " + (up ? "call" : "put") + " · " + esc(String(c.label || "").toLowerCase()) + '</summary>' + contract(c,p,up,esc(c.label || ""),h) + '</details>').join("") + '</div>';
   }).join("");
   return (o.demo ? '<p class="ox-demo">Demo prices. Real option quotes appear once live data is connected.</p>' : "") + closed + earnings + plans +
