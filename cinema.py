@@ -92,7 +92,8 @@ def payload(d: date) -> dict:
     feat = feature_for(d)
     return {"date": d.isoformat(), "count": len(FILMS),
             "feature": _public(feat) if feat else None,
-            "shelves": [{"key": k, "title": t, "films": [_public(f) for f in FILMS if f["shelf"] == k]}
+            "shelves": [{"key": k, "title": t, "films": [_public(f) for f in sorted((f for f in FILMS if f["shelf"] == k),
+                                                         key=lambda f: not f.get("shelf_first"))]}
                         for k, t in SHELVES]}
 
 
