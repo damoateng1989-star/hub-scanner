@@ -9216,6 +9216,12 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 .sr-ft span { font-size: 14px; line-height: 1.45; color: var(--ink2, #C9CED6); }
 html[data-theme="light"] .sr-ft span { color: #3A3F47; }
 .sr-shelf { margin-top: 16px; }
+.sr-head { scroll-margin-top: 80px; }
+.sr-back { background: none; border: 0; padding: 0; font: inherit; letter-spacing: inherit; color: var(--shelf, #8AB4FF); cursor: pointer; }
+.sr-watch { align-self: flex-start; margin-top: 6px; font-style: normal; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 999px; background: #fff; color: #0B0D12; }
+html[data-theme="light"] .sr-watch { background: #0d1117; color: #fff; }
+.sr-tile.on .sr-tp { outline: 2px solid #fff; outline-offset: 2px; }
+html[data-theme="light"] .sr-tile.on .sr-tp { outline-color: #0d1117; }
 .sr-rail { display: flex; gap: 12px; overflow-x: auto; padding: 8px 0 4px; scrollbar-width: none; scroll-snap-type: x mandatory; }
 .sr-rail::-webkit-scrollbar { display: none; }
 .sr-tile { flex: none; width: 128px; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; scroll-snap-align: start; display: flex; flex-direction: column; gap: 4px; }
@@ -10022,20 +10028,35 @@ async function sideMovies() {
   await renderScreening($("bfSR"));
   if ($("bfSR").hidden) { $("bfWrRoom").hidden = false; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
 }
+function srFeatHTML(f, today) {
+  const meta = [f.year, f.runtime, f.vein].filter(Boolean).map(esc).join(" · ");
+  return `<div class="wr-eyebrow"><span>THE SCREENING ROOM</span>${today ? `<span>Today's feature</span>` : `<button type="button" class="sr-back" onclick="srPick(this, null)">← Today's feature</button>`}</div>
+    <button type="button" class="sr-feat" onclick="srPlay('${esc(f.id)}')" aria-label="Watch ${esc(f.title)}">
+      <span class="sr-fp" style="background-image:url('${esc(f.poster)}')"><span class="sr-play">▶</span></span>
+      <span class="sr-ft"><b>${esc(f.title)}</b><small>${meta}</small>${f.description ? `<span>${esc(f.description)}</span>` : ""}<em class="sr-watch">▶ Watch${f.runtime ? " · " + esc(f.runtime) : ""}</em></span>
+    </button>`;
+}
+// a tile puts its film in the feature spot (title, description, play); the feature's play button starts it
+function srPick(btn, id) {
+  const el = btn.closest(".sr-card"); if (!el || !SR || !SR.feature) return;
+  const f = (id && srFind(id)) || SR.feature, today = f.id === SR.feature.id;
+  el.dataset.sel = today ? "" : f.id;
+  el.querySelector(".sr-head").innerHTML = srFeatHTML(f, today);
+  el.querySelectorAll(".sr-tile").forEach(t => t.classList.toggle("on", !today && t.dataset.id === f.id));
+  const top = el.querySelector(".sr-head").getBoundingClientRect().top;
+  if (top < 0 || top > innerHeight * .4) el.querySelector(".sr-head").scrollIntoView({behavior: "smooth", block: "start"});
+}
 async function renderScreening(host) {
   const el = host || $("screening"); if (!el) return;
   if (!SR) { try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); SR = r.status === 200 ? await r.json() : {}; } catch (e) { SR = {}; } }
-  const f = SR && SR.feature; if (!f) { el.hidden = true; return; }
-  const meta = (x) => [x.year, x.runtime, x.vein].filter(Boolean).map(esc).join(" · ");
-  const tile = (x) => `<button type="button" class="sr-tile" onclick="srPlay('${esc(x.id)}')" aria-label="Watch ${esc(x.title)}">
+  const feat = SR && SR.feature; if (!feat) { el.hidden = true; return; }
+  const f = (el.dataset.sel && srFind(el.dataset.sel)) || feat, today = f.id === feat.id;
+  const tile = (x) => `<button type="button" class="sr-tile${!today && x.id === f.id ? " on" : ""}" data-id="${esc(x.id)}" onclick="srPick(this, '${esc(x.id)}')" aria-label="${esc(x.title)}: show details">
       <span class="sr-tp" style="background-image:url('${esc(x.poster)}')"></span><b>${esc(x.title)}</b><small>${[x.year, x.runtime].filter(Boolean).map(esc).join(" · ")}</small></button>`;
-  el.innerHTML = `<div class="wr-eyebrow"><span>THE SCREENING ROOM</span><span>Today's feature</span></div>
-    <button type="button" class="sr-feat" onclick="srPlay('${esc(f.id)}')" aria-label="Watch ${esc(f.title)}">
-      <span class="sr-fp" style="background-image:url('${esc(f.poster)}')"><span class="sr-play">▶</span></span>
-      <span class="sr-ft"><b>${esc(f.title)}</b><small>${meta(f)}</small>${f.description ? `<span>${esc(f.description)}</span>` : ""}</span>
-    </button>
+  const anyEmbed = (SR.shelves || []).some(sh => sh.films.some(x => x.source === "embed"));
+  el.innerHTML = `<div class="sr-head">${srFeatHTML(f, today)}</div>
     ${(SR.shelves || []).filter(sh => sh.films.length).map(sh => `<div class="sr-shelf"><div class="retest-sub">${esc(sh.title)} · ${sh.films.length}</div><div class="sr-rail">${sh.films.map(tile).join("")}</div></div>`).join("")}
-    <div class="wr-foot"><span>Public-domain films</span><span>Streams from the Internet Archive</span></div>`;
+    <div class="wr-foot"><span>Tap a film to read about it</span><span>Streams from the Internet Archive${anyEmbed ? " &amp; YouTube" : ""}</span></div>`;
   el.hidden = false;
 }
 function srFind(id) { if (!SR) return null; if (SR.feature && SR.feature.id === id) return SR.feature; for (const sh of SR.shelves || []) for (const x of sh.films) if (x.id === id) return x; return null; }
