@@ -108,6 +108,44 @@ def _stacks(cands, last, tol):
     return out
 
 
+_WARMING: set = set()
+_WARM_Q: list = []
+
+
+def _warm_worker():
+    while True:
+        with _LOCK:
+            if not _WARM_Q:
+                _WARMING.clear()
+                return
+            sym, with_gamma = _WARM_Q.pop(0)
+        try:
+            compute(sym, with_gamma)
+        except Exception:
+            pass
+        time.sleep(0.05)            # yield: the board request must never be starved by its own warm-up
+
+
+def cached(sym: str, with_gamma: bool = True) -> dict | None:
+    """Patch 198 §6: compute()'s result only if it is already cached and fresh, else None — and queue it for ONE
+    background worker (one stock at a time), so the board path never waits on a cold computation."""
+    import scanner
+    sym = scanner.clean_symbol(sym)
+    key = (sym, with_gamma)
+    with _LOCK:
+        hit = _CACHE.get(key)
+        if hit and time.time() - hit[0] < TTL:
+            return hit[1]
+        if key in _WARMING:
+            return None
+        start = not _WARMING
+        _WARMING.add(key)
+        _WARM_Q.append(key)
+    if start:
+        threading.Thread(target=_warm_worker, daemon=True).start()
+    return None
+
+
 def compute(sym: str, with_gamma: bool = True) -> dict:
     import scanner
     sym = scanner.clean_symbol(sym)
@@ -162,7 +200,8 @@ def compute(sym: str, with_gamma: bool = True) -> dict:
                 ok = bool(chk["clear_path"] and not chk["trig_stacked"] and tgt_ok)
                 stk = dict(name="Stacked Shelf", ok=ok, passed=sum(1 for _, v in rules if v), total=len(rules),
                            rules=[dict(text=t, ok=bool(v)) for t, v in rules], stack_target=chk["stack_target"], direction=d,
-                           edge=round(float(edge), 2), target=round(float(st["target"]), 2))
+                           edge=round(float(edge), 2), target=round(float(st["target"]), 2),
+                           clear_path=bool(chk["clear_path"]), blocking=chk["blocking"])   # Patch 198 §6: read by the board chip
         if stk is None:      # a live post-earnings gap fade & rip: the Stacked Gap Fade checklist
             import patterns
             gp = {"trades": [], "live": []}

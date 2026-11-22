@@ -201,7 +201,8 @@ def _bt_pattern_trades(sym: str, kind: str) -> list:
     return cached["trades"]
 
 
-# Universe-level Lab numbers for the grade fallback (Nov 12 Lab run, 44,321 breakouts, Dec 3 2024 to Nov 11 2026).
+# Universe-level Lab numbers for the grade fallback (Nov 12 Lab run, 44,321 breakouts, Dec 3 2024 to Nov 11 2026;
+# hub "a"/"blocked" from the Nov 22 2026 Stacked Shelf run, Patch 198).
 # ONE SOURCE OF TRUTH: the card and the options odds line read these from /api/grade, never from JS literals.
 # UPDATE THIS when the Lab re-runs: the gap fade alert's hardcoded string and the landing record cards print the same setups.
 # "a" is the measured A-mix record; "overall" is the pattern's overall retest record, used when the shown setup doesn't grade A.
@@ -216,8 +217,20 @@ UNIVERSE_RECORD = {
                    overall=dict(label="Double tops & bottoms", avg=-0.34, pf=0.63, n=800, win=41.2,
                                 mix="Retest entry, all doubles")),
     "hub": dict(label="Hub",
-                a=dict(label="Hub A retests", avg=0.50, pf=1.39, n=319, win=51.7,
-                       early=0.96, late=0.03, without_top5=0.27, mix="Room 1.5+ + long pattern 4+ sessions + longs, 1 ATR stop"),
+                # Patch 198 (Form A, Nov 22): "a" is now the clear-path A record (stk_a_clear) and "blocked" the
+                # stack-in-the-way A record (stk_a_blocked), both from the Nov 22 2026 4:28 AM Stacked Shelf run
+                # (2 years, shelf target, 1 ATR stop, close-based, 10 candles). Reconciled on that run: 233 + 105 = 338,
+                # its A baseline (stk_base, every row grades A), and the n-weighted +0.368% matches its +0.37%.
+                # Owner's call (Nov 22 4:40 AM): applied without a same-run full-Lab Hub A card. "overall" is unchanged.
+                a=dict(label="Hub A retests — clear path", avg=0.53, pf=1.41, n=233, win=54.1,
+                       early=0.93, late=0.14, without_top5=0.27,
+                       mix="Room 1.5+ + long pattern 4+ sessions + longs + clear path (no 2+ stack between trigger and target), 1 ATR stop"),
+                blocked=dict(label="Hub A retests — stack in the way", avg=0.01, pf=1.00, n=105, win=46.7,
+                             early=0.35, late=-0.33, without_top5=-0.43,
+                             mix="Room 1.5+ + long pattern 4+ sessions + longs, a stack of 2+ level kinds between trigger and target, 1 ATR stop",
+                             caveat="Measured directly on A retests whose path was blocked — not the overall hub record. "
+                                    "Flat overall and negative lately: −0.33% in the later half, −0.52% over the last 6 months (28 trades), "
+                                    "−0.43% without its 5 best stocks."),
                 overall=dict(label="Hub retests", avg=-0.41, pf=0.57, n=8175, win=36.3,
                              early=-0.32, late=-0.49, mix="Retest entry, all hubs")),
 }
@@ -246,15 +259,45 @@ def _first_retest_grade(c4, res, trade, grade_at) -> str:
     return "overall"
 
 
+def _clear_path_at(c4, res, trade, j, entry, atr_j) -> bool:
+    """Patch 198: the Lab's clear-path test at the first-retest bar — the same calls
+    lab_exits._stacked_rows makes (price-only levels that existed at that bar, no
+    look-ahead, no gamma). Fail-open: any error returns True (today's behaviour),
+    matching this module's convention; a data failure must never demote a setup."""
+    try:
+        import stacked
+        tl = stacked.tol(entry, float(atr_j))
+        cands = stacked.History(c4, res).at(j, own_hub=trade.get("hub"), price=entry)
+        chk = stacked.check(cands, 1, float(trade["edge"]), entry, float(trade["target"]), tl)
+        return bool(chk["clear_path"])
+    except Exception as ex:
+        log.warning("clear path for hub edge %s failed: %s", trade.get("edge"), ex)
+        return True
+
+
 def _retest_variant_hub(c4, res) -> str:
-    """'a' if the latest pending hub breakout's first retest graded A, else 'overall'."""
+    """'a' if the latest pending hub breakout's first retest graded A with a clear path,
+    'blocked' if it graded A with a stack in the way (Patch 198, Form A), else 'overall'."""
     if not res["hubs"]:
         return "overall"
     pend = next((t for t in res["trades"] if t["outcome"] == "pending" and t["hub"] is res["hubs"][-1]), None)
     if pend is None:
         return "overall"
-    return _first_retest_grade(c4, res, pend,
-                               lambda j: engine.retest_grade(pend, float(res["close"].iloc[j]), float(res["atr"].iloc[j])))
+    i0, d, edge = pend["i0"], pend["direction"], pend["edge"]
+    close = res["close"].to_numpy(float); low = c4["Low"].to_numpy(float); high = c4["High"].to_numpy(float)
+    atr = res["atr"].to_numpy(float)
+    for j in range(i0 + 1, min(len(c4), i0 + engine.RETEST_MAX + 1)):
+        r = engine.retest_check(close, low, high, atr, i0, d, edge, j)
+        if r == "failed":
+            return "overall"
+        if r == "retest":
+            g = engine.retest_grade(pend, float(close[j]), float(atr[j]))
+            if not g.get("is_a"):
+                return "overall"
+            if d != 1:
+                return "a"          # unreachable per Patch 92 (a short never grades A); today's path preserved
+            return "a" if _clear_path_at(c4, res, pend, j, float(close[j]), float(atr[j])) else "blocked"
+    return "overall"
 
 
 def _retest_variant_double(c4, res, pa, kind) -> str:
@@ -313,6 +356,8 @@ def universe_a(kind: str) -> dict | None:
         return None
     row = rec["a"]
     grade, word = _universe_grade(row["avg"], row["pf"])
+    if key == "hub":
+        grade = "A+"              # Patch 198: the clear-path A is the product's top letter (hub only)
     return dict(label=row["label"], avg=row["avg"], pf=row["pf"], n=row["n"], win=row["win"], grade=grade, word=word)
 
 
@@ -336,11 +381,19 @@ def universe_record(sym: str, kind: str) -> dict | None:
             c4 = load_4h(sym, BACKTEST_DAYS)
             res = engine.analyze(c4, SETTINGS)
             variant = _retest_variant_hub(c4, res)
-            row = rec["a"] if variant == "a" else rec["overall"]
+            row = rec[variant]                     # Patch 198: "a" (clear path), "blocked" or "overall"
     except Exception as ex:
         log.warning("universe record for %s %s failed: %s", sym, kind, ex)
         return None
-    grade, word = _universe_grade(row["avg"], row["pf"])
+    if variant == "blocked":
+        # Patch 198: the step-down letter comes from the PF ladder alone — the
+        # avg-positive A shortcut in _universe_grade must never re-promote it.
+        grade, word = ("B", "Fair") if row["pf"] >= 1.1 else ("C", "Weak") if row["pf"] >= 0.9 else ("D", "Poor")
+    else:
+        grade, word = _universe_grade(row["avg"], row["pf"])
+    if key == "hub" and variant == "a":
+        grade = "A+"              # Patch 198: the clear-path A is the product's top letter.
+                                  # Hub only — doubles keep "A"; their split is unmeasured.
     return dict(label=row["label"], variant=variant, avg=row["avg"], pf=row["pf"], n=row["n"], win=row["win"],
                 grade=grade, word=word, caveat=row.get("caveat"))
 

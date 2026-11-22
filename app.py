@@ -1076,6 +1076,17 @@ def board_data(u: dict | None = Maybe):
                                           line=_sc.tape_short_line(row, d))
     except Exception:
         pass
+    try:      # Patch 198 §6: the live path fact on live hub rows — the same
+        import levels as _lv   # evaluation the ticker checklist shows (levels.compute, read from its cache). Fail-open
+        for r in b["live"]:    # per row: any failure means no chip, never an error.
+            try:
+                stk = (_lv.cached(r["symbol"]) or {}).get("stacked")   # cached only; warms in the background
+            except Exception:
+                continue
+            if stk and stk.get("name") == "Stacked Shelf" and stk.get("clear_path") is not None:
+                r["path"] = dict(clear=bool(stk["clear_path"]), blocking=stk.get("blocking") or [])
+    except Exception:
+        pass
     for x in b["setups"]:
         x["watching"] = x["symbol"] in mine
     for group in ("live", "near", "forming", "recent", "setups"):   # for the Webull / Robinhood links

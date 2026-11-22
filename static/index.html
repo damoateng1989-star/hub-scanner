@@ -4708,7 +4708,7 @@ function paintNowCell() {
 }
 // ---------------------------------------------------------------- setup grade: how this setup has done on this stock before
 const GRADE = {};
-const GRADE_CLS = {A: "ga", B: "gb", C: "gc", D: "gd", "?": "gq"};
+const GRADE_CLS = {"A+": "ga", A: "ga", B: "gb", C: "gc", D: "gd", "?": "gq"};   // A+ (Patch 198): the clear-path A
 // the setup the card is actually showing: a live hub break, else the first live non-hub setup (the headline in
 // briefHead / heroStats), else the hub side price is nearest. The grade must measure this setup, never the hub instead.
 function shownSetup(st) {
@@ -4802,7 +4802,7 @@ function planGradeHTML(st, shown) {
   } else if (UA) {
     disp = UA;
     const n = R ? R.n : 0;
-    line = `If it retests as an A setup: across all 543 stocks, ${name} made <b>+${UA.avg.toFixed(2)}%</b> per trade over two years (${Number(UA.n).toLocaleString()} trades, ${UA.win}% won). ${n ? `Only ${n} on ${S} itself, too few to grade on its own.` : `None on ${S} itself yet.`}`;
+    line = `If it retests as an A setup: across all 543 stocks, ${UA.grade === "A+" ? "hub A retests with a clear path" : name} made <b>+${UA.avg.toFixed(2)}%</b> per trade over two years (${Number(UA.n).toLocaleString()} trades, ${UA.win}% won). ${n ? `Only ${n} on ${S} itself, too few to grade on its own.` : `None on ${S} itself yet.`}`;
   } else return "";
   const warn = disp.grade === "D" ? " Even the A retests lost here: extra caution." : disp.grade === "C" ? " About break-even so far." : "";
   const ent = kind === "hub" ? "Entering at the breakout close" : "Entering at the neckline close";
@@ -6628,6 +6628,7 @@ function renderRetest() {
     if (r.retest && r.retest.candles_left > 0)
       rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
+                 path: r.path || null,             // Patch 198 §6: the live clear-path fact (hub rows only)
                  tape_flow: r.tape_flow || null,   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
                  grade: r.grade || null, hub: true, shelf: r.target_kind !== "atr", kind: "hub"});
   }
@@ -6671,7 +6672,7 @@ function renderRetest() {
       ? `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · retest window closes ${retestBy(x.left)} — the next 4H close decides it`
       : `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · retest window closes ${retestBy(x.left)}`;
     return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
-      <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
+      <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${pathChip(x)}${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
   // Patch 191: the first row of the existing order is the hero card; the rest render as today
   // the hero is the best A: at the edge first, else an A still waiting; with no A anywhere, the first row as before
@@ -6686,7 +6687,7 @@ function renderRetest() {
       <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span>${g ? `<span class="sg-in ${GRADE_CLS[g]} ckh-g">${g}</span>` : ""}</div>
       <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
       <div class="ckh-line">${kind === "gap" ? `Closed back above the gap-day high ${money(x.edge)} · out on a daily close below ${money(x.stop)} · target ${money(x.target)} (2× the risk) · day ${x.day} of 10` : kind === "now" ? `At the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · the next 4H close decides it` : `Pullback not at the edge yet · edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}`}${kind === "gap" ? "" : ` · retest window closes ${retestBy(x.left)}`}</div>
-      ${conf ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b></small><small class="ckh-rec" data-sym="${esc(x.sym)}"></small>` : ""}
+      ${pathChip(x)}${conf ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b></small><small class="ckh-rec" data-sym="${esc(x.sym)}"></small>` : ""}
     </a>`;
   };
   const restNow = now.filter(x => x !== heroRow);
@@ -6980,6 +6981,7 @@ function boardKindMatch(r, k) {
 const rvolWord = (r) => r == null ? null : r >= 1.5 ? "strong" : r >= 1 ? "normal" : "light";
 // Patch 182 follow-up: the stored tape classification, visible on the hub table row (confirmed only;
 // rows carry tape_flow only for viewers the flow gate allows) and as a block in the stock's panel
+function pathChip(r) { const p = r && r.path; return p && p.clear ? `<span class="vol-chip path-chip" title="Clear path: no stack of 2+ level kinds between the trigger and the target right now. A live fact — it can change as levels form. The grade's own reading is taken at the first retest.">Clear path</span>` : ""; }
 function tapeChip(r) { const t = r && r.tape_flow; return t && t.line ? `<span class="vol-chip tape-chip" title="${esc(t.line)} From the options tape, measured at the break. A past fact, not a live reading.">📊 Tape confirmed</span>` : ""; }
 function paintTapeBlock() {
   const card = document.querySelector("#bfMap .mp-chartcard"); if (!card) return;
@@ -7162,7 +7164,7 @@ function renderInstitutionalBoard(){
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     const rStale=STALE_OF(r);
     return '<tr'+(rStale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
-      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait" title="The retest window closes '+retestBy(r.retest.candles_left)+' ET">RETEST · UNTIL '+retestBy(r.retest.candles_left,true).toUpperCase()+'</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(rStale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
+      '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait" title="The retest window closes '+retestBy(r.retest.candles_left)+' ET">RETEST · UNTIL '+retestBy(r.retest.candles_left,true).toUpperCase()+'</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+pathChip(r)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(rStale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
       '<td data-label="4H context">'+esc(context)+'</td><td data-label="Analysis"><div class="board-actions"><a class="btnx sm" href="/t/'+encodeURIComponent(r.symbol)+'" onclick="event.preventDefault();openBrief(\''+esc(r.symbol)+'\')">Analyze</a><button class="btnx sm plain-btn" onclick="togglePlain(this)" aria-expanded="false">Plain English</button>'+brokerLinks(r.symbol, r.exchange)+'</div></td></tr>' + plainRow(r, kind);
@@ -7434,7 +7436,7 @@ function optionsHTML(o) {
     const rname = kind === "hub" ? "hub A retests" : "double bottom A retests";
     const retestOdds = !RA ? null : !up
       ? `Watch only: ${kind === "hub" ? "short breakdowns" : "double tops"} lost money in the two-year test.`
-      : `Setup grade <b class="sg-in ${GRADE_CLS[RA.grade]}">${RA.grade} · ${RA.word}</b> if it retests as an A: ${RA === UG.retest ? `${rname} on ${esc(BRIEF_SYM)}` : `${rname} across all 543 stocks`} ${RA.avg > 0 ? `made <b>+${RA.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(RA.avg).toFixed(2)}%</b>`} per trade (${Number(RA.n).toLocaleString()} trades, ${RA.win}% won).`;
+      : `Setup grade <b class="sg-in ${GRADE_CLS[RA.grade]}">${RA.grade} · ${RA.word}</b> if it retests as an A: ${RA === UG.retest ? `${rname} on ${esc(BRIEF_SYM)}` : `${RA.grade === "A+" ? "hub A retests with a clear path" : rname} across all 543 stocks`} ${RA.avg > 0 ? `made <b>+${RA.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(RA.avg).toFixed(2)}%</b>`} per trade (${Number(RA.n).toLocaleString()} trades, ${RA.win}% won).`;
     const odds = (kind === "hub" || kind === "double_bottom" || kind === "double") && retestOdds ? retestOdds
       : g && g.grade !== "?" ? `Setup grade <b class="sg-in ${GRADE_CLS[g.grade]}">${g.grade} · ${g.word}</b>: ${kind === "hub" ? (up ? "long breakouts" : "short breakdowns") : esc(p.setup)} ${gradeVerb(g)} per trade on the stock (${g.win}% winners, ${g.n} trades).${g.grade === "D" ? " The stock usually lost on this setup, so this contract is more likely to lose than win." : ""}`
       : g && U ? `Setup grade <b class="sg-in ${GRADE_CLS[U.grade]}">${U.grade} · ${U.word}</b>: ${esc(U.label)} record across all 543 stocks: ${U.avg > 0 ? `made <b>+${U.avg.toFixed(2)}%</b>` : `lost <b>${Math.abs(U.avg).toFixed(2)}%</b>`} per trade over two years (${Number(U.n).toLocaleString()} trades, ${U.win}% won). Too few on ${esc(BRIEF_SYM)} itself to grade.${U.grade === "D" ? " The pattern lost money in the two-year test." : ""}${U.caveat ? ` ${esc(U.caveat)}` : ""}`
@@ -9167,6 +9169,8 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .sc-flow { margin-top: 14px; background: rgba(34,163,92,.07); border: 1px solid #1E7A3C; border-radius: 12px; padding: 12px 14px; font-size: 14.5px; line-height: 1.55; color: var(--mp-ink, #E9EBEF); }
 .sc-flow b { color: #3DD68C; }
 .sc-tape { background: rgba(47,84,235,.07); border-color: #2F54EB; }
+.path-chip { background: rgba(47,84,235,.10); border-color: #2F54EB; color: #8FA6FF; }
+html[data-theme="light"] .path-chip { color: #2F54EB; }
 .sc-tape b { color: #8FA6FF; }
 .mkt-vix { white-space: nowrap; }
 /* Patch 191: the Cockpit */

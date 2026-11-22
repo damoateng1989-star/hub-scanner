@@ -258,7 +258,7 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
 <h2>3. The A only chip on the board</h2>
 <p>On the board (Browse setups), tap <b>A only</b> to see just the live breakouts and breakdowns whose setup grades A. <b>Setups</b>, the default chip, shows everything that can become a trade; <b>All</b> shows the whole table.</p>
 <h2>What the A means</h2>
-<p>The grade is the setup's measured past record across every stock NextShelf scans, not a guess about this one stock. A is the best-measured. It describes what similar setups did before; it doesn't promise what this one will do, which is why every A still comes with a stop.</p>
+<p>The grade is the setup's measured past record across every stock NextShelf scans, not a guess about this one stock. <b>A+</b>: an A retest with a clear path to the target. That's the top letter, then A, B, C and D. It describes what similar setups did before; it doesn't promise what this one will do, which is why every A still comes with a stop.</p>
 <h2>Or let it come to you</h2>
 <p>Turn on <b>Every A setup</b> (under Retesting now, or in Account) and NextShelf messages you whenever an A setup confirms on any stock it scans, not just your watchlist: about 8 a week. That's the version for a busy day.</p>""",
          ["Today's hero card shows the best A setup first, with its grade in the corner.",
