@@ -7258,7 +7258,7 @@ function paintHeatmap() {
   const short = {"Information Technology": "Tech", "Communication Services": "Comm.", "Consumer Discretionary": "Discretionary", "Consumer Staples": "Staples", "Health Care": "Health", "Real Estate": "Real estate"};
   let html = "";
   for (const S of squarify(secs, 0, 0, W, H)) {
-    const hd = S.h > 40 && S.w > 50 ? 15 : 0;
+    const hd = S.h > 44 && S.w > 50 ? 20 : 0;   // Nov 22: a taller header row for the bigger sector names
     html += `<div class="hm-sec" style="left:${S.x}px;top:${S.y}px;width:${S.w}px;height:${S.h}px">${hd ? `<div class="hm-sh">${esc(short[S.k] || S.k)}</div>` : ""}`;
     for (const t of squarify(S.list, 0, hd, S.w, S.h - hd)) {
       const [lab, cls] = HEAT_ST[t.st] || HEAT_ST.none, fit = Math.min(t.w / (t.s.length * 0.62), t.h / 1.6), fs = Math.max(10, Math.min(15, fit));
@@ -9597,14 +9597,14 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
 .hm-lg i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
 .hm-box { position: relative; width: 100%; overflow: hidden; border-radius: 10px; }
 .hm-sec { position: absolute; box-sizing: border-box; padding: 1px; }
-.hm-sh { position: absolute; left: 3px; top: 1px; right: 3px; height: 14px; font: 600 10px var(--sans, system-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--muted, #9AA0AC); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hm-sh { position: absolute; left: 4px; top: 2px; right: 4px; height: 18px; font: 800 12.5px/18px var(--sans, system-ui); letter-spacing: .1em; text-transform: uppercase; color: #E9EDF2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hm-t { position: absolute; box-sizing: border-box; border: 1px solid var(--bg, #0E0F12); border-radius: 3px; padding: 0; margin: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; transition: filter .12s; }
 .hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
 .hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
 .hm-up { background: #21B573; } .hm-down { background: #E5484D; } .hm-edge { background: #F0A81C; } .hm-edgedn { background: #B07E28; }   /* Patch 204: sharper */
 .hm-rest { background: #3A5BDB; } .hm-none { background: #000; box-shadow: inset 0 0 0 1px #23272E; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): black tiles, silver text; the inset hairline keeps each tile distinct */
 .hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
-html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-none { background: #e6e8ee; box-shadow: none; } html[data-theme="light"] .hm-none span { color: #8a909c; }
+html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-sh { color: #0D1117; } html[data-theme="light"] .hm-none { background: #e6e8ee; box-shadow: none; } html[data-theme="light"] .hm-none span { color: #8a909c; }
 html[data-theme="light"] .hm-rest { background: #6C7BD8; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
 .hm-tip { position: absolute; z-index: 5; pointer-events: none; opacity: 0; background: var(--surface, #15171C); border: 1px solid var(--line, #292A2D); color: var(--ink, #F3F4F6); font-size: 12px; padding: 5px 9px; border-radius: 8px; white-space: nowrap; box-shadow: 0 6px 18px rgba(0,0,0,.3); }
 .hm-tip.on { opacity: 1; }
