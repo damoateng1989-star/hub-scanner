@@ -4,7 +4,10 @@
 <script>/* the iOS app shows Today, Cinema and Learn from the site (Nov 22, hybrid): ?embed=ios hides the site's own navigation */
 (function(){try{var q=new URLSearchParams(location.search).get("embed");if(q==="ios")sessionStorage.setItem("ns-embed","ios");if(sessionStorage.getItem("ns-embed")==="ios")document.documentElement.classList.add("embed-ios");}catch(e){}})();</script>
 <style>html.embed-ios body > nav, html.embed-ios aside.side, html.embed-ios nav.bottom, html.embed-ios body > footer { display: none !important; }
-html.embed-ios body { --sbw: 0px !important; padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }</style>
+html.embed-ios body { --sbw: 0px !important; padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }/* Nov 22 (owner, option 2): teal base with stronger signals; dark text on the light tiles */
+.hm-up span, .hm-down span, .hm-edge span, .hm-edgedn span { color: #10303A !important; text-shadow: none !important; }
+html[data-theme="light"] .hm-rest { background: #2E6474 !important; }
+</style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9640,8 +9643,8 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
 .hm-t { position: absolute; box-sizing: border-box; border: 1px solid var(--bg, #0E0F12); border-radius: 3px; padding: 0; margin: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; transition: filter .12s; }
 .hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
 .hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
-.hm-up { background: #21B573; } .hm-down { background: #FF6B5E; } .hm-edge { background: #F0A81C; } .hm-edgedn { background: #B07E28; }   /* Patch 204: sharper */
-.hm-rest { background: #7C93FF; }   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #181A20; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
+.hm-up { background: #5FC4A0; } .hm-down { background: #FF7C75; } .hm-edge { background: #FFAD8A; } .hm-edgedn { background: #D98E74; }   /* Patch 204: sharper */
+.hm-rest { background: #194350; }   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #181A20; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
 .hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
 html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-sh { color: #0D1117; } html[data-theme="light"] .hm-none { background: #e6e8ee; box-shadow: none; } html[data-theme="light"] .hm-none span { color: #8a909c; }
 html[data-theme="light"] .hm-rest { background: #6C7BD8; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
