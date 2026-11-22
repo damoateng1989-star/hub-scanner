@@ -1073,7 +1073,8 @@ def board_data(u: dict | None = Maybe):
                 row = db.flow_signal_latest(r["symbol"], d)
                 if row:
                     r["tape_flow"] = dict(state=row["state"], net=row["flow_net"],
-                                          line=_sc.tape_short_line(row, d))
+                                          line=_sc.tape_short_line(row, d),
+                                          date=row.get("breakout_date"))   # the panel names the break it's about
     except Exception:
         pass
     try:      # Patch 198 §6: the live path fact on live hub rows — the same

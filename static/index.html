@@ -6990,7 +6990,14 @@ function paintTapeBlock() {
   if (!t || !t.line) { if (el) el.remove(); return; }
   if (!el || el.previousElementSibling !== card) { if (el) el.remove(); el = document.createElement("div"); el.id = "bfTape"; card.after(el); }
   el.className = "sc-flow sc-tape bf-tape";
-  el.innerHTML = `📊 <b>${esc(t.line)}</b><small>From the options tape, measured at the break. A past fact, not a live reading.</small>`;
+  // the reading always belongs to the stock's HUB break (board live rows are hub rows): say so, so it can't be read as
+  // being about a double bottom or another setup shown on the same panel
+  const up = r.state !== "breakdown", edge = (r.retest && r.retest.edge) || (r.hub && (up ? r.hub.high : r.hub.low));
+  let when = "";
+  try { if (t.date) when = new Date(t.date + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}); } catch (e) {}
+  const what = up ? "breakout" : "breakdown";
+  const line = t.line.replace(`confirmed this ${what}`, `confirmed the hub ${what}`);
+  el.innerHTML = `<span class="bf-tape-k">About the hub ${what}${edge ? ` through ${money(edge)}` : ""}${when ? ` · ${esc(when)}` : ""}</span>📊 <b>${esc(line)}</b><small>From the options tape, measured at the break. A past fact, not a live reading.</small>`;
 }
 function volChip(r) { const w = rvolWord(r); return w ? `<span class="vol-chip ${w}" title="Breakout-candle volume vs a normal candle at that time of day">Vol ${Number(r).toFixed(2)}× · ${w}</span>` : ""; }
 const gradeWord = (h) => h && h.grade ? `${h.grade === "warehouse" ? "Warehouse" : "Ledge"} · ${h.score}/6` : "";
@@ -9172,6 +9179,7 @@ footer > .app-legal:nth-child(4) { grid-column: 2; grid-row: 2; }
 .path-chip { background: rgba(47,84,235,.10); border-color: #2F54EB; color: #8FA6FF; }
 html[data-theme="light"] .path-chip { color: #2F54EB; }
 .sc-tape b { color: #8FA6FF; }
+.bf-tape-k { display: block; margin-bottom: 6px; font: 600 11px/1.3 var(--mono, ui-monospace, monospace); letter-spacing: .08em; text-transform: uppercase; color: var(--mut, #9AA0AC); }
 .mkt-vix { white-space: nowrap; }
 /* Patch 191: the Cockpit */
 .ck-chips { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; margin: 14px 0 6px; }
