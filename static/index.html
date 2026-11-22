@@ -1446,11 +1446,10 @@ button.primary:hover, .sp-go:hover { background: #fff !important; box-shadow: 0 
 .bf-foot a, .mb-lock a, .mb-f a, .upsell, .ox-lock a { color: #fff !important; }
 .bf-foot a + a { color: #9AA0AC !important; }
 /* Sika: monochrome robot. Green never means anything here: it is kept for price direction only */
-/* Patch 202 (Nov 22): no ring, no halo — a plain dark button with a hairline edge and the standard drop shadow */
-.scout-fab::before { display: none !important; }
-.scout-fab { border: 1px solid #2A2E33 !important; box-shadow: 0 16px 44px rgba(0,0,0,.55) !important; }
-.scout-fab:hover { box-shadow: 0 20px 50px rgba(0,0,0,.6) !important; }
-.sf-halo { display: none !important; }
+.scout-fab::before { background: conic-gradient(from var(--sf-a, 0deg), #ffffff, #646B78, #ffffff, #646B78, #ffffff) !important; }
+.scout-fab { box-shadow: 0 16px 44px rgba(0,0,0,.55), 0 0 28px rgba(255,255,255,.12) !important; }
+.scout-fab:hover { box-shadow: 0 20px 50px rgba(0,0,0,.6), 0 0 40px rgba(255,255,255,.2) !important; }
+.sf-halo { background: radial-gradient(circle, rgba(255,255,255,.18), transparent 70%) !important; }
 .scout-fab .ag-eyes circle { fill: #7C93FF !important; filter: drop-shadow(0 0 3px rgba(124,147,255,.8)) !important; }
 .scout-fab .ag-ant { fill: #9AA0AC !important; } .scout-fab.run .ag-ant { fill: #fff !important; }
 .sf-name, .sf-hello, .sf-badge { background: #F4F6F9 !important; color: #0E0F12 !important; }
