@@ -5703,6 +5703,16 @@ function extHTML(sym, P, st) {
   else if (t != null) note = `${word} is still on the near side of the trigger (${money(t)}). Thin ${x.session === "pre" ? "pre-market" : "after-hours"} trading often reverses at the open.`;
   return {pill, note: note ? `<p class="mp-extnote"><i></i>${note} <span>Last ${word.toLowerCase()} trade ${at} ET${dl}.</span></p>` : ""};
 }
+// "Wider chart": Sika's column folds away so the chart takes the full width; "‹ Show Sika" brings it back (remembered)
+function mapIsWide() { return document.body.classList.contains("map-wide"); }
+function mapWide(on) {
+  on = on == null ? !mapIsWide() : on;
+  document.body.classList.toggle("map-wide", on);
+  try { localStorage.setItem("ns-map-wide", on ? "1" : "0"); } catch (e) {}
+  paintMap();
+  if (typeof MAP_LWC_CHART !== "undefined" && MAP_LWC_CHART) setTimeout(() => window.dispatchEvent(new Event("resize")), 60);
+}
+try { if (localStorage.getItem("ns-map-wide") === "1") document.body.classList.add("map-wide"); } catch (e) {}
 function paintMap() {
   const el = $("bfMap"); if (!el) return;
   if (!MAP_ON() || !BRIEF_SYM) { el.innerHTML = ""; return; }
@@ -5747,6 +5757,7 @@ function paintMap() {
   el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
       <h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
       ${EXN ? EXN.pill : `<span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : "Market closed"}</span>`}
+      <button class="mp-widebtn" onclick="mapWide()" aria-pressed="${mapIsWide()}" title="${mapIsWide() ? "Bring Sika and the side cards back" : "Give the chart the whole width (Sika folds away)"}">${mapIsWide() ? "‹ Show Sika" : "Wider chart ⇥"}</button>
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
@@ -9472,6 +9483,11 @@ html[data-theme="light"] .mp-svg .mp-cd, html[data-theme="light"] .mp-svg .mp-cd
 #mapGrade .sg { margin: 0; }
 .mp-sika { display: flex; flex-direction: column; gap: 12px; }
 .mp-right { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.mp-widebtn { flex: none; font: 600 12.5px/1 inherit; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--mp-line); background: transparent; color: var(--mp-ink, inherit); cursor: pointer; margin-left: 8px; }
+.mp-widebtn:hover { background: rgba(255,255,255,.06); }
+body.map-wide .mp-widebtn { border-color: var(--shelf, #8AB4FF); }
+@media (min-width: 900px) { body.map-wide .mp-grid { grid-template-columns: minmax(0, 1fr); } body.map-wide .mp-right { display: none; } }
+@media (max-width: 899px) { .mp-widebtn { display: none; } }
 #mpSide { display: grid; gap: 12px; }
 .mp-sc { padding: 14px 16px; display: grid; gap: 8px; }
 .mp-sct { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mp-mut); font-weight: 600; }
