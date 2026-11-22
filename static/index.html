@@ -9808,9 +9808,7 @@ html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x 
 html:not([data-theme="light"]) body { background: #07090D !important; }
 html:not([data-theme="light"]), html:not([data-theme="light"]) main.wrap { background: transparent !important; }
 html:not([data-theme="light"]) body::before { content: ""; position: fixed; inset: -20%; z-index: 0; pointer-events: none;
-  background: radial-gradient(40% 30% at 15% 10%, rgba(61,214,140,.13), transparent 70%),
-              radial-gradient(45% 35% at 90% 30%, rgba(90,140,255,.13), transparent 70%),
-              radial-gradient(50% 40% at 30% 85%, rgba(150,110,255,.10), transparent 70%); }
+  background: none; }   /* Patch 201 (Nov 22): the colour glow is gone — its green landed as a wedge behind every page title */
 html:not([data-theme="light"]) body > main.wrap, html:not([data-theme="light"]) body > nav:not(.bottom) { position: relative; z-index: 1; }
 html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box,.week,.retest,.brief,.tbl,.empty,.board-lock,.mp-card,.sc,.lrow,.msc) {
   background: #07090D !important;          /* Nov 20: flat and as dark as the page, like the Waiting Room */
