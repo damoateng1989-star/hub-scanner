@@ -336,11 +336,19 @@ html .ns-logo span{font-weight:300 !important}
    172's static "Manrope Logo" 800/700 instances have no thin weights and are no
    longer referenced by the wordmark (see §3). */
 html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-stroke:0}   /* glass removed (Nov 19): solid, thin caps stay */
+
+/* Patch 203 (Nov 22): the new mark joins the word, and the wordmark is camel case — "NextShelf" (replaces Patch 172's caps) */
+html .ns-logo{text-transform:none !important;font-weight:700 !important;letter-spacing:-.02em !important;align-items:center}
+html .ns-logo span{font-weight:700 !important}
+.ns-logo .ns-mark{height:1.05em;width:auto;vertical-align:-0.14em;margin-right:0.34em}
+.ns-logo .ns-mark-light{display:none}
+html[data-theme="light"] .ns-logo .ns-mark-light{display:inline-block}
+html[data-theme="light"] .ns-logo .ns-mark-dark{display:none}
 </style>
 </head>
 <body>
 <section class="pitch">
-  <a class="brand ns-logo" href="/" style="text-decoration:none;color:inherit">Next<span>Shelf</span></a>
+  <a class="brand ns-logo" href="/" style="text-decoration:none;color:inherit"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
   <div>
     <h1>Find the setup. Get the plan. <em>Trade it.</em></h1>
     <ul>
@@ -355,7 +363,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
 </section>
 
 <section class="side"><div class="box">
-  <div class="brand ns-logo">Next<span>Shelf</span></div>
+  <div class="brand ns-logo"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></div>
 
   <p class="sub" id="pendingMsg" hidden style="background:var(--surface);border:1px solid var(--line-2);border-radius:12px;padding:12px 14px"></p>
   <div id="v-signin">

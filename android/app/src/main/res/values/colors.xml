@@ -2,5 +2,5 @@
 <resources>
     <!-- the site's theme_color / background_color (manifest.webmanifest) -->
     <color name="ns_bg">#070B10</color>
-    <color name="ns_icon_bg">#0B1220</color>
+    <color name="ns_icon_bg">#07090D</color>
 </resources>

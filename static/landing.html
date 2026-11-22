@@ -1070,12 +1070,20 @@ html .ft-giant{text-transform:uppercase;font-weight:200;letter-spacing:.01em}
 @keyframes hxSweep{0%{--hxs:-40%}55%{--hxs:140%}100%{--hxs:140%}}
 html[data-theme="light"] .hero.ns.hcx h1 .hx-2.hx-flow{background-image:linear-gradient(105deg,#1D4ED8 calc(var(--hxs) - 26%),#A9CBFF calc(var(--hxs) - 6%),#A9CBFF calc(var(--hxs) + 6%),#1D4ED8 calc(var(--hxs) + 26%)) !important;color:transparent !important;-webkit-text-fill-color:transparent !important;text-shadow:none !important;filter:none}
 @media(prefers-reduced-motion:reduce){.hero.ns.hcx h1 .hx-2.hx-flow{animation:none}}
+
+/* Patch 203 (Nov 22): the new mark joins the word, and the wordmark is camel case — "NextShelf" (replaces Patch 172's caps) */
+html .ns-logo{text-transform:none !important;font-weight:700 !important;letter-spacing:-.02em !important;align-items:center}
+html .ns-logo span{font-weight:700 !important}
+.ns-logo .ns-mark{height:1.05em;width:auto;vertical-align:-0.14em;margin-right:0.34em}
+.ns-logo .ns-mark-light{display:none}
+html[data-theme="light"] .ns-logo .ns-mark-light{display:inline-block}
+html[data-theme="light"] .ns-logo .ns-mark-dark{display:none}
 </style>
 </head>
 <body>
 
 <nav class="top"><div class="wrap">
-  <a class="wordmark ns-logo" href="/">Next<span>Shelf</span></a>
+  <a class="wordmark ns-logo" href="/"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
   <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false">☰</button>
   <div class="navlinks"><a href="#how">How it works</a><a href="#record">The record</a><a href="#discipline">Discipline</a><a href="#cinema">Cinema</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="#setups"><b>All three setups</b><small>See them side by side on this page</small></a><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="#faq">FAQ</a></div>
   <div class="navend"><a class="signin" href="/login" id="signInLink">Sign in</a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l-1.6 1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><span id="navEnd" class="navend"><a class="btn sm blue" href="#join" data-cta>Join the waitlist</a></span></div>

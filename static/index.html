@@ -2665,12 +2665,20 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   .btnx, .sp-row, .ask-scan-sym, .ask-send, .sp-go, .sp-alt, .chip, .board-filter, .sb-item, .kpi, .hm-t { transition: none !important; }
   .btnx:active, .sp-row:active, .ask-scan-sym:active, .ask-send:active, .sp-go:active, .sp-alt:active, .chip:active, .board-filter:active, .sb-item:active, .kpi:active, .hm-t:active, .scout-fab:active, .kpi:hover { transform: none !important; }
 }
+
+/* Patch 203 (Nov 22): the new mark joins the word, and the wordmark is camel case — "NextShelf" (replaces Patch 172's caps) */
+html .ns-logo{text-transform:none !important;font-weight:700 !important;letter-spacing:-.02em !important;align-items:center}
+html .ns-logo span{font-weight:700 !important}
+.ns-logo .ns-mark{height:1.05em;width:auto;vertical-align:-0.14em;margin-right:0.34em}
+.ns-logo .ns-mark-light{display:none}
+html[data-theme="light"] .ns-logo .ns-mark-light{display:inline-block}
+html[data-theme="light"] .ns-logo .ns-mark-dark{display:none}
 </style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
   <div class="sb-head">
-    <a class="sb-brand ns-logo" href="/" title="NextShelf home">Next<span>Shelf</span></a>
+    <a class="sb-brand ns-logo" href="/" title="NextShelf home"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
     <button class="sb-min" onclick="toggleSide()" aria-label="Collapse sidebar" title="Collapse"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 10l-2 2 2 2"/></svg></button>
   </div>
   <div class="sb-scroll">
@@ -2695,7 +2703,7 @@ html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-st
   </div>
 </aside>
 <nav><div class="wrap">
-  <a class="brand ns-logo" href="/" title="NextShelf home">Next<span>Shelf</span></a>
+  <a class="brand ns-logo" href="/" title="NextShelf home"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
   <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#cinema" data-tab="cinema">Cinema</a><a href="#results" data-tab="results">Results</a><a href="#account" data-tab="account">Account</a></div>
   <div class="navr">
     <button type="button" class="theme-btn top-theme" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>

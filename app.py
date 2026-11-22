@@ -333,6 +333,15 @@ def favicon_ico():
     return FileResponse(STATIC / "favicon.svg", media_type="image/svg+xml")
 
 
+@app.get("/logo-mark-{theme}.png")
+def logo_mark(theme: str):
+    """Patch 203: the header mark, one per theme (white climb on dark, near-black climb on light)."""
+    if theme not in ("dark", "light"):
+        raise HTTPException(404)
+    return FileResponse(STATIC / f"logo-mark-{theme}.png", media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/apple-touch-icon.png")
 def touch_icon():
     return FileResponse(STATIC / "apple-touch-icon.png", media_type="image/png")

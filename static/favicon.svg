@@ -1,1 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 120" role="img" aria-label="NextShelf"><text x="4" y="88" font-family="Manrope, Arial, sans-serif" font-size="96" font-weight="800" letter-spacing="-5" fill="#c3ccd7">Next<tspan font-weight="700">Shelf</tspan></text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="NextShelf">
+<rect x="64" y="64" width="896" height="896" rx="190" fill="#07090D"/>
+<g fill="none" stroke-width="66" stroke-linecap="round" stroke-linejoin="round">
+<path d="M300 640 L345 664 L395 632 L430 646" stroke="#3B82F6"/>
+<path d="M430 646 L700 392" stroke="#F5F7FA"/>
+<path d="M700 392 L806 392" stroke="#3DD68C"/>
+</g>
+</svg>

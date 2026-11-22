@@ -290,11 +290,19 @@ html .ns-logo span{font-weight:300 !important}
    172's static "Manrope Logo" 800/700 instances have no thin weights and are no
    longer referenced by the wordmark (see §3). */
 html:not([data-theme="light"]) .ns-logo{color:#E6EBF0 !important;-webkit-text-stroke:0}   /* glass removed (Nov 19): solid, thin caps stay */
+
+/* Patch 203 (Nov 22): the new mark joins the word, and the wordmark is camel case — "NextShelf" (replaces Patch 172's caps) */
+html .ns-logo{text-transform:none !important;font-weight:700 !important;letter-spacing:-.02em !important;align-items:center}
+html .ns-logo span{font-weight:700 !important}
+.ns-logo .ns-mark{height:1.05em;width:auto;vertical-align:-0.14em;margin-right:0.34em}
+.ns-logo .ns-mark-light{display:none}
+html[data-theme="light"] .ns-logo .ns-mark-light{display:inline-block}
+html[data-theme="light"] .ns-logo .ns-mark-dark{display:none}
 </style>
 </head>
 <body>
 <nav><div class="wrap">
-  <a class="brand ns-logo" href="/">Next<span>Shelf</span></a>
+  <a class="brand ns-logo" href="/"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
   <div class="nl"><button type="button" class="theme-btn" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button><a class="hide-sm" href="/board">Setups</a><a class="hide-sm" href="/#pricing">Pricing</a><a class="cta" id="navCta" href="/login#signup">Sign up</a><button type="button" class="nav-toggle" aria-label="Menu" aria-expanded="false" onclick="nsMenu(this)">☰</button></div>
 </div>
   <div class="nav-menu"><a href="/">Home</a><a href="/#how">How it works</a><a href="/board">Setups</a><a href="/#pricing">Pricing</a><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Setups <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn/what-is-a-hub"><b>Hubs</b><small>Tight ranges that break out. The core setup.</small></a><a href="/learn/double-tops-and-bottoms"><b>Double tops &amp; bottoms <i>live</i></b><small>Two tests, then the neckline</small></a><a href="/learn/gap-fade-and-rip"><b>Gap fade &amp; rip <i>live</i></b><small>A faded gap, then the reclaim</small></a></div></div></div><div class="lm"><button type="button" class="lm-btn" aria-expanded="false" aria-haspopup="true">Learn <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="lm-panel one"><div class="lm-col"><a href="/learn"><b>All lessons</b><small>19 short lessons, free</small></a><a href="/learn/trade-your-first-setup"><b>Your first setup</b><small>Start to finish, step by step</small></a><a href="/learn#m3"><b>Options for swing traders</b><small>Calls, puts, decay and IV</small></a><a href="/learn#m4"><b>Trading with a day job</b><small>Bracket orders and discipline</small></a></div></div></div><a href="/#faq">FAQ</a></div>
