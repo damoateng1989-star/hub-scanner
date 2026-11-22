@@ -6846,6 +6846,7 @@ async function loadToday() {
   loadPremarket();
   try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
   renderToday(); renderStrip();
+  try { paintTapeBlock(); } catch (e) {}   // a stock panel already open picks up the tape fact once Today's board arrives
   loadBrief();
 }
 function renderPremarket() {
@@ -6985,7 +6986,9 @@ function pathChip(r) { const p = r && r.path; return p && p.clear ? `<span class
 function tapeChip(r) { const t = r && r.tape_flow; return t && t.line ? `<span class="vol-chip tape-chip" title="${esc(t.line)} From the options tape, measured at the break. A past fact, not a live reading.">📊 Tape confirmed</span>` : ""; }
 function paintTapeBlock() {
   const card = document.querySelector("#bfMap .mp-chartcard"); if (!card) return;
-  const r = BRIEF_SYM && BOARD_DATA && (BOARD_DATA.live || []).find(x => x.symbol === BRIEF_SYM), t = r && r.tape_flow;
+  // either copy of the board: the browse page's (BOARD_DATA) or Today's (BOARD) — a panel opened from Today must find it too
+  const pick = (b) => b && (b.live || []).find(x => x.symbol === BRIEF_SYM && x.tape_flow && x.tape_flow.line);
+  const r = BRIEF_SYM && (pick(BOARD_DATA) || (typeof BOARD !== "undefined" && pick(BOARD))), t = r && r.tape_flow;
   let el = document.getElementById("bfTape");
   if (!t || !t.line) { if (el) el.remove(); return; }
   if (!el || el.previousElementSibling !== card) { if (el) el.remove(); el = document.createElement("div"); el.id = "bfTape"; card.after(el); }
