@@ -9189,6 +9189,8 @@ html[data-theme="light"] .path-chip { color: #2F54EB; }
 .ck-chip b { font: 700 22px/1.15 var(--sans, Inter, sans-serif); color: var(--ink, #EDEDED); }
 .ck-chip span { font-size: 12px; color: var(--mut, #9AA0AC); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ck-hero { display: block; margin: 10px 0 12px; padding: 16px 16px 14px; border-radius: 16px; border: 1.5px solid #2F54EB; background: rgba(47,84,235,.06); text-decoration: none; color: inherit; }
+/* Nov 22 (owner's pick): the hero takes the trade's direction — green for a long, red for a short (--c is set per card) */
+.ck-hero { border-color: var(--c, #2F54EB); background: color-mix(in srgb, var(--c, #2F54EB) 6%, transparent); }
 .ckh-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .ckh-k { font: 600 10.5px/1.2 var(--mono, monospace); letter-spacing: .12em; text-transform: uppercase; color: #8FA6FF; }
 .ckh-g { font: 700 13px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 8px; padding: 4px 8px; }
@@ -9196,13 +9198,15 @@ html[data-theme="light"] .path-chip { color: #2F54EB; }
 .ckh-sym small { font-size: 13px; font-weight: 500; color: var(--mut, #9AA0AC); margin-left: 6px; }
 .ckh-line { font-size: 14px; line-height: 1.45; color: var(--ink2, #C9CED6); }
 .ck-hero .tape-chip { display: block; width: max-content; margin: 10px 0 0; }
-.ck-hero .rt-tape { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--mut, #9AA0AC); } .ck-hero .rt-tape b { color: #8FA6FF; font-weight: 600; }
+.ck-hero .rt-tape { display: block; margin-top: 6px; font-size: 12.5px; line-height: 1.45; color: var(--mut, #9AA0AC); } .ck-hero .rt-tape b { color: var(--c, #8FA6FF); font-weight: 600; }
+.ck-hero .ckh-k { color: var(--c, #8FA6FF); }
+.ck-hero .tape-chip { border-color: var(--c, #2F54EB); color: var(--c, #8FA6FF); background: color-mix(in srgb, var(--c, #2F54EB) 8%, transparent); }
 .ckh-line { color: #D5D9E0; font-size: 15px; }
 html[data-theme="light"] .ckh-line { color: #2B3038; }
 html[data-theme="light"] .ckh-sym small { color: #5B6270; }
-html[data-theme="light"] .ckh-k { color: #2F54EB; }
+html[data-theme="light"] .ck-hero .ckh-k { color: var(--c, #2F54EB); }
 html[data-theme="light"] .ckh-rec { color: #2B3038; }
-html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
+html[data-theme="light"] .ck-hero .rt-tape b { color: var(--c, #2F54EB); }
 .ckh-rec { display: block; margin-top: 4px; font: 600 12px/1.4 var(--mono, monospace); color: var(--ink2, #C9CED6); } .ckh-rec:empty { display: none; }
 #ckClosest { margin: 0 0 12px; } #ckClosest[hidden] { display: none; }
 .ck-quiet { border: 1px solid var(--line, #22262E); border-radius: 14px; padding: 12px 14px; }
@@ -9219,6 +9223,9 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 #retest .arow .tape-chip { display: block; width: max-content; margin: 6px 0 0; }
 #retest .rt-tape { display: block; margin-top: 5px; font-size: 12.5px; line-height: 1.45; color: var(--mp-mut, #9AA0AC); }
 #retest .rt-tape b { color: #8FA6FF; font-weight: 600; }
+/* the hero's tape fact follows the card's direction colour (owner's pick, Nov 22) — scoped to the hero only */
+.ck-hero .rt-tape b, #retest .ck-hero .rt-tape b, html[data-theme="light"] #retest .ck-hero .rt-tape b { color: var(--c, #8FA6FF) !important; }
+.ck-hero .vol-chip.tape-chip, html[data-theme="light"] .ck-hero .vol-chip.tape-chip { color: var(--c, #8FA6FF) !important; border-color: var(--c, #2F54EB) !important; background: color-mix(in srgb, var(--c, #2F54EB) 9%, transparent) !important; }
 .rt-watch { font-weight: 600; color: var(--mut, #9AA0AC); }
 .sc-grade { margin-left: 6px; font: 700 12px/1 var(--mono, monospace); border: 1px solid currentColor; border-radius: 6px; padding: 3px 7px; }
 /* the Screening Room (Patch 195) */
