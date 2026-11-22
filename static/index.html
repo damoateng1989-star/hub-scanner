@@ -6311,7 +6311,7 @@ function paintHeat(sym) {
 function briefSideToggle(on) {           // "Hide videos" gives the chart the whole width; "▶ Videos" brings them back (remembered)
   document.body.classList.toggle("side-off", !on);
   try { localStorage.setItem("ns-side-off", on ? "0" : "1"); } catch (e) {}
-  if (!on) $("bfWr").querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} });
+  if (!on) { $("bfWr").querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); srInlineStop($("bfSR")); }
   setTimeout(briefSideRoom, 420);          // after the card resizes
   if (!on) briefSideRoom();
   if (MAP_LWC_CHART) setTimeout(() => window.dispatchEvent(new Event("resize")), 450);
@@ -6334,7 +6334,7 @@ function briefSideRoom() {
   // the card's resting left edge from its layout box, not its on-screen box: while it slides in, the on-screen
   // box is still part-way across, which used to park the videos in the middle for a second
   const gap = open ? Math.round(document.documentElement.clientWidth - card.offsetWidth - (parseFloat(getComputedStyle(card).right) || 0)) : 0;
-  if (gap < 380) { if (!el.hidden) { el.hidden = true; el.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); } return; }
+  if (gap < 380) { if (!el.hidden) { el.hidden = true; el.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); srInlineStop($("bfSR")); } return; }
   const w = Math.min(560, gap - 40); el.style.width = w + "px"; el.style.left = Math.round((gap - w) / 2) + "px";
   el.style.setProperty("--ssh", Math.round(Math.min(420, innerHeight * .46, (w - 32 - 150) * 16 / 9)) + "px");   // the clip shrinks on narrow columns so the caption keeps ~150px
   el.hidden = false;
@@ -9217,6 +9217,15 @@ html[data-theme="light"] .ck-hero .rt-tape b { color: #2F54EB; }
 html[data-theme="light"] .sr-ft span { color: #3A3F47; }
 .sr-shelf { margin-top: 16px; }
 .sr-head { scroll-margin-top: 80px; }
+.sr-inline { margin: 10px 0 4px; }
+.sr-iframe { position: relative; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden; background: #000; }
+.sr-iframe iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.sr-ibar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.sr-ibar > div { flex: 1; min-width: 0; } .sr-ibar b { display: block; font: 400 18px/1.2 "Newsreader", Georgia, serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sr-ibar small { font-size: 11.5px; color: var(--mut, #9AA0AC); }
+.sr-ibar button { flex: none; font: 600 12px/1 inherit; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.06); color: inherit; cursor: pointer; }
+html[data-theme="light"] .sr-ibar button { border-color: rgba(15,23,42,.15); background: rgba(15,23,42,.04); }
+.sr-inote { margin: 6px 0 0; font-size: 11px; line-height: 1.35; color: var(--mut, #9AA0AC); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .sr-back { background: none; border: 0; padding: 0; font: inherit; letter-spacing: inherit; color: var(--shelf, #8AB4FF); cursor: pointer; }
 .sr-watch { align-self: flex-start; margin-top: 6px; font-style: normal; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 999px; background: #fff; color: #0B0D12; }
 html[data-theme="light"] .sr-watch { background: #0d1117; color: #fff; }
@@ -10031,7 +10040,7 @@ async function sideMovies() {
 function srFeatHTML(f, today) {
   const meta = [f.year, f.runtime, f.vein].filter(Boolean).map(esc).join(" · ");
   return `<div class="wr-eyebrow"><span>THE SCREENING ROOM</span>${today ? `<span>Today's feature</span>` : `<button type="button" class="sr-back" onclick="srPick(this, null)">← Today's feature</button>`}</div>
-    <button type="button" class="sr-feat" onclick="srPlay('${esc(f.id)}')" aria-label="Watch ${esc(f.title)}">
+    <button type="button" class="sr-feat" onclick="srPlay('${esc(f.id)}', this)" aria-label="Watch ${esc(f.title)}">
       <span class="sr-fp" style="background-image:url('${esc(f.poster)}')"><span class="sr-play">▶</span></span>
       <span class="sr-ft"><b>${esc(f.title)}</b><small>${meta}</small>${f.description ? `<span>${esc(f.description)}</span>` : ""}<em class="sr-watch">▶ Watch${f.runtime ? " · " + esc(f.runtime) : ""}</em></span>
     </button>`;
@@ -10060,8 +10069,10 @@ async function renderScreening(host) {
   el.hidden = false;
 }
 function srFind(id) { if (!SR) return null; if (SR.feature && SR.feature.id === id) return SR.feature; for (const sh of SR.shelves || []) for (const x of sh.films) if (x.id === id) return x; return null; }
-function srPlay(id) {
+function srPlay(id, btn) {
   const f = srFind(id); if (!f) return;
+  const side = btn && btn.closest && btn.closest(".bf-sr");
+  if (side) return srInline(side, f);
   let v = $("srPlayer"); if (!v) { v = document.createElement("div"); v.id = "srPlayer"; v.className = "sr-player"; document.body.appendChild(v); }
   v.innerHTML = `<div class="sr-pbox" role="dialog" aria-label="${esc(f.title)}">
       <div class="sr-ph"><div><b>${esc(f.title)}</b><small>${[f.year, f.runtime, f.vein].filter(Boolean).map(esc).join(" · ")}</small></div><button type="button" onclick="srClose()" aria-label="Close">✕</button></div>
@@ -10069,6 +10080,21 @@ function srPlay(id) {
       <p class="sr-note">${f.source === "embed" ? esc(f.rights_note) : `Plays from the Internet Archive. Public domain: ${esc(f.basis)}`}</p></div>`;
   v.hidden = false; document.body.classList.add("sr-open");
   v.onclick = (e) => { if (e.target === v) srClose(); };
+}
+// beside the chart: the film plays right in the column, so the chart stays in view
+function srInline(el, f) {
+  const head = el.querySelector(".sr-head"); if (!head) return;
+  const note = f.source === "embed" ? esc(f.rights_note) : `Internet Archive · public domain: ${esc(f.basis)}`;
+  const src = f.embed + (f.embed.includes("?") ? "&" : "?") + "autoplay=1";
+  head.querySelector(".sr-feat").outerHTML = `<div class="sr-inline" data-id="${esc(f.id)}">
+      <div class="sr-iframe"><iframe src="${esc(src)}" title="${esc(f.title)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+      <div class="sr-ibar"><div><b>${esc(f.title)}</b><small>${[f.year, f.runtime].filter(Boolean).map(esc).join(" · ")}</small></div>
+        <button type="button" onclick="srInlineStop(this.closest('.bf-sr'))" title="Stop the film">■ Stop</button></div>
+      <p class="sr-inote">${note}</p></div>`;
+}
+function srInlineStop(el) {     // removing the frame stops the film; the film's card comes back
+  el = el || $("bfSR"); if (!el || !el.querySelector(".sr-inline")) return;
+  renderScreening(el);
 }
 function srClose() { const v = $("srPlayer"); if (!v) return; v.hidden = true; v.innerHTML = ""; document.body.classList.remove("sr-open"); }   // removing the frame stops the film
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && $("srPlayer") && !$("srPlayer").hidden) srClose(); });
