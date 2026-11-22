@@ -342,6 +342,12 @@ def logo_mark(theme: str):
                         headers={"Cache-Control": "public, max-age=86400"})
 
 
+@app.get("/og-card.png")
+def og_card():
+    """Patch 200: the link-preview card (Open Graph / Twitter), 1200x630."""
+    return FileResponse(STATIC / "og-card.png", media_type="image/png", headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/apple-touch-icon.png")
 def touch_icon():
     return FileResponse(STATIC / "apple-touch-icon.png", media_type="image/png")
