@@ -476,6 +476,131 @@ MODULES = [(t, d, [l for l in ls if l[0] not in _OFF_LESSONS]) for t, d, ls in M
 LESSONS = [(m, l) for m in MODULES for l in m[2]]
 
 
+# ---------------------------------------------------------------- the glossary (Nov 22): every term, in plain words
+# (term, explanation, lesson slug or None). Keep it in step with the lessons and the product: a term that changes on
+# the site changes here too.
+GLOSSARY = [
+    ("Price structure", [
+        ("Candle", "A summary of price over a stretch of time: where it opened, where it closed, and its high and low.", "why-4-hour-candles"),
+        ("4-hour candle", "NextShelf's working timeframe. The trading day splits into two: one candle closes at 1:30 PM and one at 4:00 PM Eastern. Clear enough to ignore the noise, fast enough to catch a move within days.", "why-4-hour-candles"),
+        ("The two closes", "1:30 PM and 4:00 PM Eastern, the only moments a NextShelf setup can confirm. You don't need to watch the screen in between.", "why-4-hour-candles"),
+        ("Wick", "The thin line above or below a candle's body: price poked there during the candle but didn't stay. A wick outside the hub is an attempt that failed, not a breakout.", "close-not-wick"),
+        ("Hub", "A pause: a tight sideways range where 4-hour candles keep closing inside the same narrow band, for at least 4 of them. Moves out of a tight range can be quick, because a lot of waiting decisions get made at once.", "what-is-a-hub"),
+        ("Hub top / hub bottom", "The two edges of the hub. A close above the top is a breakout; a close below the bottom is a breakdown. Also called the hub edges.", "what-is-a-hub"),
+        ("Warehouse / Ledge", "The hub's own quality score, 0 to 6, from how long it lasted, how tight it was and its volume. 4 to 6 is a Warehouse (a solid pause); 0 to 3 is a Ledge (a thin one).", None),
+        ("Shelf", "An earlier range where price paused before. Old pauses often matter again, so a shelf is a likely place for price to stall.", "shelves"),
+        ("Next shelf", "The nearest shelf in the direction of the break. It's the aim of the trade.", "shelves"),
+        ("Air pocket", "A stretch of price with very little in it: no shelves, no stacks. Price tends to move through air pockets quickly, in either direction.", "clear-path"),
+    ]),
+    ("The trade", [
+        ("Breakout / breakdown", "A 4-hour candle that closes outside the hub: above the top (breakout) or below the bottom (breakdown). It's the heads-up, not the entry.", "trade-your-first-setup"),
+        ("Heads-up", "What the breakout alert is. It says \"wait for the retest\": don't chase that close.", "trade-your-first-setup"),
+        ("15-minute warning", "About 15 minutes before each close (1:15 PM and 3:45 PM), NextShelf warns you if a stock is outside its hub: if the candle closes there, that's the breakout.", "close-not-wick"),
+        ("Trigger", "The price a close has to clear for the setup to fire, usually the hub edge (the neckline for a double top or bottom).", "trade-your-first-setup"),
+        ("Retest", "The entry. After a breakout, the first close back near the edge (within half an ATR), within 5 four-hour candles, that holds on the breakout side. A breakout that never comes back isn't traded.", "the-retest"),
+        ("Retest window", "The 5 four-hour candles after a breakout in which a retest can happen. The board shows when it closes (\"Retest · until Wed 1:30 PM\").", "the-retest"),
+        ("Retesting now / at the edge", "A setup where price is back at the edge right now: the next 4-hour close decides it.", "find-a-setups"),
+        ("Failed breakout", "A close back inside the hub before the retest. The breakout failed and there is nothing to enter.", "the-game-plan"),
+        ("Watch only", "A retest that misses one of the A rules, or a setup whose side lost money in the test (short hub retests, double tops). It's shown with the reason, but it isn't an entry.", "the-retest"),
+        ("The game plan", "The three parts every setup comes with, decided before you trade: the entry, the aim, and where you're wrong.", "the-game-plan"),
+        ("Aim / target", "Where the trade takes profit: the next shelf, or an ATR-based target when no shelf is in reach. An aim, not a promise.", "shelves"),
+        ("Wrong if / stop", "Where the plan says you were wrong. On an A hub setup it's a 4-hour close 1 ATR past your entry.", "the-game-plan"),
+        ("ATR (average true range)", "How much a stock normally moves in one candle. NextShelf uses it to size stops, targets and \"close to the edge\" for each stock, so a quiet stock and a wild one are judged fairly.", "shelves"),
+        ("Room (reward to risk)", "The distance to the next shelf divided by the distance back to the middle of the hub. An A setup needs 1.5× or more.", "the-retest"),
+        ("Sessions", "Trading days. An A hub setup needs a hub that held for 4 or more sessions.", "the-retest"),
+        ("10 candles / timed out", "Each trade gets 10 four-hour candles, about a week. If it hasn't reached the aim or the stop by then, it's marked timed out.", "the-game-plan"),
+        ("Follow-through / snap-back / stalled", "The three ways a trade ends: it reached the aim, it hit the stop, or it ran out of time.", None),
+        ("Chasing / the first-half rule", "Buying after most of the move has happened. If you missed the close, only take the trade while price is in the first half of the move, between the edge and halfway to the aim.", "dont-chase"),
+        ("Skipped (too far)", "A breakout that had already reached its aim before it could be entered. Logged in the track record, never traded.", "dont-chase"),
+        ("Position size", "How much you buy, worked out from the loss you'll accept: shares = (account × risk %) ÷ (entry − stop).", "position-size"),
+        ("R and 2R", "R is the distance from your entry to your stop: one unit of risk. A 2R target is twice that distance in your favour.", "gap-fade-and-rip"),
+    ]),
+    ("Grades and evidence", [
+        ("Setup grade", "A letter printed next to a setup: its measured past record, on that stock where there's enough history, otherwise across every stock NextShelf scans. It describes what similar setups did, not what this one will do.", "find-a-setups"),
+        ("The letters", "A+ is the top: an A retest with a clear path to the target. Then A, B, C and D. D means losses outweighed wins; C is about break-even.", "find-a-setups"),
+        ("A setup", "A hub retest that passes the measured rules: room 1.5× or more, a hub of 4+ sessions, a stop 1 ATR from the entry. Longs only.", "the-retest"),
+        ("A+", "An A retest whose path to the target was clear at the retest. The strongest grade NextShelf gives.", "clear-path"),
+        ("Stack", "Two or more different kinds of price level clustered close together: an old high, an older hub edge, a cluster of moving averages, a gamma level. Stacks act like walls.", "clear-path"),
+        ("Clear path", "No stack between the entry and the target. On the board, a blue Clear path chip shows the road as it stands right now; the grade's own reading is taken at the retest.", "clear-path"),
+        ("Stack in the way", "A stack sits between the entry and the target. An A retest like this steps down from A+ and carries its own, weaker record.", "clear-path"),
+        ("Confluence", "Another kind of level sitting right on a setup's trigger or target.", None),
+        ("Strong / weak breakout", "Strong means the breakout candle had 1.2× normal volume or more and closed at least 0.2 ATR past the edge. Weak breaks fail more often. Breakouts on light volume don't count at all.", "trade-your-first-setup"),
+        ("Volume (Vol 1.2×)", "The breakout candle's volume compared with a normal candle at that time of day.", None),
+        ("Average per trade", "The average gain or loss per trade. It's what decides whether a rule works, not the win rate.", "reading-the-track-record"),
+        ("Win rate", "The share of trades that won. A method can win 40% of the time and make money if the wins are bigger than the losses.", "reading-the-track-record"),
+        ("Profit factor (PF)", "Total winnings divided by total losses. PF 1.31 means $1.31 made for every $1.00 lost. Win rate tells you how often; profit factor tells you how much.", "flow-confirmed"),
+        ("n (trade count)", "How many trades an average rests on. Under 30 is directional only; a rule needs 100+ before it can leave beta.", "flow-confirmed"),
+        ("Early / later half", "The test split in two by time. A rule that only works in one half is probably luck.", None),
+        ("Without the top 5", "The record recomputed with its five best stocks removed, so a couple of lucky names can't carry it.", "flow-confirmed"),
+        ("Backtest", "History replayed: every past setup scored the way the rule trades it. Expect a little decay going forward, because the rule was chosen on the same data.", "flow-confirmed"),
+        ("Track record / forward log", "Every live setup logged from the day its rule shipped, with its outcome. Nothing is removed. This is the proof that counts.", "reading-the-track-record"),
+        ("Beta / ready to leave beta", "A rule stays in beta until it passes every check in the Lab: 100+ trades, a positive average, PF 1.2+, positive in both halves, positive over the last 6 months, and positive without its 5 best stocks.", None),
+    ]),
+    ("Other setups", [
+        ("Double top / double bottom", "Two tests of the same high (top) or low (bottom), 3 to 30 sessions apart, with a real dip or bounce of at least 2 ATR between them.", "double-tops-and-bottoms"),
+        ("Neckline", "The low of the dip between the two peaks of a double top (or the high of the bounce in a double bottom). A close through it is the heads-up; the retest of it is the entry.", "double-tops-and-bottoms"),
+        ("Gap", "When a stock opens far from where it closed, often on earnings or news. A gap can skip straight past an aim or a stop.", "earnings-and-gaps"),
+        ("Gap fade & rip", "A stock gaps up 5%+ and fades into a long upper wick, then closes back above the gap-day high within 5 sessions. Daily candles, long only, stop below the lowest low since the gap, 2R target.", "gap-fade-and-rip"),
+        ("Earnings pill", "The violet badge on a stock that reports within two weeks. Alerts add a line when earnings are within a week.", "earnings-and-gaps"),
+    ]),
+    ("Options and the tape", [
+        ("Option", "A contract about a stock's price by a certain date. One contract usually covers 100 shares.", "calls-and-puts"),
+        ("Call / put", "A call gains value when the stock rises; a put gains value when it falls.", "calls-and-puts"),
+        ("Strike", "The price written into the option. At the money: near today's price. In the money: already on the winning side.", "calls-and-puts"),
+        ("Expiry", "The date the option ends. NextShelf aims for about three times the typical days to the shelf, 2 to 6 weeks out.", "expiry-and-strike"),
+        ("Premium", "What you pay for an option, and the most you can lose on it.", "calls-and-puts"),
+        ("Delta", "Roughly how much an option's price moves when the stock moves $1. At the money is about 0.5.", "calls-and-puts"),
+        ("Time decay (theta)", "The part of an option's price you pay for time, shrinking every day and faster near expiry. A small move your way can still lose money.", "time-decay"),
+        ("Implied volatility (IV)", "The market's guess of how much a stock will move, built into the option's price. Higher IV, pricier options.", "implied-volatility"),
+        ("IV crush", "The sharp drop in IV right after earnings. It can wipe out the gain from a move that went your way.", "implied-volatility"),
+        ("Bid-ask spread", "The gap between the price buyers pay and sellers get. Wide spreads cost you the moment you buy; use a limit order near the middle.", "expiry-and-strike"),
+        ("The tape / flow confirmed", "Money spent buying calls at the ask minus money spent buying puts at the ask, over the break day and the session before. When it's large for that stock, the break was backed by real money: flow confirmed. A past fact about the break, not a forecast.", "flow-confirmed"),
+        ("Gamma / GEX", "Gamma exposure: where options dealers are positioned by strike. Big gamma strikes can act like magnets or walls for price.", None),
+        ("Call wall / put wall", "The strike with the most call (or put) gamma for an expiry. It often behaves like a ceiling (call wall) or a floor (put wall).", None),
+        ("GEX heat map", "The grid beside the chart showing gamma by strike and expiry, in millions of dollars. The brightest cells are the strongest levels.", None),
+    ]),
+    ("Chart tools", [
+        ("Volume profile", "The bars on the left of the chart: how much traded at each price. Long bars are prices the market accepted; short bars are air.", None),
+        ("POC (point of control)", "The price with the most volume traded in the profile. Price often gravitates back to it.", None),
+        ("Moving averages", "The average close over the last 9, 21, 50 or 200 candles. NextShelf counts them as a level only when two or more cluster together.", "clear-path"),
+        ("Ichimoku cloud", "The shaded band on the chart (settings 9 · 26 · 52). Shown for context only: it is never part of a grade or an alert.", None),
+        ("VIX", "The market's fear gauge, from S&P 500 option prices. High VIX means a jumpy market, where gaps and false breaks are more common.", None),
+    ]),
+    ("In the app", [
+        ("Today", "The first screen after you log in: the brief, the three chips (VIX, Retesting now, Waiting) and the hero card.", "find-a-setups"),
+        ("Hero card", "The larger card on Today. When any setup grades A, the best one goes here: one at the edge right now first.", "find-a-setups"),
+        ("Board (Browse setups)", "Every setup across the stocks NextShelf scans. Chips filter it: Setups (the default), A only, All, and more.", "find-a-setups"),
+        ("Watchlist", "The tickers you follow. Only those can alert you; the free tier covers 3.", "trade-your-first-setup"),
+        ("Morning brief", "A weekday message at the time you choose: the stocks closest to a breakout, breakouts still in play, and your watchlist.", None),
+        ("Sika", "The assistant on each stock's panel. It explains the setup in plain English from NextShelf's rules and past prices. Education only.", None),
+        ("Results", "The track record page: every setup NextShelf found, with its outcome.", "reading-the-track-record"),
+        ("The Lab", "Where every rule is tested on two years of history before it reaches you, and re-tested as data comes in.", None),
+    ]),
+]
+
+
+def _gid(term: str) -> str:
+    import re
+    return "g-" + re.sub(r"[^a-z0-9]+", "-", term.lower()).strip("-")
+
+
+def glossary_body() -> str:
+    titles = {l[0]: l[1] for _, _, ls in MODULES for l in ls}
+    n = sum(len(t) for _, t in GLOSSARY)
+    parts = [f'<p class="lu-lede">Every term NextShelf uses, in plain words. {n} terms. Each one links to the lesson that teaches it, where there is one.</p>',
+             '<input class="gl-q" type="search" placeholder="Search a term (retest, ATR, A+…)" aria-label="Search the glossary" oninput="glFilter(this.value)">',
+             '<div class="gl-jump">' + "".join(f'<a href="#gc{i}">{_e(c)}</a>' for i, (c, _) in enumerate(GLOSSARY)) + '</div>']
+    for i, (cat, terms) in enumerate(GLOSSARY):
+        rows = []
+        for term, expl, slug in terms:
+            more = f' <a class="gl-l" href="/learn/{slug}">{_e(titles[slug])} →</a>' if slug in titles else ""
+            rows.append(f'<div class="gl-t" id="{_gid(term)}" data-k="{_e((term + " " + expl).lower())}"><dt>{_e(term)}</dt><dd>{_e(expl)}{more}</dd></div>')
+        parts.append(f'<section class="gl-c" id="gc{i}"><h2>{_e(cat)}</h2><dl>{"".join(rows)}</dl></section>')
+    parts.append('<p class="gl-none" hidden>No term matches. Try a shorter word.</p>')
+    parts.append('<p class="lu-fine">Educational content only, not financial advice. Trading involves risk, including the loss of your money.</p>')
+    return "".join(parts)
+
+
 def _e(s: str) -> str:
     return html.escape(s)
 
@@ -484,7 +609,9 @@ def index_body() -> str:
     n = len(LESSONS)
     mins = sum(l[2] for _, l in LESSONS)
     parts = [f'<p class="lu-lede">Short, free lessons on the NextShelf method: hubs, shelves and closes, the game plan, options basics, '
-             f'how to trade around a day job, and the other setups on the board. {n} lessons · about {mins} minutes in total.</p>']
+             f'how to trade around a day job, and the other setups on the board. {n} lessons · about {mins} minutes in total.</p>',
+             f'<a class="gl-card" href="/learn/glossary"><span class="lu-n">Aa</span><span><b>Glossary</b><small>Every term on NextShelf in plain words: '
+             f'{sum(len(t) for _, t in GLOSSARY)} terms, from ATR to A+.</small></span><span class="lu-m">→</span></a>']
     k = 0
     for mi, (title, blurb, lessons) in enumerate(MODULES, 1):
         rows = []
@@ -545,8 +672,31 @@ STYLE = """<style>
 .lu-nav a.next { margin-left: auto; background: var(--ink); color: var(--bg, #070b10) !important; border-color: var(--ink); }
 .lu-fine { margin-top: 26px; font-size: 13px; color: var(--faint, #8a9aae); }
 html[data-theme="light"] .lu-nav a.next { background: #0d1117; color: #fff !important; border-color: #0d1117; }
+.gl-card { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px; margin-top: 18px; padding: 16px; border-radius: 16px;
+  border: 1px solid rgba(61,214,140,.4); background: rgba(61,214,140,.06); color: var(--ink) !important; text-decoration: none !important; }
+.gl-card:hover { border-color: #3DD68C; } .gl-card b { display: block; } .gl-card small { display: block; color: var(--muted); font-size: 14px; margin-top: 2px; }
+.gl-q { width: 100%; box-sizing: border-box; margin-top: 18px; padding: 13px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: 500 16px var(--sans); }
+.gl-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.gl-jump a { padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); font-size: 13px; font-weight: 600; color: var(--ink) !important; text-decoration: none !important; }
+.gl-c { margin-top: 30px; scroll-margin-top: 80px; } .gl-c h2 { font-size: 20px !important; margin: 0 0 8px !important; }
+.gl-c dl { margin: 0; display: grid; gap: 8px; }
+.gl-t { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); scroll-margin-top: 80px; }
+.gl-t:target { border-color: #3DD68C; }
+.gl-t dt { font-weight: 700; color: var(--ink); } .gl-t dd { margin: 4px 0 0; color: var(--muted); line-height: 1.55; }
+.gl-l { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.gl-c[hidden], .gl-t[hidden], .gl-jump[hidden], .gl-none[hidden] { display: none !important; }
+.gl-c dl, .gl-t { min-width: 0; }
+.gl-none { color: var(--muted); margin-top: 20px; }
 </style>
 <script>
+function glFilter(q) {
+  q = (q || "").trim().toLowerCase(); let any = false;
+  document.querySelectorAll(".gl-c").forEach(c => { let n = 0;
+    c.querySelectorAll(".gl-t").forEach(t => { const hit = !q || (t.dataset.k || "").includes(q); t.hidden = !hit; if (hit) n++; });
+    c.hidden = !n; if (n) any = true; });
+  const none = document.querySelector(".gl-none"); if (none) none.hidden = any;
+  const j = document.querySelector(".gl-jump"); if (j) j.hidden = !!q;
+}
 document.querySelectorAll(".lu-quiz").forEach(q => q.querySelectorAll("button").forEach(b => b.onclick = () => {
   const ok = b.dataset.ok === "1";
   q.querySelectorAll("button").forEach(x => { x.classList.remove("ok", "no"); if (x.dataset.ok === "1") x.classList.add("ok"); });
@@ -558,7 +708,10 @@ document.querySelectorAll(".lu-quiz").forEach(q => q.querySelectorAll("button").
 
 def render(slug: str | None = None) -> str | None:
     shell = (STATIC / "page.html").read_text()
-    if slug:
+    if slug == "glossary":
+        title, body = "Glossary", glossary_body()
+        crumbs = '<a href="/learn">Learn</a><a class="on">Glossary</a>'
+    elif slug:
         got = lesson_body(slug)
         if not got:
             return None
