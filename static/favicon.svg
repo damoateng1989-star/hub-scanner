@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-label="NextShelf">
-<rect x="64" y="64" width="896" height="896" rx="190" fill="#07090D"/>
-<g fill="none" stroke-width="66" stroke-linecap="round" stroke-linejoin="round">
+<rect x="0" y="0" width="1024" height="1024" rx="220" fill="#07090D"/>
+<g fill="none" stroke-width="96" stroke-linecap="round" stroke-linejoin="round" transform="translate(512 517) scale(1.32) translate(-553 -528)">
 <path d="M300 640 L345 664 L395 632 L430 646" stroke="#3B82F6"/>
 <path d="M430 646 L700 392" stroke="#F5F7FA"/>
 <path d="M700 392 L806 392" stroke="#3DD68C"/>
