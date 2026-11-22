@@ -1,0 +1,9 @@
+.gradle/
+build/
+app/build/
+local.properties
+*.iml
+.idea/
+# the RELEASE (upload) keystore never goes in the repo — it lives in GitHub secrets
+release.keystore
+*.jks

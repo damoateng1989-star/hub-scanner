@@ -1,0 +1,64 @@
+// NextShelf for Android: a Trusted Web Activity (Nov 22 2026, owner's pick "whole site").
+// The app opens https://nextshelfapp.com full screen in the user's Chrome, so every web change is in the
+// app the moment it deploys. Built by GitHub Actions (.github/workflows/android.yml).
+plugins {
+    id 'com.android.application'
+}
+
+def ciVersionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInteger()
+
+android {
+    namespace "com.nextshelf.app"
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.nextshelf.app"
+        minSdk 23
+        targetSdk 35
+        versionCode ciVersionCode
+        versionName "1.0.0"
+    }
+
+    signingConfigs {
+        // A fixed debug key, committed on purpose (debug keys are not secrets): its fingerprint is in the
+        // site's /.well-known/assetlinks.json, so a sideloaded debug build opens full screen, no URL bar.
+        debug {
+            storeFile file("debug.keystore")
+            storePassword "android"
+            keyAlias "androiddebugkey"
+            keyPassword "android"
+        }
+        // The upload key for Google Play, from GitHub secrets (never committed). Without the secrets the
+        // release bundle is built unsigned.
+        if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+            release {
+                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
+        release {
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+            if (System.getenv("ANDROID_KEYSTORE_PATH")) {
+                signingConfig signingConfigs.release
+            }
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.7.4'
+}

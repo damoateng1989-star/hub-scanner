@@ -348,6 +348,24 @@ def fonts(name: str):
                         headers={"Cache-Control": "public, max-age=31536000, immutable"})
 
 
+# Android app (Nov 22 2026): a Trusted Web Activity opens this site full screen only if this file vouches for the
+# app's signing key. The committed debug key (android/app/debug.keystore) is always listed, so test builds verify.
+# For Google Play, add the SHA-256 fingerprints from Play Console → App integrity (the app signing key, and the
+# upload key) to the ANDROID_CERT_SHA256 env var on Render, comma-separated. No code change needed.
+ANDROID_PACKAGE = "com.nextshelf.app"
+ANDROID_DEBUG_SHA256 = "20:C3:43:FE:66:4A:26:60:FE:22:A4:15:8D:33:27:CB:48:15:2A:31:FC:6D:BE:A1:12:6D:D5:53:58:B6:ED:C4"
+
+
+@app.get("/.well-known/assetlinks.json")
+def assetlinks():
+    extra = [x.strip().upper() for x in os.getenv("ANDROID_CERT_SHA256", "").split(",") if x.strip()]
+    prints = [ANDROID_DEBUG_SHA256] + [x for x in extra if x != ANDROID_DEBUG_SHA256]
+    return JSONResponse([{"relation": ["delegate_permission/common.handle_all_urls"],
+                          "target": {"namespace": "android_app", "package_name": ANDROID_PACKAGE,
+                                     "sha256_cert_fingerprints": prints}}],
+                        headers={"Cache-Control": "public, max-age=3600"})
+
+
 @app.get("/manifest.webmanifest")
 def manifest():
     return FileResponse(STATIC / "manifest.webmanifest", media_type="application/manifest+json")

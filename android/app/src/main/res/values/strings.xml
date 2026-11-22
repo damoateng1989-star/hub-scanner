@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">NextShelf</string>
+    <string name="launch_url">https://nextshelfapp.com/app#today</string>
+    <string name="asset_statements" translatable="false">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {\"namespace\": \"web\", \"site\": \"https://nextshelfapp.com\"}
+        }]
+    </string>
+    <string name="provider_authority" translatable="false">com.nextshelf.app.fileprovider</string>
+</resources>
