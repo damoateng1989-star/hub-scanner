@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>/* the iOS app shows Today, Cinema and Learn from the site (Nov 22, hybrid): ?embed=ios hides the site's own navigation */
+(function(){try{var q=new URLSearchParams(location.search).get("embed");if(q==="ios")sessionStorage.setItem("ns-embed","ios");if(sessionStorage.getItem("ns-embed")==="ios")document.documentElement.classList.add("embed-ios");}catch(e){}})();</script>
+<style>html.embed-ios body > nav, html.embed-ios aside.side, html.embed-ios nav.bottom, html.embed-ios body > footer { display: none !important; }
+html.embed-ios body { --sbw: 0px !important; padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }</style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
