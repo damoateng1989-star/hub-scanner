@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId "com.nextshelf.app"
-        minSdk 23
+        minSdk 24
         targetSdk 36
         versionCode ciVersionCode
         versionName "1.0.0"
