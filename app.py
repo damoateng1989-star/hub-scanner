@@ -378,6 +378,15 @@ def service_worker():
                         headers={"Cache-Control": "no-cache", "Service-Worker-Allowed": "/"})
 
 
+@app.get("/shots/{name}.webp")
+def landing_shot(name: str):
+    """Real app screenshots for the landing page strip (Nov 22, the owner's phone captures)."""
+    if name not in ("board", "chart", "sika", "cinema"):
+        raise HTTPException(404)
+    return FileResponse(STATIC / "shots" / f"{name}.webp", media_type="image/webp",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/icon-{name}.png")
 def pwa_icon(name: str):
     if name not in ("192", "512", "maskable-512"):
