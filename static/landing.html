@@ -1598,7 +1598,7 @@ document.querySelectorAll(".lm").forEach(function (m) {
   $("pkCta").addEventListener("click", () => { $("pkPop").hidden = true; });
 })();
 </script>
-<script>/* hero droplets (Nov 22, owner's pick): green and blue rain behind the hero; a still frame under reduced motion */
+<script>/* hero droplets (Nov 22, owner's pick): calm green and blue droplets behind the hero — slow, round, a gentle sway; a still frame under reduced motion */
 (function () {
   const hero = document.querySelector("header.hero"); if (!hero || document.getElementById("heroRain")) return;
   const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -1613,23 +1613,23 @@ document.querySelectorAll(".lm").forEach(function (m) {
   let W = 0, H = 0, drops = [], ripples = [];
   const light = () => document.documentElement.dataset.theme === "light";
   function size() { const r = hero.getBoundingClientRect(); W = r.width; H = r.height; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const n = Math.round(Math.min(140, W * H / 9000)); drops = Array.from({length: n}, () => mk(true)); }
+    const n = Math.round(Math.min(70, W * H / 18000)); drops = Array.from({length: n}, () => mk(true)); }
   function mk(any) { const z = Math.random();               // depth: far drops are small, slow and faint
     return {x: Math.random() * W, y: any ? Math.random() * H : -20 - Math.random() * H * .3, z,
-            len: 6 + z * 16, v: 1.4 + z * 3.2, w: .6 + z * 1.1, hue: Math.random() < .5 ? "61,214,140" : "91,140,255"}; }
+            len: 2 + z * 5, v: .45 + z * 1.0, w: 1.1 + z * 1.6, ph: Math.random() * 6.283, sw: .2 + Math.random() * .35, hue: Math.random() < .5 ? "61,214,140" : "91,140,255"}; }
   function frame() {
     ctx.clearRect(0, 0, W, H); const L = light();
     for (const d of drops) {
-      d.y += d.v; d.x += d.v * .06;
+      d.y += d.v; d.ph += .012; d.x += Math.sin(d.ph) * d.sw * .25;
       const a = (L ? .18 : .22) + d.z * (L ? .22 : .35);
       const g = ctx.createLinearGradient(d.x, d.y - d.len, d.x, d.y);
       g.addColorStop(0, `rgba(${d.hue},0)`); g.addColorStop(1, `rgba(${d.hue},${a})`);
       ctx.strokeStyle = g; ctx.lineWidth = d.w; ctx.lineCap = "round";
-      ctx.beginPath(); ctx.moveTo(d.x - d.v * .06 * d.len / d.v, d.y - d.len); ctx.lineTo(d.x, d.y); ctx.stroke();
-      ctx.fillStyle = `rgba(${d.hue},${a + .1})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.w * .9, 0, 6.283); ctx.fill();   // the droplet head
-      if (d.y > H - 8) { if (d.z > .55) ripples.push({x: d.x, y: H - 6 - Math.random() * 10, r: 1, a: .35 * d.z, hue: d.hue}); Object.assign(d, mk(false)); }
+      ctx.beginPath(); ctx.moveTo(d.x, d.y - d.len); ctx.lineTo(d.x, d.y); ctx.stroke();
+      ctx.fillStyle = `rgba(${d.hue},${a + .1})`; ctx.beginPath(); ctx.arc(d.x, d.y, d.w * 1.05, 0, 6.283); ctx.fill();   // the droplet head
+      if (d.y > H - 8) { if (d.z > .55) ripples.push({x: d.x, y: H - 6 - Math.random() * 10, r: 1, a: .3 * d.z, hue: d.hue}); Object.assign(d, mk(false)); }
     }
-    for (let i = ripples.length - 1; i >= 0; i--) { const p = ripples[i]; p.r += .6; p.a *= .94;
+    for (let i = ripples.length - 1; i >= 0; i--) { const p = ripples[i]; p.r += .25; p.a *= .975;
       ctx.strokeStyle = `rgba(${p.hue},${p.a})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.ellipse(p.x, p.y, p.r * 2.2, p.r * .6, 0, 0, 6.283); ctx.stroke();
       if (p.a < .02) ripples.splice(i, 1); }
     if (!reduce) requestAnimationFrame(frame);
