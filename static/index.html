@@ -693,7 +693,7 @@ body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ea
 .ss-ctl .ss-where { margin-left: auto; }
 .ss-ctl button { height: 38px; min-width: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: #121418; color: #EDEDED; font-size: 13px; cursor: pointer; }
 .ss-ctl button:disabled { opacity: .4; cursor: default; }
-.ss-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #07090D; z-index: 3; }
+.ss-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #181A20; z-index: 3; }
 .ss-end b { font: 400 20px/1.25 "Newsreader", Georgia, serif; color: #fff; margin-bottom: 6px; } .ss-end span { color: #9AA3AF; font-size: 13px; }
 html[data-theme="light"] .ss-ctl button { background: #F3F4F6; color: #1F2328; border-color: rgba(15,23,42,.12); }
 .bf-wr[hidden], body:not(.brief-open) .bf-wr { display: none !important; }
@@ -9603,7 +9603,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
 .hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
 .hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
 .hm-up { background: #21B573; } .hm-down { background: #FF6B5E; } .hm-edge { background: #F0A81C; } .hm-edgedn { background: #B07E28; }   /* Patch 204: sharper */
-.hm-rest { background: #7C93FF; }   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #07090D; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
+.hm-rest { background: #7C93FF; }   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #181A20; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
 .hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
 html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-sh { color: #0D1117; } html[data-theme="light"] .hm-none { background: #e6e8ee; box-shadow: none; } html[data-theme="light"] .hm-none span { color: #8a909c; }
 html[data-theme="light"] .hm-rest { background: #6C7BD8; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
@@ -9814,17 +9814,17 @@ html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x 
 
 /* Nov 20: solid glass, app-wide (dark theme). Glass LOOK — a glossy sheen, a bright rim, depth — but nothing is
    see-through: every card, bar and button is opaque. A soft colour glow sits on the page itself, in the gaps. */
-html:not([data-theme="light"]) body { background: #07090D !important; }
+html:not([data-theme="light"]) body { background: #181A20 !important; }
 html:not([data-theme="light"]), html:not([data-theme="light"]) main.wrap { background: transparent !important; }
 html:not([data-theme="light"]) body::before { content: ""; position: fixed; inset: -20%; z-index: 0; pointer-events: none;
   background: none; }   /* Patch 201 (Nov 22): the colour glow is gone — its green landed as a wedge behind every page title */
 html:not([data-theme="light"]) body > main.wrap, html:not([data-theme="light"]) body > nav:not(.bottom) { position: relative; z-index: 1; }
 html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box,.week,.retest,.brief,.tbl,.empty,.board-lock,.mp-card,.sc,.lrow,.msc) {
-  background: #07090D !important;          /* Nov 20: flat and as dark as the page, like the Waiting Room */
+  background: #181A20 !important;          /* Nov 20: flat and as dark as the page, like the Waiting Room */
   border: 1px solid rgba(255,255,255,.10) !important;
   box-shadow: none !important; }
 html:not([data-theme="light"]) body > nav:not(.bottom), html:not([data-theme="light"]) nav.bottom {
-  background: #07090D !important; border-color: rgba(255,255,255,.12) !important; }
+  background: #181A20 !important; border-color: rgba(255,255,255,.12) !important; }
 /* Nov 20: buttons in the Sika chat skin — rounded 12px, solid dark fill, a soft grey hairline, light-grey bold label;
    the selected / main one is Sika's white "Scan my watchlist now" button. Nothing see-through. */
 html:not([data-theme="light"]) :is(.btnx,.board-filter,.chip,.sk-pills button,.theme-btn,.wl-pills button,button.ghost,.sika-skin-btn):not(.on):not(.active):not(.primary):not(.plain-btn) {
@@ -9906,14 +9906,24 @@ html[data-theme="light"] .wr-pill { background: #F3F4F6 !important; color: #1F23
 .today-stories:not(:has(> :not([hidden]))) { display: none; }
 .wr-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 980px) { .wr-row:has(> #waitingRoom:not([hidden])) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
-html:not([data-theme="light"]) .wr-card { background: #07090D !important; border: 1px solid rgba(255,255,255,.10) !important; box-shadow: none !important; }
+html:not([data-theme="light"]) .wr-card { background: #181A20 !important; border: 1px solid rgba(255,255,255,.10) !important; box-shadow: none !important; }
 /* Nov 20: every card flat and page-dark (dark theme) — the Waiting Room look app-wide */
 html:not([data-theme="light"]) :is(.hz-card,.sk-hero,.wl-card,.board-table,.mkt,.ag-card,.agent,.rec-card,.ex-card,.acct-card,.set-card,.mm-card,.hm-card,.hm-panel,.lab-card,.pricing-card,.cmd,.mbrief) {
-  background: #07090D !important; border-color: rgba(255,255,255,.10) !important; box-shadow: none !important; background-image: none !important; }
+  background: #181A20 !important; border-color: rgba(255,255,255,.10) !important; box-shadow: none !important; background-image: none !important; }
 html:not([data-theme="light"]) .cmd { border-radius: 18px !important; }
+/* Nov 22 (owner): ONE background inside the app, dark theme — #181A20, the stock panel's colour, everywhere.
+   The near-black (#07090D) and the in-between greys are gone; cards are told apart by their hairline border. */
+html:not([data-theme="light"]) :is(aside.side, .board-filters, #chips, .sk-pills, .wr-window, .bf-foot, .gp-setup, .gp > div, .seg, .style-opt,
+  .mb-chip, .board-frame, .acct, .rule1, .setup, .ag-find, #boardSearch, #sym, .tbl th, table th) {
+  background-color: #181A20 !important; background-image: none !important; }
+html:not([data-theme="light"]) :is(.board-filters, #chips, .sk-pills, .wr-window, .gp > div, .seg, .style-opt, .mb-chip, .board-frame, .acct, .rule1, .setup, #boardSearch, #sym) {
+  border-color: rgba(255,255,255,.10) !important; }
+html:not([data-theme="light"]) .bf-foot { border-top: 1px solid rgba(255,255,255,.10) !important; }
+html:not([data-theme="light"]) aside.side { border-right: 1px solid rgba(255,255,255,.08) !important; }
+
 .mkt { border-radius: 14px !important; padding: 10px 14px !important; }   /* the market pill takes the card shape, like the chips under it */
 /* The Daily Stack (Patch 179) */
-.stack-entry { background: #07090D; border: 1px solid rgba(255,255,255,.10); border-radius: 18px; overflow: hidden; margin: 16px 0; }
+.stack-entry { background: #181A20; border: 1px solid rgba(255,255,255,.10); border-radius: 18px; overflow: hidden; margin: 16px 0; }
 html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,23,42,.1); }
 .se-banner { aspect-ratio: 16 / 7; background: #000 center 35% / cover no-repeat; }
 .se-body { padding: 14px 16px 16px; }
@@ -9944,7 +9954,7 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
 .stack-rail button { width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-size: 12px; padding: 0; font-weight: 600; cursor: pointer; }
 .stack-rail button:disabled { opacity: .45; }
 .stack-play { position: absolute; inset: 0; margin: auto; width: 76px; height: 76px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.45); color: #fff; font-size: 26px; z-index: 2; cursor: pointer; }
-.stack-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #07090D; }
+.stack-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #181A20; }
 .stack-end h3 { font: 400 30px/1.2 "Newsreader", Georgia, serif; margin: 0 0 10px; color: #fff; }
 .stack-end p { color: #9AA3AF; margin: 0 0 22px; }
 .stack-end button { padding: 12px 22px; border-radius: 12px; background: #F4F6F9; color: #0E0F12; border: 0; font-weight: 600; font-size: 15px; cursor: pointer; }
