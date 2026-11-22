@@ -181,6 +181,13 @@ with _lock:
             _conn.commit()
         except sqlite3.OperationalError:
             pass
+    for _col, _ddl in (("stripe_customer", "TEXT"), ("stripe_sub", "TEXT"), ("sub_status", "TEXT"),
+                       ("sub_period_end", "TEXT"), ("sub_cancel_at_end", "INTEGER DEFAULT 0"), ("trial_used", "INTEGER DEFAULT 0")):
+        try:   # Nov 22: Stripe billing (Pro $29/mo, 7-day trial)
+            _conn.execute(f"ALTER TABLE users ADD COLUMN {_col} {_ddl}")
+            _conn.commit()
+        except sqlite3.OperationalError:
+            pass
     try:   # added later: last sign-in, for the admin dashboard
         _conn.execute("ALTER TABLE users ADD COLUMN last_login_at TEXT")
         _conn.commit()
@@ -446,7 +453,8 @@ def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
 
 
 # --- users
-USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes", "a_all")
+USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes", "a_all",
+               "stripe_customer", "stripe_sub", "sub_status", "sub_period_end", "sub_cancel_at_end", "trial_used")
 
 
 def create_user(**f) -> int:
@@ -469,7 +477,7 @@ def get_user(uid: int) -> dict | None:
 
 
 def user_by(field: str, value) -> dict | None:
-    assert field in ("email", "google_sub", "telegram_chat", "link_code")
+    assert field in ("email", "google_sub", "telegram_chat", "link_code", "stripe_customer")
     r = _run(f"SELECT * FROM users WHERE {field}=?", (value,)).fetchone()
     return dict(r) if r else None
 

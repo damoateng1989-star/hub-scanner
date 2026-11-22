@@ -683,6 +683,52 @@ def google_callback(request: Request, code: str = "", state: str = "", error: st
     return resp
 
 
+# ---------------------------------------------------------------- billing (Stripe, Nov 22: Pro $29/mo, 7-day trial)
+import billing  # noqa: E402
+
+
+@app.get("/api/billing")
+def billing_status(u: dict = User):
+    return billing.status(u)
+
+
+@app.post("/api/billing/checkout")
+def billing_checkout(u: dict = User):
+    if not billing.enabled():
+        raise HTTPException(503, "Payments aren't switched on yet")
+    if auth.is_pro(u) and (u.get("sub_status") in billing.PRO_STATUSES or not u.get("stripe_customer")):
+        raise HTTPException(409, "You're already on Pro")
+    try:
+        return dict(url=billing.checkout_url(u))
+    except Exception as ex:
+        raise HTTPException(502, f"Couldn't open checkout: {ex}")
+
+
+@app.post("/api/billing/portal")
+def billing_portal(u: dict = User):
+    if not billing.enabled():
+        raise HTTPException(503, "Payments aren't switched on yet")
+    try:
+        return dict(url=billing.portal_url(u))
+    except Exception as ex:
+        raise HTTPException(400, str(ex))
+
+
+@app.post("/api/billing/webhook")
+async def billing_webhook(request: Request):
+    payload = await request.body()
+    try:
+        event = billing.verify(payload, request.headers.get("stripe-signature", ""))
+    except ValueError as ex:
+        log.warning("stripe webhook rejected: %s", ex)
+        raise HTTPException(400, "bad signature")
+    try:
+        return dict(ok=True, result=billing.handle(event))
+    except Exception:
+        log.exception("stripe webhook %s failed", event.get("type"))
+        raise HTTPException(500, "webhook failed")   # Stripe retries
+
+
 # ---------------------------------------------------------------- account
 @app.get("/api/me")
 def me(u: dict | None = Maybe):

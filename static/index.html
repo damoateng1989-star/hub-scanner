@@ -3527,8 +3527,44 @@ async function loadMe() {
 const joinBox = (title, text) => `<div class="acct"><h3>${title}</h3><p>${text}</p>
   <div class="row"><a class="upsell" style="margin:0;font-size:15px" href="/login#signup">Create a free account →</a>
   <a class="upsell" style="margin:0 0 0 14px;font-size:15px;color:var(--muted)" href="/login">Sign in</a></div></div>`;
+// ---- billing (Stripe Checkout + customer portal; Nov 22: Pro $29/mo, 7-day trial)
+let BILL = null;
+async function startCheckout(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Opening checkout…"; }
+  try { const r = await api("/api/billing/checkout", {method: "POST"}); location.href = r.url; }
+  catch (e) { toast(e.message || "Couldn't open checkout"); if (btn) { btn.disabled = false; btn.textContent = "Try again"; } }
+}
+async function openPortal(btn) {
+  if (btn) { btn.disabled = true; btn.textContent = "Opening…"; }
+  try { const r = await api("/api/billing/portal", {method: "POST"}); location.href = r.url; }
+  catch (e) { toast(e.message || "Couldn't open billing"); if (btn) { btn.disabled = false; btn.textContent = "Manage billing"; } }
+}
+function billingCard(b) {
+  if (!b || !b.enabled || !b.has_billing || b.manual) return "";
+  const d = b.period_end ? new Date(b.period_end).toLocaleDateString("en-US", {month: "short", day: "numeric", year: "numeric"}) : "";
+  const line = b.status === "trialing" ? `Free trial${d ? ` until <b style="display:inline;font-size:inherit">${d}</b>` : ""}. ${b.cancel_at_end ? "It won't renew." : `Then ${esc(b.price)}.`}`
+    : b.status === "active" ? (b.cancel_at_end ? `Pro until <b style="display:inline;font-size:inherit">${d}</b>, then it ends.` : `${esc(b.price)}${d ? ` · renews ${d}` : ""}.`)
+    : b.status === "past_due" ? `Your last payment didn't go through. Update your card to keep Pro.`
+    : b.status === "canceled" || b.status === "unpaid" || b.status === "incomplete_expired" ? `Your Pro plan has ended.` : `Status: ${esc(b.status || "unknown")}.`;
+  return `<div class="acct"><h3>Your Pro plan</h3><p>${line}</p><div class="row"><button class="btnx" onclick="openPortal(this)">Manage billing</button>
+    ${!isPro() ? `<button class="btnx primary" onclick="startCheckout(this)">Restart Pro</button>` : ""}</div>
+    <p style="margin-top:8px;font-size:13px;color:var(--muted)">Update your card, see invoices or cancel on Stripe's secure page.</p></div>`;
+}
+async function billingReturn() {   // back from Stripe Checkout: the webhook upgrades the plan within a few seconds
+  const q = new URLSearchParams(location.search).get("billing"); if (!q) return;
+  history.replaceState(null, "", location.pathname + location.hash);
+  if (q !== "success") return;
+  toast("Thanks! Setting up your Pro plan…");
+  for (let i = 0; i < 8; i++) {
+    await new Promise(r => setTimeout(r, 1500));
+    try { ME = await api("/api/me"); } catch (e) {}
+    if (ME && ME.plan === "pro") { toast("Welcome to Pro."); if (CUR === "account") loadAccount(); try { render(); } catch (e) {} return; }
+  }
+  toast("Payment received. Pro will switch on in a moment; refresh if it doesn't.");
+}
 async function loadAccount() {
   if (!ME) await loadMe();
+  if (!ME.guest) { try { BILL = await api("/api/billing"); } catch (e) { BILL = null; } }
   if (ME.guest) {
     $("account").innerHTML = `<div class="acct"><h3>New here?</h3><p>Learn the setup in about a minute.</p><a class="btnx sm" href="#guide">How it works</a></div>` + joinBox("Join NextShelf", `Free: watch up to ${ME.ticker_limit} tickers with Telegram alerts, see the track record, and browse every chart. Pro adds pre-close warnings, the live board, phone calls and backtests.`);
     return;
@@ -3540,7 +3576,9 @@ async function loadAccount() {
       <button onclick="signOut()">Sign out</button></div></div>
 
     ${m.is_admin ? brokerPreviewCard() : ""}
-    ${isPro() ? "" : `<div class="acct"><h3>Free and Pro plans</h3><p>Pricing will be announced at launch. During the beta, contact the site owner to try Pro.</p>
+    ${billingCard(BILL)}
+    ${isPro() ? "" : `<div class="acct"><h3>Free and Pro plans</h3>${BILL && BILL.enabled ? `<p>Pro is <b style="display:inline;font-size:inherit">${esc(BILL.price)}</b>.${BILL.trial_days ? ` Try it free for ${BILL.trial_days} days: cancel before then and you won't be charged.` : ""} Cancel any time.</p>
+      <div class="row" style="margin:6px 0 4px"><button class="btnx primary" id="goPro" onclick="startCheckout(this)">${BILL.trial_days ? `Start your ${BILL.trial_days}-day free trial` : "Upgrade to Pro"}</button></div>` : `<p>Pricing will be announced at launch. During the beta, contact the site owner to try Pro.</p>`}
       <div class="tiers">
         <div class="tier"><b>Free · your plan</b><ul><li>Watch up to ${m.ticker_limit} tickers</li><li>Telegram alerts after each breakout</li>
           <li>Setups: stocks inside a hub</li><li>Track record and charts</li></ul></div>
@@ -8986,7 +9024,7 @@ function netbar() {
 }
 window.addEventListener("offline", netbar);
 window.addEventListener("online", () => { netbar(); loadTickers(); loadAlerts(); showTab(); });
-boot(); setTimeout(pollAgent, 1500); setTimeout(paintInstall, 1200); setTimeout(pollLive, 2500);
+boot(); setTimeout(billingReturn, 600); setTimeout(pollAgent, 1500); setTimeout(paintInstall, 1200); setTimeout(pollLive, 2500);
 setInterval(() => { loadTickers(); loadAlerts(); if (CUR === "discover") loadBoard(); }, 120000);
 </script>
 
