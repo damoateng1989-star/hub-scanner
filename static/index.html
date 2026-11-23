@@ -669,8 +669,9 @@ body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ea
 .bf-heat[hidden] { display: none !important; }
 .bf-wr { position: fixed; top: 24px; bottom: 24px; z-index: 36; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: 16px; box-sizing: border-box; }
 .bf-wr::-webkit-scrollbar { display: none; }
-.bf-wr-top { display: flex; justify-content: flex-end; flex: none; margin-bottom: -6px; }
+.bf-wr-top { display: flex; justify-content: flex-end; gap: 8px; flex: none; margin-bottom: -6px; }
 .bf-wr-top button, .bf-wr-tab { border: 1px solid rgba(255,255,255,.14); background: #121418; color: #C9CED6; font-size: 12.5px; border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.bh-back { display: block; margin: 0 0 10px auto; border: 1px solid rgba(255,255,255,.14); background: #121418; color: #C9CED6; font-size: 12.5px; border-radius: 999px; padding: 7px 12px; cursor: pointer; }
 .bf-wr-top button:hover, .bf-wr-tab:hover { color: #fff; border-color: rgba(255,255,255,.3); }
 .bf-wr-tab { position: fixed; left: 20px; bottom: 22px; z-index: 36; }
 .bf-wr-tab[hidden], body:not(.brief-open) .bf-wr-tab { display: none !important; }
@@ -3272,7 +3273,7 @@ html[data-theme="light"] .vp-l small, html[data-theme="light"] .vp-r small { col
 </aside>
 <div class="bf-scrim" id="bfScrim" onclick="closeBrief()"></div>
 <button class="bf-wr-tab" id="bfWrTab" type="button" hidden onclick="briefSideToggle(true)" aria-label="Show the movies">▶ Movies</button>
-<div class="bf-wr" id="bfWr" hidden><div class="bf-wr-top"><button type="button" onclick="briefSideToggle(false)">‹ Hide movies, bigger chart</button></div><div class="wr-card sr-card bf-sr" id="bfSR" hidden></div><div class="wr-card bf-stk" id="bfStk" hidden></div><div class="wr-card" id="bfWrRoom" hidden></div></div>
+<div class="bf-wr" id="bfWr" hidden><div class="bf-wr-top"><button type="button" id="bfHeatBtn" onclick="heatChoose(true)" hidden>GEX heat map</button><button type="button" onclick="briefSideToggle(false)">‹ Hide movies, bigger chart</button></div><div class="wr-card sr-card bf-sr" id="bfSR" hidden></div><div class="wr-card bf-stk" id="bfStk" hidden></div><div class="wr-card" id="bfWrRoom" hidden></div></div>
 <button class="scout-fab" id="scoutFab" onclick="toggleScout()" aria-label="Sika: scan for setups" aria-expanded="false">
   <span class="sf-halo"></span><span class="sf-radar"></span><span class="sf-bot" id="sfBot"></span><span class="sf-tip">Scan</span><span class="sf-badge" id="sfBadge" hidden></span>
 </button>
@@ -7747,13 +7748,15 @@ function bfHeatHTML(j) {
   const rows = rowHTML.join("");
   const sw = (v) => `<i style="background:var(${v})"></i>`;
   const legend = `<div class="bh-legend"><span>${sw("--bh-up")}Positive gamma</span><span>${sw("--bh-down")}Negative gamma</span><em>the strongest pull in each expiry · the rest is dimmed</em></div>`;
-  return `<div class="bh-card"><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · M = $1,000,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>${legend}</div>`;
+  return `<div class="bh-card"><button type="button" class="bh-back" onclick="heatChoose(false)">‹ Back to movies</button><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · M = $1,000,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>${legend}</div>`;
 }
 function paintHeat(sym) {
   const el = $("bfHeat"); if (!el) return;
   if (BRIEF_SYM !== sym) return;
   const html = bfHeatHTML(GAMMA_GRID[sym]);
+  const hb = $("bfHeatBtn"); if (hb) hb.hidden = !html;
   if (!html) { hideHeat(); return; }             // fail-open: no gamma, no panel; the card renders as before
+  if (!heatWanted()) { hideHeat(); return; }      // Nov 23 (owner): the movies keep this space; the heat map is one tap away
   const cc = candleColors();                       // the chart's candle colours, the member's own if they set them
   if (cc[0]) el.style.setProperty("--bh-up", cc[0]); if (cc[1]) el.style.setProperty("--bh-down", cc[1]);
   el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on"); briefSideRoom();
@@ -7795,6 +7798,12 @@ function briefSideRoom() {
 window.addEventListener("resize", () => { clearTimeout(window._bsrT); window._bsrT = setTimeout(briefSideRoom, 200); });
 // the card changes width while it loads (and when the heat map comes and goes): keep the videos beside it
 if ("ResizeObserver" in window) addEventListener("DOMContentLoaded", () => { const c = $("brief"); if (c) new ResizeObserver(() => { if (document.body.classList.contains("brief-open")) briefSideRoom(); }).observe(c); });
+function heatWanted() { try { return localStorage.getItem("ns-side-heat") === "1"; } catch (e) { return false; } }
+function heatChoose(on) {
+  try { localStorage.setItem("ns-side-heat", on ? "1" : "0"); } catch (e) {}
+  if (on) { $("bfWr").querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); srInlineStop($("bfSR")); paintHeat(BRIEF_SYM); }
+  else hideHeat();
+}
 function hideHeat() { const el = $("bfHeat"); if (el) { el.hidden = true; el.innerHTML = ""; } document.body.classList.remove("heat-on"); if (typeof briefSideRoom === "function") setTimeout(briefSideRoom, 0); }
 function paintBriefWatch(sym) {          // the watchlist button next to "Open full chart"
   const b = $("bfWatch"); if (!b) return;
