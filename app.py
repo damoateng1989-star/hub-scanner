@@ -729,6 +729,13 @@ async def billing_webhook(request: Request):
         raise HTTPException(500, "webhook failed")   # Stripe retries
 
 
+# ---------------------------------------------------------------- company names
+@app.get("/api/names")
+def company_names():
+    """Ticker -> company name for the scanned universe (static file; safe to cache)."""
+    return JSONResponse(universe.NAMES, headers={"Cache-Control": "public, max-age=86400"})
+
+
 # ---------------------------------------------------------------- account
 @app.get("/api/me")
 def me(u: dict | None = Maybe):

@@ -2700,6 +2700,9 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b, .mp-legend .lg-h span { padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.14); background: rgba(10,12,16,.55); color: #E6EBF0; text-shadow: none; }
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
+.mp-legend .lg-h i { font: 500 12px var(--sans, Inter, sans-serif); font-style: normal; color: #C9D1D9; max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+html[data-theme="light"] .mp-legend .lg-h i { color: #334155; text-shadow: none; }
+@media (max-width: 700px) { .mp-legend .lg-h i { max-width: 34vw; } }
 .mp-legend .lg-o { display: flex; flex-wrap: wrap; gap: 3px 10px; }
 .mp-legend .u { color: #3DD68C; } .mp-legend .d { color: #FF6B5E; }
 html[data-theme="light"] .mp-legend { color: #5B6472; text-shadow: none; }
@@ -5544,14 +5547,15 @@ function initLightweightMapChart() {
     if (!LEG) { LEG = document.createElement("div"); LEG.className = "mp-legend"; host.parentElement.appendChild(LEG); }
     window.MAP_LWC_LEG = LEG;
     const legPaint = (b) => {
-      const head = `<div class="lg-h"><b>${esc(BRIEF_SYM || "")}</b><span>${TFW}</span></div>`;
+      const _nm = (window.NS_NAMES || {})[String(BRIEF_SYM || "").toUpperCase()] || "";
+      const head = `<div class="lg-h"><b>${esc(BRIEF_SYM || "")}</b>${_nm ? `<i>${esc(_nm)}</i>` : ""}<span>${TFW}</span></div>`;
       if (!b) { LEG.innerHTML = head; return; }
       const prev = D.cs[D.cs.findIndex(x => +x.time === +b.time) - 1], ch = prev ? b.close - prev.close : b.close - b.open, pc = prev ? ch / prev.close * 100 : (b.close - b.open) / b.open * 100;
       const c = (v, ref) => v >= ref ? "u" : "d";
       LEG.innerHTML = head + `<div class="lg-o"><span>O <b class="${c(b.open, prev ? prev.close : b.open)}">${(+b.open).toFixed(2)}</b></span><span>H <b class="u">${(+b.high).toFixed(2)}</b></span><span>L <b class="d">${(+b.low).toFixed(2)}</b></span><span>C <b class="${ch >= 0 ? "u" : "d"}">${(+b.close).toFixed(2)}</b></span><span class="${ch >= 0 ? "u" : "d"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)} (${ch >= 0 ? "+" : ""}${pc.toFixed(2)}%)</span></div>`;
     };
     const legLast = () => { const l = D.cs[D.cs.length - 1]; legPaint(l ? {time: l.time, open: +l.open, high: +l.high, low: +l.low, close: +l.close} : null); };
-    legLast();
+    legLast(); LEG._repaint = legLast;
     chart.subscribeCrosshairMove(p => { const b = p && p.seriesData && p.seriesData.get(candles); if (b && p.point) legPaint({time: p.time, open: b.open, high: b.high, low: b.low, close: b.close}); else legLast(); });
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
@@ -10488,6 +10492,10 @@ function closeStack() {
   window.scrollTo(0, STK.scrollY || 0);
 }
 document.addEventListener("keydown", e => { if (e.key === "Escape") { const v = document.getElementById("stackView"); if (v && !v.hidden) closeStack(); } });
+
+/* company names for the chart legend (static, fetched once) */
+window.NS_NAMES = window.NS_NAMES || {};
+fetch("/api/names").then(r => r.ok ? r.json() : {}).then(n => { window.NS_NAMES = n || {}; try { const l = window.MAP_LWC_LEG; if (l && l._repaint) l._repaint(); } catch (e) {} }).catch(() => {});
 </script>
 </body>
 </html>

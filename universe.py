@@ -112,6 +112,23 @@ def _load_sectors() -> dict:
 SECTORS = _load_sectors()
 
 
+def _load_names() -> dict:
+    try:
+        with open(_os.path.join(_os.path.dirname(__file__), "names.json")) as f:
+            return {k.upper(): v for k, v in _json.load(f)["names"].items()}
+    except Exception:
+        return {}
+
+
+NAMES = _load_names()
+
+
+def company_name(symbol: str) -> str:
+    """Company name for display ("MSFT" -> "Microsoft"); empty when unknown."""
+    s = symbol.upper()
+    return NAMES.get(s) or NAMES.get(s.replace("-", ".")) or NAMES.get(s.replace(".", "-")) or ""
+
+
 def sector(symbol: str) -> str:
     """GICS sector for the market heat map; ETFs are their own group; unknown names go to 'Other'."""
     s = symbol.upper()
