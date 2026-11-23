@@ -851,7 +851,9 @@ html[data-theme="light"] .bf-heat .bh-spot { background: #0d1117; color: #FFFFFF
 .sf-tip::after { content: ""; position: absolute; right: -5px; top: 50%; margin-top: -5px; border: 5px solid transparent; border-right: 0; border-left-color: #3DD68C; }
 .sf-badge { position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: #F4F6F9; color: #0E0F12;
   font: 800 12px/22px var(--sans); box-shadow: 0 0 0 3px var(--t-bg, #0E0F12); }
-body.brief-open .scout-fab { opacity: 0; pointer-events: none; }
+body.brief-open .scout-fab { opacity: 1; pointer-events: auto; z-index: 40; bottom: 96px; }   /* Nov 22: Sika stays on the stock panel and opens the chat for that stock */
+body.brief-open .ask-backdrop { z-index: 41; } body.brief-open .ask-pop { z-index: 42; bottom: 182px; }
+@media (max-width: 999px) { body.brief-open .scout-fab { bottom: calc(92px + env(safe-area-inset-bottom)); } body.brief-open .ask-pop { bottom: calc(168px + env(safe-area-inset-bottom)); } }
 .scout-pop { position: fixed; right: 22px; bottom: 100px; z-index: 31; width: min(360px, calc(100vw - 24px)); padding: 16px; border-radius: 18px;
   background: #15171C; border: 1px solid #353639; box-shadow: 0 30px 80px rgba(0,0,0,.6); color: #E9EBEF; font-family: var(--sans); transform-origin: 100% 100%; animation: mpIn var(--dur-med) var(--ease-snap) both; }
 .scout-pop[hidden] { display: none !important; }
@@ -2702,6 +2704,11 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h span { color: #C9D1D9; }
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
+.ask-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; } .ask-chip { all: unset; cursor: pointer; font: 500 12.5px var(--sans); padding: 6px 11px; border-radius: 999px; background: rgba(124,147,255,.14); color: #C9D4FF; border: 1px solid rgba(124,147,255,.3); }
+.ask-chip:hover { background: rgba(124,147,255,.24); }
+.ask-explain p { margin: 0 0 8px; line-height: 1.55; } .ask-explain p:last-child { margin-bottom: 0; } .ask-fine { font-size: 11.5px; opacity: .7; }
+.ask-legend { display: grid; gap: 6px; margin: 4px 0 8px; } .ask-legend div { display: grid; grid-template-columns: 10px auto; column-gap: 8px; align-items: baseline; font-size: 13px; }
+.ask-legend i { width: 10px; height: 3px; border-radius: 2px; display: block; transform: translateY(-3px); } .ask-legend span { grid-column: 2; opacity: .75; font-size: 12px; }
 .ask-rcpt { justify-self: end; margin: -9px 4px 0 0; font: 500 11px var(--sans); color: #8A93A0; } .ask-rcpt.read { color: #9AA4B2; }
 .pulse { margin: 0 0 18px; padding: 4px 16px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
 .pl-h { all: unset; box-sizing: border-box; width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; padding: 10px 0 6px; cursor: pointer; }
@@ -7105,7 +7112,7 @@ function renderToday() {
   $("mkt").innerHTML = marketChip();
   renderPremarket();
   renderWeek();
-  renderTodayVideos();
+  if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet
   renderRetest();
   loadPulse();
   renderRule();
@@ -8597,6 +8604,7 @@ if ($("agAva")) $("agAva").innerHTML = ROBOT_SVG;
 if ($("spAva")) $("spAva").innerHTML = ROBOT_SVG;
 let SCOUT_SC = {running: false}, MY_SCAN = null, MY_SCANNING = false;
 function toggleScout(force) {
+  if (force === undefined && document.body.classList.contains("brief-open") && BRIEF_SYM) { askSikaChart(); return; }
   const pop = $("scoutPop"), open = force ?? pop.hidden;
   pop.hidden = !open; $("scoutFab").setAttribute("aria-expanded", String(open)); $("sfHello").hidden = true;
   if (open) { renderScout(); pollAgent(); }
@@ -8627,6 +8635,73 @@ function askSikaOpen() {
   const body = $("askBody");
   if (body && !body.children.length) body.innerHTML = `<p class="sp-hint">Tell me a ticker — for example <b>AMAT</b> — then ask me anything about its setup.</p>`;
   const inp = $("askInput"); if (inp) inp.focus();
+}
+// Nov 22 (owner): from the stock panel, the robot opens the chat already on that stock, with plain-English answers
+// built from the panel's own plan (mapPlan): instant, and they can't disagree with the numbers on screen.
+function askSikaChart() {
+  const sym = BRIEF_SYM; if (!sym) return askSikaOpen();
+  askSikaOpen();
+  if (ASK_SYMBOL !== sym) { ASK_SYMBOL = sym; ASK_HISTORY = []; }
+  const body = $("askBody");
+  if (body && body.dataset.chartFor === sym) return;
+  if (body) body.dataset.chartFor = sym;
+  const nm = typeof nsName === "function" ? nsName(sym) : "";
+  askSikaSay(`<p class="sp-hint">You're looking at <b>${esc(sym)}</b>${nm ? ` (${esc(nm)})` : ""}. Want me to walk you through this chart?</p>
+    <div class="ask-chips">${[["Explain this chart", "explain"], ["What do the lines mean?", "lines"], ["When is it wrong?", "wrong"]].map(([q, k]) => `<button type="button" class="ask-chip" onclick="askSikaLocal('${k}', this.textContent)">${q}</button>`).join("")}</div>`, "ask-sika");
+  askSikaHistory("user", `Let's discuss ${sym}.`);
+}
+function askSikaLocal(kind, q) {
+  const it = askSikaEcho(q), sym = BRIEF_SYM;
+  it.local = async () => {
+    const say = askSikaTyping();
+    const html = kind === "lines" ? sikaLinesHTML() : kind === "wrong" ? sikaWrongHTML(sym) : sikaExplainHTML(sym);
+    askSikaHistory("user", q); askSikaHistory("sika", html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim());
+    await say(html, "ask-sika ask-explain");
+  };
+  ASK_QUEUE.push(it); askSikaDrain();
+}
+function sikaPlan(sym) {
+  const st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || findStatus(sym);
+  if (!st) return {};
+  const P = (typeof MAP_LWC_DATA !== "undefined" && MAP_LWC_DATA && MAP_LWC_DATA.P && MAP_LWC_DATA.P.sym === sym) ? MAP_LWC_DATA.P : mapPlan(sym, st);
+  return {st, P};
+}
+function sikaExplainHTML(sym) {
+  const {st, P} = sikaPlan(sym);
+  if (!P) return `<p class="sp-hint">I can't read ${esc(sym)}'s chart yet. Give it a second to load, then ask again.</p>`;
+  const TFW = {"1h": "1-hour", "2h": "2-hour", "3h": "3-hour", "4h": "4-hour", "1d": "daily"}[MAP_TF] || "4-hour";
+  const up = P.dir !== -1, pct = (v) => v != null && P.px ? ` (${pctFrom(v, P.px)} from here)` : "";
+  const out = [];
+  out.push(`<p><b>What you're looking at:</b> ${TFW} candles for ${esc(sym)}${mapExtOn() ? ", including pre-market (amber shading) and after hours (blue shading)" : ""}. The coloured lines are NextShelf's plan for the setup it sees: <b>${esc(P.setupName || "Hub breakout")}</b>.</p>`);
+  out.push(`<p><b>Where it is now:</b> ${P.isLive ? "trading at" : "it last closed at"} <b>${money(P.px)}</b>. ${esc(P.status || "")}. ${esc(P.sub || "")}</p>`);
+  if (P.status !== "No setup in play" && P.trig != null) {
+    const lv = [`the <b style="color:#F2C14E">trigger</b> at <b>${money(P.trig)}</b> is where the setup ${P.tone === "go" || P.phase ? "confirmed" : "confirms"}`];
+    if (P.obst) lv.push(`<b style="color:#B48CFF">${esc(P.obst.name.toLowerCase())} at ${money(P.obst.level)}</b> is the first speed bump (${esc(P.obst.why)})`);
+    if (P.shelf != null) lv.push(`the <b style="color:#3DD68C">${P.atrTarget ? "target" : "next shelf"}</b> at <b>${money(P.shelf)}</b>${pct(P.shelf)} is where it's aiming`);
+    out.push(`<p><b>The levels:</b> ${lv.join("; ")}.</p>`);
+    if (P.stop != null) out.push(`<p><b>When it's wrong:</b> a close ${up ? "below" : "above"} the red <b style="color:#FF6B5E">stop at ${money(P.stop)}</b> means the idea is off.</p>`);
+    if (P.watch) out.push(`<p><b>Heads-up:</b> this side is <b>watch only</b>. It lost money in the two-year test, so there's no entry plan.</p>`);
+  } else {
+    const a = st.shelf_up, b = st.shelf_down;
+    out.push(`<p><b>Nothing to act on yet.</b> ${a || b ? `The nearest shelves are ${[a && `<b>${money(a.level)}</b> above`, b && `<b>${money(b.level)}</b> below`].filter(Boolean).join(" and ")}. ` : ""}I'll flag it once price settles into a tight range.</p>`);
+  }
+  const ex = typeof EXT !== "undefined" && EXT[sym] && EXT[sym].session && EXT[sym].price != null ? EXT[sym] : null;
+  if (ex) out.push(`<p><b>Outside market hours:</b> ${ex.session === "pre" ? "pre-market" : "after hours"} it's at <b>${money(ex.price)}</b>. Those prices don't count for the setup; only regular-hours closes do.</p>`);
+  out.push(`<p class="ask-fine">Plain English from the chart's own numbers. Not financial advice.</p>`);
+  return out.join("");
+}
+function sikaWrongHTML(sym) {
+  const {P} = sikaPlan(sym);
+  if (!P || P.stop == null) return `<p>There's no stop on ${esc(sym)}'s chart right now because there's no setup in play, so nothing can be "wrong" yet.</p>`;
+  const up = P.dir !== -1;
+  return `<p>The idea is wrong if ${esc(sym)} closes <b>${up ? "below" : "above"} ${money(P.stop)}</b>, the red dashed <b style="color:#FF6B5E">stop</b> line${P.px ? `, ${pctFrom(P.stop, P.px)} from the last price` : ""}.</p><p>NextShelf judges it on a closing price, not a quick dip during the candle. Fast markets can gap past the stop, so a real exit can be worse than the line.</p><p class="ask-fine">Not financial advice.</p>`;
+}
+function sikaLinesHTML() {
+  const L = [["#F2C14E", "Trigger", "the price that confirms the setup"], ["#FF6B5E", "Stop (red dashed)", "where the idea is wrong"],
+    ["#3DD68C", "Next shelf / Target", "the next level price tends to reach, the aim"], ["#B48CFF", "Resistance / Old high", "a level where the move may stall"],
+    ["#5AC8FA", "Hub high / Hub low", "the tight range the stock just left (or is still in)"], ["#4F8CFF", "POC", "the price that traded the most volume in view"],
+    ["#9AA4B2", "2× levels", "where two or more kinds of level stack up, stronger than one alone"], ["#9AA4B2", "Grey bars on the left", "the volume profile: how much traded at each price"]];
+  return `<p>What each line on the chart means:</p><div class="ask-legend">${L.map(([c, n, w]) => `<div><i style="background:${c}"></i><b>${n}</b><span>${w}</span></div>`).join("")}</div>${mapExtOn() ? `<p>The <b>amber</b> and <b>blue</b> bands are pre-market and after hours. They're shown for context; setups only use market hours.</p>` : ""}`;
 }
 function askSikaClose() { const pop = $("askPop"), backdrop = $("askBackdrop"); if (pop) pop.hidden = true; if (backdrop) backdrop.hidden = true; }
 let ASK_ANCHOR = null;   // read receipts: while Sika answers a queued message, her bubbles go right under it
@@ -8695,7 +8770,7 @@ async function askSikaDrain() {
       if (it && typeof it === "object") {
         await askSikaRead(it);
         ASK_ANCHOR = it.rc && it.rc.isConnected ? it.rc : it.el;
-        try { await askSikaProcess(it.raw, true); } finally { ASK_ANCHOR = null; }
+        try { if (it.local) await it.local(); else await askSikaProcess(it.raw, true); } finally { ASK_ANCHOR = null; }
       }
       else await askSikaProcess(it);
     }
