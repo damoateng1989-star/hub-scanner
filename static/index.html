@@ -2692,6 +2692,20 @@ html[data-theme="light"] .cs-pop { background: #fff; color: #0D1117; border-colo
 html[data-theme="light"] .cs-pal, html[data-theme="light"] .cs-types button { border-color: rgba(15,23,42,.14); color: #0D1117; }
 html[data-theme="light"] .cs-pal.on { border-color: #0D1117; box-shadow: 0 0 0 1px #0D1117; }
 html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0; }
+
+/* Nov 22: the chart's top-left legend (ticker · timeframe · O H L C), like Webull */
+.mp-legend { position: absolute; left: 10px; top: 8px; z-index: 6; pointer-events: none; font: 500 11.5px/1.45 var(--mono, "JetBrains Mono", ui-monospace, monospace); color: #9AA0AC;
+  text-shadow: 0 1px 2px rgba(0,0,0,.7); }
+.mp-legend .lg-h { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
+.mp-legend .lg-h b, .mp-legend .lg-h span { padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.14); background: rgba(10,12,16,.55); color: #E6EBF0; text-shadow: none; }
+.mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
+.mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
+.mp-legend .lg-o { display: flex; flex-wrap: wrap; gap: 3px 10px; }
+.mp-legend .u { color: #3DD68C; } .mp-legend .d { color: #FF6B5E; }
+html[data-theme="light"] .mp-legend { color: #5B6472; text-shadow: none; }
+html[data-theme="light"] .mp-legend .lg-h b, html[data-theme="light"] .mp-legend .lg-h span { background: rgba(255,255,255,.8); border-color: rgba(15,23,42,.14); color: #0D1117; }
+html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="light"] .mp-legend .d { color: #D93A2B; }
+@media (max-width: 560px) { .mp-legend { font-size: 10.5px; left: 8px; top: 6px; } .mp-legend .lg-o { max-width: 230px; } }
 </style>
 </head>
 <body class="term">
@@ -5376,6 +5390,7 @@ function initLightweightMapChart() {
     try {
       host.innerHTML = ""; host.appendChild(MAP_LWC_CHART.chartElement());
       if (MAP_LWC_FOOT) host.after(MAP_LWC_FOOT);
+      if (window.MAP_LWC_LEG && host.parentElement) host.parentElement.appendChild(window.MAP_LWC_LEG);   // the corner legend moves with the chart
       MAP_LWC_HOSTEL = host;
       MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390});
       MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => { MAP_VP_DRAW && MAP_VP_DRAW(); MAP_CLOUD_DRAW && MAP_CLOUD_DRAW(); }); } });
@@ -5522,6 +5537,22 @@ function initLightweightMapChart() {
     }
     // Price range includes the plotted levels via autoscaleInfoProvider (above);
     // time still fits content. Native candle autoscaling otherwise.
+    // Nov 22 (owner, like Webull): ticker + timeframe + the candle's O/H/L/C in the chart's top-left corner;
+    // shows the last candle, follows the crosshair while hovering.
+    const TFW = {"1h": "1 hour", "2h": "2 hours", "3h": "3 hours", "4h": "4 hours", "1d": "1 day"}[MAP_TF] || MAP_TF.toUpperCase();
+    let LEG = host.parentElement.querySelector(".mp-legend");
+    if (!LEG) { LEG = document.createElement("div"); LEG.className = "mp-legend"; host.parentElement.appendChild(LEG); }
+    window.MAP_LWC_LEG = LEG;
+    const legPaint = (b) => {
+      const head = `<div class="lg-h"><b>${esc(BRIEF_SYM || "")}</b><span>${TFW}</span></div>`;
+      if (!b) { LEG.innerHTML = head; return; }
+      const prev = D.cs[D.cs.findIndex(x => +x.time === +b.time) - 1], ch = prev ? b.close - prev.close : b.close - b.open, pc = prev ? ch / prev.close * 100 : (b.close - b.open) / b.open * 100;
+      const c = (v, ref) => v >= ref ? "u" : "d";
+      LEG.innerHTML = head + `<div class="lg-o"><span>O <b class="${c(b.open, prev ? prev.close : b.open)}">${(+b.open).toFixed(2)}</b></span><span>H <b class="u">${(+b.high).toFixed(2)}</b></span><span>L <b class="d">${(+b.low).toFixed(2)}</b></span><span>C <b class="${ch >= 0 ? "u" : "d"}">${(+b.close).toFixed(2)}</b></span><span class="${ch >= 0 ? "u" : "d"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)} (${ch >= 0 ? "+" : ""}${pc.toFixed(2)}%)</span></div>`;
+    };
+    const legLast = () => { const l = D.cs[D.cs.length - 1]; legPaint(l ? {time: l.time, open: +l.open, high: +l.high, low: +l.low, close: +l.close} : null); };
+    legLast();
+    chart.subscribeCrosshairMove(p => { const b = p && p.seriesData && p.seriesData.get(candles); if (b && p.point) legPaint({time: p.time, open: b.open, high: b.high, low: b.low, close: b.close}); else legLast(); });
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
       // Hovering/tapping the RETEST pill explains why the setup waits before entry.
