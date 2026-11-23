@@ -223,6 +223,14 @@ def _scenarios(S_entry: float, K: float, dte: int, iv: float, call: bool, need: 
     Tn = max(0.0, dte - need * 7 / 5) / 365
     curve = dict(px=pxs, tgt=[round(bs_price(x, K, Tn, iv, call), 2) for x in pxs],
                  exp=[round(max(0.0, (x - K) if call else (K - x)), 2) for x in pxs])
+    # date slider: the same curve on calendar days from now to expiry (every day, or every 2nd past 30 rows), plus the
+    # planner's target day so the default position matches at_shelf exactly. day = calendar days from now.
+    step = 1 if dte <= 30 else 2
+    tday = round(need * 7 / 5, 2)
+    cdays = sorted(set(list(range(0, dte, step)) + [dte, min(tday, dte)]))
+    curve["days"] = cdays
+    curve["rows"] = [[round(bs_price(x, K, max(0.0, dte - d) / 365, iv, call), 2) for x in pxs] for d in cdays]
+    curve["tgt_day"] = min(tday, dte)
     return dict(curve=curve, iv_mults=SCEN_IV, days=days, need=float(need), fail_days=FAIL_DAYS,
                 remain=[round(max(0.0, dte - d * 7 / 5)) for d in days], fail_remain=round(max(0.0, dte - FAIL_DAYS)),
                 tgt=[row(target, d) for d in days], fail=fail_row(fail_px))

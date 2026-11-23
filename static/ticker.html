@@ -281,6 +281,14 @@ html[data-theme="light"] #swingPlay .sw-ctx { color:#78350f; background:#fffbeb;
 .oxc svg .m-now { stroke: #9AA4B2; fill: #9AA4B2; } .oxc svg .m-fail { stroke: #FF6B5E; fill: #FF6B5E; } .oxc svg .m-be { stroke: #F5C26B; fill: #F5C26B; } .oxc svg .m-tgt { stroke: #3DD68C; fill: #3DD68C; }
 .oxc svg text.ml { stroke: none; }
 .oxc svg .cur { stroke: #E6EBF0; stroke-width: 1; } .oxc svg .du { fill: #3DD68C; stroke: #181A20; stroke-width: 2; } .oxc svg .dd { fill: #FF6B5E; stroke: #181A20; stroke-width: 2; }
+.oxc-date { position: relative; margin: 8px 2px 2px; }
+.oxc-date::after { content: ""; position: absolute; left: var(--t, 50%); top: 3px; width: 2px; height: 12px; background: #3DD68C; border-radius: 1px; pointer-events: none; transform: translateX(-1px); opacity: .8; }
+.oxc-date input[type=range] { -webkit-appearance: none; appearance: none; width: 100% !important; height: 18px !important; min-height: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; border-radius: 0 !important; margin: 0; cursor: pointer; }
+.oxc-date input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #8FB4FF var(--p, 0%), #2A2E37 var(--p, 0%)); }
+.oxc-date input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: #2A2E37; } .oxc-date input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: #8FB4FF; }
+.oxc-date input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #E6EBF0; border: 2px solid #181A20; margin-top: -7px; box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
+.oxc-date input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #E6EBF0; border: 2px solid #181A20; }
+.oxc-dl { display: flex; justify-content: space-between; font-size: 10.5px; color: #7D8794; margin-top: 2px; }
 .oxc-tabs { display: flex; gap: 6px; margin-top: 4px; } .oxc-tabs button { all: unset; cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 7px; background: #22252D; color: #9AA4B2; }
 .oxc-tabs button.on { background: #E6EBF0; color: #0B0D12; }
 html[data-theme="light"] .oxc-read span b { color: #0D1117; } html[data-theme="light"] .oxc svg .gr { stroke: #E5E8EE; } html[data-theme="light"] .oxc svg .z { stroke: #C9CED6; }
@@ -944,12 +952,20 @@ function oxCurveHTML(c, p) {
   if (!cv || !Array.isArray(cv.px) || cv.px.length < 3 || !(mid > 0)) return "";
   if (Object.keys(OXC).length > 40) for (const k in OXC) if (!document.getElementById(k)) delete OXC[k];
   const id = "oxc" + (++OXC_N);
-  OXC[id] = {c, p, mode: "tgt", S: Math.min(cv.px[cv.px.length - 1], Math.max(cv.px[0], +p.target))};
-  return '<div class="oxc" id="' + id + '"><p class="oxg-h">Drag across the chart to see the profit or loss at any stock price. Modeled, not quotes.</p>' +
+  const days = Array.isArray(cv.days) && Array.isArray(cv.rows) && cv.rows.length === cv.days.length ? cv.days : null;
+  OXC[id] = {c, p, mode: "tgt", di: days ? Math.max(0, days.indexOf(cv.tgt_day)) : 0, S: Math.min(cv.px[cv.px.length - 1], Math.max(cv.px[0], +p.target))};
+  return '<div class="oxc" id="' + id + '"><p class="oxg-h">Drag across the chart for any stock price; slide the date to see time pass. Modeled, not quotes.</p>' +
     '<div class="oxc-read"></div><svg viewBox="0 0 360 200" preserveAspectRatio="none" role="img" aria-label="Profit and loss by stock price"></svg>' +
-    '<div class="oxc-tabs"><button type="button" data-m="tgt" onclick="oxcMode(\'' + id + '\',\'tgt\')">At target day</button><button type="button" data-m="exp" onclick="oxcMode(\'' + id + '\',\'exp\')">At expiry</button></div></div>';
+    (days ? '<div class="oxc-date"><input type="range" min="0" max="' + (days.length - 1) + '" step="1" value="' + OXC[id].di + '" aria-label="Date" oninput="oxcDay(\'' + id + '\',+this.value)"><div class="oxc-dl"><span>Today</span><span>Expiry</span></div></div>' : '') +
+    '<div class="oxc-tabs"><button type="button" data-m="now" onclick="oxcMode(\'' + id + '\',\'now\')">Today</button><button type="button" data-m="tgt" onclick="oxcMode(\'' + id + '\',\'tgt\')">Target day</button><button type="button" data-m="exp" onclick="oxcMode(\'' + id + '\',\'exp\')">Expiry</button></div></div>';
 }
-function oxcMode(id, m) { if (OXC[id]) { OXC[id].mode = m; oxcDraw(id); } }
+function oxcMode(id, m) {
+  const D = OXC[id]; if (!D) return; const cv = D.c.scen.curve;
+  D.mode = m;
+  if (cv.days && cv.rows) { D.di = m === "now" ? 0 : m === "exp" ? cv.days.length - 1 : Math.max(0, cv.days.indexOf(cv.tgt_day)); const r = document.querySelector("#" + id + " .oxc-date input"); if (r) r.value = D.di; }
+  oxcDraw(id);
+}
+function oxcDay(id, i) { const D = OXC[id]; if (!D) return; const cv = D.c.scen.curve; D.di = i; D.mode = i === 0 ? "now" : i === cv.days.length - 1 ? "exp" : cv.days[i] === cv.tgt_day ? "tgt" : "day"; oxcDraw(id); }
 function oxcVal(arr, px, S) {
   if (S <= px[0]) return arr[0]; if (S >= px[px.length - 1]) return arr[arr.length - 1];
   let i = 0; while (i < px.length - 2 && px[i + 1] < S) i++;
@@ -957,9 +973,10 @@ function oxcVal(arr, px, S) {
 }
 function oxcDraw(id) {
   const el = document.getElementById(id), D = OXC[id]; if (!el || !D) return;
-  const {c, p} = D, cv = c.scen.curve, px = cv.px, mid = +c.mid, arr = D.mode === "exp" ? cv.exp : cv.tgt;
+  const {c, p} = D, cv = c.scen.curve, px = cv.px, mid = +c.mid, hasDays = !!(cv.days && cv.rows);
+  const arr = hasDays ? cv.rows[D.di] : D.mode === "exp" ? cv.exp : cv.tgt, isExp = hasDays ? D.di === cv.days.length - 1 : D.mode === "exp";
   const W = 360, L = 6, RR = 300, T = 10, B = 162, lo = px[0], hi = px[px.length - 1];
-  const pls = arr.map(v => (v - mid) * 100), plo = pls.concat(cv.exp.map(v => (v - mid) * 100));
+  const pls = arr.map(v => (v - mid) * 100), plo = (hasDays ? cv.rows[0] : cv.tgt).concat(cv.exp).map(v => (v - mid) * 100);
   const ymax = Math.max(...plo, 10) * 1.08, ymin = Math.min(...plo, -10) * 1.15;
   const x = S => L + (S - lo) / (hi - lo) * (RR - L), y = v => T + (ymax - v) / (ymax - ymin) * (B - T);
   const pts = px.map((S, i) => x(S).toFixed(1) + "," + y(pls[i]).toFixed(1)), line = "M" + pts.join("L"), y0 = y(0);
@@ -968,7 +985,7 @@ function oxcDraw(id) {
   let g = '<defs><clipPath id="' + id + 'u"><rect x="0" y="0" width="' + W + '" height="' + y0 + '"/></clipPath><clipPath id="' + id + 'd"><rect x="0" y="' + y0 + '" width="' + W + '" height="200"/></clipPath></defs>';
   [ymax / 1.08 * 0.5, 0, ymin / 1.15].forEach(v => { g += '<line x1="' + L + '" x2="' + RR + '" y1="' + y(v) + '" y2="' + y(v) + '" class="' + (v === 0 ? "z" : "gr") + '"/><text x="' + (RR + 4) + '" y="' + (y(v) + 3) + '" class="ax">' + (v > 0 ? "+" : v < 0 ? "−" : "") + nice(v) + '</text>'; });
   g += '<path d="' + area + '" class="au" clip-path="url(#' + id + 'u)"/><path d="' + area + '" class="ad" clip-path="url(#' + id + 'd)"/>';
-  if (D.mode === "tgt") g += '<path d="M' + px.map((S, i) => x(S).toFixed(1) + "," + y((cv.exp[i] - mid) * 100).toFixed(1)).join("L") + '" class="ex"/>';
+  if (!isExp) g += '<path d="M' + px.map((S, i) => x(S).toFixed(1) + "," + y((cv.exp[i] - mid) * 100).toFixed(1)).join("L") + '" class="ex"/>';
   g += '<path d="' + line + '" class="lu" clip-path="url(#' + id + 'u)"/><path d="' + line + '" class="ld" clip-path="url(#' + id + 'd)"/>';
   const be = +c.breakeven, mk = [[+p.entry, "Now", "m-now", 0], [+p.fail_px, "Fail", "m-fail", 1], [be, "Breakeven", "m-be", 1], [+p.target, "Target", "m-tgt", 0]];
   mk.forEach(([S, lab, cls, row]) => { if (S >= lo && S <= hi) g += '<line x1="' + x(S) + '" x2="' + x(S) + '" y1="' + T + '" y2="' + B + '" class="mk ' + cls + '"/><text x="' + x(S) + '" y="' + (B + 13 + row * 12) + '" class="ml ' + cls + '" text-anchor="middle">' + lab + '</text>'; });
@@ -976,9 +993,16 @@ function oxcDraw(id) {
   g += '<line x1="' + cx + '" x2="' + cx + '" y1="' + T + '" y2="' + B + '" class="cur"/><circle cx="' + cx + '" cy="' + cy + '" r="5.5" class="' + (pl >= 0 ? "du" : "dd") + '"/>';
   el.querySelector("svg").innerHTML = g;
   const k = pl >= 0 ? "up" : "dn";
-  el.querySelector(".oxc-read").innerHTML = '<span>If ' + esc(BRIEF_SYM_SAFE()) + ' is at <b>' + money(S) + '</b> ' + (D.mode === "exp" ? "at expiry" : "in ~" + (p.days_to_target % 1 ? p.days_to_target : Math.round(p.days_to_target)) + " trading day" + (+p.days_to_target === 1 ? "" : "s")) + '</span>' +
+  el.querySelector(".oxc-read").innerHTML = '<span>If ' + esc(BRIEF_SYM_SAFE()) + ' is at <b>' + money(S) + '</b> ' + oxcWhen(D, p, cv) + '</span>' +
     '<div><b class="' + k + '">' + (pl >= 0 ? "+" : "−") + money(Math.abs(pl)) + '</b><em class="' + k + '">' + (pc >= 0 ? "+" : "−") + Math.abs(pc).toFixed(0) + '%</em><small>option ≈ ' + money(v) + ' · per contract</small></div>';
   el.querySelectorAll(".oxc-tabs button").forEach(b => b.classList.toggle("on", b.dataset.m === D.mode));
+  const rg = el.querySelector(".oxc-date input"); if (rg && hasDays) { rg.style.setProperty("--p", (D.di / Math.max(1, cv.days.length - 1) * 100) + "%"); const ti = cv.days.indexOf(cv.tgt_day); rg.parentElement.style.setProperty("--t", (ti / Math.max(1, cv.days.length - 1) * 100) + "%"); }
+}
+function oxcWhen(D, p, cv) {
+  if (!(cv.days && cv.rows)) return D.mode === "exp" ? "at expiry" : "in ~" + (p.days_to_target % 1 ? p.days_to_target : Math.round(p.days_to_target)) + " trading days";
+  const d = cv.days[D.di], dt = new Date(); dt.setDate(dt.getDate() + Math.round(d));
+  const ds = dt.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}), left = Math.max(0, Math.round(cv.days[cv.days.length - 1] - d));
+  return D.di === 0 ? "today" : D.di === cv.days.length - 1 ? "at expiry, " + ds : "on " + ds + (d === cv.tgt_day ? " (target day)" : "") + " · " + left + " day" + (left === 1 ? "" : "s") + " left";
 }
 function oxcInit(root) { (root || document).querySelectorAll(".oxc").forEach(el => { if (OXC[el.id] && !el.dataset.drawn) { el.dataset.drawn = "1"; oxcDraw(el.id); } }); }
 (function () {
