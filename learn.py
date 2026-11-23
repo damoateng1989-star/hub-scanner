@@ -219,10 +219,45 @@ MODULES = [
          ("You entered an A retest at $50 with a stop 1 ATR ($1) below. A 4-hour candle closes at $48.80. What does the plan say?",
           ["Hold, it might come back", "The stop was hit: exit", "Buy more at a better price"],
           1, "A close past the stop is the 'wrong if' condition. The plan says the trade is over.")),
+        ("meet-sika-and-lookout", "Meet your crew: Sika and Lookout", 4, """
+<p>NextShelf has two helpers. Neither one trades for you, and neither one replaces your judgment. Think of them as two colleagues with very clear job descriptions: one explains, one watches.</p>
+<h2>Sika: the explainer</h2>
+<div class="cbox"><small>Job description</small><b>Sika · the robot in the corner</b><br>
+<b>Role:</b> explain setups and charts in plain English, and find setups worth a look.<br>
+<b>Works:</b> on every stock's panel, and in Ask Sika from Today.<br>
+<b>Duties:</b><ul>
+<li><b>Explain this chart</b>: what the hub, the shelf and the trigger mean for this stock right now.</li>
+<li><b>What do the lines mean?</b>: every line on the chart, one sentence each.</li>
+<li><b>When is it wrong?</b>: the level where the plan stops working, and why.</li>
+<li><b>Find setups</b>: ask for live breakouts with room to run, and Sika lists them from the latest scan.</li>
+<li>Answer your own questions about a setup, grounded in NextShelf's rules and the stock's past prices.</li></ul>
+<b>Never:</b> places, changes or cancels an order; tells you what to buy; makes up numbers that aren't on the card.<br>
+<b>Reports to:</b> you. Sika's reads are education, not financial advice.</div>
+<p>Use Sika <b>before</b> a trade, while you're deciding. If a setup confuses you, ask before you act.</p>
+<h2>Lookout: the watcher</h2>
+<div class="cbox"><small>Job description</small><b>Lookout · the two green eyes</b><br>
+<b>Role:</b> watch a trade you've already taken and tap you when the plan says something changed.<br>
+<b>Works:</b> from the moment you say "Yes, watch it" until you tap <b>I'm out</b> (or the watch winds down on its own).<br>
+<b>Duties:</b> one alert each for:<ul>
+<li><b>The plan dies</b>: a 4-hour close past the kill level. Closes, not wicks.</li>
+<li><b>The target is touched</b>: the first touch.</li>
+<li><b>Time is up</b>: the setup's window to work has closed.</li>
+<li><b>Earnings are tomorrow</b>: the evening before a report inside the watch.</li></ul>
+<b>Never:</b> buys, sells or touches an order; holds your money; shares your watches. They never enter the track record.<br>
+<b>Reports to:</b> you. You manage the trade; Lookout only taps you on the shoulder.</div>
+<p>Use Lookout <b>after</b> you're in, so you don't have to stare at the chart all day. While it's watching, its eyes pulse green on Today and on the ticket; when the watch ends, they go grey.</p>
+<h2>How they work together</h2>
+<p>Sika helps you decide. You place the trade yourself. Lookout keeps watch. Your Trade Diary records what happened and what you'd do better. At every step, the decision is yours.</p>""",
+         ["Sika explains: charts, lines, when a plan is wrong, and which setups are live.",
+          "Lookout watches a trade you took: plan dead, target touched, time up, earnings tomorrow.",
+          "Neither one ever trades. You make every decision."],
+         ("You bought a call on a breakout and want to stop checking the chart at work. Who do you ask?",
+          ["Sika, to close the trade for you", "Lookout, to watch it and tap you when the plan changes", "Neither, NextShelf trades it automatically"],
+          1, "Lookout watches and alerts; it never trades. Sika explains before you trade. NextShelf never places trades on its own.")),
         ("lookout", "Lookout: let NextShelf watch your trade", 3, """
 <p>The hardest part of a swing trade isn't the entry. It's the days after: checking the price at work, wondering if a dip means it's over, forgetting earnings are on Thursday. <b>Lookout</b> does the watching for you.</p>
 <h2>Starting a watch</h2>
-<p>After you take a trade, tap <b>I'm in — watch this</b> on the swing play card. Add your fill price and size if you like (both optional), then <b>Yes, watch it</b>. Lookout binds to the exact plan the card showed you: its trigger, target and the level where the idea is wrong.</p>
+<p>After you take a trade, tap <b>I'm in — watch this</b> on the swing play card (or say yes when Lookout offers right after an order goes through). Add your fill price and size if you like (both optional), then <b>Yes, watch it</b>. Lookout binds to the exact plan the card showed you: its trigger, target and the level where the idea is wrong.</p>
 <h2>What it taps you about</h2>
 <ul><li><b>The plan dies</b>: a 4-hour close back past the stop. Closes only: a dip during the candle that recovers by the close doesn't count, the same rule as the setups themselves.</li>
 <li><b>The target is touched</b>: the first touch only. Whether you take profit or hold for the next shelf is up to you.</li>
@@ -642,9 +677,9 @@ GLOSSARY = [
         ("Board (Browse setups)", "Every setup across the stocks NextShelf scans. Chips filter it: Setups (the default), A only, All, and more.", "find-a-setups"),
         ("Watchlist", "The tickers you follow. Only those can alert you; the free tier covers 3.", "trade-your-first-setup"),
         ("Morning brief", "A weekday message at the time you choose: the stocks closest to a breakout, breakouts still in play, and your watchlist.", None),
-        ("Sika", "The assistant on each stock's panel (the robot in the corner). Tap it on a stock for \"Explain this chart\", \"What do the lines mean?\" and \"When is it wrong?\", or ask your own question. Plain English from NextShelf's rules and past prices. Education only.", None),
+        ("Sika", "NextShelf's explainer: the assistant on each stock's panel (the robot in the corner), and Ask Sika on Today for finding live setups. Tap it on a stock for \"Explain this chart\", \"What do the lines mean?\" and \"When is it wrong?\", or ask your own question. Plain English from NextShelf's rules and past prices. Education only.", "meet-sika-and-lookout"),
         ("Results", "The track record page: every setup NextShelf found, with its outcome.", "reading-the-track-record"),
-        ("Lookout", "Opt-in watching for a trade you took: it taps you when the plan dies (on a close), the target is touched, time runs out, or earnings are tomorrow. It never trades, and your watches stay private.", "lookout"),
+        ("Lookout", "NextShelf's watcher (the two green eyes): opt-in watching for a trade you took: it taps you when the plan dies (on a close), the target is touched, time runs out, or earnings are tomorrow. It never trades, and your watches stay private.", "lookout"),
         ("Trade diary", "Your private log of every trade: what you bought, why you took it, what you'd do better and a grade. Trades you watch with Lookout (or place through a linked brokerage) land there on their own. It shows your P&L calendar, win rate and the patterns in your own trading.", None),
         ("Profit factor", "Money made on winners divided by money lost on losers. Above 1 means your wins outweigh your losses; 2 means you made $2 for every $1 lost.", None),
         ("R (R-multiple)", "A trade's result measured in units of what you risked. Risk $100 and make $250: that's +2.5R. Lose the full $100: -1R. For a bought option the risk is the premium you paid.", None),
