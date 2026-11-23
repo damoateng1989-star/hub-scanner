@@ -4967,7 +4967,7 @@ function renderLkStrip() {
 // the Cinema strip: what's playing in the Screening Room
 async function renderCineStrip() {
   const el = $("cineStrip"); if (!el) return;
-  if (!SR) { try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); SR = r.status === 200 ? await r.json() : {}; } catch (e) { SR = {}; } }
+  if (!SR || !SR.feature) { SR = await cinemaFetch(); }
   const f = SR && SR.feature; if (!f) { el.hidden = true; return; }
   const perf = Array.from({length: 5}, () => "<i></i>").join("");
   el.innerHTML = `<span class="cs-perf" aria-hidden="true"><span>${perf}</span><span>${perf}</span></span>
@@ -11842,9 +11842,17 @@ async function loadCinema() {
   if (el.hidden) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">The films are being set up. Check back soon.</p>'; }
 }
 // beside the stock panel on computers: the Screening Room (the Stack and the Waiting Room only if there are no films)
+// Nov 23: a failed fetch (signed out, a deploy restarting) is not cached, so the films come back on the next try
+async function cinemaFetch() {
+  try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); return r.status === 200 ? await r.json() : null; } catch (e) { return null; }
+}
 async function sideMovies() {
-  await renderScreening($("bfSR"));
-  if ($("bfSR").hidden) { $("bfWrRoom").hidden = false; renderWaitingRoom($("bfWrRoom")); renderSideStack($("bfStk")); }
+  // Nov 23 (owner): the Screening Room only (Market History and the classics); no Daily Stack, no Waiting Room fallback
+  for (let i = 0; i < 3; i++) {
+    await renderScreening($("bfSR"));
+    if (!$("bfSR").hidden) return;
+    await new Promise(r => setTimeout(r, 4000 * (i + 1)));
+  }
 }
 function srFeatHTML(f, today) {
   const meta = [f.year, f.runtime, f.vein].filter(Boolean).map(esc).join(" · ");
@@ -11866,7 +11874,7 @@ function srPick(btn, id) {
 }
 async function renderScreening(host) {
   const el = host || $("screening"); if (!el) return;
-  if (!SR) { try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); SR = r.status === 200 ? await r.json() : {}; } catch (e) { SR = {}; } }
+  if (!SR || !SR.feature) { SR = await cinemaFetch(); }
   const feat = SR && SR.feature; if (!feat) { el.hidden = true; return; }
   const f = (el.dataset.sel && srFind(el.dataset.sel)) || feat, today = f.id === feat.id;
   const tile = (x) => `<button type="button" class="sr-tile${!today && x.id === f.id ? " on" : ""}" data-id="${esc(x.id)}" onclick="srPick(this, '${esc(x.id)}')" aria-label="${esc(x.title)}: show details">
@@ -11914,7 +11922,11 @@ async function renderTodayVideos() {
   if (host._io) host._io.disconnect();
   if (host.dataset.mode === "stack") { host.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); host.dataset.mode = ""; host.dataset.day = ""; }
   if (matchMedia("(max-width: 899px)").matches) { if (host._wrIo) host._wrIo.disconnect(); host.hidden = true; host.innerHTML = ""; return; }
-  renderWaitingRoom(host);
+  // Nov 23 (owner): Today's video tile is the Screening Room (today's feature, Market History, the classics)
+  if (host._wrIo) host._wrIo.disconnect();
+  host.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} });
+  host.classList.add("sr-card"); host.innerHTML = "";
+  await renderScreening(host);
 }
 async function renderStackEntry() {
   const el = document.getElementById("stackEntry"); if (!el) return;
