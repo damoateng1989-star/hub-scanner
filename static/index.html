@@ -2702,6 +2702,19 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h span { color: #C9D1D9; }
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
+.ask-rcpt { justify-self: end; margin: -9px 4px 0 0; font: 500 11px var(--sans); color: #8A93A0; } .ask-rcpt.read { color: #9AA4B2; }
+.pulse { margin: 0 0 18px; padding: 4px 16px 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.pl-h { all: unset; box-sizing: border-box; width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; padding: 10px 0 6px; cursor: pointer; }
+.pl-t { font: 600 15px var(--sans); color: var(--ink); white-space: nowrap; } .pl-chev { margin-left: auto; color: var(--muted); font-size: 13px; }
+.pl-sum { order: 3; flex-basis: 100%; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.pl-sum .up, .pl-r b.up { color: #3DD68C; } .pl-sum .dn, .pl-r b.dn { color: #FF6B5E; }
+.pl-sub { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.pl-rows { display: grid; } .pl-r { display: grid; grid-template-columns: minmax(0, 1fr) auto 52px 56px 16px; gap: 8px; align-items: baseline; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.pl-hd { border-top: 0; padding: 0 0 4px; font: 600 10px var(--mono, ui-monospace, monospace); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; } .pl-hd span:nth-child(3), .pl-hd span:nth-child(4) { text-align: right; }
+.pl-n { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .pl-s { font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.pl-r b { font: 600 12.5px var(--mono, ui-monospace, monospace); text-align: right; color: var(--ink); } .pl-a { color: var(--muted); font-size: 11px; text-align: center; }
+.pl-cl { margin: 8px 0 0; font-size: 12.5px; color: var(--ink); } .pl-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #F2C14E; margin: 0 6px 1px 0; vertical-align: middle; }
+@media (max-width: 420px) { .pulse { padding: 4px 14px 10px; } .pl-r { grid-template-columns: minmax(0, 1fr) auto 46px 50px 12px; gap: 6px; font-size: 12.5px; } .pl-s { font-size: 10.5px; } }
 .oxc { margin: 14px 0 6px; }
 .oxc-read span { font-size: 12.5px; color: #9AA4B2; } .oxc-read span b { color: #E6EBF0; font: 600 12.5px var(--mono, ui-monospace, monospace); }
 .oxc-read div { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 2px 0 4px; }
@@ -2816,6 +2829,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <div class="ck-chips" id="ckChips" hidden></div>
   <div class="retest" id="retest" hidden></div>
   <div class="mbrief" id="mbrief" hidden></div>
+  <div class="pulse" id="pulse" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
     <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
@@ -7090,6 +7104,7 @@ function renderToday() {
   renderWeek();
   renderTodayVideos();
   renderRetest();
+  loadPulse();
   renderRule();
   renderKpis();
   renderPhoneNudge();
@@ -8119,6 +8134,33 @@ function setupCard(x) {
 let RECORD_PAT = "rules";
 
 
+// ---------------------------------------------------------------- Patch 207: sector pulse (Today, context only)
+let PULSE = null, PULSE_T = 0;
+function pulseOpen() { try { return localStorage.getItem("ns_pulse_open") !== "0"; } catch (e) { return true; } }
+function pulseToggle() { const o = !pulseOpen(); try { localStorage.setItem("ns_pulse_open", o ? "1" : "0"); } catch (e) {} paintPulse(); }
+async function loadPulse() {
+  if (!ME || ME.guest) { const el = $("pulse"); if (el) el.hidden = true; return; }      // signed-in, like the board
+  if (PULSE && Date.now() - PULSE_T < 5 * 60 * 1000) return paintPulse();
+  try { PULSE = await api("/api/pulse"); PULSE_T = Date.now(); } catch (e) { PULSE = null; }
+  paintPulse();
+}
+function paintPulse() {
+  const el = $("pulse"); if (!el) return;
+  const P = PULSE, rows = P && Array.isArray(P.rows) ? P.rows : [];
+  if (!rows.length) { el.hidden = true; return; }                                           // fail-open: no strip, never an error
+  const open = pulseOpen(), dir = v => v > 0 ? "up" : v < 0 ? "dn" : "";
+  const pt = v => `<b class="${dir(v)}">${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)}</b>`;
+  const arrow = t => t === "rising" ? "▲" : t === "falling" ? "▼" : "·";
+  const top = rows[0], bot = rows[rows.length - 1];
+  const summary = `<span class="${dir(top.rs20)}">${esc(top.sector)}</span> leading · <span class="${dir(bot.rs20)}">${esc(bot.sector)}</span> lagging` + (P.cluster ? ` <i class="pl-dot"></i> ${esc(P.cluster)}` : "");
+  const asOf = P.as_of ? new Date(P.as_of + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}) : "";
+  el.innerHTML = `<button type="button" class="pl-h" onclick="pulseToggle()" aria-expanded="${open}"><span class="pl-t">Sector pulse</span>${open ? "" : `<span class="pl-sum">${summary}</span>`}<span class="pl-chev">${open ? "▴" : "▾"}</span></button>`
+    + (open ? `<p class="pl-sub">Relative strength vs the S&amp;P 500 · context, not a grade${asOf ? ` · closes to ${asOf}` : ""}</p>
+      <div class="pl-rows"><div class="pl-r pl-hd"><span>Sector</span><span></span><span>5D</span><span>20D</span><span></span></div>
+      ${rows.map(r => `<div class="pl-r"><span class="pl-n">${esc(r.sector)}</span><span class="pl-s">${esc(r.state)}</span>${pt(r.rs5)}${pt(r.rs20)}<span class="pl-a" title="20-day relative strength ${esc(r.trend)} over the last 5 days">${arrow(r.trend)}</span></div>`).join("")}</div>
+      ${P.cluster ? `<p class="pl-cl"><i class="pl-dot"></i>${esc(P.cluster)}</p>` : ""}` : "");
+  el.hidden = false;
+}
 // ---------------------------------------------------------------- morning brief (Today card + settings)
 function eveningNow() { const n = etNow(), m = n.getHours() * 60 + n.getMinutes(), wd = n.getDay(); return wd >= 1 && wd <= 5 && m >= 16 * 60 + 30; }
 async function loadRecapCard() {
@@ -8573,12 +8615,14 @@ function askSikaOpen() {
   const inp = $("askInput"); if (inp) inp.focus();
 }
 function askSikaClose() { const pop = $("askPop"), backdrop = $("askBackdrop"); if (pop) pop.hidden = true; if (backdrop) backdrop.hidden = true; }
+let ASK_ANCHOR = null;   // read receipts: while Sika answers a queued message, her bubbles go right under it
 function askSikaSay(html, cls) {
   const body = $("askBody"); if (!body) return null;
   const d = document.createElement("div");
   d.className = "ask-msg " + (cls || "ask-sika");
   d.innerHTML = html;
-  body.appendChild(d);
+  if (ASK_ANCHOR && ASK_ANCHOR.isConnected && ASK_ANCHOR.parentElement === body && ASK_ANCHOR.nextSibling && !/ask-you/.test(cls || "")) { ASK_ANCHOR.after(d); ASK_ANCHOR = d; }
+  else body.appendChild(d);
   body.scrollTop = body.scrollHeight;
   return d;
 }
@@ -8608,14 +8652,39 @@ function askSikaSend() {
   const raw = (inp.value || "").trim();
   if (!raw) return;
   inp.value = "";
-  ASK_QUEUE.push(raw);
+  ASK_QUEUE.push(askSikaEcho(raw));
   askSikaDrain();
+}
+// Nov 22 (owner): read receipts. The member's bubble shows at once with "Delivered" under it; when Sika starts on
+// that message it turns into "Read 9:42 PM" (like iMessage, only the latest message keeps its receipt).
+function askSikaEcho(raw) {
+  const el = askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
+  const body = $("askBody");
+  if (body) body.querySelectorAll(".ask-rcpt").forEach(r => r.remove());
+  let rc = null;
+  if (el) { rc = document.createElement("div"); rc.className = "ask-rcpt"; rc.textContent = "Delivered"; el.after(rc); if (body) body.scrollTop = body.scrollHeight; }
+  return {raw, rc, el, t: Date.now()};
+}
+async function askSikaRead(item) {
+  if (!item || !item.rc) return;
+  const w = 450 - (Date.now() - item.t); if (w > 0) await new Promise(r => setTimeout(r, w));   // a beat, so "Delivered" is seen
+  if (!item.rc.isConnected) return;
+  item.rc.textContent = "Read " + new Date().toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"});
+  item.rc.classList.add("read");
 }
 async function askSikaDrain() {
   if (ASK_BUSY || !ASK_QUEUE.length) return;
   ASK_BUSY = true;
   try {
-    while (ASK_QUEUE.length) await askSikaProcess(ASK_QUEUE.shift());
+    while (ASK_QUEUE.length) {
+      const it = ASK_QUEUE.shift();
+      if (it && typeof it === "object") {
+        await askSikaRead(it);
+        ASK_ANCHOR = it.rc && it.rc.isConnected ? it.rc : it.el;
+        try { await askSikaProcess(it.raw, true); } finally { ASK_ANCHOR = null; }
+      }
+      else await askSikaProcess(it);
+    }
   } finally {
     ASK_BUSY = false;
     const body = $("askBody"); if (body) body.scrollTop = body.scrollHeight;
@@ -8838,7 +8907,7 @@ function askSikaAttnHTML() {
   return h;
 }
 function askSikaTap(sym) {
-  ASK_QUEUE.push(sym);
+  ASK_QUEUE.push(askSikaEcho(sym));
   askSikaDrain();
 }
 
@@ -8850,7 +8919,7 @@ function askSikaTap(sym) {
 // as a normal follow-up — the typing bubble, the model call, and the Pro gate
 // are all unchanged.
 function askSikaChip(q) {
-  ASK_QUEUE.push(q);
+  ASK_QUEUE.push(askSikaEcho(q));
   askSikaDrain();
 }
 

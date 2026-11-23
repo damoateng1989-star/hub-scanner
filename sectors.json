@@ -1,5 +1,5 @@
 {
-"source": "GICS sectors: S&P 500 list (datasets/s-and-p-500-companies on GitHub, Nov 2026) plus Nasdaq-100 extras by hand",
+"source": "GICS sectors: S&P 500 list (datasets/s-and-p-500-companies on GitHub, Nov 2026) plus Nasdaq-100 extras by hand; SPCX from the Patch 207 bundle",
 "sectors": {
 "A": "Health Care",
 "AAPL": "Information Technology",
@@ -519,6 +519,7 @@
 "YUM": "Consumer Discretionary",
 "ZBH": "Health Care",
 "ZBRA": "Information Technology",
-"ZTS": "Health Care"
+"ZTS": "Health Care",
+"SPCX": "Industrials"
 }
 }

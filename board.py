@@ -317,6 +317,11 @@ def scan_board() -> int:
         except Exception:
             pass
         n = _scan_board()
+        try:      # Patch 207: sector pulse, rebuilt with each sweep (context only; fail-open)
+            import pulse
+            pulse.build()
+        except Exception:
+            pass
     finally:
         SCAN.update(running=False, current=None, finished=pd.Timestamp.now(tz="UTC").isoformat())
         _lock.release()

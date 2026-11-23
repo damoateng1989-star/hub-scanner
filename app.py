@@ -1130,6 +1130,17 @@ def board_for(u: dict | None) -> bool:
     return bool(u) and os.getenv("BOARD_FOR_ALL", "true").strip().lower() in ("1", "true", "yes", "on")
 
 
+@app.get("/api/pulse")
+def pulse_data(u: dict = User):
+    """Patch 207: sector rotation vs SPY plus the live-setup cluster line. Signed-in, like the board. Never errors."""
+    try:
+        import pulse
+        return pulse.payload(board.board().get("live") or []) or dict(rows=[])
+    except Exception:
+        log.exception("pulse")
+        return dict(rows=[])
+
+
 @app.get("/api/board")
 def board_data(u: dict | None = Maybe):
     b = board.board()
