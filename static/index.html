@@ -2706,6 +2706,13 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 #shelfOptHost { margin-top: 14px; }
+/* Nov 22 (owner): Webull's soft teal-green for the live trade flow (Confirm, Buy to open / Call, Place order, I'm in) */
+:root { --wb-green: linear-gradient(90deg, #42A07E 0%, #4FBC97 100%); --wb-green-flat: #48AE8A; }
+.sopt .shelf-confirm, .shelf-trade-ticket .shelf-confirm { background: var(--wb-green) !important; color: #fff !important; box-shadow: none !important; }
+.sopt .shelf-confirm b { color: #fff !important; } .sopt .shelf-confirm small { color: rgba(255,255,255,.82) !important; }
+.sopt .shelf-confirm:disabled { opacity: .45 !important; }
+.sopt .shelf-seg button.on.buy { background: var(--wb-green-flat) !important; color: #fff !important; }
+.soc-acts .soc-go.buy { background: var(--wb-green) !important; color: #fff !important; } .soc-acts .soc-go.buy:hover { filter: brightness(1.06); }
 .soc-live.lk-ok { color: #9FE8C2; background: rgba(61,214,140,.12); border-color: rgba(61,214,140,.3); } .soc-live.lk-ok i { background: #3DD68C; box-shadow: 0 0 0 3px rgba(61,214,140,.18); }
 .lk .soc-sub { line-height: 1.5; } .lk-items { display: grid; gap: 8px; margin: 12px 2px 14px; } .lk-items div { display: grid; gap: 1px; font-size: 12.5px; line-height: 1.45; } .lk-items b { color: #E6EBF0; font-size: 13px; } .lk-items span { color: #9AA4B2; }
 .lk-in { align-items: center; } .lk-in i { font-style: normal; color: #6F7885; font-size: 11px; margin-left: 4px; } .lk-in input { width: 110px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2E333D; background: #1B1E25; color: #E6EBF0; font: 600 13px var(--mono, ui-monospace, monospace); text-align: right; }
@@ -2755,7 +2762,7 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 html[data-theme="light"] .soc { background: #fff; border-color: #E3E7ED; color: #0D1117; } html[data-theme="light"] .soc h3 { color: #0D1117; }
 html[data-theme="light"] .soc-rows { background: #F6F8FA; border-color: #E3E7ED; } html[data-theme="light"] .soc-rows > div { border-color: #E9EDF2; } html[data-theme="light"] .soc-rows b { color: #0D1117; }
 html[data-theme="light"] .soc-acts .soc-cancel { background: #EEF1F5; color: #0D1117; }
-.sopt .shelf-seg button.on { background: #e2e8f0 !important; color: #0f172a !important; } .sopt .shelf-seg button.on.buy { background: #16a34a !important; color: #fff !important; } .sopt .shelf-seg button.on.sell { background: #b91c1c !important; color: #fff !important; }
+.sopt .shelf-seg button.on { background: #e2e8f0 !important; color: #0f172a !important; } .sopt .shelf-seg button.on.buy { background: #48AE8A !important; color: #fff !important; } .sopt .shelf-seg button.on.sell { background: #b91c1c !important; color: #fff !important; }
 .sopt-grid label { font-size: 10px !important; letter-spacing: .08em; text-transform: uppercase; color: #91a0b3 !important; } .sopt-grid { display: grid; grid-template-columns: 1.2fr .9fr 1.4fr; gap: 10px; margin: 10px 0 8px; }
 .sopt-grid label, .sopt label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
 .sopt-grid select { width: 100%; min-width: 0; padding: 8px 8px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); font: 500 13px var(--sans); }
