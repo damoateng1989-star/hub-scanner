@@ -370,7 +370,7 @@ def place_checked_order(user: dict, preview_id: str) -> Any:
     uid, secret = _credentials(user)
     with _LOCK:
         pending = _PENDING.pop(str(preview_id), None)
-    if not pending or pending["expires"] <= time.time():
+    if not pending or pending.get("kind") == "option" or pending["expires"] <= time.time():
         raise LookupError("Order preview expired. Run the impact preview again.")
     if pending["user_id"] != int(user["id"]):
         raise PermissionError("This order preview belongs to another member")
@@ -379,3 +379,83 @@ def place_checked_order(user: dict, preview_id: str) -> Any:
         wait_to_confirm=True,
     )
     return _body(response)
+
+
+# ---------------------------------------------------------------- options (owner, Nov 22): single-leg orders like
+# TradingView's options ticket. Same contract as stocks: preview first (SnapTrade's option impact), the previewed order is
+# kept server-side, single-use, user-bound and short-lived, and only that exact order can be placed after an explicit
+# confirm. Nothing is ever placed without a preview.
+_OCC_IN = re.compile(r"^([A-Z]{1,6})(\d{6})([CP])(\d{8})$")
+_OPT_ACTIONS = ("BUY_TO_OPEN", "SELL_TO_CLOSE")
+
+
+def occ21(symbol: str) -> str:
+    """'AVGO261211C00305000' -> 'AVGO  261211C00305000' (root padded to 6, the 21-character OCC format SnapTrade wants)."""
+    s = re.sub(r"\s+", "", str(symbol or "").upper())
+    m = _OCC_IN.match(s)
+    if not m:
+        raise ValueError("Pick a valid option contract")
+    root, ymd, cp, strike = m.groups()
+    return f"{root:<6}{ymd}{cp}{strike}"
+
+
+def _option_form(payload: dict) -> dict:
+    occ = occ21(payload.get("contract") or "")
+    action = str(payload.get("action") or "").upper()
+    if action not in _OPT_ACTIONS:
+        raise ValueError("Side must be Buy to open or Sell to close")
+    units = payload.get("units")
+    if isinstance(units, bool) or not isinstance(units, int) or not 1 <= units <= 100:
+        raise ValueError("Contracts must be a whole number from 1 to 100")
+    order_type = str(payload.get("order_type") or "LIMIT").upper()
+    if order_type not in ("LIMIT", "MARKET"):
+        raise ValueError("Only limit and market option orders are supported")
+    price = None
+    if order_type == "LIMIT":
+        try:
+            price = round(float(payload.get("price")), 2)
+        except (TypeError, ValueError):
+            raise ValueError("A valid limit price is required")
+        if not 0 < price < 100000:
+            raise ValueError("Enter a valid limit price")
+    return dict(occ=occ, action=action, units=units, order_type=order_type, price=price)
+
+
+def _option_call(client, fn, uid: str, secret: str, account_id: str, f: dict):
+    return fn(account_id=account_id, user_id=uid, user_secret=secret, order_type=f["order_type"], time_in_force="DAY",
+              limit_price=None if f["price"] is None else f"{f['price']:.2f}",
+              price_effect=None if f["order_type"] == "MARKET" else ("DEBIT" if f["action"] == "BUY_TO_OPEN" else "CREDIT"),
+              legs=[{"instrument": {"symbol": f["occ"], "instrument_type": "OPTION"}, "action": f["action"], "units": f["units"]}])
+
+
+def option_impact(user: dict, payload: dict) -> dict:
+    client = _client()
+    uid, secret = _credentials(user)
+    account_id = str(payload.get("account_id") or "")
+    _owned_account(user, account_id)
+    f = _option_form(payload)
+    body = _body(_option_call(client, client.trading.get_option_impact, uid, secret, account_id, f))
+    preview_id = uuid.uuid4().hex
+    with _LOCK:
+        now = time.time()
+        for key in [k for k, v in _PENDING.items() if v["expires"] <= now]:
+            _PENDING.pop(key, None)
+        _PENDING[preview_id] = {"kind": "option", "user_id": int(user["id"]), "account_id": account_id, "form": f,
+                                "expires": now + _PREVIEW_TTL}
+    return {"preview_id": preview_id, "expires_in_seconds": _PREVIEW_TTL,
+            "order": {"contract": f["occ"], "action": f["action"], "units": f["units"], "order_type": f["order_type"],
+                      "limit_price": f["price"]},
+            "impact": body if isinstance(body, dict) else {"impact": body}}
+
+
+def place_checked_option(user: dict, preview_id: str) -> Any:
+    client = _client()
+    uid, secret = _credentials(user)
+    with _LOCK:
+        pending = _PENDING.pop(str(preview_id), None)
+    if not pending or pending.get("kind") != "option" or pending["expires"] <= time.time():
+        raise LookupError("Order preview expired. Run the preview again.")
+    if pending["user_id"] != int(user["id"]):
+        raise PermissionError("This order preview belongs to another member")
+    _owned_account(user, pending["account_id"])
+    return _body(_option_call(client, client.trading.place_mleg_order, uid, secret, pending["account_id"], pending["form"]))

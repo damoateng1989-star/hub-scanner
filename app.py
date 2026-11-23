@@ -2099,6 +2099,54 @@ async def broker_impact(body: BrokerImpactBody, u: dict = Admin):
         _broker_error(e)
 
 
+class BrokerOptionImpactBody(BaseModel):
+    account_id: str
+    contract: str
+    action: str
+    units: int
+    order_type: str = "LIMIT"
+    price: float | None = None
+
+
+@app.get("/api/broker/options/chain/{symbol}")
+async def broker_option_chain(symbol: str, u: dict = Admin):
+    """The option chain for the options ticket (expiries within ~45 days, strikes within ±8%), bid/ask/mid per contract."""
+    import options as _opt
+    import scanner as _sc
+    sym = _sc.clean_symbol(symbol)
+    def run():
+        c4 = _sc.load_4h(sym, _sc.SCAN_DAYS)
+        spot = float(c4["Close"].iloc[-1])
+        rows = _opt.chain(sym, spot, 0.35)
+        out = [dict(symbol=r["symbol"], expiry=r["expiry"].isoformat(), call=bool(r["call"]), strike=r["strike"],
+                    bid=round(r["bid"], 2), ask=round(r["ask"], 2),
+                    mid=round((r["bid"] + r["ask"]) / 2, 2) if r["bid"] > 0 and r["ask"] > 0 else round(r.get("last") or 0, 2))
+               for r in rows]
+        return dict(symbol=sym, spot=round(spot, 2), contracts=sorted(out, key=lambda r: (r["expiry"], r["strike"])))
+    try:
+        return await run_in_threadpool(run)
+    except Exception as e:
+        raise HTTPException(400, f"option chain unavailable: {str(e)[:120]}")
+
+
+@app.post("/api/broker/options/impact")
+async def broker_option_impact(body: BrokerOptionImpactBody, u: dict = Admin):
+    try:
+        return await run_in_threadpool(snaptrade.option_impact, u, body.dict())
+    except Exception as e:
+        _broker_error(e)
+
+
+@app.post("/api/broker/options/order")
+async def broker_option_order(body: BrokerOrderBody, u: dict = Admin):
+    if body.confirm is not True:
+        raise HTTPException(400, "Explicit order confirmation is required")
+    try:
+        return {"order": await run_in_threadpool(snaptrade.place_checked_option, u, body.preview_id)}
+    except Exception as e:
+        _broker_error(e)
+
+
 @app.post("/api/broker/order")
 async def broker_order(body: BrokerOrderBody, u: dict = Admin):
     if body.confirm is not True:
