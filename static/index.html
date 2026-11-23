@@ -7673,7 +7673,7 @@ function oxCurveHTML(c, p) {
   const days = Array.isArray(cv.days) && Array.isArray(cv.rows) && cv.rows.length === cv.days.length ? cv.days : null;
   OXC[id] = {c, p, mode: "tgt", di: days ? Math.max(0, days.indexOf(cv.tgt_day)) : 0, S: Math.min(cv.px[cv.px.length - 1], Math.max(cv.px[0], +p.target))};
   return '<div class="oxc" id="' + id + '"><p class="oxg-h">Drag across the chart for any stock price; slide the date to see time pass. Modeled, not quotes.</p>' +
-    '<div class="oxc-read"></div><svg viewBox="0 0 360 200" preserveAspectRatio="none" role="img" aria-label="Profit and loss by stock price"></svg>' +
+    '<div class="oxc-read"></div><svg viewBox="0 0 360 200" role="img" aria-label="Profit and loss by stock price"></svg>' +
     (days ? '<div class="oxc-date"><input type="range" min="0" max="' + (days.length - 1) + '" step="1" value="' + OXC[id].di + '" aria-label="Date" oninput="oxcDay(\'' + id + '\',+this.value)"><div class="oxc-dl"><span>Today</span><span>Expiry</span></div></div>' : '') +
     '<div class="oxc-tabs"><button type="button" data-m="now" onclick="oxcMode(\'' + id + '\',\'now\')">Today</button><button type="button" data-m="tgt" onclick="oxcMode(\'' + id + '\',\'tgt\')">Target day</button><button type="button" data-m="exp" onclick="oxcMode(\'' + id + '\',\'exp\')">Expiry</button></div></div>';
 }
@@ -7693,7 +7693,8 @@ function oxcDraw(id) {
   const el = document.getElementById(id), D = OXC[id]; if (!el || !D) return;
   const {c, p} = D, cv = c.scen.curve, px = cv.px, mid = +c.mid, hasDays = !!(cv.days && cv.rows);
   const arr = hasDays ? cv.rows[D.di] : D.mode === "exp" ? cv.exp : cv.tgt, isExp = hasDays ? D.di === cv.days.length - 1 : D.mode === "exp";
-  const W = 360, L = 6, RR = 300, T = 10, B = 162, lo = px[0], hi = px[px.length - 1];
+  const svg = el.querySelector("svg"), W = Math.max(260, Math.round(svg.getBoundingClientRect().width || 360)), L = 6, RR = W - 60, T = 10, B = 162, lo = px[0], hi = px[px.length - 1];
+  svg.setAttribute("viewBox", "0 0 " + W + " 200"); D.W = W; D.RR = RR;   // drawn at its real width: crisp text and lines, never stretched
   const pls = arr.map(v => (v - mid) * 100), plo = (hasDays ? cv.rows[0] : cv.tgt).concat(cv.exp).map(v => (v - mid) * 100);
   const ymax = Math.max(...plo, 10) * 1.08, ymin = Math.min(...plo, -10) * 1.15;
   const x = S => L + (S - lo) / (hi - lo) * (RR - L), y = v => T + (ymax - v) / (ymax - ymin) * (B - T);
@@ -7722,17 +7723,18 @@ function oxcWhen(D, p, cv) {
   const ds = dt.toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}), left = Math.max(0, Math.round(cv.days[cv.days.length - 1] - d));
   return D.di === 0 ? "today" : D.di === cv.days.length - 1 ? "at expiry, " + ds : "on " + ds + (d === cv.tgt_day ? " (target day)" : "") + " · " + left + " day" + (left === 1 ? "" : "s") + " left";
 }
-function oxcInit(root) { (root || document).querySelectorAll(".oxc").forEach(el => { if (OXC[el.id] && !el.dataset.drawn) { el.dataset.drawn = "1"; oxcDraw(el.id); } }); }
+function oxcInit(root) { (root || document).querySelectorAll(".oxc").forEach(el => { if (OXC[el.id] && (!el.dataset.drawn || root) && el.offsetParent) { el.dataset.drawn = "1"; oxcDraw(el.id); } }); }
 (function () {
   let drag = null;
   const at = (e, sv) => { const id = sv.parentElement.id, D = OXC[id]; if (!D) return; const r = sv.getBoundingClientRect(), px = D.c.scen.curve.px;
-    const sx = (e.clientX - r.left) / r.width * 360, S = px[0] + (sx - 6) / (300 - 6) * (px[px.length - 1] - px[0]);
+    const W = D.W || 360, RR = D.RR || 300, sx = (e.clientX - r.left) / r.width * W, S = px[0] + (sx - 6) / (RR - 6) * (px[px.length - 1] - px[0]);
     D.S = Math.round(Math.max(px[0], Math.min(px[px.length - 1], S)) * 100) / 100; oxcDraw(id); };
   document.addEventListener("pointerdown", e => { const sv = e.target.closest && e.target.closest(".oxc svg"); if (!sv) return; drag = sv; try { sv.setPointerCapture(e.pointerId); } catch (x) {} at(e, sv); });
   document.addEventListener("pointermove", e => { const sv = drag || (e.pointerType === "mouse" && e.target.closest && e.target.closest(".oxc svg")); if (sv) at(e, sv); });
   document.addEventListener("pointerup", () => { drag = null; }); document.addEventListener("pointercancel", () => { drag = null; });
   document.addEventListener("toggle", e => { if (e.target && e.target.classList && e.target.classList.contains("oc-more") && e.target.open) oxcInit(e.target); }, true);
   new MutationObserver(() => oxcInit()).observe(document.documentElement, {childList: true, subtree: true});
+  let rz = 0; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => document.querySelectorAll(".oxc").forEach(el => { if (OXC[el.id] && el.dataset.drawn && el.offsetParent) oxcDraw(el.id); }), 120); });
 })();
 function BRIEF_SYM_SAFE() { return (typeof BRIEF_SYM !== "undefined" && BRIEF_SYM) || "the stock"; }
 /* Patch 206: the scenario grid options.py already prices (c.scen), shown read-only inside "Show the math".
