@@ -555,3 +555,20 @@ def cancel(user: dict, account_id: str, brokerage_order_id: str) -> Any:
     if not re.fullmatch(r"[A-Za-z0-9_.:\-]{1,80}", str(brokerage_order_id or "")):
         raise ValueError("Unknown order")
     return _body(client.trading.cancel_order(account_id=account_id, user_id=uid, user_secret=secret, brokerage_order_id=str(brokerage_order_id)))
+
+
+def order_history(user: dict, days: int = 90) -> list[dict]:
+    """Trade Diary: every order on every linked account over the last `days` days (read-only), oldest first."""
+    client = _client()
+    uid, secret = _credentials(user)
+    out = []
+    for a in _account_rows(user):
+        aid = _account_id(a)
+        ob = _body(client.account_information.get_user_account_orders(user_id=uid, user_secret=secret, account_id=aid, state="all", days=days))
+        olist = ob if isinstance(ob, list) else (ob.get("orders") or ob.get("results") or []) if isinstance(ob, dict) else []
+        for o in olist:
+            if isinstance(o, dict):
+                r = _order_row(o)
+                r["account_id"] = aid
+                out.append(r)
+    return sorted(out, key=lambda r: str(r.get("updated") or r.get("placed") or ""))

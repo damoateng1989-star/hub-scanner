@@ -148,6 +148,13 @@ def start_watch(user: dict, p: dict) -> dict:
     # fix 3: the ticket's touch-based safety-net alerts would contradict a close-based watch; Lookout replaces them
     off = db._run("DELETE FROM price_alerts WHERE user_id=? AND symbol=? AND fired_at IS NULL AND label IN ('trigger','entry','stop','target')",
                   (user["id"], ticker)).rowcount
+    try:   # Nov 23: the watch also opens a trade in the member's Trade Diary
+        import diary
+        w = db._run("SELECT * FROM watched_positions WHERE id=?", (cur.lastrowid,)).fetchone()
+        if w:
+            diary.from_lookout_start(user, dict(w))
+    except Exception as e:
+        log.warning("diary link skipped: %s", e)
     return dict(id=cur.lastrowid, window_end=wend, earnings_date=edate, safety_alerts_off=off)
 
 
@@ -172,6 +179,9 @@ def close_watch(user: dict, row_id: int, exit_price=None, reason: str = "member"
     except (TypeError, ValueError):
         xp = None
     _set(row_id, state="closed", state_at=_now(), closed_at=_now(), close_reason=reason, exit_price=xp)
+    if xp is not None:
+        import diary
+        diary.from_lookout_close(user["id"], row_id, xp)
     return dict(ok=True)
 
 

@@ -2863,6 +2863,74 @@ html[data-theme="light"] .mp-legend .lg-h span { color: #334155; }
 html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="light"] .mp-legend .d { color: #D93A2B; }
 @media (max-width: 560px) { .mp-legend { font-size: 10.5px; left: 8px; top: 6px; } .mp-legend .lg-o { max-width: 230px; } }
 </style>
+<style>
+/* Nov 23: Trade Diary. One green and one red everywhere: the Daily P&L colours. */
+:root { --dy-up: #1D9E75; --dy-dn: #E24B4A; }
+.dy-up { color: var(--dy-up) !important; } .dy-dn { color: var(--dy-dn) !important; }
+.dy-tabs { display: flex; gap: 6px; margin: 0 0 14px; flex-wrap: wrap; }
+.dy-tabs button { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.dy-tabs button.on { background: var(--ink); color: var(--bg); border-color: transparent; }
+.dy-tabs .dy-add { margin-left: auto; background: var(--wb-green-flat, #48AE8A); color: #fff; border-color: transparent; font-weight: 600; }
+.dy-sync { display: flex; align-items: center; gap: 8px; background: var(--sunk); border-radius: 10px; padding: 9px 12px; margin-bottom: 12px; font-size: 13px; color: var(--muted); }
+.dy-sync button { margin-left: auto; background: none; border: 0; color: var(--ink); font: inherit; font-size: 13px; text-decoration: underline; cursor: pointer; }
+.dy-hero { background: var(--sunk); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; }
+.dy-hero .l, .dy-m .l { font-size: 12px; color: var(--muted); }
+.dy-hero .v { font-size: 30px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.dy-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+@media (min-width: 900px) { .dy-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .dy-cols { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 14px; align-items: start; } }
+.dy-m { background: var(--sunk); border-radius: 10px; padding: 10px 12px; }
+.dy-m .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dy-card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px; }
+.dy-h { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 10px; font-size: 14px; }
+.dy-h small { font-weight: 400; color: var(--muted); font-size: 12px; }
+.dy-seg { display: inline-flex; gap: 2px; background: var(--sunk); border-radius: 8px; padding: 2px; }
+.dy-seg button { border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 12px; padding: 4px 9px; border-radius: 6px; cursor: pointer; }
+.dy-seg button.on { background: var(--surface); color: var(--ink); }
+.dy-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.dy-cal .wd { font-size: 11px; color: var(--muted); text-align: center; padding-bottom: 2px; }
+.dy-day { border-radius: 8px; min-height: 48px; padding: 4px 5px; font-size: 11px; background: var(--sunk); color: var(--faint); border: 0; text-align: left; font: inherit; font-size: 11px; cursor: default; }
+.dy-day.has { cursor: pointer; } .dy-day.pad { background: transparent; }
+.dy-day.w { background: var(--dy-up) !important; color: #fff !important; } .dy-day.l { background: var(--dy-dn) !important; color: #fff !important; }
+.dy-day.today { outline: 1.5px solid var(--ink); outline-offset: -1.5px; }
+.dy-day.sel { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--ink); }
+.dy-day .amt { display: block; color: inherit !important; font-weight: 600; font-size: 11px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.dy-day i { display: block; font-style: normal; opacity: .85; font-size: 10px; }
+.dy-nav { background: none; border: 0; color: var(--ink); font: inherit; font-size: 18px; cursor: pointer; padding: 0 6px; }
+.dy-bar { margin-bottom: 9px; } .dy-bar .t { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.dy-bar .tr { height: 7px; background: var(--sunk); border-radius: 4px; overflow: hidden; } .dy-bar .tr i { display: block; height: 7px; border-radius: 4px; }
+.dy-pat p { margin: 0 0 8px; color: var(--muted); line-height: 1.55; font-size: 13px; } .dy-pat p b { color: var(--ink); font-weight: 600; }
+.dy-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); cursor: pointer; width: 100%; background: none; border-left: 0; border-right: 0; border-bottom: 0; color: inherit; font: inherit; text-align: left; }
+.dy-row:first-of-type { border-top: 0; } .dy-row, .dy-row * { white-space: normal; }
+.dy-row .a { font-size: 14px; } .dy-row .a b { font-weight: 600; }
+.dy-row .s { font-size: 12px; color: var(--faint); margin-top: 2px; }
+.dy-row .s.need { color: var(--accent); }
+.dy-row .p { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.dy-pill { font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--sunk); color: var(--muted); margin-left: 4px; font-weight: 500; }
+.dy-pill.g { background: rgba(29,158,117,.14); color: var(--dy-up); } .dy-pill.b { background: rgba(226,75,74,.13); color: var(--dy-dn); }
+.dy-row > span:first-child { min-width: 0; flex: 1 1 auto; overflow-wrap: anywhere; } .dy-row .p { flex-shrink: 0; }
+.dy-bars svg { display: block; width: 100%; height: 150px; } .dy-bars .x { display: flex; justify-content: space-between; font-size: 11px; color: var(--faint); margin-top: 4px; }
+.dy-empty { text-align: center; padding: 28px 12px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.dy-mini { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin: 0 0 14px; color: inherit; text-decoration: none; }
+.dy-mini .k { font-size: 12px; color: var(--muted); } .dy-mini .v { font-weight: 600; font-size: 16px; }
+.dy-mini .go { margin-left: auto; color: var(--muted); font-size: 13px; }
+/* the trade sheet */
+.dy-sheet { background: var(--surface); color: var(--ink); width: min(520px, 100%); max-height: calc(100dvh - 36px); overflow: auto; border-radius: 18px; padding: 18px; border: 1px solid var(--line); }
+.dy-sheet h3 { margin: 0 0 2px; font-size: 18px; } .dy-sheet .sub { color: var(--muted); font-size: 13px; margin: 0 0 12px; }
+.dy-f { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dy-f .full { grid-column: 1 / -1; }
+.dy-f label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.dy-f input, .dy-f select, .dy-f textarea { width: 100%; box-sizing: border-box; background: var(--sunk); border: 1px solid var(--line); color: var(--ink); border-radius: 9px; padding: 9px 10px; font: inherit; font-size: 14px; }
+.dy-f textarea { min-height: 64px; resize: vertical; line-height: 1.45; }
+.dy-f input:disabled { opacity: .7; }
+.dy-f .dy-seg { display: flex; } .dy-f .dy-seg button { flex: 1; padding: 7px 0; font-size: 13px; }
+.dy-calc { grid-column: 1 / -1; display: flex; gap: 14px; font-size: 13px; color: var(--muted); background: var(--sunk); border-radius: 9px; padding: 8px 10px; }
+.dy-calc b { color: var(--ink); font-variant-numeric: tabular-nums; }
+.dy-acts { display: flex; gap: 8px; margin-top: 14px; }
+.dy-acts button { flex: 1; padding: 11px; border-radius: 10px; font: inherit; font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid var(--line-2); background: transparent; color: var(--ink); }
+.dy-acts .save { background: var(--wb-green-flat, #48AE8A); color: #fff; border-color: transparent; }
+.dy-acts .del { flex: 0 0 auto; color: var(--dy-dn); }
+.dy-err { color: var(--dy-dn); font-size: 13px; margin-top: 8px; min-height: 1px; }
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -2872,7 +2940,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   </div>
   <div class="sb-scroll">
     <div class="sb-label">Market</div>
-    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a><a class="sb-item" href="#journal" data-nav="journal" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z"/><path d="M6 3.5v17"/><path d="M9.5 8h5.5M9.5 11.5h5.5"/></svg><span>Journal</span></a>
+    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#diary" data-nav="diary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m8.5 15 2.2 2 4.8-4.5"/></svg><span>Trade diary</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a><a class="sb-item" href="#journal" data-nav="journal" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z"/><path d="M6 3.5v17"/><path d="M9.5 8h5.5M9.5 11.5h5.5"/></svg><span>Journal</span></a>
     <div class="sb-label">Yours</div>
     <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>Watchlist</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#admin" data-nav="admin" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
     <a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a><a class="sb-item" href="#positions" data-nav="positions" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M6.5 16V11M11 16V7M15.5 16v-4M20 16V9"/></svg><span>Positions</span></a>
@@ -2894,7 +2962,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 </aside>
 <nav><div class="wrap">
   <a class="brand ns-logo" href="/" title="NextShelf home"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
-  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#cinema" data-tab="cinema">Cinema</a><a href="#results" data-tab="results">Results</a><a href="#account" data-tab="account">Account</a></div>
+  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#cinema" data-tab="cinema">Cinema</a><a href="#results" data-tab="results">Results</a><a href="#diary" data-tab="diary">Diary</a><a href="#account" data-tab="account">Account</a></div>
   <div class="navr">
     <button type="button" class="theme-btn top-theme" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     <a href="#guide" class="helpbtn" title="How it works" aria-label="How it works">?</a>
@@ -2915,6 +2983,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <div class="ck-chips" id="ckChips" hidden></div>
   <div class="retest" id="retest" hidden></div>
   <div class="lk-watch" id="lkWatch" hidden></div>
+  <a class="dy-mini" id="dyMini" href="#diary" hidden></a>
   <div class="mbrief" id="mbrief" hidden></div>
   <div class="pulse" id="pulse" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
@@ -3034,6 +3103,10 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <div class="vh"><h1>Your <em>positions.</em></h1><p id="posSub">Live from your connected broker.</p>
     <span class="toggle"><button class="chip" type="button" onclick="loadPositions(true)">↻ Refresh</button></span></div>
   <div id="posBody"><div class="loading"><span class="spin"></span>Loading…</div></div>
+</section>
+<section data-view="diary" hidden>
+  <div class="vh"><h1>Trade <em>diary.</em></h1><p>Every trade, why you took it, and what you'd do better. Only you can see it.</p></div>
+  <div id="dyBody"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 <section data-view="paper" hidden>
   <div class="vh"><h1>Paper <em>trades.</em></h1><p>Automatic practice trades in your Alpaca paper account.</p>
@@ -4022,8 +4095,8 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results" };
-const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "account", "paper", "positions", "guide", "lab", "journal", "admin"];
-const NAV_FOR = { alerts: "today", paper: "account", positions: "account", guide: "", lab: "account", journal: "account", admin: "account" };
+const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "diary", "account", "paper", "positions", "guide", "lab", "journal", "admin"];
+const NAV_FOR = { alerts: "today", diary: "diary", paper: "account", positions: "account", guide: "", lab: "account", journal: "account", admin: "account" };
 let CUR = "today";
 function showTab() {
   let tab = (location.hash || "#today").slice(1);
@@ -4044,6 +4117,7 @@ function showTab() {
   if (CUR === "guide") renderGloss();
   if (CUR === "lab") loadLab();
   if (CUR === "journal") loadJournal();
+  if (CUR === "diary") loadDiary();
   if (CUR === "admin") loadAdmin();
   window.scrollTo(0, 0);
 }
@@ -4185,6 +4259,7 @@ async function shelfOptSubmit() {
     const r = await api("/api/broker/options/order", {method: "POST", body: JSON.stringify({preview_id: pv, confirm: true})});
     if (out) out.innerHTML = `<b>Order submitted</b> · ${esc(line)}<details class="shelf-impact-raw"><summary>Brokerage response</summary><pre class="broker-position-json">${esc(JSON.stringify(r.order || {}, null, 2))}</pre></details>`;
     toast("Options order submitted."); setTimeout(() => posMine(S.sym, true), 2500);
+    if (S.action === "BUY_TO_OPEN") diaryTagOrder(S, k, r);     // Nov 23: the diary learns why this trade was taken
     if (S.action === "BUY_TO_OPEN") lookoutAfterOrder(S, k, d);     // Patch 208: success path only
   } catch (e) { if (out) out.textContent = e.message || "The brokerage did not confirm the order."; toast(e.message || "Order failed."); }
 }
@@ -4289,6 +4364,241 @@ function nsConfirm(o) {
     el.querySelector(".soc-cancel").onclick = () => done(false); el.querySelector(".soc-go").onclick = () => done(true);
     document.addEventListener("keydown", key, true); document.body.appendChild(el); el.querySelector(".soc-cancel").focus();
   });
+}
+// ---------------------------------------------------------------- Nov 23: Trade Diary (every member, private)
+let DY = null;
+const DYS = {tab: "dash", range: 30, month: null, day: null, filter: "all"};
+const dyKey = (iso) => iso ? new Date(iso).toLocaleDateString("en-CA", {timeZone: "America/New_York"}) : "";
+const dyTodayKey = () => new Date().toLocaleDateString("en-CA", {timeZone: "America/New_York"});
+const dyMoney = (v, sign = true) => v == null ? "–" : (sign ? (v > 0 ? "+" : v < 0 ? "−" : "") : (v < 0 ? "−" : "")) + "$" + Math.abs(v).toLocaleString("en-US", {maximumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2, minimumFractionDigits: Math.abs(v) >= 1000 ? 0 : 2});
+const dyCls = (v) => v > 0 ? "dy-up" : v < 0 ? "dy-dn" : "";
+const dyR = (r) => r == null ? "" : (r > 0 ? "+" : r < 0 ? "−" : "") + Math.abs(r).toFixed(Math.abs(r) < 1 ? 2 : 1) + "R";
+function dyDate(key, o = {month: "short", day: "numeric"}) { return key ? new Date(key + "T12:00:00").toLocaleDateString("en-US", o) : ""; }
+async function loadDiary(sync) {
+  const el = $("dyBody"); if (!el) return;
+  if (!ME || ME.guest) { el.innerHTML = `<div class="dy-empty">Sign in to keep your private trade diary.<br><a href="/login" style="color:var(--ink)">Sign in →</a></div>`; return; }
+  try { DY = await api("/api/diary" + (sync ? "?sync=" + sync : "")); }
+  catch (e) { if (!DY) { el.innerHTML = `<div class="dy-empty">${esc(e.message || "Your diary didn't load.")} <button class="chip" onclick="loadDiary()">Try again</button></div>`; return; } }
+  paintDiary();
+  if (!sync && DY.broker) loadDiary(1);          // fast first paint, then pick up new fills from the brokerage
+}
+function dyClosed() { return (DY ? DY.trades : []).filter(t => t.closed && t.pnl != null); }
+function dyStats() {
+  const c = dyClosed(), now = dyTodayKey(), sum = (a) => a.reduce((s, t) => s + t.pnl, 0);
+  const d0 = new Date(now + "T12:00:00"), mon = new Date(d0); mon.setDate(d0.getDate() - ((d0.getDay() + 6) % 7));
+  const wk = mon.toLocaleDateString("en-CA"), mo = now.slice(0, 7);
+  const wins = c.filter(t => t.pnl > 0), losses = c.filter(t => t.pnl < 0), rs = c.filter(t => t.r != null);
+  let streak = 0, sk = 0;
+  for (const t of [...c].sort((a, b) => String(b.closed_at).localeCompare(String(a.closed_at)))) {
+    const s = Math.sign(t.pnl); if (!s) continue;
+    if (!sk) sk = s; if (s !== sk) break; streak++;
+  }
+  const gl = Math.abs(sum(losses));
+  return {n: c.length, net: sum(c), today: sum(c.filter(t => dyKey(t.closed_at) === now)), week: sum(c.filter(t => dyKey(t.closed_at) >= wk)),
+    month: sum(c.filter(t => dyKey(t.closed_at).startsWith(mo))), win: c.length ? wins.length / c.length * 100 : null,
+    pf: gl ? sum(wins) / gl : (wins.length ? Infinity : null), avgR: rs.length ? rs.reduce((s, t) => s + t.r, 0) / rs.length : null,
+    avgW: wins.length ? sum(wins) / wins.length : null, avgL: losses.length ? sum(losses) / losses.length : null, streak, sk,
+    open: DY.trades.filter(t => !t.closed).length, need: DY.trades.filter(t => t.needs_note).length,
+    since: c.length ? dyKey(c.reduce((m, t) => String(t.opened_at) < String(m.opened_at) ? t : m).opened_at) : null};
+}
+function dyByDay() { const m = {}; for (const t of dyClosed()) { const k = dyKey(t.closed_at); (m[k] = m[k] || {pnl: 0, n: 0}); m[k].pnl += t.pnl; m[k].n++; } return m; }
+function paintDiary() {
+  const el = $("dyBody"); if (!el || !DY) return;
+  const S = dyStats();
+  const tabs = `<div class="dy-tabs">${[["dash", "Dashboard"], ["cal", "Calendar"], ["log", "Trade log"]].map(([k, l]) => `<button type="button" class="${DYS.tab === k ? "on" : ""}" onclick="DYS.tab='${k}';paintDiary()">${l}</button>`).join("")}<button type="button" class="dy-add" onclick="dyEdit()">+ Log a trade</button></div>`;
+  const ago = DY.synced_at ? Math.max(0, Math.round((Date.now() - new Date(DY.synced_at)) / 60000)) : null;
+  const sync = DY.broker ? `<div class="dy-sync">↻ <span>${DY.sync && DY.sync.ok === false ? esc(DY.sync.reason || "Couldn't sync") : ago == null ? "Syncing your brokerage…" : "Brokerage synced " + (ago < 1 ? "just now" : ago < 60 ? ago + " min ago" : dyDate(dyKey(DY.synced_at)))}${S.need ? ` · ${S.need} trade${S.need > 1 ? "s" : ""} need${S.need > 1 ? "" : "s"} a note` : ""}</span><button type="button" onclick="loadDiary(2)">Sync now</button></div>`
+    : S.need ? `<div class="dy-sync">✎ <span>${S.need} trade${S.need > 1 ? "s" : ""} need${S.need > 1 ? "" : "s"} a note</span><button type="button" onclick="DYS.tab='log';DYS.filter='need';paintDiary()">Show</button></div>` : "";
+  if (!DY.trades.length) {
+    el.innerHTML = tabs + sync + `<div class="dy-card dy-empty"><b style="color:var(--ink);font-size:16px">Start your diary</b><br>Log a trade: what you bought, why you took it, and what you'd do better.<br>Trades you watch with Lookout${DY.broker ? " or place through your brokerage" : ""} land here on their own.<br><br><button type="button" class="chip" onclick="dyEdit()">+ Log your first trade</button></div>`;
+    return;
+  }
+  el.innerHTML = tabs + sync + (DYS.tab === "cal" ? dyCalHTML() : DYS.tab === "log" ? dyLogHTML() : dyDashHTML(S));
+}
+function dyDashHTML(S) {
+  const m = (l, v, cls = "") => `<div class="dy-m"><div class="l">${l}</div><div class="v ${cls}">${v}</div></div>`;
+  const recent = [...DY.trades].slice(0, 6);
+  return `<div class="dy-hero"><div class="l">Net P&amp;L · all time</div><div class="v ${dyCls(S.net)}">${dyMoney(S.net)}</div><div class="l">${S.n} closed trade${S.n === 1 ? "" : "s"}${S.since ? " · since " + dyDate(S.since) : ""}${S.open ? ` · ${S.open} open` : ""}</div></div>
+    <div class="dy-grid">${m("Today", dyMoney(S.today), dyCls(S.today))}${m("This week", dyMoney(S.week), dyCls(S.week))}${m("This month", dyMoney(S.month), dyCls(S.month))}
+      ${m("Win rate", S.win == null ? "–" : Math.round(S.win) + "%")}${m("Profit factor", S.pf == null ? "–" : S.pf === Infinity ? "∞" : S.pf.toFixed(1))}
+      ${m("Average R", S.avgR == null ? "–" : dyR(S.avgR), dyCls(S.avgR))}
+      <div class="dy-m"><div class="l">Avg win / loss</div><div class="v" style="font-size:16px"><span class="dy-up">${S.avgW == null ? "–" : dyMoney(S.avgW, false)}</span> / <span class="dy-dn">${S.avgL == null ? "–" : dyMoney(Math.abs(S.avgL), false)}</span></div></div>
+      ${m("Streak", S.streak ? S.streak + (S.sk > 0 ? " win" : " loss") + (S.streak > 1 ? (S.sk > 0 ? "s" : "es") : "") : "–", S.sk > 0 ? "dy-up" : S.sk < 0 ? "dy-dn" : "")}</div>
+    <div class="dy-cols"><div>
+      <div class="dy-card"><div class="dy-h"><span>Daily P&amp;L</span><span class="dy-seg">${[[30, "30 days"], [90, "90 days"], [0, "All"]].map(([v, l]) => `<button type="button" class="${DYS.range === v ? "on" : ""}" onclick="DYS.range=${v};paintDiary()">${l}</button>`).join("")}</span></div>${dyBarsSVG()}</div>
+      ${dyCalHTML(true)}
+    </div><div>
+      <div class="dy-card dy-pat"><div class="dy-h"><span>Your patterns</span><small>from your own trades</small></div>${dyPatterns()}</div>
+      <div class="dy-card"><div class="dy-h"><span>By setup</span></div>${dyGroupHTML(t => t.setup || "Not tagged")}</div>
+      <div class="dy-card"><div class="dy-h"><span>By ticker</span></div>${dyGroupHTML(t => t.ticker, 6)}</div>
+      <div class="dy-card"><div class="dy-h"><span>Recent trades</span><button type="button" class="dy-nav" style="font-size:13px;text-decoration:underline" onclick="DYS.tab='log';paintDiary()">See all</button></div>${recent.map(dyRowHTML).join("")}</div>
+    </div></div>`;
+}
+function dyBarsSVG() {
+  const by = dyByDay(), keys = Object.keys(by).sort();
+  if (!keys.length) return `<div class="dy-empty" style="padding:14px">Close a trade to see your daily P&amp;L.</div>`;
+  let ks = keys;
+  if (DYS.range) { const d = new Date(dyTodayKey() + "T12:00:00"); d.setDate(d.getDate() - DYS.range); const cut = d.toLocaleDateString("en-CA"); ks = keys.filter(k => k > cut); }
+  if (!ks.length) return `<div class="dy-empty" style="padding:14px">No closed trades in the last ${DYS.range} days.</div>`;
+  const W = 340, H = 120, mid = 60, mx = Math.max(...ks.map(k => Math.abs(by[k].pnl)), 1), bw = Math.min(26, W / ks.length);
+  const x0 = (W - bw * ks.length) / 2;
+  return `<div class="dy-bars"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Daily profit and loss"><line x1="0" y1="${mid}" x2="${W}" y2="${mid}" stroke="var(--line-2)" stroke-width="1" vector-effect="non-scaling-stroke"/>${ks.map((k, i) => {
+    const v = by[k].pnl, h = Math.max(1, Math.abs(v) / mx * (mid - 6));
+    return `<rect x="${(x0 + i * bw + bw * 0.15).toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" y="${(v >= 0 ? mid - h : mid).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${v >= 0 ? "#1D9E75" : "#E24B4A"}"><title>${dyDate(k)} · ${dyMoney(v)}</title></rect>`;
+  }).join("")}</svg><div class="x"><span>${dyDate(ks[0])}</span><span>${dyDate(ks[ks.length - 1])}</span></div></div>`;
+}
+function dyGroupHTML(fn, max = 8) {
+  const g = {};
+  for (const t of dyClosed()) { const k = fn(t); (g[k] = g[k] || {pnl: 0, n: 0, w: 0}); g[k].pnl += t.pnl; g[k].n++; if (t.pnl > 0) g[k].w++; }
+  const rows = Object.entries(g).sort((a, b) => b[1].pnl - a[1].pnl).slice(0, max);
+  if (!rows.length) return `<div class="dy-empty" style="padding:10px">Nothing closed yet.</div>`;
+  const mx = Math.max(...rows.map(r => Math.abs(r[1].pnl)), 1);
+  return rows.map(([k, v]) => `<div class="dy-bar"><div class="t"><span>${esc(k)} · ${v.n} trade${v.n > 1 ? "s" : ""} · ${Math.round(v.w / v.n * 100)}% wins</span><span class="${dyCls(v.pnl)}">${dyMoney(v.pnl)}</span></div><div class="tr"><i style="width:${(Math.abs(v.pnl) / mx * 100).toFixed(1)}%;background:${v.pnl >= 0 ? "#1D9E75" : "#E24B4A"}"></i></div></div>`).join("");
+}
+function dyPatterns() {
+  const c = dyClosed(), out = [];
+  if (c.length < 5) return `<p>Close ${5 - c.length} more trade${5 - c.length > 1 ? "s" : ""} and I'll start spotting your patterns: when you win, when you don't, and which setups work for you.</p>`;
+  const wr = (a) => a.length ? Math.round(a.filter(t => t.pnl > 0).length / a.length * 100) : null, net = (a) => a.reduce((s, t) => s + t.pnl, 0);
+  const trig = c.filter(t => t.timing === "trigger"), early = c.filter(t => ["early", "notyet", "against", "nosetup"].includes(t.timing));
+  if (trig.length >= 2 && early.length >= 2) out.push(`You win <b>${wr(trig)}%</b> when you wait for the trigger, and <b>${wr(early)}%</b> when you get in early or off the plan (${dyMoney(net(trig))} vs ${dyMoney(net(early))}).`);
+  const la = c.filter(t => t.pnl < 0), lt = la.filter(t => ["early", "notyet", "against", "nosetup"].includes(t.timing));
+  if (la.length >= 3 && lt.length / la.length >= 0.5) out.push(`<b>${lt.length} of your ${la.length} losses</b> came from trades taken before the setup was ready or off the plan.`);
+  const A = c.filter(t => t.grade === "A"), low = c.filter(t => t.grade === "C" || t.grade === "D");
+  if (A.length >= 2 && low.length >= 2) out.push(`Trades you graded <b>A</b> made ${dyMoney(net(A))}. The ones you graded <b>C or D</b> made ${dyMoney(net(low))}.`);
+  const g = {}; for (const t of c) if (t.setup) (g[t.setup] = g[t.setup] || []).push(t);
+  const ss = Object.entries(g).filter(([, a]) => a.length >= 3).sort((a, b) => net(b[1]) - net(a[1]));
+  if (ss.length >= 2) out.push(`Your best setup is <b>${esc(ss[0][0])}</b> (${dyMoney(net(ss[0][1]))}, ${wr(ss[0][1])}% wins). Your weakest is <b>${esc(ss[ss.length - 1][0])}</b> (${dyMoney(net(ss[ss.length - 1][1]))}).`);
+  else if (ss.length === 1) out.push(`<b>${esc(ss[0][0])}</b>: ${ss[0][1].length} trades, ${wr(ss[0][1])}% wins, ${dyMoney(net(ss[0][1]))}.`);
+  const S = dyStats();
+  if (S.avgW != null && S.avgL != null && Math.abs(S.avgL) > S.avgW) out.push(`Your average loss (${dyMoney(Math.abs(S.avgL), false)}) is bigger than your average win (${dyMoney(S.avgW, false)}). Cutting losers at the kill line would close that gap.`);
+  const wd = {}; for (const t of c) { const d = new Date(dyKey(t.closed_at) + "T12:00:00").toLocaleDateString("en-US", {weekday: "long"}); (wd[d] = wd[d] || []).push(t); }
+  const worst = Object.entries(wd).filter(([, a]) => a.length >= 3).sort((a, b) => net(a[1]) - net(b[1]))[0];
+  if (worst && net(worst[1]) < 0) out.push(`<b>${worst[0]}s</b> are your toughest day so far (${dyMoney(net(worst[1]))} over ${worst[1].length} trades).`);
+  const untagged = c.filter(t => !t.timing).length;
+  if (untagged >= 3) out.push(`${untagged} closed trades don't say how you got in. Tag them ("Waited for the trigger", "Entered early"…) and I can tell you what your timing costs you.`);
+  return out.length ? out.slice(0, 4).map(p => `<p>${p}</p>`).join("") : `<p>No clear pattern yet. Keep tagging the setup, how you got in and a grade, and it'll show up.</p>`;
+}
+function dyCalHTML(mini) {
+  const by = dyByDay(), today = dyTodayKey();
+  if (!DYS.month) DYS.month = today.slice(0, 7);
+  const [y, mo] = DYS.month.split("-").map(Number), first = new Date(y, mo - 1, 1), days = new Date(y, mo, 0).getDate(), pad = (first.getDay() + 6) % 7;
+  let tot = 0, cells = "";
+  for (let i = 0; i < pad; i++) cells += `<div class="dy-day pad"></div>`;
+  for (let d = 1; d <= days; d++) {
+    const k = `${DYS.month}-${String(d).padStart(2, "0")}`, v = by[k];
+    if (v) tot += v.pnl;
+    const c = v ? (v.pnl > 0 ? " w" : v.pnl < 0 ? " l" : "") : "";
+    cells += `<button type="button" class="dy-day${c}${v ? " has" : ""}${k === today ? " today" : ""}${DYS.day === k ? " sel" : ""}" ${v ? `onclick="dyPickDay('${k}')"` : "tabindex=-1"}>${d}${v ? `<span class="amt">${(v.pnl > 0 ? "+" : v.pnl < 0 ? "−" : "") + "$" + Math.round(Math.abs(v.pnl)).toLocaleString("en-US")}</span>${mini ? "" : `<i>${v.n} trade${v.n > 1 ? "s" : ""}</i>`}` : ""}</button>`;
+  }
+  const title = first.toLocaleDateString("en-US", {month: "long", year: "numeric"});
+  const list = !mini && DYS.day && DYS.day.startsWith(DYS.month) ? `<div class="dy-card"><div class="dy-h"><span>${dyDate(DYS.day, {weekday: "long", month: "short", day: "numeric"})}</span><span class="${dyCls(by[DYS.day] && by[DYS.day].pnl)}">${dyMoney(by[DYS.day] ? by[DYS.day].pnl : 0)}</span></div>${DY.trades.filter(t => dyKey(t.closed_at || t.opened_at) === DYS.day).map(dyRowHTML).join("") || `<div class="dy-empty" style="padding:8px">No trades.</div>`}</div>` : "";
+  return `<div class="dy-card"><div class="dy-h"><span><button type="button" class="dy-nav" onclick="dyMonth(-1)" aria-label="Previous month">‹</button>${title}<button type="button" class="dy-nav" onclick="dyMonth(1)" aria-label="Next month">›</button></span><span class="${dyCls(tot)}">${dyMoney(tot)}</span></div>
+    <div class="dy-cal">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(w => `<div class="wd">${w}</div>`).join("")}${cells}</div></div>${list}`;
+}
+function dyMonth(n) { const [y, m] = DYS.month.split("-").map(Number), d = new Date(y, m - 1 + n, 1); DYS.month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; paintDiary(); }
+function dyPickDay(k) { DYS.day = DYS.day === k ? null : k; DYS.tab = "cal"; paintDiary(); }
+function dyRowHTML(t) {
+  const what = t.instrument === "option" ? (t.contract || t.ticker + " option") : `${t.side === -1 ? "Short" : "Long"} ${t.ticker}`;
+  const when = dyDate(dyKey(t.closed_at || t.opened_at));
+  const meta = t.closed ? `${when} · ${t.qty}${t.instrument === "option" ? " ct" : " sh"}${t.r != null ? " · " + dyR(t.r) : ""}` : `Open since ${dyDate(dyKey(t.opened_at))} · ${t.qty}${t.instrument === "option" ? " ct" : " sh"} @ ${money(t.entry_price)}`;
+  return `<button type="button" class="dy-row" onclick="dyEdit(${t.id})"><span><div class="a"><b>${esc(t.ticker)}</b> · ${esc(t.instrument === "option" ? what.replace(t.ticker + " ", "") : t.side === -1 ? "Short" : "Long")}${t.setup ? " · " + esc(t.setup) : ""}${t.grade ? `<span class="dy-pill ${"AB".includes(t.grade) ? "g" : "b"}">${esc(t.grade)}</span>` : ""}${t.source !== "manual" ? `<span class="dy-pill">${t.source === "broker" ? "Auto" : "Lookout"}</span>` : ""}</div>
+    <div class="s${t.needs_note ? " need" : ""}">${t.needs_note ? "Add why you took it · " : ""}${esc(meta)}</div></span><span class="p ${dyCls(t.pnl)}">${t.closed ? dyMoney(t.pnl) : "Open"}</span></button>`;
+}
+function dyLogHTML() {
+  const f = DYS.filter, rows = DY.trades.filter(t => f === "open" ? !t.closed : f === "need" ? t.needs_note : f === "win" ? t.pnl > 0 : f === "loss" ? t.pnl < 0 : true);
+  return `<div class="dy-card"><div class="dy-h"><span class="dy-seg">${[["all", "All"], ["win", "Wins"], ["loss", "Losses"], ["open", "Open"], ["need", "Needs a note"]].map(([k, l]) => `<button type="button" class="${f === k ? "on" : ""}" onclick="DYS.filter='${k}';paintDiary()">${l}</button>`).join("")}</span><small>${rows.length}</small></div>
+    ${rows.map(dyRowHTML).join("") || `<div class="dy-empty">Nothing here.</div>`}</div>`;
+}
+function dyEdit(id) {
+  const t = id ? DY.trades.find(x => x.id === id) : null, auto = t && t.source === "broker", ro = auto ? "disabled" : "";
+  const v = (k, d = "") => t && t[k] != null ? esc(t[k]) : d, dt = (iso) => iso ? dyKey(iso) : "";
+  const el = document.createElement("div"); el.className = "soc-back";
+  const seg = (name, opts, cur) => `<div class="dy-seg" data-seg="${name}">${opts.map(([val, l]) => `<button type="button" data-v="${val}" class="${String(cur) === String(val) ? "on" : ""}" ${ro && name !== "grade" ? ro : ""}>${l}</button>`).join("")}</div>`;
+  el.innerHTML = `<div class="dy-sheet" role="dialog" aria-modal="true" aria-labelledby="dyT">
+    <h3 id="dyT">${t ? esc(t.ticker) + (t.closed ? " · " + dyMoney(t.pnl) : " · open") : "Log a trade"}</h3>
+    <p class="sub">${auto ? "From your brokerage. The fills are filled in for you; add the why and the lesson." : t && t.source === "lookout" ? "Started by Lookout. Add your exit when you're out." : "Only you can see your diary."}</p>
+    <div class="dy-f">
+      <div><label>Ticker</label><input id="dyTk" value="${v("ticker")}" placeholder="NVDA" autocapitalize="characters" ${ro}></div>
+      <div><label>Type</label>${seg("instrument", [["stock", "Shares"], ["option", "Option"]], t ? t.instrument : "stock")}</div>
+      <div class="full" id="dyCtW" ${t && t.instrument === "option" ? "" : "hidden"}><label>Contract</label><input id="dyCt" value="${v("contract")}" placeholder="NVDA Dec 4 $180 Call" ${ro}></div>
+      <div><label>Side</label>${seg("side", [[1, "Long"], [-1, "Short"]], t ? t.side : 1)}</div>
+      <div><label id="dyQL">${t && t.instrument === "option" ? "Contracts" : "Shares"}</label><input id="dyQ" type="number" min="0" step="any" value="${v("qty")}" ${ro}></div>
+      <div><label>Entry price</label><input id="dyE" type="number" min="0" step="any" value="${v("entry_price")}" ${ro}></div>
+      <div><label>Exit price <i style="font-style:normal;color:var(--faint)">blank if still open</i></label><input id="dyX" type="number" min="0" step="any" value="${v("exit_price")}" ${ro}></div>
+      <div><label>Opened</label><input id="dyOd" type="date" value="${t ? dt(t.opened_at) : dyTodayKey()}" ${ro}></div>
+      <div><label>Closed</label><input id="dyCd" type="date" value="${t ? dt(t.closed_at) : ""}" ${ro}></div>
+      <div><label>Fees</label><input id="dyF" type="number" min="0" step="any" value="${v("fees", "")}"></div>
+      <div><label>Risk ($) <i style="font-style:normal;color:var(--faint)">for R</i></label><input id="dyRk" type="number" min="0" step="any" value="${v("risk", "")}" placeholder="${t && t.risk_used && !t.risk ? Math.round(t.risk_used) : "auto"}"></div>
+      <div class="dy-calc" id="dyCalc"></div>
+      <div><label>Setup</label><select id="dyS"><option value="">Choose…</option>${DY.setups.map(s => `<option ${t && t.setup === s ? "selected" : ""}>${esc(s)}</option>`).join("")}</select></div>
+      <div><label>How did you get in?</label><select id="dyTi"><option value="">Choose…</option>${Object.entries(DY.timings).map(([k, l]) => `<option value="${k}" ${t && t.timing === k ? "selected" : ""}>${esc(l)}</option>`).join("")}</select></div>
+      <div class="full"><label>Why I took it</label><textarea id="dyW" placeholder="Closed above the hub on the 4H, volume picked up, sector green.">${v("why")}</textarea></div>
+      <div class="full"><label>What I'd do better</label><textarea id="dyL" placeholder="Took profit too early. Let the target do its job.">${v("lesson")}</textarea></div>
+      <div class="full"><label>Grade yourself <i style="font-style:normal;color:var(--faint)">how well you followed your plan, not the result</i></label>${seg("grade", [["A", "A"], ["B", "B"], ["C", "C"], ["D", "D"]], t ? t.grade : "")}</div>
+    </div>
+    <div class="dy-err" id="dyErr"></div>
+    <div class="dy-acts">${t ? `<button type="button" class="del">Delete</button>` : ""}<button type="button" class="cancel">Cancel</button><button type="button" class="save">Save</button></div></div>`;
+  const q = (s) => el.querySelector(s), segv = (n) => { const b = el.querySelector(`[data-seg="${n}"] .on`); return b ? b.dataset.v : ""; };
+  el.querySelectorAll("[data-seg]").forEach(g => g.addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b || b.disabled) return;
+    const was = b.classList.contains("on"); g.querySelectorAll("button").forEach(x => x.classList.remove("on"));
+    if (!(was && g.dataset.seg === "grade")) b.classList.add("on");
+    if (g.dataset.seg === "instrument") { q("#dyCtW").hidden = segv("instrument") !== "option"; q("#dyQL").textContent = segv("instrument") === "option" ? "Contracts" : "Shares"; }
+    calc();
+  }));
+  const calc = () => {
+    const qn = +q("#dyQ").value, e = +q("#dyE").value, x = q("#dyX").value === "" ? null : +q("#dyX").value, f = +q("#dyF").value || 0;
+    const mult = segv("instrument") === "option" ? 100 : 1, side = +segv("side") || 1;
+    if (!(qn > 0 && e > 0)) { q("#dyCalc").innerHTML = "Enter the size and entry to see the P&amp;L."; return; }
+    if (x == null) { q("#dyCalc").innerHTML = `Position <b>${money(qn * e * mult)}</b> · still open`; return; }
+    const p = (x - e) * qn * mult * side - f, rk = +q("#dyRk").value || (mult === 100 && side === 1 ? e * qn * 100 : 0);
+    q("#dyCalc").innerHTML = `P&amp;L <b class="${dyCls(p)}">${dyMoney(p)}</b>${rk ? ` · <b class="${dyCls(p)}">${dyR(p / rk)}</b>` : ""} · ${(p / (qn * e * mult) * 100).toFixed(1)}%`;
+  };
+  el.querySelectorAll("input").forEach(i => i.addEventListener("input", () => { q("#dyErr").textContent = ""; calc(); }));
+  calc();
+  const done = () => { document.removeEventListener("keydown", key, true); el.remove(); };
+  const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); done(); } };
+  el.addEventListener("click", (e) => { if (e.target === el) done(); });
+  q(".cancel").onclick = done;
+  if (t) q(".del").onclick = async () => {
+    if (!(await nsConfirm({badge: "Delete", title: `Delete this ${t.ticker} trade?`, sub: auto ? "It came from your brokerage, so the next sync may bring it back." : "This can't be undone.", stay: "Keep it", go: "Delete", goCls: "sell"}))) return;
+    try { await api("/api/diary/" + t.id, {method: "DELETE"}); done(); toast("Trade deleted."); loadDiary(); } catch (e) { q("#dyErr").textContent = e.message; }
+  };
+  q(".save").onclick = async () => {
+    const body = {setup: q("#dyS").value, timing: q("#dyTi").value, why: q("#dyW").value, lesson: q("#dyL").value, grade: segv("grade"), fees: q("#dyF").value, risk: q("#dyRk").value};
+    if (!auto) {
+      Object.assign(body, {ticker: q("#dyTk").value.trim(), instrument: segv("instrument"), side: segv("side"), contract: q("#dyCt").value, qty: q("#dyQ").value,
+        entry_price: q("#dyE").value, exit_price: q("#dyX").value, opened_at: q("#dyOd").value, closed_at: q("#dyCd").value || (q("#dyX").value ? q("#dyOd").value : "")});
+      if (!body.ticker) { q("#dyErr").textContent = "Enter a ticker."; return; }
+      if (!(+body.qty > 0) || !(+body.entry_price > 0)) { q("#dyErr").textContent = "Enter the size and your entry price."; return; }
+    }
+    const b = q(".save"); b.disabled = true; b.textContent = "Saving…";
+    try { await api(t ? "/api/diary/" + t.id : "/api/diary", {method: t ? "PUT" : "POST", body: JSON.stringify(body)}); done(); toast(t ? "Saved." : "Trade logged."); loadDiary(); }
+    catch (e) { q("#dyErr").textContent = e.message || "Couldn't save."; b.disabled = false; b.textContent = "Save"; }
+  };
+  document.addEventListener("keydown", key, true); document.body.appendChild(el);
+  if (!t) q("#dyTk").focus();
+}
+// the Today card: this week at a glance, and what still needs a note
+async function loadDiaryMini() {
+  const el = $("dyMini"); if (!el) return;
+  if (!ME || ME.guest) { el.hidden = true; return; }
+  try { DY = await api("/api/diary"); } catch (e) { el.hidden = true; return; }
+  if (!DY.trades.length) { el.hidden = true; return; }
+  const S = dyStats();
+  el.innerHTML = `<span style="font-size:20px" aria-hidden="true">📔</span><span><div class="k">Trade diary · this week</div><div class="v ${dyCls(S.week)}">${dyMoney(S.week)}</div></span><span class="k" style="margin-left:6px">${S.need ? `${S.need} need${S.need > 1 ? "" : "s"} a note` : S.win != null ? Math.round(S.win) + "% wins" : ""}</span><span class="go">Open ›</span>`;
+  el.hidden = false;
+}
+// the options ticket files why the order was placed, so the broker sync can fill in the setup and the plan
+function diaryTagOrder(S, k, r) {
+  try {
+    const c4 = BRIEF_CHART && BRIEF_CHART.symbol === S.sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(S.sym);
+    const P = st ? mapPlan(S.sym, st) : null, G = soptGuard(S, k);
+    const timing = !P || P.trig == null ? "nosetup" : !G ? "trigger" : G.title === "Not yet" ? "notyet" : G.title === "Waiting for the pullback" ? "early" : G.title === "No setup" ? "nosetup" : "against";
+    const plan = lookoutPlanFromTicket(S.sym, k.call ? 1 : -1), o = (r && r.order) || {};
+    const ref = Array.isArray(o) ? (o[0] && o[0].brokerage_order_id) : (o.brokerage_order_id || (o.order && o.order.brokerage_order_id) || "");
+    api("/api/diary/tag", {method: "POST", body: JSON.stringify({order_ref: ref || "", ticker: S.sym, occ: k.symbol, setup: P && P.setupName ? P.setupName : "", timing, plan})}).catch(() => {});
+  } catch (e) {}
 }
 // ---------------------------------------------------------------- Patch 208: Lookout (watch, never trade)
 function lookoutPlanFromTicket(sym, wantDir) {
@@ -7538,7 +7848,7 @@ function renderToday() {
   renderWeek();
   if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet
   renderRetest();
-  loadWatching();
+  loadWatching(); loadDiaryMini();
   loadPulse();
   renderRule();
   renderKpis();

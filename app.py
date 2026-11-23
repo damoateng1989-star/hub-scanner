@@ -2097,6 +2097,58 @@ def lookout_close(row_id: int, body: LookoutClose, u: dict = User):
         raise HTTPException(404, str(e))
 
 
+# ---------------------------------------------------------------- Trade Diary (every member, private; Nov 23)
+@app.get("/api/diary")
+async def diary_list(sync: int = 0, u: dict = User):
+    import diary
+    sync_info = None
+    if sync:
+        try:
+            sync_info = await run_in_threadpool(diary.sync_broker, u, sync > 1)
+        except Exception as e:
+            log.info("diary sync failed for %s: %s", u["id"], e)
+            sync_info = dict(ok=False, reason="Couldn't reach your brokerage. Your diary is still here.")
+    out = await run_in_threadpool(diary.list_trades, u)
+    out["sync"] = sync_info
+    return out
+
+
+@app.post("/api/diary")
+async def diary_add(request: Request, u: dict = User):
+    import diary
+    try:
+        return await run_in_threadpool(diary.create, u, await request.json())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.put("/api/diary/{tid}")
+async def diary_edit(tid: int, request: Request, u: dict = User):
+    import diary
+    try:
+        return await run_in_threadpool(diary.update, u, tid, await request.json())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+@app.delete("/api/diary/{tid}")
+def diary_delete(tid: int, u: dict = User):
+    import diary
+    try:
+        diary.delete(u, tid)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    return dict(ok=True)
+
+
+@app.post("/api/diary/tag")
+async def diary_tag(request: Request, u: dict = User):
+    import diary
+    return await run_in_threadpool(diary.tag_order, u, await request.json())
+
+
 @app.post("/api/broker/register")
 async def broker_register(u: dict = Admin):
     try:
