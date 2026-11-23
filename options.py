@@ -178,11 +178,41 @@ def _contract_view(c: dict, S_entry: float, target: float, fail_px: float, days_
     at_shelf = bs_price(target, c["strike"], t_hit, iv, call)
     at_fail = bs_price(fail_px, c["strike"], max(0.0, dte - 1) / 365, iv, call)
     spread = (c["ask"] - c["bid"]) / mid if mid and c["bid"] > 0 else None
-    return dict(label=label, symbol=c["symbol"], strike=c["strike"], bid=round(c["bid"], 2), ask=round(c["ask"], 2), mid=round(mid, 2),
+    scen = _scenarios(S_entry, c["strike"], dte, iv, call, days_to_target, mid, target, fail_px)
+    return dict(label=label, scen=scen, iv_src="chain" if c.get("iv") else "history", symbol=c["symbol"], strike=c["strike"], bid=round(c["bid"], 2), ask=round(c["ask"], 2), mid=round(mid, 2),
                 delta=round(abs(delta), 2), iv=round(iv * 100, 1), breakeven=round(c["strike"] + mid if call else c["strike"] - mid, 2),
                 cost=round(mid * 100, 2), at_shelf=round(at_shelf, 2), at_shelf_pct=round((at_shelf / mid - 1) * 100) if mid else None,
                 at_fail=round(at_fail, 2), at_fail_pct=round((at_fail / mid - 1) * 100) if mid else None,
                 wide_spread=bool(spread and spread > 0.15), quote_now=round(quote, 2), estimated=prep)
+
+
+# Patch 205: scenario grid. The same Black-Scholes as above, priced at several implied-volatility levels and several
+# times-to-target, so the card can show IV unchanged / contraction / expansion and let the member change the assumptions
+# without a second pricing engine in the browser. Display only.
+SCEN_IV = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]      # IV x this (0.7 = a 30% contraction)
+FAIL_DAYS = 1                                                            # a failed breakout shows on the next 4H closes
+
+
+def _scen_days(need: float, dte: int) -> list[float]:
+    """Trading days to the target to price: the planner's estimate plus a few round choices, all before expiry."""
+    max_td = max(0.0, dte * 5 / 7 - 0.5)
+    ds = sorted({float(need), 1.0, 3.0, 5.0, 10.0, 15.0})
+    return [d for d in ds if d < max_td] or [min(float(need), max_td)]
+
+
+def _scenarios(S_entry: float, K: float, dte: int, iv: float, call: bool, need: float, mid: float,
+               target: float, fail_px: float) -> dict | None:
+    if not all(math.isfinite(x) for x in (mid or 0, iv or 0, S_entry or 0, target or 0, fail_px or 0)) \
+            or not (mid and mid > 0 and iv and iv > 0 and S_entry > 0 and dte > 0 and target > 0 and fail_px > 0):
+        return None                                   # no reliable premium or volatility: show no modeled values at all
+    days = _scen_days(need, dte)
+
+    def row(px, td):  # option value with the stock at px after td trading days (7/5 calendar days each, as before)
+        T = max(0.0, dte - td * 7 / 5) / 365
+        return [round(bs_price(px, K, T, iv * m, call), 2) for m in SCEN_IV]
+    return dict(iv_mults=SCEN_IV, days=days, need=float(need), fail_days=FAIL_DAYS,
+                remain=[round(max(0.0, dte - d * 7 / 5)) for d in days], fail_remain=round(max(0.0, dte - FAIL_DAYS * 7 / 5)),
+                tgt=[row(target, d) for d in days], fail=row(fail_px, FAIL_DAYS))
 
 
 def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: float, target_kind: str,
@@ -209,7 +239,7 @@ def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: 
     return dict(direction=d, side="call" if call else "put", setup=setup, spread=spread, kind=kind, mode=mode, entry=round(entry, 2), edge=round(edge, 2),
                 target=round(target, 2), target_kind=target_kind, target_pct=round((target / entry - 1) * 100, 2),
                 expiry=exp.isoformat(), dte=(exp - date.today()).days, contracts=views, history=hist,
-                days_to_target=need, fail_px=round(fail_px, 2))
+                days_to_target=need, days_src="history" if hist["reached"] >= 3 else "assumed", fail_px=round(fail_px, 2))
 
 
 def _spread(cs: list[dict], atm: dict, call: bool, long_v: dict, entry: float, target: float, fail_px: float,
@@ -226,6 +256,7 @@ def _spread(cs: list[dict], atm: dict, call: bool, long_v: dict, entry: float, t
         return None
     short = max(side, key=lambda r: r["strike"]) if call else min(side, key=lambda r: r["strike"])
     sv = _contract_view(short, entry, target, fail_px, need, iv_fallback, "Short leg", prep)
+    sv.pop("scen", None)
     debit = round(long_v["mid"] - sv["mid"], 2)
     width = abs(short["strike"] - atm["strike"])
     if debit <= 0 or debit >= width:
