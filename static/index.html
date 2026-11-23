@@ -2930,6 +2930,9 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 .dy-acts .save { background: var(--wb-green-flat, #48AE8A); color: #fff; border-color: transparent; }
 .dy-acts .del { flex: 0 0 auto; color: var(--dy-dn); }
 .dy-err { color: var(--dy-dn); font-size: 13px; margin-top: 8px; min-height: 1px; }
+.lk-mark { width: auto !important; height: auto !important; background: none !important; border: 0 !important; --lk-bg: #1B1E25; } html[data-theme="light"] .lk-mark { --lk-bg: #fff; }
+.lk-h b .lk-eyes { vertical-align: -3px; margin-right: 8px; } .lk-eyes { display: inline-block; flex: none; }
+.lk-watch { --lk-bg: var(--surface); } html[data-theme="light"] .lk-eyes { --lk-ring: #0d1117; }
 </style>
 </head>
 <body class="term">
@@ -4365,7 +4368,7 @@ async function posMine(sym, force) {
   const mine = P.positions.filter(r => (r.underlying || r.symbol) === sym), ord = P.orders.filter(o => o.open && (o.underlying || o.symbol) === sym);
   if (!LK) { try { LK = await api("/api/lookout"); } catch (e) {} }        // Patch 209: the Lookout pill
   const watching = LK && (LK.live || []).some(w => w.ticker === sym && w.state !== "closed");
-  host.innerHTML = mine.length || ord.length ? `<div class="pos-mine"><div class="pos-mh"><b>Your ${esc(sym)}</b>${watching ? `<span class="tk-lkpill"><i></i>LOOKOUT WATCHING</span>` : ""}<a href="#positions" onclick="mapTicketClose();closeBrief()">All positions →</a></div>${mine.map(posCard).join("")}${ord.map(posOrderRow).join("")}</div>` : "";
+  host.innerHTML = mine.length || ord.length ? `<div class="pos-mine"><div class="pos-mh"><b>Your ${esc(sym)}</b>${watching ? `<span class="tk-lkpill">${lkEyes(20)}LOOKOUT WATCHING</span>` : ""}<a href="#positions" onclick="mapTicketClose();closeBrief()">All positions →</a></div>${mine.map(posCard).join("")}${ord.map(posOrderRow).join("")}</div>` : "";
 }
 // a NextShelf-styled confirm for actions that reach the broker
 function nsConfirm(o) {
@@ -4631,12 +4634,15 @@ function lookoutAfterOrder(S, k, d) {
   lookoutWindow({ticker: S.sym, contract: `${S.sym} ${d} $${k.strike} ${k.call ? "Call" : "Put"}`, contract_occ: k.symbol, qty: S.qty, entry_price: unit,
     limitLine: `${S.qty} × ${S.type === "LIMIT" ? "limit " + money(S.price) : "market"} · ${money(unit * 100 * S.qty)}`, placed: true, ...plan});
 }
-const LK_BADGE = `<svg width="28" height="20" viewBox="0 0 28 20" aria-hidden="true"><circle cx="8" cy="10" r="7" fill="#0E1A16" stroke="#4FBC97" stroke-width="2"/><circle cx="20" cy="10" r="7" fill="#0E1A16" stroke="#4FBC97" stroke-width="2"/><rect x="12" y="8" width="4" height="3" rx="1" fill="#4FBC97"/><circle cx="9.5" cy="8.5" r="2.2" fill="#9FE8C2"/><circle cx="21.5" cy="8.5" r="2.2" fill="#9FE8C2"/></svg>`;
+// Patch 210: the Lookout mark, two round eyes (also binoculars). Ratios from R = 36; the pupils take the ground's colour
+// via --lk-bg (set by the container), so the mark sits right on the sheet, a panel or the pill's tint.
+const lkEyes = (w = 24, on = true) => `<svg class="lk-eyes" width="${w}" height="${Math.round(w * 72 / 134)}" viewBox="0 0 134 72" fill="none" role="img" aria-label="Lookout${on ? "" : " (watch ended)"}"><circle cx="36" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="98" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="36" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="98" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="36" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/><circle cx="98" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/></svg>`;
+const LK_BADGE = lkEyes(30);
 function lookoutWindow(o) {
   const up = o.direction !== -1, el = document.createElement("div"); el.className = "soc-back";
   const dd = (iso) => iso ? new Date(iso + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}) : "";
   el.innerHTML = `<div class="soc lk" role="dialog" aria-modal="true" aria-labelledby="lkT">
-    <div class="lk-top"><div class="lk-badge">${LK_BADGE}</div><div><div class="lk-kicker">${o.placed ? "Order placed" : "Watch a trade"} · ${esc(o.ticker)}</div><h3 id="lkT">Hi, I'm Lookout 👋</h3></div></div>
+    <div class="lk-top"><div class="lk-badge lk-mark">${LK_BADGE}</div><div><div class="lk-kicker">${o.placed ? "Order placed" : "Watch a trade"} · ${esc(o.ticker)}</div><h3 id="lkT">Hi, I'm Lookout 👋</h3></div></div>
     <p class="lk-intro">I'll keep an eye on ${o.placed ? "this trade" : "the trade you placed"} for you, if you let me. The trade stays yours: I never buy, sell or touch an order. I just tap you on the shoulder when something changes.</p>
     <div class="soc-rows">${o.contract ? `<div><span>Position</span><b>${esc(o.contract)}</b></div>` : `<div><span>Stock</span><b>${esc(o.ticker)}</b></div>`}
       ${o.limitLine ? `<div><span>Order</span><b>${esc(o.limitLine)}</b></div>` : ""}
@@ -4694,7 +4700,7 @@ async function loadWatching(force) {
       <div class="lk-mid"><b>${esc(r.contract || "Shares")}</b><small>${r.state === "watching" || r.state === "target_hit" ? `${r.days_left ?? "–"} day${r.days_left === 1 ? "" : "s"} left · stop ${money(r.kill)} · target ${money(r.target)}` : `stop was ${money(r.kill)}`}</small></div>
       <span class="lk-st lk-${(word[r.state] || ["", ""])[1]}">${(word[r.state] || [r.state])[0]}</span><button type="button" class="lk-out" onclick="lookoutOut(${r.id}, '${esc(r.ticker)}')">I'm out</button></div>`;
   const log = (r) => `<div class="lk-log"><b>${esc(r.ticker)}</b> ${esc(r.contract || "Shares")} <span>${esc({member: "you closed it", auto_dead: "closed after the plan died", auto_window_closed: "closed after the window", position_closed: "left your account"}[r.close_reason] || r.close_reason || "")}${r.exit_price ? ` · out at ${money(r.exit_price)}` : ""} · ${r.closed_at ? new Date(r.closed_at).toLocaleDateString("en-US", {month: "short", day: "numeric"}) : ""}</span></div>`;
-  el.innerHTML = (live.length ? `<div class="lk-h"><b>Watching</b><span>Lookout taps you when something changes. It never trades.</span></div>${live.map(row).join("")}` : "")
+  el.innerHTML = (live.length ? `<div class="lk-h"><b>${lkEyes(24, live.some(r => r.state === "watching" || r.state === "target_hit"))}Watching</b><span>Lookout taps you when something changes. It never trades.</span></div>${live.map(row).join("")}` : "")
     + (closed.length ? `<details class="lk-closed"><summary>Your closed watches · ${closed.length}</summary>${closed.map(log).join("")}<p class="lk-priv">Private to you. Never part of the track record.</p></details>` : "");
   el.hidden = false;
 }
@@ -11007,7 +11013,7 @@ html[data-theme="light"] .tk-verdict { border-color: #EBDDBB; }
 .tk-spc { margin: 0; color: var(--tk-amber); font-size: 12.5px; } .tk-intr { margin: 0; color: var(--tk-mut); font-size: 12.5px; }
 .tk-kill { margin: 2px 0 0; padding-top: 10px; border-top: 1px solid var(--tk-line); font-size: 13px; line-height: 1.5; } .tk-kill span { display: block; color: var(--tk-mut); }
 .tk-lkpill { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font: 700 10px var(--mono, ui-monospace, monospace); letter-spacing: .05em; color: #00C898; background: rgba(0,200,152,.12); border-radius: 999px; padding: 4px 9px; }
-.tk-lkpill i { width: 7px; height: 7px; border-radius: 50%; background: #00C898; }
+.tk-lkpill { --lk-bg: #122C20; } html[data-theme="light"] .tk-lkpill { --lk-bg: #E0F6EE; --lk-ring: #0d1117; }
 /* ---- trade ticket */
 .mp-tradebtn { background: #000 !important; border-color: #000 !important; color: #fff !important; }
 .tk-back { position: fixed; inset: 0; z-index: 1000; background: rgba(5,7,10,.55); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; }

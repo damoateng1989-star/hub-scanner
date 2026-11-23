@@ -310,6 +310,7 @@ html[data-theme="light"] .oxg tbody th, html[data-theme="light"] .oxg td b { col
 .lkt-back { position: fixed; inset: 0; z-index: 2000; background: rgba(4,6,10,.62); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 18px; }
 .lkt { width: min(400px, 100%); background: #1B1E25; border: 1px solid #2E333D; border-radius: 20px; padding: 18px; color: #E6EBF0; font-family: var(--sans); }
 .lkt-badge { display: inline-block; font: 700 10.5px var(--mono, monospace); letter-spacing: .1em; text-transform: uppercase; color: #9FE8C2; background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.3); padding: 4px 8px; border-radius: 999px; margin-bottom: 10px; }
+.lkt-hd { display: flex; align-items: center; gap: 10px; } .lkt { --lk-bg: #1B1E25; }
 .lkt h3 { margin: 0 0 4px; font-size: 19px; } .lkt p { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: #9AA4B2; } .lkt small { display: block; text-align: center; margin-top: 10px; font-size: 12px; color: #8A93A0; }
 .lkt-rows { background: #14161B; border: 1px solid #262A33; border-radius: 14px; padding: 4px 14px; } .lkt-rows div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #22262E; font-size: 13px; color: #9AA4B2; } .lkt-rows div:first-child { border-top: 0; }
 .lkt-rows b { color: #E6EBF0; font-family: var(--mono, monospace); } .lkt-rows b.d { color: #FF8A80; } .lkt-rows input { width: 100px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2E333D; background: #1B1E25; color: #E6EBF0; text-align: right; }
@@ -913,10 +914,13 @@ async function loadSwingCard() {
 }
 
 // Patch 208: the second door — "I'm in — watch this" for a trade placed in the member's own broker app
+// Patch 210: the Lookout mark, two round eyes (also binoculars). Ratios from R = 36; the pupils take the ground's colour
+// via --lk-bg (set by the container), so the mark sits right on the sheet, a panel or the pill's tint.
+const lkEyes = (w = 24, on = true) => `<svg class="lk-eyes" width="${w}" height="${Math.round(w * 72 / 134)}" viewBox="0 0 134 72" fill="none" role="img" aria-label="Lookout${on ? "" : " (watch ended)"}"><circle cx="36" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="98" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="36" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="98" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="36" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/><circle cx="98" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/></svg>`;
 function tkLookout(x) {
   const pl = x.plan, up = pl.direction !== -1, k = x.contract, el = document.createElement("div"); el.className = "lkt-back";
   const contract = k ? `${x.sym} ${k.expiry} $${k.strike} ${x.side === "puts" ? "Put" : "Call"}` : null;
-  el.innerHTML = `<div class="lkt" role="dialog" aria-modal="true"><span class="lkt-badge">Watch a trade · ${esc(x.sym)}</span><h3>Hi, I'm Lookout 👋</h3>
+  el.innerHTML = `<div class="lkt" role="dialog" aria-modal="true"><span class="lkt-badge">Watch a trade · ${esc(x.sym)}</span><h3 class="lkt-hd">${lkEyes(30)}<span>Hi, I'm Lookout 👋</span></h3>
     <p>I'll keep an eye on the trade you placed, if you let me. The trade stays yours: I never buy, sell or touch an order. I just tap you on the shoulder when something changes.</p>
     <div class="lkt-rows"><div><span>${contract ? "Position" : "Stock"}</span><b>${esc(contract || x.sym)}</b></div>
       <div><span>Your fill (optional)</span><input type="number" step="0.01" min="0" id="lktFill"></div><div><span>Size (optional)</span><input type="number" step="1" min="0" id="lktQty"></div>
