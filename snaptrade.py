@@ -459,3 +459,93 @@ def place_checked_option(user: dict, preview_id: str) -> Any:
         raise PermissionError("This order preview belongs to another member")
     _owned_account(user, pending["account_id"])
     return _body(_option_call(client, client.trading.place_mleg_order, uid, secret, pending["account_id"], pending["form"]))
+
+
+# ---------------------------------------------------------------- positions & orders view (owner, Nov 22)
+def _num(v):
+    try:
+        f = float(v)
+        return f if f == f else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _occ_parts(occ: str) -> dict:
+    s = re.sub(r"\s+", "", str(occ or "").upper())
+    m = _OCC_IN.match(s)
+    if not m:
+        return {}
+    root, ymd, cp, k = m.groups()
+    return dict(underlying=root, expiry=f"20{ymd[:2]}-{ymd[2:4]}-{ymd[4:]}", option_type="CALL" if cp == "C" else "PUT",
+                strike=int(k) / 1000, occ=s)
+
+
+def _position_row(p: dict) -> dict | None:
+    ins = p.get("instrument") or {}
+    kind = str(ins.get("kind") or "").lower()
+    units, price, cost = _num(p.get("units")), _num(p.get("price")), _num(p.get("cost_basis"))
+    if not units:
+        return None
+    row = dict(kind=kind or "other", units=units, price=price, cost=cost, symbol=ins.get("symbol") or "", description=ins.get("description"))
+    if kind == "option":
+        und = ins.get("underlying") or {}
+        mult = _num(ins.get("multiplier")) or 100
+        row.update(_occ_parts(ins.get("symbol")))
+        row.update(underlying=(und.get("symbol") if isinstance(und, dict) else None) or row.get("underlying"),
+                   option_type=ins.get("option_type") or row.get("option_type"), strike=_num(ins.get("strike_price")) or row.get("strike"),
+                   expiry=str(ins.get("expiration_date") or row.get("expiry") or "")[:10], mult=mult)
+    else:
+        row["mult"] = 1
+    m = row["mult"]
+    row["value"] = round(units * price * m, 2) if price is not None else None
+    row["paid"] = round(units * cost * m, 2) if cost is not None else None
+    if row["value"] is not None and row["paid"]:
+        row["pl"] = round(row["value"] - row["paid"], 2)
+        row["pl_pct"] = round(row["pl"] / abs(row["paid"]) * 100, 1)
+    return row
+
+
+_OPEN_STATES = {"PENDING", "ACCEPTED", "OPEN", "PARTIAL", "PARTIALLY_FILLED", "QUEUED", "TRIGGERED", "ACTIVATED", "PENDING_NEW", "NEW", "REPLACE_PENDING"}
+
+
+def _order_row(o: dict) -> dict:
+    opt = o.get("option_symbol") or {}
+    uni = o.get("universal_symbol") or {}
+    status = str(o.get("status") or "").upper()
+    row = dict(id=str(o.get("brokerage_order_id") or ""), status=status, action=str(o.get("action") or "").upper(),
+               qty=_num(o.get("total_quantity")), filled=_num(o.get("filled_quantity")), order_type=o.get("order_type"),
+               limit=_num(o.get("limit_price")), avg_fill=_num(o.get("execution_price")), tif=o.get("time_in_force"),
+               placed=o.get("time_placed"), updated=o.get("time_updated") or o.get("time_executed"),
+               open=status in _OPEN_STATES)
+    if isinstance(opt, dict) and opt.get("ticker"):
+        row.update(kind="option", **_occ_parts(opt.get("ticker")))
+        und = opt.get("underlying_symbol") or {}
+        if isinstance(und, dict) and und.get("symbol"):
+            row["underlying"] = und["symbol"]
+    else:
+        row.update(kind="stock", symbol=(uni.get("symbol") if isinstance(uni, dict) else None) or o.get("symbol") or "")
+    return row
+
+
+def portfolio(user: dict, account_id: str) -> dict:
+    """Open positions (stocks and options, with value and P/L from the broker's own prices) and the last 7 days of orders."""
+    client = _client()
+    uid, secret = _credentials(user)
+    _owned_account(user, account_id)
+    pb = _body(client.account_information.get_all_account_positions(user_id=uid, user_secret=secret, account_id=account_id))
+    plist = pb.get("results") if isinstance(pb, dict) else pb
+    ob = _body(client.account_information.get_user_account_orders(user_id=uid, user_secret=secret, account_id=account_id, state="all", days=7))
+    olist = ob if isinstance(ob, list) else (ob.get("orders") or ob.get("results") or []) if isinstance(ob, dict) else []
+    positions = [r for r in (_position_row(p) for p in (plist or []) if isinstance(p, dict)) if r]
+    orders = sorted((_order_row(o) for o in olist if isinstance(o, dict)), key=lambda r: str(r.get("placed") or ""), reverse=True)
+    fresh = pb.get("data_freshness") if isinstance(pb, dict) else None
+    return dict(positions=positions, orders=orders[:40], as_of=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), freshness=fresh)
+
+
+def cancel(user: dict, account_id: str, brokerage_order_id: str) -> Any:
+    client = _client()
+    uid, secret = _credentials(user)
+    _owned_account(user, account_id)
+    if not re.fullmatch(r"[A-Za-z0-9_.:\-]{1,80}", str(brokerage_order_id or "")):
+        raise ValueError("Unknown order")
+    return _body(client.trading.cancel_order(account_id=account_id, user_id=uid, user_secret=secret, brokerage_order_id=str(brokerage_order_id)))

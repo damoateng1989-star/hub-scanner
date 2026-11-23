@@ -2706,6 +2706,22 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 #shelfOptHost { margin-top: 14px; }
+.pos-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 18px; } .pos-sum > div { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--surface); }
+.pos-sum small, .pos-g small { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 3px; } .pos-sum b { font: 650 18px var(--mono, ui-monospace, monospace); color: var(--ink); }
+.pos-hd { margin: 18px 0 8px; font: 600 11px var(--mono, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.pos-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; background: var(--surface); }
+.pos-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; } .pos-h b { font-size: 15px; color: var(--ink); } .pos-h span { font-size: 12.5px; color: var(--muted); }
+.pos-g { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; } .pos-g b { font: 600 13.5px var(--mono, ui-monospace, monospace); color: var(--ink); }
+.pos-g b.up, .pos-sum b.up { color: #3DD68C; } .pos-g b.dn, .pos-sum b.dn { color: #FF6B5E; }
+.pos-a { display: flex; gap: 8px; flex-wrap: wrap; } .pos-a button, .pos-cx { font-size: 12.5px !important; padding: 6px 12px !important; border-radius: 9px !important; }
+.pos-a .pos-sell { background: #B91C1C !important; color: #fff !important; border-color: #B91C1C !important; }
+.pos-ord { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); } .pos-ord > div { flex: 1; min-width: 0; } .pos-ord b { display: block; font-size: 13.5px; color: var(--ink); } .pos-ord small { font-size: 12px; color: var(--muted); }
+.pos-st { font: 600 11px var(--mono, ui-monospace, monospace); text-transform: capitalize; padding: 3px 8px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--muted); white-space: nowrap; }
+.pos-st.open { background: rgba(242,193,78,.14); color: #F2C14E; } .pos-st.fill { background: rgba(61,214,140,.14); color: #3DD68C; }
+.pos-empty { color: var(--muted); font-size: 13.5px; margin: 4px 0 8px; } .pos-fine { font-size: 12px; color: var(--muted); margin-top: 18px; }
+.pos-mine { margin-top: 14px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; } .pos-mh { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; } .pos-mh a { font-size: 12.5px; }
+.pos-mine .pos-card { margin-bottom: 6px; }
+@media (max-width: 560px) { .pos-g { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pos-sum b { font-size: 15px; } }
 .soc-back { position: fixed; inset: 0; z-index: 2000; background: rgba(4,6,10,.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 18px; animation: socIn .16s ease-out; }
 .soc-back.out { opacity: 0; transition: opacity .15s; } @keyframes socIn { from { opacity: 0; } to { opacity: 1; } }
 .soc { width: min(400px, 100%); background: #1B1E25; border: 1px solid #2E333D; border-radius: 20px; padding: 18px 18px 16px; box-shadow: 0 24px 70px rgba(0,0,0,.55); color: #E6EBF0; animation: socUp .18s ease-out; }
@@ -2829,7 +2845,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
     <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a><a class="sb-item" href="#journal" data-nav="journal" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h11a1.5 1.5 0 0 1 1.5 1.5v14a1.5 1.5 0 0 1-1.5 1.5H6z"/><path d="M6 3.5v17"/><path d="M9.5 8h5.5M9.5 11.5h5.5"/></svg><span>Journal</span></a>
     <div class="sb-label">Yours</div>
     <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>Watchlist</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#admin" data-nav="admin" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
-    <a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a>
+    <a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a><a class="sb-item" href="#positions" data-nav="positions" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M6.5 16V11M11 16V7M15.5 16v-4M20 16V9"/></svg><span>Positions</span></a>
     <div class="sb-label">Learn</div>
     <a class="sb-item" href="/learn" data-nav="learn"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 9 12 4 2 9l10 5 10-5z"/><path d="M6 11v5c0 1.5 2.7 3 6 3s6-1.5 6-3v-5"/></svg><span>Learn</span></a>
     <a class="sb-item" href="/learn/glossary" data-nav="glossary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M8 7h7M8 11h5"/></svg><span>Glossary</span></a>
@@ -2983,6 +2999,11 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 </section>
 
 <!-- PAPER (admin) -->
+<section data-view="positions" hidden>
+  <div class="vh"><h1>Your <em>positions.</em></h1><p id="posSub">Live from your connected broker.</p>
+    <span class="toggle"><button class="chip" type="button" onclick="loadPositions(true)">↻ Refresh</button></span></div>
+  <div id="posBody"><div class="loading"><span class="spin"></span>Loading…</div></div>
+</section>
 <section data-view="paper" hidden>
   <div class="vh"><h1>Paper <em>trades.</em></h1><p>Automatic practice trades in your Alpaca paper account.</p>
     <span class="toggle"><span class="note" id="pBroker" style="margin:0"></span>
@@ -3763,7 +3784,7 @@ async function loadAccount() {
 
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
-      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a><a class="btnx sm" href="#journal">Journal</a>` : ""}</div></div>`;
+      ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#positions">Positions</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a><a class="btnx sm" href="#journal">Journal</a>` : ""}</div></div>`;
   if (m.is_admin) loadBrokerAccounts();
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -3970,14 +3991,14 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results" };
-const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "account", "paper", "guide", "lab", "journal", "admin"];
-const NAV_FOR = { alerts: "today", paper: "account", guide: "", lab: "account", journal: "account", admin: "account" };
+const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "account", "paper", "positions", "guide", "lab", "journal", "admin"];
+const NAV_FOR = { alerts: "today", paper: "account", positions: "account", guide: "", lab: "account", journal: "account", admin: "account" };
 let CUR = "today";
 function showTab() {
   let tab = (location.hash || "#today").slice(1);
   tab = ALIAS[tab] || tab;
   CUR = VIEWS.includes(tab) ? tab : "today";
-  if ((CUR === "paper" || CUR === "lab" || CUR === "journal" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
+  if ((CUR === "paper" || CUR === "positions" || CUR === "lab" || CUR === "journal" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
   document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== CUR);
   const navKey = CUR in NAV_FOR ? NAV_FOR[CUR] : CUR;
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
@@ -3987,6 +4008,7 @@ function showTab() {
   if (CUR === "results") loadRecord();
   if (CUR === "cinema") loadCinema();
   if (CUR === "paper") loadPaper();
+  if (CUR === "positions") loadPositions();
   if (CUR === "account") loadAccount();
   if (CUR === "guide") renderGloss();
   if (CUR === "lab") loadLab();
@@ -4061,7 +4083,7 @@ function renderShelfTradeCard(sym) {
 // ---------------------------------------------------------------- options ticket (owner, Nov 22): like TradingView's
 // options order panel. Pick expiry, call/put and strike from the live chain, buy to open or sell to close, limit (at the
 // mid by default) or market; SnapTrade previews it, then only that exact order can be confirmed. Long options only.
-let SOPT = null;
+let SOPT = null, SOPT_PRESET = null, POS = null;
 async function shelfOptLoad(sym) {
   SOPT = {sym, chain: null, exp: null, call: true, strike: null, action: "BUY_TO_OPEN", qty: 1, type: "LIMIT", price: null, preview: null, req: 0, t: null};
   shelfOptPaint();
@@ -4070,6 +4092,12 @@ async function shelfOptLoad(sym) {
     if (!SOPT || SOPT.sym !== sym) return;
     SOPT.chain = c.contracts || []; SOPT.spot = c.spot;
     const plans = (OPT_CACHE[sym] && OPT_CACHE[sym].plans) || [], plan = plans.find(x => x.direction === 1) || plans[0], pc = plan && plan.contracts && plan.contracts[0];
+    const pre = SOPT_PRESET && SOPT_PRESET.sym === sym ? SOPT_PRESET : null; SOPT_PRESET = null;
+    if (pre) {     // "Sell to close" from a position: that exact contract, even if it's outside the chain window
+      let r = SOPT.chain.find(x => x.symbol === pre.occ);
+      if (!r && pre.parts && pre.parts.expiry) { r = {symbol: pre.occ, expiry: pre.parts.expiry, call: pre.parts.option_type === "CALL", strike: pre.parts.strike, bid: 0, ask: 0, mid: pre.price || 0}; SOPT.chain.push(r); }
+      if (r) { SOPT.exp = r.expiry; SOPT.call = r.call; SOPT.strike = r.strike; SOPT.action = "SELL_TO_CLOSE"; SOPT.qty = Math.max(1, Math.round(pre.qty || 1)); SOPT.price = r.bid > 0 ? r.bid : r.mid; shelfOptPaint(); shelfOptQueue(); return; }
+    }
     const hit = pc && SOPT.chain.find(r => r.symbol === pc.symbol);
     if (hit) { SOPT.exp = hit.expiry; SOPT.call = hit.call; SOPT.strike = hit.strike; }
     else {
@@ -4124,7 +4152,7 @@ async function shelfOptSubmit() {
   try {
     const r = await api("/api/broker/options/order", {method: "POST", body: JSON.stringify({preview_id: pv, confirm: true})});
     if (out) out.innerHTML = `<b>Order submitted</b> · ${esc(line)}<details class="shelf-impact-raw"><summary>Brokerage response</summary><pre class="broker-position-json">${esc(JSON.stringify(r.order || {}, null, 2))}</pre></details>`;
-    toast("Options order submitted.");
+    toast("Options order submitted."); setTimeout(() => posMine(S.sym, true), 2500);
   } catch (e) { if (out) out.textContent = e.message || "The brokerage did not confirm the order."; toast(e.message || "Order failed."); }
 }
 // the real-order confirmation: the exact order, what it costs, where it goes; Cancel is the default (Esc / tap outside)
@@ -4155,6 +4183,77 @@ function soptConfirm(S, k, d) {
     document.addEventListener("keydown", key, true);
     document.body.appendChild(el);
     el.querySelector(".soc-cancel").focus();
+  });
+}
+// ---------------------------------------------------------------- positions & orders (owner, Nov 22)
+async function posFetch(force) {
+  if (!BROKER_ACCOUNTS.length && typeof loadBrokerAccounts === "function") { try { await loadBrokerAccounts(); } catch (e) {} }
+  const a = BROKER_ACCOUNTS[0]; if (!a) return {none: true};
+  if (POS && !force && Date.now() - POS._t < 20000) return POS;
+  const r = await api(`/api/broker/portfolio?account_id=${encodeURIComponent(a.account_id)}`);
+  POS = Object.assign(r, {_t: Date.now(), _acct: a}); return POS;
+}
+const posDay = (e) => e ? new Date(e + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "";
+const posName = (r) => r.kind === "option" ? `${esc(r.underlying || "")} ${posDay(r.expiry)} $${+r.strike} ${r.option_type === "PUT" ? "Put" : "Call"}` : esc(r.symbol || "");
+const posPL = (v, pct) => v == null ? "—" : `<b class="${v >= 0 ? "up" : "dn"}">${v >= 0 ? "+" : "−"}${money(Math.abs(v))}${pct != null ? ` · ${v >= 0 ? "+" : "−"}${Math.abs(pct).toFixed(1)}%` : ""}</b>`;
+const posAct = (a) => ({BUY_TO_OPEN: "Buy to open", SELL_TO_CLOSE: "Sell to close", BUY_TO_CLOSE: "Buy to close", SELL_TO_OPEN: "Sell to open", BUY: "Buy", SELL: "Sell"})[a] || a || "";
+function posCard(r) {
+  const dte = r.expiry ? Math.round((new Date(r.expiry + "T16:00:00") - new Date()) / 864e5) : null;
+  const sell = r.kind === "option" && r.units > 0 ? `<button type="button" class="pos-sell" onclick='posSellToClose(${JSON.stringify({sym: r.underlying, occ: r.occ, qty: r.units, price: r.price, parts: {expiry: r.expiry, option_type: r.option_type, strike: r.strike}})})'>Sell to close</button>` : "";
+  return `<div class="pos-card"><div class="pos-h"><b>${posName(r)}</b><span>${r.kind === "option" ? `${r.units} contract${Math.abs(r.units) === 1 ? "" : "s"}${dte != null ? ` · ${dte}d left` : ""}` : `${r.units} share${Math.abs(r.units) === 1 ? "" : "s"}`}</span></div>
+    <div class="pos-g"><div><small>Avg cost</small><b>${r.cost != null ? money(r.cost) : "—"}</b></div><div><small>Now</small><b>${r.price != null ? money(r.price) : "—"}</b></div><div><small>Value</small><b>${r.value != null ? money(r.value) : "—"}</b></div><div><small>P/L</small>${posPL(r.pl, r.pl_pct)}</div></div>
+    <div class="pos-a">${sell}${(r.underlying || r.symbol) ? `<button type="button" onclick="openBrief('${esc(r.underlying || r.symbol)}')">Open ${esc(r.underlying || r.symbol)}</button>` : ""}</div></div>`;
+}
+function posOrderRow(o) {
+  const done = o.avg_fill != null && o.filled ? ` · filled ${o.filled} @ ${money(o.avg_fill)}` : "";
+  return `<div class="pos-ord"><div><b>${posAct(o.action)} ${o.qty ?? ""} · ${posName(o)}</b><small>${o.order_type || ""}${o.limit != null ? " " + money(o.limit) : ""} · ${esc(o.tif || "")}${done} · ${o.placed ? new Date(o.placed).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : ""}</small></div>
+    <span class="pos-st ${o.open ? "open" : /FILL|EXEC/.test(o.status) ? "fill" : "done"}">${esc((o.status || "").replace(/_/g, " ").toLowerCase())}</span>${o.open && o.id ? `<button type="button" class="pos-cx" onclick='posCancel(${JSON.stringify({id: o.id, line: posAct(o.action) + " " + (o.qty ?? "") + " " + (o.kind === "option" ? (o.underlying || "") + " " + posDay(o.expiry) + " $" + o.strike + " " + (o.option_type === "PUT" ? "Put" : "Call") : (o.symbol || ""))})})'>Cancel</button>` : ""}</div>`;
+}
+async function loadPositions(force) {
+  const el = $("posBody"); if (!el) return;
+  if (!POS || force) el.innerHTML = loadingHTML("Reading your positions from the broker…");
+  let P; try { P = await posFetch(force); } catch (e) { el.innerHTML = `<p class="pos-empty">${esc(e.message || "Couldn't read your positions.")}</p>`; return; }
+  if (P.none) { el.innerHTML = `<p class="pos-empty">No broker connected. Connect Webull on the <a href="#account">Account page</a>.</p>`; return; }
+  const al = shelfTradeAccountLabel(P._acct); $("posSub").textContent = `Live from ${al.broker}${al.masked ? " " + al.masked : ""} · updated ${new Date(P._t).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"})}`;
+  const opts = P.positions.filter(r => r.kind === "option"), stk = P.positions.filter(r => r.kind !== "option" && r.kind !== "cash");
+  const tv = P.positions.reduce((a, r) => a + (r.value || 0), 0), tpl = P.positions.reduce((a, r) => a + (r.pl || 0), 0);
+  const open = P.orders.filter(o => o.open), past = P.orders.filter(o => !o.open);
+  el.innerHTML = `<div class="pos-sum"><div><small>Positions value</small><b>${money(tv)}</b></div><div><small>Open P/L</small>${posPL(tpl)}</div><div><small>Open orders</small><b>${open.length}</b></div></div>
+    <h3 class="pos-hd">Options</h3>${opts.length ? opts.map(posCard).join("") : `<p class="pos-empty">No open option positions.</p>`}
+    ${stk.length ? `<h3 class="pos-hd">Stocks</h3>${stk.map(posCard).join("")}` : ""}
+    <h3 class="pos-hd">Open orders</h3>${open.length ? open.map(posOrderRow).join("") : `<p class="pos-empty">No open orders.</p>`}
+    ${past.length ? `<h3 class="pos-hd">Last 7 days</h3>${past.map(posOrderRow).join("")}` : ""}
+    <p class="pos-fine">Prices come from your broker and can be delayed. P/L is per the broker's average cost.</p>`;
+}
+function posSellToClose(x) {
+  SOPT_PRESET = x; SOPT = null;
+  openBrief(x.sym);
+  setTimeout(() => { mapTicketOpen(); mapTicketMode("options"); }, 900);
+}
+async function posCancel(x) {
+  const ok = await nsConfirm({badge: "Cancel order", title: "Cancel this order?", sub: x.line, note: "The broker cancels it if it hasn't filled yet. A partly filled order keeps the part that filled.", go: "Cancel order", goCls: "sell", stay: "Keep it"});
+  if (!ok) return;
+  try { await api("/api/broker/orders/cancel", {method: "POST", body: JSON.stringify({account_id: (POS && POS._acct || BROKER_ACCOUNTS[0]).account_id, brokerage_order_id: x.id, confirm: true})}); toast("Cancel sent to your broker."); }
+  catch (e) { toast(e.message || "The broker didn't cancel it."); }
+  setTimeout(() => { if (CUR === "positions") loadPositions(true); if (SOPT) posMine(SOPT.sym, true); }, 1200);
+}
+async function posMine(sym, force) {
+  const host = $("soptMine"); if (!host) return;
+  let P; try { P = await posFetch(force); } catch (e) { host.innerHTML = ""; return; }
+  if (!P || P.none || !$("soptMine") || !SOPT || SOPT.sym !== sym) return;
+  const mine = P.positions.filter(r => (r.underlying || r.symbol) === sym), ord = P.orders.filter(o => o.open && (o.underlying || o.symbol) === sym);
+  host.innerHTML = mine.length || ord.length ? `<div class="pos-mine"><div class="pos-mh"><b>Your ${esc(sym)}</b><a href="#positions" onclick="mapTicketClose();closeBrief()">All positions →</a></div>${mine.map(posCard).join("")}${ord.map(posOrderRow).join("")}</div>` : "";
+}
+// a NextShelf-styled confirm for actions that reach the broker
+function nsConfirm(o) {
+  return new Promise(resolve => {
+    const el = document.createElement("div"); el.className = "soc-back";
+    el.innerHTML = `<div class="soc" role="alertdialog" aria-modal="true"><div class="soc-top"><span class="soc-live"><i></i>${esc(o.badge || "Confirm")}</span></div><h3>${esc(o.title)}</h3><p class="soc-sub">${esc(o.sub || "")}</p>${o.note ? `<p class="soc-note">${esc(o.note)}</p>` : ""}<div class="soc-acts"><button type="button" class="soc-cancel">${esc(o.stay || "Cancel")}</button><button type="button" class="soc-go ${o.goCls || "buy"}">${esc(o.go || "OK")}</button></div></div>`;
+    const done = (v) => { document.removeEventListener("keydown", key, true); el.remove(); resolve(v); };
+    const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); done(false); } };
+    el.addEventListener("click", (e) => { if (e.target === el) done(false); });
+    el.querySelector(".soc-cancel").onclick = () => done(false); el.querySelector(".soc-go").onclick = () => done(true);
+    document.addEventListener("keydown", key, true); document.body.appendChild(el); el.querySelector(".soc-cancel").focus();
   });
 }
 function shelfOptPaintBits() {
@@ -4192,7 +4291,8 @@ function shelfOptPaint() {
     <div id="soptImpact" class="broker-impact-result shelf-impact" aria-live="polite">Checking the order with SnapTrade…</div>
     <button id="soptConfirm" type="button" class="shelf-confirm disabled-submit" onclick="shelfOptSubmit()" disabled><b id="soptConfirmLabel">Confirm</b><small>${S.type === "LIMIT" ? "Limit" : "Market"} · Day · ${BROKER_ACCOUNTS[0] ? esc(shelfTradeAccountLabel(BROKER_ACCOUNTS[0]).broker) : "no broker connected"}</small></button>
     <p class="shelf-trade-note">Long options only: buy to open, sell to close. You confirm every order; nothing is placed until you do.</p>
-  </div>`;
+  </div><div id="soptMine"></div>`;
+  posMine(S.sym);
   shelfOptPaintBits();
 }
 function openShelfTrade(sym) {

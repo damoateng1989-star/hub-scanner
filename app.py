@@ -2127,6 +2127,31 @@ def _snap_reason(e: Exception) -> str | None:
     return None
 
 
+class BrokerCancelBody(BaseModel):
+    account_id: str
+    brokerage_order_id: str
+    confirm: bool = False
+
+
+@app.get("/api/broker/portfolio")
+async def broker_portfolio(account_id: str, u: dict = Admin):
+    """Owner: open positions (stocks + options, value and P/L) and the last 7 days of orders, from the connected broker."""
+    try:
+        return await run_in_threadpool(snaptrade.portfolio, u, account_id)
+    except Exception as e:
+        _broker_error(e, _snap_reason(e))
+
+
+@app.post("/api/broker/orders/cancel")
+async def broker_cancel(body: BrokerCancelBody, u: dict = Admin):
+    if body.confirm is not True:
+        raise HTTPException(400, "Explicit confirmation is required")
+    try:
+        return {"result": await run_in_threadpool(snaptrade.cancel, u, body.account_id, body.brokerage_order_id)}
+    except Exception as e:
+        _broker_error(e, _snap_reason(e))
+
+
 @app.get("/api/broker/options/chain/{symbol}")
 async def broker_option_chain(symbol: str, u: dict = Admin):
     """The option chain for the options ticket (expiries within ~45 days, strikes within ±8%), bid/ask/mid per contract."""
