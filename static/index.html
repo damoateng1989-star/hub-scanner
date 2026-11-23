@@ -2706,6 +2706,8 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 #shelfOptHost { margin-top: 14px; }
+.sopt-guard { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: rgba(242,193,78,.1); border: 1px solid rgba(242,193,78,.35); color: #F5D58A; font-size: 12.5px; line-height: 1.45; } .sopt-guard b { color: #F2C14E; }
+.soc-guard { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(242,193,78,.1); border: 1px solid rgba(242,193,78,.35); display: grid; gap: 2px; font-size: 12.5px; line-height: 1.45; } .soc-guard b { color: #F2C14E; font-size: 13px; } .soc-guard span { color: #E9D9AE; }
 /* Nov 22 (owner): Webull's soft teal-green for the live trade flow (Confirm, Buy to open / Call, Place order, I'm in) */
 :root { --wb-green: linear-gradient(90deg, #42A07E 0%, #4FBC97 100%); --wb-green-flat: #48AE8A; }
 .sopt .shelf-confirm, .shelf-trade-ticket .shelf-confirm { background: var(--wb-green) !important; color: #fff !important; box-shadow: none !important; }
@@ -4187,7 +4189,7 @@ async function shelfOptSubmit() {
 function soptConfirm(S, k, d) {
   return new Promise(resolve => {
     const acct = BROKER_ACCOUNTS[0], al = acct ? shelfTradeAccountLabel(acct) : null, buy = S.action === "BUY_TO_OPEN";
-    const unit = S.type === "LIMIT" ? S.price : k.mid, tot = unit * 100 * S.qty;
+    const unit = S.type === "LIMIT" ? S.price : k.mid, tot = unit * 100 * S.qty, G = soptGuard(S, k);
     const el = document.createElement("div"); el.className = "soc-back";
     el.innerHTML = `<div class="soc" role="alertdialog" aria-modal="true" aria-labelledby="socT">
       <div class="soc-top"><span class="soc-live"><i></i>Real order</span><span class="soc-acct">${al ? esc(al.broker) + (al.masked ? " " + esc(al.masked) : "") : ""}</span></div>
@@ -4200,8 +4202,9 @@ function soptConfirm(S, k, d) {
         <div class="soc-tot"><span>${buy ? "Total cost" : "Est. proceeds"}</span><b>${money(tot)}</b></div>
         ${buy ? `<div class="soc-risk"><span>Most you can lose</span><b>${money(tot)}</b></div>` : ""}
       </div>
+      ${G ? `<div class="soc-guard"><b>⚠ ${esc(G.title)}</b><span>${esc(G.text)} You can still place it; it's your call.</span></div>` : ""}
       <p class="soc-note">This goes straight to your brokerage. ${S.type === "LIMIT" ? "It fills only at " + money(S.price) + " or better, today." : "A market order fills at whatever price is available."}</p>
-      <div class="soc-acts"><button type="button" class="soc-cancel">Cancel</button><button type="button" class="soc-go ${buy ? "buy" : "sell"}">Place order · ${money(tot)}</button></div>
+      <div class="soc-acts"><button type="button" class="soc-cancel">Cancel</button><button type="button" class="soc-go ${buy ? "buy" : "sell"}">${G ? "Place anyway" : "Place order · " + money(tot)}</button></div>
     </div>`;
     const done = (v) => { document.removeEventListener("keydown", key, true); el.classList.add("out"); setTimeout(() => el.remove(), 160); resolve(v); };
     const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); done(false); } };
@@ -4382,6 +4385,22 @@ async function lookoutOut(id, sym) {
   try { await api(`/api/lookout/${id}/close`, {method: "POST", body: JSON.stringify({exit_price: xp.p})}); toast(`Stopped watching ${sym}.`); loadWatching(true); }
   catch (e) { toast(e.message || "Couldn't stop the watch."); }
 }
+// Nov 23 (owner): the plan's own verdict on buying now. A warning, never a block: you can still place it.
+function soptGuard(S, k) {
+  if (!S || S.action !== "BUY_TO_OPEN") return null;
+  const c4 = BRIEF_CHART && BRIEF_CHART.symbol === S.sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(S.sym);
+  if (!st) return null;
+  const P = mapPlan(S.sym, st);
+  if (P.status === "No setup in play" || P.trig == null) return {title: "No setup", text: `There's no setup in play on ${S.sym} right now. The plan says no trade.`};
+  const call = k ? k.call : S.call;
+  if (P.dir === 1 && !call) return {title: "Against the plan", text: `This ${P.setupName || "setup"} is long. A put bets on the other side of it.`};
+  if (P.dir === -1 && call) return {title: "Against the plan", text: `This setup points down. A call bets on the other side of it.`};
+  if (P.watch) return {title: "Watch only", text: "This side lost money in the two-year test, so the plan has no entry."};
+  const T = mapTicketPlan(P, st);
+  if (T.state === "wait") return {title: "Not yet", text: P.steps === "gapfade" ? `The plan says no trade until a daily close above ${money(P.trig)}.` : `The plan says no trade until a 4-hour close above ${money(P.trig)}${P.steps === "hub" ? "" : " (the neckline)"}.`};
+  if (T.state === "ready") return {title: "Waiting for the pullback", text: `It broke out, but the plan's entry is a pullback to ${money(T.entry)} that holds. Buying now is chasing.`};
+  return null;
+}
 function shelfOptPaintBits() {
   const S = SOPT; if (!S) return; const k = shelfOptContract(), b = $("soptConfirm");
   const unit = S.type === "LIMIT" ? S.price : k && k.mid;
@@ -4415,6 +4434,7 @@ function shelfOptPaint() {
     ${S.type === "LIMIT" ? `<div class="shelf-limit-wrap"><label>Limit price per share · USD</label><input type="number" min="0.01" step="0.01" value="${S.price > 0 ? S.price.toFixed(2) : ""}" oninput="shelfOptSet('price', this.value)"></div>` : `<p class="shelf-trade-note" style="margin:6px 0">Market orders on options can fill far from the mid when the spread is wide. A limit is safer.</p>`}
     <div class="shelf-price-rows"><div><span>${S.action === "BUY_TO_OPEN" ? "Total cost · most you can lose" : "Total proceeds"}</span><b id="soptTotal">—</b></div><div><span>Time in force</span><b>Day</b></div></div>
     <div id="soptImpact" class="broker-impact-result shelf-impact" aria-live="polite">Checking the order with SnapTrade…</div>
+    ${(() => { const g = soptGuard(S, k); return g ? `<p class="sopt-guard"><b>⚠ ${esc(g.title)}</b> · ${esc(g.text)}</p>` : ""; })()}
     <button id="soptConfirm" type="button" class="shelf-confirm disabled-submit" onclick="shelfOptSubmit()" disabled><b id="soptConfirmLabel">Confirm</b><small>${S.type === "LIMIT" ? "Limit" : "Market"} · Day · ${BROKER_ACCOUNTS[0] ? esc(shelfTradeAccountLabel(BROKER_ACCOUNTS[0]).broker) : "no broker connected"}</small></button>
     <p class="shelf-trade-note">Long options only: buy to open, sell to close. You confirm every order; nothing is placed until you do.</p>
   </div><div id="soptMine"></div>`;
