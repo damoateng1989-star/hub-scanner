@@ -213,7 +213,17 @@ def _scenarios(S_entry: float, K: float, dte: int, iv: float, call: bool, need: 
     def fail_row(px):  # same clock as the headline at_fail: one calendar day out
         T = max(0.0, dte - FAIL_DAYS) / 365
         return [round(bs_price(px, K, T, iv * m, call), 2) for m in SCEN_IV]
-    return dict(iv_mults=SCEN_IV, days=days, need=float(need), fail_days=FAIL_DAYS,
+    # P/L curve for the drag chart in "Show the math": stock prices spanning the failure price to past the target,
+    # priced at the planner's time to target (same clock as at_shelf, current IV) and at expiry (intrinsic value).
+    be = K + mid if call else K - mid
+    lo0, hi0 = min(fail_px, S_entry, K, be, target), max(fail_px, S_entry, K, be, target)
+    pad = max((hi0 - lo0) * 0.35, S_entry * 0.02)
+    lo, hi = max(0.01, lo0 - pad), hi0 + pad
+    pxs = [round(lo + (hi - lo) * i / 60, 2) for i in range(61)]
+    Tn = max(0.0, dte - need * 7 / 5) / 365
+    curve = dict(px=pxs, tgt=[round(bs_price(x, K, Tn, iv, call), 2) for x in pxs],
+                 exp=[round(max(0.0, (x - K) if call else (K - x)), 2) for x in pxs])
+    return dict(curve=curve, iv_mults=SCEN_IV, days=days, need=float(need), fail_days=FAIL_DAYS,
                 remain=[round(max(0.0, dte - d * 7 / 5)) for d in days], fail_remain=round(max(0.0, dte - FAIL_DAYS)),
                 tgt=[row(target, d) for d in days], fail=fail_row(fail_px))
 

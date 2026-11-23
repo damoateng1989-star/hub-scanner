@@ -266,6 +266,25 @@ html[data-theme="light"] #swingPlay .sw-ctx { color:#78350f; background:#fffbeb;
 #optionsSwing .ox-lock { padding:16px; border:1px dashed var(--line-2); border-radius:14px; background:var(--bg); } #optionsSwing .ox-lock b { color:var(--ink); font-size:15px; } #optionsSwing .ox-lock p { color:var(--muted); margin:6px 0 12px; }
 #optionsSwing .ox-lock a { display:inline-flex; padding:7px 11px; border:1px solid var(--line-2); border-radius:9px; color:var(--ink); text-decoration:none; font-size:13px; }
 #optionsSwing .ox-demo { margin:0 0 10px; padding:6px 10px; border:1px solid rgba(255,138,76,.4); border-radius:8px; color:#ff8a4c; font-size:12.5px; } #optionsSwing .ox-closed { display:block; margin:0 0 10px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; color:var(--muted); font-size:13px; }
+.oxc { margin: 14px 0 6px; }
+.oxc-read span { font-size: 12.5px; color: #9AA4B2; } .oxc-read span b { color: #E6EBF0; font: 600 12.5px var(--mono, ui-monospace, monospace); }
+.oxc-read div { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 2px 0 4px; }
+.oxc-read div b { font: 600 22px var(--mono, ui-monospace, monospace); } .oxc-read div em { font: 600 13px var(--mono, ui-monospace, monospace); font-style: normal; } .oxc-read div small { font-size: 11.5px; color: #7D8794; }
+.oxc-read .up { color: #3DD68C; } .oxc-read .dn { color: #FF6B5E; }
+.oxc svg { display: block; width: 100%; height: 200px; touch-action: none; cursor: ew-resize; user-select: none; -webkit-user-select: none; }
+.oxc svg .gr { stroke: #22262E; stroke-width: .6; } .oxc svg .z { stroke: #3A3F4A; stroke-width: 1; }
+.oxc svg .ax { font: 10px var(--mono, ui-monospace, monospace); fill: #7D8794; }
+.oxc svg .au { fill: #3DD68C; opacity: .12; } .oxc svg .ad { fill: #FF6B5E; opacity: .12; }
+.oxc svg .lu { fill: none; stroke: #3DD68C; stroke-width: 2; } .oxc svg .ld { fill: none; stroke: #FF6B5E; stroke-width: 2; }
+.oxc svg .ex { fill: none; stroke: #7D8794; stroke-width: 1; stroke-dasharray: 3 3; }
+.oxc svg .mk { stroke-width: .8; stroke-dasharray: 2 3; } .oxc svg .ml { font: 10px var(--sans, Inter, sans-serif); }
+.oxc svg .m-now { stroke: #9AA4B2; fill: #9AA4B2; } .oxc svg .m-fail { stroke: #FF6B5E; fill: #FF6B5E; } .oxc svg .m-be { stroke: #F5C26B; fill: #F5C26B; } .oxc svg .m-tgt { stroke: #3DD68C; fill: #3DD68C; }
+.oxc svg text.ml { stroke: none; }
+.oxc svg .cur { stroke: #E6EBF0; stroke-width: 1; } .oxc svg .du { fill: #3DD68C; stroke: #181A20; stroke-width: 2; } .oxc svg .dd { fill: #FF6B5E; stroke: #181A20; stroke-width: 2; }
+.oxc-tabs { display: flex; gap: 6px; margin-top: 4px; } .oxc-tabs button { all: unset; cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 7px; background: #22252D; color: #9AA4B2; }
+.oxc-tabs button.on { background: #E6EBF0; color: #0B0D12; }
+html[data-theme="light"] .oxc-read span b { color: #0D1117; } html[data-theme="light"] .oxc svg .gr { stroke: #E5E8EE; } html[data-theme="light"] .oxc svg .z { stroke: #C9CED6; }
+html[data-theme="light"] .oxc svg .cur { stroke: #0D1117; } html[data-theme="light"] .oxc-tabs button { background: #EEF1F5; color: #475569; } html[data-theme="light"] .oxc-tabs button.on { background: #0D1117; color: #fff; }
 .oxg { margin: 10px 0 4px; } .oxg-h { font-size: 12.5px; line-height: 1.5; color: #9AA4B2; margin: 0 0 6px; } .oxg-h b { color: #c4a8ff; font-weight: 600; }
 .oxg table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
 
@@ -916,6 +935,64 @@ async function loadOptionsPanel() {
   try { const r = await fetch("/api/options/" + encodeURIComponent(SYM), {signal: AbortSignal.timeout(45000)}); if (!r.ok) throw new Error("options request failed"); host.innerHTML = heading + renderOptionsPanel(await r.json()); }
   catch (e) { host.innerHTML = heading + '<p class="ox-note">Options prices aren\'t available right now.</p>'; }
 }
+/* Drag chart (owner, Nov 22): profit/loss per contract across stock prices, at the planner's time to target and at
+   expiry. Every option value comes from c.scen.curve (priced on the server); the browser only interpolates between the
+   61 priced points and does (value - mid) x 100. Read-only exploration: it changes nothing. */
+const OXC = {}; let OXC_N = 0;
+function oxCurveHTML(c, p) {
+  const cv = c && c.scen && c.scen.curve, mid = c ? +c.mid : 0;
+  if (!cv || !Array.isArray(cv.px) || cv.px.length < 3 || !(mid > 0)) return "";
+  if (Object.keys(OXC).length > 40) for (const k in OXC) if (!document.getElementById(k)) delete OXC[k];
+  const id = "oxc" + (++OXC_N);
+  OXC[id] = {c, p, mode: "tgt", S: Math.min(cv.px[cv.px.length - 1], Math.max(cv.px[0], +p.target))};
+  return '<div class="oxc" id="' + id + '"><p class="oxg-h">Drag across the chart to see the profit or loss at any stock price. Modeled, not quotes.</p>' +
+    '<div class="oxc-read"></div><svg viewBox="0 0 360 200" preserveAspectRatio="none" role="img" aria-label="Profit and loss by stock price"></svg>' +
+    '<div class="oxc-tabs"><button type="button" data-m="tgt" onclick="oxcMode(\'' + id + '\',\'tgt\')">At target day</button><button type="button" data-m="exp" onclick="oxcMode(\'' + id + '\',\'exp\')">At expiry</button></div></div>';
+}
+function oxcMode(id, m) { if (OXC[id]) { OXC[id].mode = m; oxcDraw(id); } }
+function oxcVal(arr, px, S) {
+  if (S <= px[0]) return arr[0]; if (S >= px[px.length - 1]) return arr[arr.length - 1];
+  let i = 0; while (i < px.length - 2 && px[i + 1] < S) i++;
+  const f = (S - px[i]) / (px[i + 1] - px[i]); return arr[i] + (arr[i + 1] - arr[i]) * f;
+}
+function oxcDraw(id) {
+  const el = document.getElementById(id), D = OXC[id]; if (!el || !D) return;
+  const {c, p} = D, cv = c.scen.curve, px = cv.px, mid = +c.mid, arr = D.mode === "exp" ? cv.exp : cv.tgt;
+  const W = 360, L = 6, RR = 300, T = 10, B = 162, lo = px[0], hi = px[px.length - 1];
+  const pls = arr.map(v => (v - mid) * 100), plo = pls.concat(cv.exp.map(v => (v - mid) * 100));
+  const ymax = Math.max(...plo, 10) * 1.08, ymin = Math.min(...plo, -10) * 1.15;
+  const x = S => L + (S - lo) / (hi - lo) * (RR - L), y = v => T + (ymax - v) / (ymax - ymin) * (B - T);
+  const pts = px.map((S, i) => x(S).toFixed(1) + "," + y(pls[i]).toFixed(1)), line = "M" + pts.join("L"), y0 = y(0);
+  const area = line + "L" + x(hi).toFixed(1) + "," + y0 + "L" + x(lo).toFixed(1) + "," + y0 + "Z";
+  const nice = v => { const a = Math.abs(v); return a >= 1000 ? "$" + (a / 1000).toFixed(1) + "k" : "$" + Math.round(a); };
+  let g = '<defs><clipPath id="' + id + 'u"><rect x="0" y="0" width="' + W + '" height="' + y0 + '"/></clipPath><clipPath id="' + id + 'd"><rect x="0" y="' + y0 + '" width="' + W + '" height="200"/></clipPath></defs>';
+  [ymax / 1.08 * 0.5, 0, ymin / 1.15].forEach(v => { g += '<line x1="' + L + '" x2="' + RR + '" y1="' + y(v) + '" y2="' + y(v) + '" class="' + (v === 0 ? "z" : "gr") + '"/><text x="' + (RR + 4) + '" y="' + (y(v) + 3) + '" class="ax">' + (v > 0 ? "+" : v < 0 ? "−" : "") + nice(v) + '</text>'; });
+  g += '<path d="' + area + '" class="au" clip-path="url(#' + id + 'u)"/><path d="' + area + '" class="ad" clip-path="url(#' + id + 'd)"/>';
+  if (D.mode === "tgt") g += '<path d="M' + px.map((S, i) => x(S).toFixed(1) + "," + y((cv.exp[i] - mid) * 100).toFixed(1)).join("L") + '" class="ex"/>';
+  g += '<path d="' + line + '" class="lu" clip-path="url(#' + id + 'u)"/><path d="' + line + '" class="ld" clip-path="url(#' + id + 'd)"/>';
+  const be = +c.breakeven, mk = [[+p.entry, "Now", "m-now", 0], [+p.fail_px, "Fail", "m-fail", 1], [be, "Breakeven", "m-be", 1], [+p.target, "Target", "m-tgt", 0]];
+  mk.forEach(([S, lab, cls, row]) => { if (S >= lo && S <= hi) g += '<line x1="' + x(S) + '" x2="' + x(S) + '" y1="' + T + '" y2="' + B + '" class="mk ' + cls + '"/><text x="' + x(S) + '" y="' + (B + 13 + row * 12) + '" class="ml ' + cls + '" text-anchor="middle">' + lab + '</text>'; });
+  const S = D.S, v = oxcVal(arr, px, S), pl = (v - mid) * 100, pc = pl / (mid * 100) * 100, cx = x(S), cy = y(pl);
+  g += '<line x1="' + cx + '" x2="' + cx + '" y1="' + T + '" y2="' + B + '" class="cur"/><circle cx="' + cx + '" cy="' + cy + '" r="5.5" class="' + (pl >= 0 ? "du" : "dd") + '"/>';
+  el.querySelector("svg").innerHTML = g;
+  const k = pl >= 0 ? "up" : "dn";
+  el.querySelector(".oxc-read").innerHTML = '<span>If ' + esc(BRIEF_SYM_SAFE()) + ' is at <b>' + money(S) + '</b> ' + (D.mode === "exp" ? "at expiry" : "in ~" + (p.days_to_target % 1 ? p.days_to_target : Math.round(p.days_to_target)) + " trading day" + (+p.days_to_target === 1 ? "" : "s")) + '</span>' +
+    '<div><b class="' + k + '">' + (pl >= 0 ? "+" : "−") + money(Math.abs(pl)) + '</b><em class="' + k + '">' + (pc >= 0 ? "+" : "−") + Math.abs(pc).toFixed(0) + '%</em><small>option ≈ ' + money(v) + ' · per contract</small></div>';
+  el.querySelectorAll(".oxc-tabs button").forEach(b => b.classList.toggle("on", b.dataset.m === D.mode));
+}
+function oxcInit(root) { (root || document).querySelectorAll(".oxc").forEach(el => { if (OXC[el.id] && !el.dataset.drawn) { el.dataset.drawn = "1"; oxcDraw(el.id); } }); }
+(function () {
+  let drag = null;
+  const at = (e, sv) => { const id = sv.parentElement.id, D = OXC[id]; if (!D) return; const r = sv.getBoundingClientRect(), px = D.c.scen.curve.px;
+    const sx = (e.clientX - r.left) / r.width * 360, S = px[0] + (sx - 6) / (300 - 6) * (px[px.length - 1] - px[0]);
+    D.S = Math.round(Math.max(px[0], Math.min(px[px.length - 1], S)) * 100) / 100; oxcDraw(id); };
+  document.addEventListener("pointerdown", e => { const sv = e.target.closest && e.target.closest(".oxc svg"); if (!sv) return; drag = sv; try { sv.setPointerCapture(e.pointerId); } catch (x) {} at(e, sv); });
+  document.addEventListener("pointermove", e => { const sv = drag || (e.pointerType === "mouse" && e.target.closest && e.target.closest(".oxc svg")); if (sv) at(e, sv); });
+  document.addEventListener("pointerup", () => { drag = null; }); document.addEventListener("pointercancel", () => { drag = null; });
+  document.addEventListener("toggle", e => { if (e.target && e.target.classList && e.target.classList.contains("oc-more") && e.target.open) oxcInit(e.target); }, true);
+  new MutationObserver(() => oxcInit()).observe(document.documentElement, {childList: true, subtree: true});
+})();
+function BRIEF_SYM_SAFE() { return (typeof SYM !== "undefined" && SYM) || "the stock"; }
 /* Patch 206: the scenario grid options.py already prices (c.scen), shown read-only inside "Show the math".
    Every value comes from c.scen; the only arithmetic here is P/L per contract = (value - mid) x 100. */
 function oxGridHTML(c, p, o) {
@@ -950,7 +1027,7 @@ function renderOptionsPanel(o) {
       '<div><span>If the ' + move + ' fails <i class="ox-sim">simulated</i></span><b>≈ ' + money(c.at_fail) + ' <em class="dn">' + sgn(c.at_fail_pct) + '</em></b></div><div><span>Gain at the aim <i class="ox-sim">simulated</i></span><b class="' + (good ? "oc-gain" : "oc-lossv") + '">≈ ' + (gain >= 0 ? "+" : "−") + money(Math.abs(gain)) + '</b></div><div><span>Max loss</span><b>' + money(c.cost) + '</b></div>' +
       '<p class="oc-note">Per contract (100 shares). The gain is not capped, so this is what the plan aims for, not a ceiling; the loss is capped at what you pay.</p></div>' +
       (good ? "" : '<p class="oc-warn">⚠ Loses money even if the stock reaches ' + money(p.target) + ': the move is too small to pay for this contract\'s time value. Skip it.</p>') +
-      '<details class="oc-more"><summary>Show the math</summary><div class="oc-rows"><div><span>Breakeven at expiry</span><b>' + money(c.breakeven) + '</b></div><div><span>Expiry</span><b>' + day(p.expiry) + " · " + esc(p.dte) + ' days</b></div><div><span>Strike</span><b>' + esc(c.label) + " · delta " + esc(c.delta) + '</b></div><div><span>Bid / ask now</span><b>' + (c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted") + '</b></div><div><span>Implied volatility</span><b>' + esc(c.iv) + '%</b></div></div>' + oxGridHTML(c, p, o) +
+      '<details class="oc-more"><summary>Show the math</summary><div class="oc-rows"><div><span>Breakeven at expiry</span><b>' + money(c.breakeven) + '</b></div><div><span>Expiry</span><b>' + day(p.expiry) + " · " + esc(p.dte) + ' days</b></div><div><span>Strike</span><b>' + esc(c.label) + " · delta " + esc(c.delta) + '</b></div><div><span>Bid / ask now</span><b>' + (c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted") + '</b></div><div><span>Implied volatility</span><b>' + esc(c.iv) + '%</b></div></div>' + oxGridHTML(c, p, o) + oxCurveHTML(c, p) +
       '<p class="oc-note"><b>Simulated:</b> the values at the aim and on a failure are Black-Scholes estimates, not real quotes. The cost' + (c.estimated ? " assumes the stock is at " + money(p.entry) + " when it breaks out" : " is the middle of the bid and ask") + '; the other values assume the volatility stays the same.</p></details>' +
       '<p class="oc-note oc-assume">Figures assume the aim is reached in about ' + esc(p.days_to_target) + " trading day" + (p.days_to_target === 1 ? "" : "s") + " at today\'s implied volatility (" + esc(c.iv) + '%). Slower moves or falling volatility mean less.' + (p.days_src === "assumed" ? " (Too few past setups to measure the pace, so ~3 days is assumed.)" : "") + '</p>' +
       (c.wide_spread ? '<p class="oc-warn">⚠ Wide bid/ask spread (' + money(c.bid) + " / " + money(c.ask) + '). Use a limit order near the middle.</p>' : "") + '</div>';
