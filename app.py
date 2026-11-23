@@ -273,6 +273,30 @@ Pro = Depends(auth.require_pro)
 Admin = Depends(auth.require_admin)
 
 
+# Nov 23 (owner): broker LINKING for members the owner switches on (testing). Read-only: they connect Webull to see
+# positions and sync their Trade Diary. Placing, previewing and cancelling orders stay Admin-only (lawyer review first).
+def broker_testers() -> set[int]:
+    import json as _json
+    try:
+        return {int(x) for x in _json.loads(db.get_setting("broker_testers") or "[]")}
+    except (ValueError, TypeError):
+        return set()
+
+
+def broker_link_ok(u: dict | None) -> bool:
+    return bool(u) and not u.get("guest") and (bool(u.get("is_admin")) or int(u["id"]) in broker_testers())
+
+
+def _require_broker_user(request: Request) -> dict:
+    u = auth.require_user(request)
+    if not broker_link_ok(u):
+        raise HTTPException(403, "Linking a brokerage isn't open for your account yet.")
+    return u
+
+
+BrokerUser = Depends(_require_broker_user)
+
+
 class AddBody(BaseModel):
     symbol: str
 
@@ -755,6 +779,7 @@ def me(u: dict | None = Maybe):
         return dict(guest=True, plan="guest", is_admin=False, ticker_limit=auth.FREE_TICKER_LIMIT)
     bot = telegram_bot.bot_username()
     return dict(email=u["email"], name=u["name"], plan="pro" if auth.is_pro(u) else "free", is_admin=bool(u["is_admin"]),
+                broker_link=broker_link_ok(u), broker_trade=bool(u["is_admin"]),
                 ticker_limit=None if auth.is_pro(u) else auth.FREE_TICKER_LIMIT,
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
@@ -992,7 +1017,24 @@ def admin_user_detail(uid: int, u: dict = Admin):
         raise HTTPException(404, "No such member")
     return dict(id=x["id"], email=x["email"], name=x["name"], plan=x["plan"], is_admin=bool(x["is_admin"]),
                 created_at=x["created_at"], last_login_at=x.get("last_login_at"), telegram=bool(x["telegram_chat"]),
-                phone=x.get("phone") or "", tickers=db.user_symbols(uid))
+                phone=x.get("phone") or "", tickers=db.user_symbols(uid), broker_link=int(uid) in broker_testers())
+
+
+class BrokerAccessBody(BaseModel):
+    on: bool
+
+
+@app.post("/api/admin/users/{uid}/broker")
+def admin_broker_access(uid: int, body: BrokerAccessBody, u: dict = Admin):
+    """Let one member link a brokerage, read-only (testing). Turning it off stops access; their link at SnapTrade
+    stays until they disconnect it there."""
+    import json as _json
+    if not db.get_user(uid):
+        raise HTTPException(404, "No such member")
+    t = broker_testers()
+    (t.add if body.on else t.discard)(int(uid))
+    db.set_setting("broker_testers", _json.dumps(sorted(t)))
+    return dict(ok=True, broker_link=body.on)
 
 
 @app.post("/api/admin/users/{uid}/plan")
@@ -2298,7 +2340,7 @@ async def diary_tag(request: Request, u: dict = User):
 
 
 @app.post("/api/broker/register")
-async def broker_register(u: dict = Admin):
+async def broker_register(u: dict = BrokerUser):
     try:
         return await run_in_threadpool(snaptrade.register, u)
     except Exception as e:
@@ -2306,7 +2348,7 @@ async def broker_register(u: dict = Admin):
 
 
 @app.post("/api/broker/portal")
-async def broker_portal(u: dict = Admin):
+async def broker_portal(u: dict = BrokerUser):
     try:
         url = await run_in_threadpool(snaptrade.portal, u)
         return {"url": url}
@@ -2315,7 +2357,7 @@ async def broker_portal(u: dict = Admin):
 
 
 @app.get("/api/broker/status")
-async def broker_status(u: dict = Admin):
+async def broker_status(u: dict = BrokerUser):
     """Safe owner-only status check; reports credential presence, never credential values."""
     try:
         return await run_in_threadpool(snaptrade.credential_status, u)
@@ -2324,7 +2366,7 @@ async def broker_status(u: dict = Admin):
 
 
 @app.get("/api/broker/accounts")
-async def broker_accounts(u: dict = Admin):
+async def broker_accounts(u: dict = BrokerUser):
     try:
         rows = await run_in_threadpool(snaptrade.accounts, u)
         return {"accounts": rows, "connected": bool(rows)}
@@ -2336,7 +2378,7 @@ async def broker_accounts(u: dict = Admin):
 
 
 @app.get("/api/broker/accounts/{account_id}/positions")
-async def broker_positions(account_id: str, u: dict = Admin):
+async def broker_positions(account_id: str, u: dict = BrokerUser):
     try:
         return {"positions": await run_in_threadpool(snaptrade.positions, u, account_id)}
     except Exception as e:
@@ -2344,7 +2386,7 @@ async def broker_positions(account_id: str, u: dict = Admin):
 
 
 @app.get("/api/broker/accounts/{account_id}/orders")
-async def broker_orders(account_id: str, u: dict = Admin):
+async def broker_orders(account_id: str, u: dict = BrokerUser):
     try:
         return {"orders": await run_in_threadpool(snaptrade.orders, u, account_id)}
     except Exception as e:
@@ -2414,7 +2456,7 @@ class BrokerCancelBody(BaseModel):
 
 
 @app.get("/api/broker/portfolio")
-async def broker_portfolio(account_id: str, u: dict = Admin):
+async def broker_portfolio(account_id: str, u: dict = BrokerUser):
     """Owner: open positions (stocks + options, value and P/L) and the last 7 days of orders, from the connected broker."""
     try:
         return await run_in_threadpool(snaptrade.portfolio, u, account_id)

@@ -305,7 +305,8 @@ def from_lookout_close(user_id: int, watch_id: int, exit_price) -> None:
 def _broker_ok(user: dict) -> bool:
     try:
         import snaptrade
-        return bool(snaptrade.configured() and user.get("is_admin") and snaptrade._db_secret(snaptrade._uid(user)))
+        ok = bool(user.get("is_admin")) or int(user["id"]) in set(json.loads(db.get_setting("broker_testers") or "[]"))   # owner + testers
+        return bool(snaptrade.configured() and ok and snaptrade._db_secret(snaptrade._uid(user)))
     except Exception:
         return False
 

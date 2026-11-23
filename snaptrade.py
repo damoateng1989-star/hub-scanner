@@ -196,7 +196,8 @@ def portal(user: dict) -> str:
     client = _client()
     uid, secret = _credentials(user)
     response = client.authentication.login_snap_trade_user(
-        user_id=uid, user_secret=secret, connection_type="trade-if-available",
+        user_id=uid, user_secret=secret,
+        connection_type="trade-if-available" if user.get("is_admin") else "read",   # members link read-only
         connection_portal_version="v4", dark_mode=True,
     )
     body = _plain(getattr(response, "body", response))

@@ -3905,7 +3905,7 @@ async function loadAccount() {
       <div class="row"><span class="plan${isPro() ? " pro" : ""}">${isPro() ? "Pro" : "Free"} plan</span>
       <button onclick="signOut()">Sign out</button></div></div>
 
-    ${m.is_admin ? brokerPreviewCard() : ""}
+    ${m.broker_link ? brokerPreviewCard(m.is_admin) : ""}
     ${billingCard(BILL)}
     ${isPro() ? "" : `<div class="acct"><h3>Free and Pro plans</h3>${BILL && BILL.enabled ? `<p>Pro is <b style="display:inline;font-size:inherit">${esc(BILL.price)}</b>.${BILL.trial_days ? ` Try it free for ${BILL.trial_days} days: cancel before then and you won't be charged.` : ""} Cancel any time.</p>
       <div class="row" style="margin:6px 0 4px"><button class="btnx primary" id="goPro" onclick="startCheckout(this)">${BILL.trial_days ? `Start your ${BILL.trial_days}-day free trial` : "Upgrade to Pro"}</button></div>` : `<p>Pricing will be announced at launch. During the beta, contact the site owner to try Pro.</p>`}
@@ -3948,23 +3948,24 @@ async function loadAccount() {
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
       <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
       ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#positions">Positions</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a>` : ""}</div></div>`;
-  if (m.is_admin) loadBrokerAccounts();
+  if (m.broker_link) loadBrokerAccounts();
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     try { await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: $("phoneIn").value})}); ME = null; await loadMe(); loadAccount(); }
     catch (err) { $("phoneMsg").textContent = err.message; }
   });
 }
-function brokerPreviewCard() {
+function brokerPreviewCard(owner = true) {
   return `<div class="acct broker-preview">
-    <div class="broker-head"><div><div class="broker-kicker">Brokerage · owner access</div><div class="broker-title">Trade from NextShelf</div>
-      <p class="broker-copy">Connect Webull through SnapTrade. Your brokerage password is entered only on the secure connection portal.</p></div>
+    <div class="broker-head"><div><div class="broker-kicker">${owner ? "Brokerage · owner access" : "Brokerage · read-only"}</div><div class="broker-title">${owner ? "Trade from NextShelf" : "Link your Webull"}</div>
+      <p class="broker-copy">${owner ? "Connect Webull through SnapTrade." : "NextShelf can see your positions and orders, and log your trades in your Trade Diary. It can't place, change or cancel anything."} Your brokerage password is entered only on SnapTrade's secure connection page.</p></div>
       <span class="broker-status" id="brokerStatus"><i></i> Checking</span></div>
     <div class="broker-divider"></div>
     <div id="brokerAccounts"><p class="broker-copy">Loading connected brokerage accounts…</p></div>
     <div class="broker-actions"><button class="broker-connect" type="button" onclick="connectBroker()" hidden>Connect Webull</button>
       <button type="button" class="sec" onclick="loadBrokerAccounts()">Refresh accounts</button></div>
-    <div id="brokerMessage" class="broker-subnote" aria-live="polite">Brokerage access is owner-only during this prototype.</div>
+    ${owner ? "" : `<p class="broker-copy" style="margin-top:8px"><a href="#positions" style="color:inherit">See your positions →</a> · To unlink, remove NextShelf in SnapTrade or your Webull app.</p>`}
+    <div id="brokerMessage" class="broker-subnote" aria-live="polite">${owner ? "Brokerage access is owner-only during this prototype." : "Read-only link, switched on for testing."}</div>
   </div>`;
 }
 let BROKER_ACCOUNTS = [];
@@ -4000,6 +4001,15 @@ async function loadBrokerAccounts() {
   if (connectBtn) { connectBtn.hidden = true; connectBtn.disabled = true; }
   try {
     const credentialState = await api("/api/broker/status");
+    const member = !(ME && ME.is_admin);     // Nov 23: read-only testers start from scratch, so they get the Connect button
+    if (member && !credentialState.credentials_available) {
+      BROKER_ACCOUNTS = [];
+      if (status) status.innerHTML = '<i></i> Not linked';
+      if (host) host.innerHTML = '<p class="broker-copy">Tap Connect Webull, sign in on SnapTrade\'s page, then come back here.</p>';
+      if (connectBtn) { connectBtn.hidden = false; connectBtn.disabled = false; }
+      if (msg) msg.textContent = "Read-only link, switched on for testing.";
+      return;
+    }
     if (!credentialState.credentials_available) {
       BROKER_ACCOUNTS = [];
       if (status) status.innerHTML = '<i></i> Needs recovery';
@@ -4019,6 +4029,11 @@ async function loadBrokerAccounts() {
         <button type="button" class="sec" onclick="showBrokerPositions('${esc(a.account_id)}')">Positions</button>
       </div>`).join("") : '<p class="broker-copy">SnapTrade returned zero brokerage accounts for the saved NextShelf user. This does not prove your Webull authorization was deleted. Do not reconnect yet; investigate the existing SnapTrade authorization first.</p>';
     if (msg) msg.textContent = data.connected ? "Existing connected account data is provided by SnapTrade and may be cached by the brokerage." : "Saved credentials are present, but SnapTrade returned no accounts. No new connection was started.";
+    if (member && !BROKER_ACCOUNTS.length) {      // registered, but the SnapTrade step wasn't finished
+      if (host) host.innerHTML = '<p class="broker-copy">No Webull account linked yet. Tap Connect Webull to finish linking.</p>';
+      if (msg) msg.textContent = "Read-only link, switched on for testing.";
+      if (connectBtn) { connectBtn.hidden = false; connectBtn.disabled = false; }
+    }
     if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   } catch (e) {
     BROKER_ACCOUNTS = [];
@@ -4104,7 +4119,12 @@ async function memberDetail(uid) {
   el.innerHTML = `<div class="mdet"><div class="row" style="justify-content:space-between"><b>${esc(x.name || x.email)}</b><button class="btnx sm" onclick="$('memberDetail').innerHTML=''">Close</button></div>
     <p class="note" style="margin:6px 0 0">${esc(x.email)} · ${x.is_admin ? "admin · " : ""}${x.plan === "pro" || x.is_admin ? "Pro" : "Free"} · joined ${day(x.created_at + "Z")} · last seen ${x.last_login_at ? day(x.last_login_at + "Z") : "–"}</p>
     <p class="note" style="margin:4px 0 0">Phone ${x.phone ? esc(x.phone) : "–"} · Telegram ${x.telegram ? "connected" : "not connected"}</p>
+    ${x.is_admin ? "" : `<p class="note" style="margin:8px 0 0">Broker link (read-only, testing): <b>${x.broker_link ? "on" : "off"}</b> <button class="btnx sm" onclick="memberBroker(${x.id}, ${!x.broker_link})">${x.broker_link ? "Turn off" : "Let them link Webull"}</button></p>`}
     <div class="mdet-t">${x.tickers.length ? x.tickers.map(t => `<span>${esc(t)}</span>`).join("") : `<span class="none">No tickers on their watchlist</span>`}</div></div>`;
+}
+async function memberBroker(uid, on) {
+  try { await api(`/api/admin/users/${uid}/broker`, {method: "POST", body: JSON.stringify({on})}); toast(on ? "They can link Webull now (read-only)." : "Broker link turned off."); memberDetail(uid); }
+  catch (e) { toast(friendly(e)); }
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
 // Nov 23: database backups: nightly at 2:17 AM ET, kept 14 deep on the disk, copied off the server when a bucket is set
@@ -4178,7 +4198,8 @@ function showTab() {
   let tab = (location.hash || "#today").slice(1);
   tab = ALIAS[tab] || tab;
   CUR = VIEWS.includes(tab) ? tab : "today";
-  if ((CUR === "paper" || CUR === "positions" || CUR === "lab" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
+  if ((CUR === "paper" || CUR === "lab" || CUR === "admin") && !(ME && ME.is_admin)) CUR = "today";
+  if (CUR === "positions" && !(ME && (ME.is_admin || ME.broker_link))) CUR = "today";     // Nov 23: read-only testers see their positions
   document.querySelectorAll("[data-view]").forEach(el => el.hidden = el.dataset.view !== CUR);
   const navKey = CUR in NAV_FOR ? NAV_FOR[CUR] : CUR;
   document.querySelectorAll(".toptabs a, nav.bottom a").forEach(a => a.classList.toggle("on", a.dataset.tab === navKey));
@@ -4393,7 +4414,7 @@ const posPL = (v, pct) => v == null ? "—" : `<b class="${v >= 0 ? "up" : "dn"}
 const posAct = (a) => ({BUY_TO_OPEN: "Buy to open", SELL_TO_CLOSE: "Sell to close", BUY_TO_CLOSE: "Buy to close", SELL_TO_OPEN: "Sell to open", BUY: "Buy", SELL: "Sell"})[a] || a || "";
 function posCard(r) {
   const dte = r.expiry ? Math.round((new Date(r.expiry + "T16:00:00") - new Date()) / 864e5) : null;
-  const sell = r.kind === "option" && r.units > 0 ? `<button type="button" class="pos-sell" onclick='posSellToClose(${JSON.stringify({sym: r.underlying, occ: r.occ, qty: r.units, price: r.price, parts: {expiry: r.expiry, option_type: r.option_type, strike: r.strike}})})'>Sell to close</button>` : "";
+  const sell = r.kind === "option" && r.units > 0 && ME && ME.broker_trade ? `<button type="button" class="pos-sell" onclick='posSellToClose(${JSON.stringify({sym: r.underlying, occ: r.occ, qty: r.units, price: r.price, parts: {expiry: r.expiry, option_type: r.option_type, strike: r.strike}})})'>Sell to close</button>` : "";
   return `<div class="pos-card"><div class="pos-h"><b>${posName(r)}</b><span>${r.kind === "option" ? `${r.units} contract${Math.abs(r.units) === 1 ? "" : "s"}${dte != null ? ` · ${dte}d left` : ""}` : `${r.units} share${Math.abs(r.units) === 1 ? "" : "s"}`}</span></div>
     <div class="pos-g"><div><small>Avg cost</small><b>${r.cost != null ? money(r.cost) : "—"}</b></div><div><small>Now</small><b>${r.price != null ? money(r.price) : "—"}</b></div><div><small>Value</small><b>${r.value != null ? money(r.value) : "—"}</b></div><div><small>P/L</small>${posPL(r.pl, r.pl_pct)}</div></div>
     <div class="pos-a">${sell}${(r.underlying || r.symbol) ? `<button type="button" onclick="openBrief('${esc(r.underlying || r.symbol)}')">Open ${esc(r.underlying || r.symbol)}</button>` : ""}</div></div>`;
@@ -4401,7 +4422,7 @@ function posCard(r) {
 function posOrderRow(o) {
   const done = o.avg_fill != null && o.filled ? ` · filled ${o.filled} @ ${money(o.avg_fill)}` : "";
   return `<div class="pos-ord"><div><b>${posAct(o.action)} ${o.qty ?? ""} · ${posName(o)}</b><small>${o.order_type || ""}${o.limit != null ? " " + money(o.limit) : ""} · ${esc(o.tif || "")}${done} · ${o.placed ? new Date(o.placed).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : ""}</small></div>
-    <span class="pos-st ${o.open ? "open" : /FILL|EXEC/.test(o.status) ? "fill" : "done"}">${esc((o.status || "").replace(/_/g, " ").toLowerCase())}</span>${o.open && o.id ? `<button type="button" class="pos-cx" onclick='posCancel(${JSON.stringify({id: o.id, line: posAct(o.action) + " " + (o.qty ?? "") + " " + (o.kind === "option" ? (o.underlying || "") + " " + posDay(o.expiry) + " $" + o.strike + " " + (o.option_type === "PUT" ? "Put" : "Call") : (o.symbol || ""))})})'>Cancel</button>` : ""}</div>`;
+    <span class="pos-st ${o.open ? "open" : /FILL|EXEC/.test(o.status) ? "fill" : "done"}">${esc((o.status || "").replace(/_/g, " ").toLowerCase())}</span>${o.open && o.id && ME && ME.broker_trade ? `<button type="button" class="pos-cx" onclick='posCancel(${JSON.stringify({id: o.id, line: posAct(o.action) + " " + (o.qty ?? "") + " " + (o.kind === "option" ? (o.underlying || "") + " " + posDay(o.expiry) + " $" + o.strike + " " + (o.option_type === "PUT" ? "Put" : "Call") : (o.symbol || ""))})})'>Cancel</button>` : ""}</div>`;
 }
 async function loadPositions(force) {
   const el = $("posBody"); if (!el) return;
@@ -5608,6 +5629,7 @@ try { if (localStorage.getItem("hs_side_min")) document.body.classList.add("side
 function renderSide() {
   const admin = !!(ME && ME.is_admin);
   document.querySelectorAll(".side [data-admin]").forEach(el => el.hidden = !admin);
+  { const pos = document.querySelector('.side [data-nav="positions"]'); if (pos) pos.hidden = !(ME && (ME.is_admin || ME.broker_link)); }
   document.querySelectorAll(".sb-item").forEach(a => a.classList.toggle("on", a.dataset.nav === CUR));
   if ($("sbOut")) $("sbOut").hidden = !ME || !!ME.guest;
   if ($("sbPlan")) $("sbPlan").innerHTML = !ME ? "" : ME.guest ? `<a href="/login" style="color:#9fb3ff">Sign in →</a>`
