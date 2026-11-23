@@ -3022,6 +3022,16 @@ html[data-theme="light"] .vp-l small, html[data-theme="light"] .vp-r small { col
 @keyframes p212ripple { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(2.6); opacity: 0; } }
 @keyframes p212breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
 </style>
+<style>
+/* Nov 23: the ticker suggestions under "Add a ticker", in the dark theme */
+.cmd { position: relative; }
+.ns-sugg { position: absolute; left: 34px; top: calc(100% + 6px); z-index: 30; min-width: 260px; max-width: min(420px, calc(100% - 40px)); background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; padding: 4px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.ns-sugg[hidden] { display: none; }
+.ns-sugg button { display: flex; align-items: baseline; gap: 10px; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 8px 10px; color: var(--ink); font: inherit; cursor: pointer; }
+.ns-sugg button b { font: 600 14px var(--mono); min-width: 56px; } .ns-sugg button span { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ns-sugg button:hover, .ns-sugg button.on { background: var(--sunk); }
+html[data-theme="light"] .ns-sugg { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -3136,7 +3146,7 @@ html[data-theme="light"] .vp-l small, html[data-theme="light"] .vp-r small { col
   <div class="vh"><h1>My <em>list.</em></h1><p>The stocks you follow. Tap one to see its chart and price levels.</p></div>
   <form class="cmd" id="add" autocomplete="off">
     <span class="pre">$</span>
-    <input id="sym" placeholder="Add a ticker or company, e.g. NVDA" autocapitalize="characters" autocomplete="off" maxlength="40" aria-label="Ticker or company name" list="nsSymList"><datalist id="nsSymList"></datalist>
+    <input id="sym" placeholder="Add a ticker or company, e.g. NVDA" autocapitalize="characters" autocomplete="off" maxlength="40" aria-label="Ticker or company name" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="nsSugg"><div class="ns-sugg" id="nsSugg" role="listbox" hidden></div>
     <button type="button" id="scanBtn">Scan now</button>
     <button class="ghost" id="addBtn">+ Add</button>
   </form>
@@ -12146,10 +12156,34 @@ function nsSuggest(q) {
   a.sort((x, y) => x.length - y.length || x.localeCompare(y));
   return a.concat(b, c).slice(0, 8);
 }
+// Nov 23 (owner): our own suggestion list in the app's dark style (the browser's datalist popup was white)
+let NS_SUG_I = -1;
 function nsFillList() {
-  const dl = document.getElementById("nsSymList"), inp = document.getElementById("sym"); if (!dl || !inp) return;
-  dl.innerHTML = nsSuggest(inp.value).map(k => `<option value="${k}">${esc(nsName(k))}</option>`).join("");
+  const box = document.getElementById("nsSugg"), inp = document.getElementById("sym"); if (!box || !inp) return;
+  const list = nsSuggest(inp.value);
+  NS_SUG_I = -1;
+  if (!list.length || document.activeElement !== inp) { box.hidden = true; inp.setAttribute("aria-expanded", "false"); box.innerHTML = ""; return; }
+  box.innerHTML = list.map((k, i) => `<button type="button" role="option" id="nsSug${i}" data-sym="${k}" tabindex="-1"><b>${k}</b><span>${esc(nsName(k))}</span></button>`).join("");
+  box.hidden = false; inp.setAttribute("aria-expanded", "true");
 }
+function nsPickSug(sym) {
+  const box = document.getElementById("nsSugg"), inp = document.getElementById("sym"); if (!inp) return;
+  inp.value = sym; box.hidden = true; box.innerHTML = ""; inp.setAttribute("aria-expanded", "false"); inp.focus();
+}
+document.addEventListener("DOMContentLoaded", () => {
+  const box = document.getElementById("nsSugg"), inp = document.getElementById("sym"); if (!box || !inp) return;
+  box.addEventListener("mousedown", (e) => { const b = e.target.closest("button[data-sym]"); if (b) { e.preventDefault(); nsPickSug(b.dataset.sym); } });
+  inp.addEventListener("focus", nsFillList);
+  inp.addEventListener("blur", () => setTimeout(() => { box.hidden = true; inp.setAttribute("aria-expanded", "false"); }, 120));
+  inp.addEventListener("keydown", (e) => {
+    const items = [...box.querySelectorAll("button")]; if (box.hidden || !items.length) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault(); NS_SUG_I = (NS_SUG_I + (e.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items.forEach((b, i) => b.classList.toggle("on", i === NS_SUG_I)); inp.setAttribute("aria-activedescendant", items[NS_SUG_I].id);
+    } else if (e.key === "Enter" && NS_SUG_I >= 0) { e.preventDefault(); nsPickSug(items[NS_SUG_I].dataset.sym); }
+    else if (e.key === "Escape") { box.hidden = true; inp.setAttribute("aria-expanded", "false"); }
+  });
+});
 fetch("/api/names").then(r => r.ok ? r.json() : {}).then(n => { window.NS_NAMES = n || {}; try { if (typeof renderInstitutionalBoard === "function" && typeof BOARD_DATA !== "undefined" && BOARD_DATA) renderInstitutionalBoard(); } catch (e) {} try { const l = window.MAP_LWC_LEG; if (l && l._repaint) l._repaint(); } catch (e) {} }).catch(() => {});
 </script>
 </body>
