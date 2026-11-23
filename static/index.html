@@ -2980,6 +2980,46 @@ body.on-chat .scout-fab { display: none !important; }
 .ch-qi:first-of-type { border-top: 0; } .ch-qi .r { color: var(--muted); font-size: 12px; } .ch-qi .a { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .ch-new { position: sticky; bottom: 6px; margin: 0 auto; display: block; background: var(--ink); color: var(--bg); border: 0; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; }
 </style>
+<style>
+/* ---- Patch 212: Today, shelf-first. The green is the hero's own var(--up); amber is the ticket's subtle amber. */
+#hello.p212 { font-family: var(--serif) !important; font-style: italic; font-weight: 400 !important; letter-spacing: -.01em !important; font-size: clamp(34px, 4.4vw, 44px) !important; }
+#hello.p212 .hello-sub { display: block; font-family: var(--sans); font-style: normal; font-size: 15px; letter-spacing: 0; color: var(--muted); margin-top: 6px; line-height: 1.5; font-weight: 400; }
+.vpill { display: flex; align-items: center; justify-content: space-between; gap: 12px; background: #13120E; border: 1px solid #363226; border-radius: 14px; padding: 10px 14px; margin: 14px 0 4px; }
+html[data-theme="light"] .vpill { background: #FBF6EA; border-color: #EBDDBB; }
+.vp-l { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; } .vp-l small { font: 600 10.5px var(--mono); letter-spacing: .08em; color: #E0BA70; }
+html[data-theme="light"] .vp-l small, html[data-theme="light"] .vp-r small { color: #9a6700; }
+.vp-l b { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; }
+.vp-dot { width: 8px; height: 8px; border-radius: 50%; background: #E0BA70; flex: none; }
+.vp-r { display: grid; gap: 5px; justify-items: end; flex: none; } .vp-r small { font: 500 11px var(--mono); color: #E0BA70; }
+.vp-bar { width: 84px; height: 3px; border-radius: 2px; background: rgba(224,186,112,.18); overflow: hidden; } .vp-bar i { display: block; height: 100%; background: #9E8656; }
+.ck-chips.p212 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.ck-chips.p212 .ck-chip { gap: 4px; } .ck-chips.p212 .ck-chip svg { margin-top: 4px; } .ck-chips.p212 .ck-chip em { font-style: normal; font-size: 11px; color: var(--up); margin-left: 4px; }
+.ck-vix { font-size: 12px; color: var(--muted); margin: 2px 0 6px; } .ck-vix b { color: var(--ink); font-weight: 600; }
+.hs { position: relative; margin: 14px 0 2px; height: 108px; } .hs-svg { position: absolute; left: 0; right: 0; top: 12px; width: 100%; height: 80px; }
+.hs-lab { position: absolute; left: 4px; right: 4px; font: 500 11.5px var(--mono); color: var(--muted); } .hs-lab.t { top: 0; } .hs-lab.b { bottom: 0; }
+.hs-dot { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--dc); box-shadow: 0 0 0 3px var(--surface); }
+.hs-dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--dc); opacity: 0; }
+.hs-room { font-size: 12.5px; color: var(--muted); margin-top: 6px; } .hs-room b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.arow:has(> .mini-shelf) { grid-template-columns: 36px 1fr auto !important; } .arow > .mini-shelf { align-self: center; }
+.retest .arow .tape-chip, #retestWait .arow .tape-chip { display: block; width: max-content; max-width: 100%; margin: 6px 0 0; }
+.lk-strip { display: grid; gap: 6px; margin: 2px 0 14px; } .lk-strip[hidden] { display: none; }
+.lks-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 9px 12px; color: inherit; font: inherit; cursor: pointer; --lk-bg: var(--surface); }
+.lks-eyes { display: grid; place-items: center; width: 40px; height: 30px; border-radius: 999px; background: color-mix(in srgb, var(--up) 8%, transparent); --lk-bg: color-mix(in srgb, var(--up) 8%, var(--surface)); flex: none; }
+.lks-t { display: grid; min-width: 0; } .lks-t b { font-size: 14px; font-weight: 600; } .lks-t small { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lks-row .go { margin-left: auto; color: var(--muted); } .lks-more { font-size: 12px; color: var(--muted); padding-left: 4px; }
+.cine-strip { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px 10px 10px; margin: 6px 0 14px; color: inherit; text-decoration: none; }
+.cine-strip[hidden] { display: none; }
+.cs-perf { display: grid; grid-template-columns: auto auto; gap: 6px; padding: 4px 8px; border-radius: 8px; background: color-mix(in srgb, #6C7686 18%, transparent); flex: none; }
+.cs-perf > span { display: grid; gap: 4px; } .cs-perf i { display: block; width: 7px; height: 5px; border-radius: 1.5px; background: #6C7686; }
+.cs-t { display: grid; gap: 2px; min-width: 0; } .cs-t small { font: 600 10px var(--mono); letter-spacing: .1em; color: var(--muted); } .cs-t b { font-size: 14px; font-weight: 600; }
+.cine-strip .go { margin-left: auto; color: var(--muted); }
+@media (prefers-reduced-motion: no-preference) {
+  .hs-dot.live::after { animation: p212ripple 2.4s ease-out infinite; }
+  .vp-dot { animation: p212breathe 2.4s ease-in-out infinite; }
+}
+@keyframes p212ripple { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(2.6); opacity: 0; } }
+@keyframes p212breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -3026,11 +3066,14 @@ body.on-chat .scout-fab { display: none !important; }
 <section data-view="today">
   <div class="hello">
     <h1 id="hello">Welcome</h1>
-    <div id="mkt"></div>
+    <div id="mkt" hidden></div>
   </div>
+  <div class="vpill" id="vPill" hidden></div>
   <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
   <div class="ck-chips" id="ckChips" hidden></div>
   <div class="retest" id="retest" hidden></div>
+  <div class="lk-strip" id="lkStrip" hidden></div>
+  <a class="cine-strip" id="cineStrip" href="#cinema" hidden></a>
   <div class="lk-watch" id="lkWatch" hidden></div>
   <a class="dy-mini" id="dyMini" href="#diary" hidden></a>
   <a class="dy-mini" id="chMini" href="#chat" hidden><span style="font-size:20px" aria-hidden="true">💬</span><span><div class="k">Member chat</div><div class="v" style="font-size:15px">Talk setups with other members</div></span><span class="go">Open ›</span></a>
@@ -4843,6 +4886,92 @@ async function chMod(id, action) {
     toast(action === "dismiss" ? "Kept." : action === "mute" ? "Deleted and muted for 24 hours." : "Deleted."); chQueue(); }
   catch (e) { toast(friendly(e)); }
 }
+// ---------------------------------------------------------------- Patch 212: Today, shelf-first
+// The next scheduled close check: the 1:30 PM verdict, then the 4:00 PM confirm (1:00 PM on early-close days), on trading days.
+function nsNextCheck(now = new Date()) {
+  const ny = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const trading = (d) => d.getDay() > 0 && d.getDay() < 6 && !(typeof mktClosed === "function" && mktClosed(iso(d)));
+  const checks = (d) => (typeof mktEarly === "function" && mktEarly(iso(d))) ? [[780, "NEXT CONFIRM"]] : [[810, "NEXT VERDICT"], [960, "NEXT CONFIRM"]];
+  const at = (d, m) => { const x = new Date(d); x.setHours(Math.floor(m / 60), m % 60, 0, 0); return x; };
+  const all = [];
+  for (let k = -6; k <= 8; k++) { const d = new Date(ny); d.setDate(ny.getDate() + k); if (trading(d)) for (const [m, lab] of checks(d)) all.push({t: at(d, m), lab}); }
+  const i = all.findIndex(c => c.t > ny); if (i < 0) return null;
+  const nx = all[i], prev = i > 0 ? all[i - 1].t : new Date(nx.t.getTime() - 4 * 3600e3);
+  const hm = (d) => d.toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"});
+  return {label: nx.lab, when: `${nx.t.toLocaleDateString("en-US", {weekday: "short"})} ${hm(nx.t)} close`,
+          warns: hm(new Date(nx.t.getTime() - 15 * 60000)).replace(/ (AM|PM)$/, ""),
+          frac: Math.max(0, Math.min(1, (ny - prev) / (nx.t - prev))), today: iso(nx.t) === iso(ny)};
+}
+function renderVerdictPill() {
+  const el = $("vPill"); if (!el) return;
+  const c = nsNextCheck(); if (!c) { el.hidden = true; return; }
+  el.innerHTML = `<div class="vp-l"><i class="vp-dot" aria-hidden="true"></i><small>${c.label}</small><b>${esc(c.when)}</b></div>
+    <div class="vp-r"><small>warns ${esc(c.warns)}</small><span class="vp-bar"><i style="width:${(c.frac * 100).toFixed(1)}%"></i></span></div>`;
+  el.hidden = false;
+}
+function nsMarketLine() {
+  const n = etNow(), m = n.getHours() * 60 + n.getMinutes(), c = nsNextCheck();
+  const open = c && c.today && m >= 570 && m < 960 && n.getDay() > 0 && n.getDay() < 6;
+  return open ? `Market's open — ${c.label === "NEXT VERDICT" ? "the 1:30 verdict" : "the 4:00 confirm"} is the next check.` : "Market's closed — everything's set for tomorrow.";
+}
+// the stat tiles: Retesting now (dots on the shelf) and Waiting (one hollow dot under it)
+function ckTileGlyph(n, now) {
+  if (now) {
+    const k = Math.min(7, n), dots = Array.from({length: k}, (_, i) => `<circle cx="${8 + i * 9}" cy="9" r="3" fill="var(--up)"/>`).join("");
+    return `<svg width="72" height="16" viewBox="0 0 72 16" aria-hidden="true"><line x1="2" y1="13" x2="70" y2="13" stroke="var(--up)" stroke-width="2" stroke-linecap="round"/>${dots}</svg>${n > 7 ? `<em>+${n - 7}</em>` : ""}`;
+  }
+  return `<svg width="72" height="16" viewBox="0 0 72 16" aria-hidden="true"><line x1="2" y1="5" x2="70" y2="5" stroke="#6C7686" stroke-width="2" stroke-linecap="round"/>${n ? `<circle cx="36" cy="11.5" r="3" fill="none" stroke="#9EA8B6" stroke-width="1.5"/>` : ""}</svg>`;
+}
+// where price sits between the edge and the next shelf: 0 at the edge, 1 at the shelf (6% padding each end)
+function shelfFrac(x) {
+  const e = Number(x.edge), t = Number(x.target), p = Number(x.px);
+  if (!(e > 0 && t > 0 && p > 0) || t === e) return 0.06;
+  return 0.06 + 0.88 * Math.max(0, Math.min(1, (p - e) / (t - e)));
+}
+function shelfRoom(x) { const e = Number(x.edge), t = Number(x.target); return e > 0 && t > 0 ? (t / e - 1) * 100 : null; }
+function heroShelfHTML(x) {
+  if (!(Number(x.edge) > 0 && Number(x.target) > 0)) return "";
+  const up = x.state !== "breakdown", f = shelfFrac(x), room = shelfRoom(x);
+  const W = 300, xl = 12, xr = W - 12, X = xl + (xr - xl) * f, yS = up ? 18 : 62, yE = up ? 62 : 18;
+  const ticks = Array.from({length: 13}, (_, i) => `<line x1="${xl + i * (xr - xl) / 12}" y1="${yS - 3}" x2="${xl + i * (xr - xl) / 12}" y2="${yS + 3}" stroke="#6C7686" stroke-width="1"/>`).join("");
+  const col = up ? "var(--up)" : "#FF6B5E";
+  return `<div class="hs"><div class="hs-lab ${up ? "t" : "b"} sh">next shelf ${money(x.target)}</div>
+    <svg class="hs-svg" viewBox="0 0 ${W} 80" preserveAspectRatio="none" aria-hidden="true">
+      <line x1="${xl}" y1="${yS}" x2="${xr}" y2="${yS}" stroke="#6C7686" stroke-width="1.5"/>${ticks}
+      <line x1="${xl}" y1="${yE}" x2="${xr}" y2="${yE}" stroke="${col}" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+    <span class="hs-dot${x.near ? " live" : ""}" style="left:${(f * 100).toFixed(1)}%;top:${12 + yE}px;--dc:${col}"></span>
+    <div class="hs-lab ${up ? "b" : "t"} ed" style="color:${col}">the edge ${money(x.edge)}${x.near ? " — price is sitting on it" : ""}</div></div>
+    ${room != null ? `<div class="hs-room">room to the next shelf <b style="color:${col}">${room >= 0 ? "+" : "−"}${Math.abs(room).toFixed(1)}%</b></div>` : ""}`;
+}
+function miniShelf(x) {
+  const up = x.state !== "breakdown", f = shelfFrac(x), col = up ? "var(--up)" : "#FF6B5E";
+  const yS = up ? 5 : 17, yE = up ? 17 : 5, X = 3 + 30 * f;
+  return `<svg class="mini-shelf" width="36" height="22" viewBox="0 0 36 22" aria-hidden="true"><line x1="3" y1="${yS}" x2="33" y2="${yS}" stroke="#6C7686" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="3" y1="${yE}" x2="33" y2="${yE}" stroke="${col}" stroke-width="2" stroke-linecap="round"/><circle cx="${X.toFixed(1)}" cy="${yE}" r="3.2" fill="${col}"/></svg>`;
+}
+// the Watching strip: a summary of live Lookout watches, at most two rows
+function renderLkStrip() {
+  const el = $("lkStrip"); if (!el) return;
+  const live = (ME && !ME.guest && LK && (LK.live || []).filter(r => r.state === "watching" || r.state === "target_hit")) || [];
+  if (!live.length) { el.hidden = true; el.innerHTML = ""; return; }
+  const lab = (r) => esc(r.contract ? `${r.ticker} · ${r.contract.replace(new RegExp("^" + r.ticker + "\\s*"), "")}` : `${r.ticker} · shares`);
+  el.innerHTML = live.slice(0, 2).map(r => `<button type="button" class="lks-row" onclick="document.getElementById('lkWatch').scrollIntoView({behavior:'smooth',block:'start'})">
+      <span class="lks-eyes">${lkEyes(26)}</span><span class="lks-t"><b>${lab(r)}</b><small>kill ${money(r.kill)} · target ${money(r.target)}</small></span><span class="go">›</span></button>`).join("")
+    + (live.length > 2 ? `<div class="lks-more">+${live.length - 2} more</div>` : "");
+  el.hidden = false;
+}
+// the Cinema strip: what's playing in the Screening Room
+async function renderCineStrip() {
+  const el = $("cineStrip"); if (!el) return;
+  if (!SR) { try { const r = await fetch("/api/cinema", {credentials: "same-origin"}); SR = r.status === 200 ? await r.json() : {}; } catch (e) { SR = {}; } }
+  const f = SR && SR.feature; if (!f) { el.hidden = true; return; }
+  const perf = Array.from({length: 5}, () => "<i></i>").join("");
+  el.innerHTML = `<span class="cs-perf" aria-hidden="true"><span>${perf}</span><span>${perf}</span></span>
+    <span class="cs-t"><small>WHILE YOU WAIT</small><b>${esc(f.title)} is playing in the Screening Room</b></span><span class="go">›</span>`;
+  el.hidden = false;
+}
 // ---------------------------------------------------------------- Patch 208: Lookout (watch, never trade)
 function lookoutPlanFromTicket(sym, wantDir) {
   // the SAME numbers the ticket's safety-net row shows: trigger/entry, stop, target (long); the plan's own for a short
@@ -4917,8 +5046,9 @@ function lookoutFromCard(sym, f) {
 let LK = null;
 async function loadWatching(force) {
   const el = $("lkWatch"); if (!el) return;
-  if (!ME || ME.guest) { el.hidden = true; return; }
+  if (!ME || ME.guest) { el.hidden = true; renderLkStrip(); return; }
   if (!LK || force) { try { LK = await api("/api/lookout"); } catch (e) { el.hidden = true; return; } }
+  renderLkStrip();       // Patch 212: the summary strip under the retest cards
   const live = LK.live || [], closed = LK.closed || [];
   if (!live.length && !closed.length) { el.hidden = true; return; }
   const word = {watching: ["Watching", "w"], target_hit: ["Target touched", "t"], dead: ["Plan is dead", "d"], window_closed: ["Window closed", "c"]};
@@ -7936,7 +8066,7 @@ function renderRetest() {
   const rows = [];
   for (const r of (BOARD.live || [])) {
     if (r.retest && r.retest.candles_left > 0)
-      rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge,
+      rows.push({sym: r.symbol, label: "Hub", state: r.state, edge: r.retest.edge, px: (LIVE_OPEN && LIVE[r.symbol] && LIVE[r.symbol].price) || r.last_close,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
                  path: r.path || null,             // Patch 198 §6: the live clear-path fact (hub rows only)
                  tape_flow: r.tape_flow || null,   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
@@ -7946,7 +8076,7 @@ function renderRetest() {
   const seen = new Set(rows.map(x => x.sym));
   for (const r of (BOARD.setups || [])) {
     if (r.retest && r.retest.candles_left > 0 && !seen.has(r.symbol) && seen.add(r.symbol))
-      rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge,
+      rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge, px: (LIVE_OPEN && LIVE[r.symbol] && LIVE[r.symbol].price) || r.last_close,
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null, kind: r.kind});
   }
   // Gap fade & rip: entry is a DAILY close back above the gap-day high (no 4-hour retest window), so it gets its own
@@ -7981,7 +8111,7 @@ function renderRetest() {
     const txt = kind === "now"
       ? `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · at the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · retest window closes ${retestBy(x.left)} — the next 4H close decides it`
       : `${esc(x.label)}${x.watch ? ' · <b class="rt-watch">watch only</b>' : ""} · ${up ? "broke out" : "broke down"}, pullback not at the edge yet · edge ${money(x.edge)} · retest window closes ${retestBy(x.left)}`;
-    return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
+    return `<a class="arow" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">${miniShelf(x)}
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${txt}</span>${pathChip(x)}${x.tape_flow && x.tape_flow.line ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b> From the options tape, measured at the break. A past fact, not a live reading.</small>` : ""}</span><span class="go">›</span></a>`;
   };
   // Patch 191: the first row of the existing order is the hero card; the rest render as today
@@ -7997,6 +8127,7 @@ function renderRetest() {
       <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span>${g ? `<span class="sg-in ${GRADE_CLS[g]} ckh-g">${g}</span>` : ""}</div>
       <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
       <div class="ckh-line">${kind === "gap" ? `Closed back above the gap-day high ${money(x.edge)} · out on a daily close below ${money(x.stop)} · target ${money(x.target)} (2× the risk) · day ${x.day} of 10` : kind === "now" ? `At the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · the next 4H close decides it` : `Pullback not at the edge yet · edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}`}${kind === "gap" ? "" : ` · retest window closes ${retestBy(x.left)}`}</div>
+      ${kind === "gap" ? "" : heroShelfHTML(x)}
       ${pathChip(x)}${conf ? `${tapeChip(x)}<small class="rt-tape"><b>${esc(x.tape_flow.line)}</b></small><small class="ckh-rec" data-sym="${esc(x.sym)}"></small>` : ""}
     </a>`;
   };
@@ -8032,9 +8163,12 @@ function renderCkChips(nNow, nWait) {
   const el = $("ckChips"); if (!el) return;
   const v = INFO && INFO.vix, chips = [];
   if (v && v.level != null) chips.push(`<div class="ck-chip"><small>VIX</small><b>${Number(v.level).toFixed(2)}</b><span>${esc(v.band || "")}</span></div>`);
-  chips.push(`<div class="ck-chip"><small>Retesting now</small><b>${nNow}</b><span>at the edge</span></div>`);
-  chips.push(`<div class="ck-chip"><small>Waiting</small><b>${nWait}</b><span>for the retest</span></div>`);
-  el.innerHTML = chips.join(""); el.hidden = !BOARD;
+  // Patch 212: two tiles with a shelf glyph each; VIX (when stored) stays as a quiet line under them
+  const vix = chips.length ? `<div class="ck-vix" style="grid-column:1/-1">VIX <b>${Number(v.level).toFixed(2)}</b> ${esc(v.band || "")}</div>` : "";
+  el.classList.add("p212");
+  el.innerHTML = `<div class="ck-chip"><small>Retesting now</small><b>${nNow}</b><span>at the edge</span>${ckTileGlyph(nNow, true)}</div>`
+    + `<div class="ck-chip"><small>Waiting</small><b>${nWait}</b><span>for the retest</span>${ckTileGlyph(nWait, false)}</div>` + vix;
+  el.hidden = !BOARD;
 }
 // Patch 191: one quiet card for the name closest to a breakout (the brief's own pick)
 function renderCkClosest(d) {
@@ -8180,8 +8314,11 @@ function renderToday() {
   const greet = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
   const name = ME && !ME.guest && ME.name ? ", " + esc(ME.name.split(" ")[0]) : "";
   const now = etNow();
-  $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, <em>${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.</em><small class="hello-sub">${greet}${name}</small>`;
-  $("mkt").innerHTML = marketChip();
+  // Patch 212: a serif date, the greeting with the market's state in words, then the verdict pill
+  $("hello").classList.add("p212");
+  $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, ${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.<small class="hello-sub">${name ? `${greet}${name}. ` : ""}${nsMarketLine()}</small>`;
+  $("mkt").innerHTML = ""; $("mkt").hidden = true;
+  renderVerdictPill(); renderCineStrip();
   renderPremarket();
   renderWeek();
   if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet
