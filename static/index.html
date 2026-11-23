@@ -4223,7 +4223,9 @@ async function shelfOptLoad(sym) {
 function soptMktClosed(now = new Date()) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "numeric", hour12: false}).formatToParts(now).map(x => [x.type, x.value]));
   const m = (+p.hour % 24) * 60 + +p.minute;
-  return p.weekday === "Sat" || p.weekday === "Sun" || m < 570 || m >= 960;
+  const ny = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"})), iso = `${ny.getFullYear()}-${String(ny.getMonth() + 1).padStart(2, "0")}-${String(ny.getDate()).padStart(2, "0")}`;
+  const close = typeof mktEarly === "function" && mktEarly(iso) ? 780 : 960;
+  return p.weekday === "Sat" || p.weekday === "Sun" || (typeof mktClosed === "function" && mktClosed(iso)) || m < 570 || m >= close;
 }
 function shelfOptContract() { return SOPT && SOPT.chain ? SOPT.chain.find(r => r.expiry === SOPT.exp && r.call === SOPT.call && r.strike === SOPT.strike) : null; }
 function shelfOptSet(f, v) {
@@ -4361,7 +4363,9 @@ async function posMine(sym, force) {
   let P; try { P = await posFetch(force); } catch (e) { host.innerHTML = ""; return; }
   if (!P || P.none || !$("soptMine") || !SOPT || SOPT.sym !== sym) return;
   const mine = P.positions.filter(r => (r.underlying || r.symbol) === sym), ord = P.orders.filter(o => o.open && (o.underlying || o.symbol) === sym);
-  host.innerHTML = mine.length || ord.length ? `<div class="pos-mine"><div class="pos-mh"><b>Your ${esc(sym)}</b><a href="#positions" onclick="mapTicketClose();closeBrief()">All positions →</a></div>${mine.map(posCard).join("")}${ord.map(posOrderRow).join("")}</div>` : "";
+  if (!LK) { try { LK = await api("/api/lookout"); } catch (e) {} }        // Patch 209: the Lookout pill
+  const watching = LK && (LK.live || []).some(w => w.ticker === sym && w.state !== "closed");
+  host.innerHTML = mine.length || ord.length ? `<div class="pos-mine"><div class="pos-mh"><b>Your ${esc(sym)}</b>${watching ? `<span class="tk-lkpill"><i></i>LOOKOUT WATCHING</span>` : ""}<a href="#positions" onclick="mapTicketClose();closeBrief()">All positions →</a></div>${mine.map(posCard).join("")}${ord.map(posOrderRow).join("")}</div>` : "";
 }
 // a NextShelf-styled confirm for actions that reach the broker
 function nsConfirm(o) {
@@ -4732,6 +4736,7 @@ function shelfOptPaintBits() {
     const lab = $("soptConfirmLabel"); if (lab && k) lab.textContent = `Confirm ${S.action === "BUY_TO_OPEN" ? "buy" : "sell"} · ${S.qty} ${S.sym} $${k.strike} ${k.call ? "call" : "put"}${S.qty > 1 ? "s" : ""}`; }
 }
 function shelfOptPaint() {
+  try { const ct = $("tkCt"); if (ct && MAP_TK && SOPT && MAP_TK.sym === SOPT.sym) { const st = (BRIEF_CHART && BRIEF_CHART.symbol === SOPT.sym && BRIEF_CHART.status) || findStatus(SOPT.sym); ct.innerHTML = tkContractHTML(SOPT.sym, null, mapTicketPlan(mapPlan(SOPT.sym, st), st)); } } catch (e) {}   // Patch 209: the contract card follows the live pick
   const host = $("shelfOptHost"), S = SOPT; if (!host || !S) return;
   const acct = BROKER_ACCOUNTS[0], al = acct ? shelfTradeAccountLabel(acct) : null;
   const head = `<div class="broker-ticket-head"><b>${al ? esc(al.broker) + (al.masked ? " " + esc(al.masked) : "") : "No broker connected"}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>`
@@ -6899,6 +6904,68 @@ function mapTicketPlan(P, st) {
   if (wi) { stop = wi.stop; target = wi.target; }
   return {state, entry, stop, target, how, note, name: P.setupName};
 }
+// ---------------------------------------------------------------- Patch 209: the trade ticket, the plan on one line
+// Presentation only: every number here is already in the ticket (mapPlan / mapTicketPlan / the option contract).
+function tkPx(sym, st) {
+  const L = LIVE[sym], last = st && st.last_close;
+  if (LIVE_OPEN && L && L.price != null) return {px: +L.price, chg: L.change_pct != null ? +L.change_pct : null, word: "today"};
+  const x = EXT[sym];
+  if (x && x.session && x.price != null && last) return {px: +x.price, chg: (x.price / last - 1) * 100, word: x.session === "pre" ? "premarket" : "after hours"};
+  return {px: last != null ? +last : null, chg: L && L.change_pct != null ? +L.change_pct : null, word: "last close"};
+}
+function tkHeadHTML(sym, P, st) {
+  const q = tkPx(sym, st), g = document.querySelector("#mapGrade .sg-b"), gl = g && /^[A-D]$/.test(g.textContent.trim()) ? g.textContent.trim() : "";
+  const chg = q.chg != null && q.word !== "last close" ? `<small class="${q.chg >= 0 ? "u" : "d"}">${q.chg >= 0 ? "+" : "−"}${Math.abs(q.chg).toFixed(1)}% ${q.word}</small>` : "";
+  return `<div class="tk-h2"><div class="tk-id"><b>${esc(sym)}</b>${q.px != null ? `<span class="tk-px">${money(q.px)}</span>` : ""}${chg}</div>
+    ${P.setupName ? `<span class="tk-setup">${esc(P.setupName.toUpperCase())}${gl ? " · " + gl : ""}</span>` : ""}<button class="tk-x" onclick="mapTicketClose()" aria-label="Close">✕</button></div>`;
+}
+// the next 4-hour verdict: 1:30 PM ET, then the 4:00 PM confirm (1:00 PM on early-close days); hidden on non-trading days and after the close
+function tkVerdictHTML(now = new Date()) {
+  const ny = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"})), dow = ny.getDay();
+  const iso = `${ny.getFullYear()}-${String(ny.getMonth() + 1).padStart(2, "0")}-${String(ny.getDate()).padStart(2, "0")}`;
+  if (dow === 0 || dow === 6 || (typeof mktClosed === "function" && mktClosed(iso))) return "";
+  const m = ny.getHours() * 60 + ny.getMinutes(), early = typeof mktEarly === "function" && mktEarly(iso);
+  const [end, lab] = early ? [780, "1:00 CONFIRM"] : m < 810 ? [810, "1:30 VERDICT"] : [960, "4:00 CONFIRM"];
+  if (m >= end) return "";
+  const left = end - m, h = Math.floor(left / 60), mm = left % 60;
+  return `<span class="tk-verdict">${lab} · ${h ? h + "H " : ""}${mm}M</span>`;
+}
+function tkPct(v, px) { const d = (v / px - 1) * 100; return `${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}%`; }
+function tkLineHTML(sym, P, T, st) {
+  const px = tkPx(sym, st).px, stop = T.stop, line = P.phase === 0 ? P.trig : T.entry, tgt = T.target;
+  if (![px, stop, line, tgt].every(v => v > 0) || !(stop < line && line < tgt)) return "";      // no long plan, no line
+  const span = tgt - stop, lo = Math.min(stop, px) - span * 0.12, hi = Math.max(tgt, px) + span * 0.12;
+  const x = (v) => (v - lo) / (hi - lo) * 100, cl = (v) => `${v}%;transform:translateX(${v < 12 ? -v / 12 * 50 : v > 88 ? -50 - (v - 88) / 12 * 50 : -50}%)`;   // labels stay inside the card at the edges
+  const xs = x(stop), xl = x(line), xt = x(tgt), xn = x(px);
+  const zone = `linear-gradient(90deg, var(--tkl-red) 0 ${xs}%, var(--tkl-slate) ${xs}% ${xl}%, var(--tkl-green) ${xl}% ${xt}%, var(--tkl-deep) ${xt}% 100%)`;
+  const near = Math.abs(xl - xt) < 16;      // the line and target labels would collide: drop the target's to the lower row
+  return `<div class="tk-line"><div class="tk-lh">THE PLAN, ON ONE LINE</div>
+    <div class="tk-lt">
+      <div class="tk-lab p-up c-am" style="left:${cl(xl)}"><i>THE LINE</i>${money(line)}</div>
+      <div class="tk-lab ${near ? "p-dn2" : "p-up"} c-gr" style="left:${cl(xt)}"><i>TARGET</i>${money(tgt)}</div>
+      <div class="tk-track" style="background:${zone}">
+        <span class="tk-tick red" style="left:${xs}%"></span><span class="tk-tick amber" style="left:${xl}%"></span><span class="tk-tick green" style="left:${xt}%"></span>
+        <span class="tk-now" style="left:${xn}%"></span></div>
+      <div class="tk-lab p-dn c-rd" style="left:${cl(xs)}"><i>STOP</i>${money(stop)}</div>
+      <div class="tk-lab p-dn2 nowl" style="left:${cl(xn)}"><i>NOW</i> ${money(px)}</div>
+    </div>
+    <div class="tk-lc">${px <= stop ? `${Math.abs((stop / px - 1) * 100).toFixed(1)}% past the kill` : `${tkPct(stop, px)} to the kill`} · ${tkPct(line, px)} to the line · ${tkPct(tgt, px)} to the target</div></div>`;
+}
+// the contract card: identity, the quote, how wide the spread is, and the intrinsic value at the target (arithmetic only)
+function tkContractHTML(sym, c, T) {
+  const live = typeof SOPT !== "undefined" && SOPT && SOPT.sym === sym && typeof shelfOptContract === "function" ? shelfOptContract() : null;
+  const k = live ? {strike: live.strike, call: live.call, expiry: live.expiry, bid: live.bid, ask: live.ask, buy: SOPT.action === "BUY_TO_OPEN"}
+    : c ? {strike: c.strike, call: true, expiry: (OPT_CACHE[sym] && (OPT_CACHE[sym].plans || []).find(x => x.direction === 1) || {}).expiry, bid: c.bid, ask: c.ask, buy: true} : null;
+  if (!k || !k.strike) return "";
+  const day = k.expiry ? new Date(k.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "";
+  const mid = k.bid > 0 && k.ask > 0 ? (k.bid + k.ask) / 2 : null, sp = mid ? (k.ask - k.bid) / mid : null, wide = sp != null && sp > 0.15;
+  const intr = T.target > 0 ? Math.max(0, (k.call ? T.target - k.strike : k.strike - T.target) * 100) : null;
+  return `<div class="tk-ct"><div class="tk-ct-h"><b>${esc(sym)} ${esc(day)} $${k.strike} ${k.call ? "Call" : "Put"}</b><span class="tk-ct-pill">${k.call ? "CALL" : "PUT"} · ${k.buy ? "BUY TO OPEN" : "SELL TO CLOSE"}</span></div>
+    ${mid ? `<div class="tk-q"><span>Bid ${money(k.bid)}</span><b>Mid ${money(mid)}</b><span>Ask ${money(k.ask)}</span></div>
+    <div class="tk-sp ${wide ? "wide" : ""}"><i style="width:${Math.min(100, sp / 0.4 * 100).toFixed(1)}%"></i></div>
+    ${wide ? `<p class="tk-spc">Wide spread — ${Math.round(sp * 100)}% of mid. Limit orders only; never chase the ask.</p>` : ""}` : `<div class="tk-q"><span>No live quote right now.</span></div>`}
+    ${intr != null ? `<p class="tk-intr">${intr > 0 ? `At the target this contract holds ${money(intr).replace(".00", "")} of intrinsic value alone.` : "At the target this contract holds no intrinsic value."}</p>` : ""}</div>`;
+}
 function mapTicketHTML() {
   const sym = BRIEF_SYM, c4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(sym);
   const P = mapPlan(sym, st), T = mapTicketPlan(P, st), a = MAP_ACCT(), acct = +(a.acct ?? 10000), risk = +(a.risk ?? 1);
@@ -6911,8 +6978,9 @@ function mapTicketHTML() {
   const alBtn = (lab, price, dir, text) => { const x = has(lab); return `<button class="tk-al tk-al-${lab} ${x ? "on" : ""}" onclick="mapTicketAlert('${lab}', ${price}, ${dir})" aria-pressed="${x}"><span class="tk-al-dot">${TK_AL_ICON[lab] || TK_AL_ICON.trigger}${x ? `<i class="tk-al-ok">${TK_AL_ICON.ok}</i>` : ""}</span>${text} <b>${money(price)}</b></button>`; };
   const tone = {wait: ["Not yet", "t-wait"], ready: ["Order ready: waits for the pullback", "t-ready"], now: ["At the entry now", "t-now"]}[T.state];
   return `<div class="tk-back" onclick="if(event.target===this)mapTicketClose()"><div class="tkt" role="dialog" aria-label="Trade ${esc(sym)}">
-    <div class="tk-h"><b>Trade ${esc(sym)}</b><span>${esc(T.name)}</span><button class="tk-x" onclick="mapTicketClose()" aria-label="Close">✕</button></div>
-    <div class="tk-st ${tone[1]}"><b>${tone[0]}</b><span>${esc(T.note)}</span></div>
+    ${tkHeadHTML(sym, P, st)}
+    <div class="tk-st ${tone[1]}"><div class="tk-st-top"><b>${tone[0]}</b>${tkVerdictHTML()}</div><span>${esc(T.note)}</span></div>
+    ${tkLineHTML(sym, P, T, st)}
     <div class="tk-tabs"><button class="${MAP_TK.mode !== "options" ? "on" : ""}" onclick="mapTicketMode('shares')">Shares</button><button class="${MAP_TK.mode === "options" ? "on" : ""}" onclick="mapTicketMode('options')">Options</button></div>
     ${MAP_TK.mode === "options" ? mapTicketOptionsHTML(sym, P, T, acct, risk, ex) : `
     <div class="tk-order">
@@ -6934,6 +7002,7 @@ function mapTicketHTML() {
     ${MAP_TK.mode === "options" && ME && ME.is_admin ? `<div class="tk-alh">Place it with your broker</div><div id="shelfOptHost" class="tk-live"></div>` : ""}
     <div class="tk-alh">Safety net: alerts to your phone</div>
     <div class="tk-als">${P.phase === 0 ? alBtn("trigger", P.trig, 1, "Trigger") : alBtn("entry", T.entry, -1, "Entry")}${alBtn("stop", T.stop, -1, "Stop")}${alBtn("target", T.target, 1, "Target")}</div>
+    ${T.stop > 0 ? `<p class="tk-kill">The plan dies on a 4-hour close below ${money(T.stop)}.<span>Closes, not wicks — the same rule that got you in.</span></p>` : ""}
     <p class="tk-fine">${MAP_TK.mode === "options" && ME && ME.is_admin ? "You confirm every order; NextShelf never trades on its own." : "You place the order yourself; NextShelf never trades for you."} Based on NextShelf's rules and past prices, for education only, not financial advice.</p>
   </div></div>`;
 }
@@ -6973,7 +7042,7 @@ function mapTicketOptionsHTML(sym, P, T, acct, risk, ex) {
     : `${contract}\nBUY ${qty} contract${qty === 1 ? "" : "s"} · limit ${money(c.mid)} (mid)${over}\nTAKE PROFIT when ${sym} reaches ${money(p.target)} (option ≈ ${money(c.at_shelf)}, simulated)\nEXIT on a 4-hour close back below ${money(T.stop)}\nCost ${money(qty * c.cost)} · most you can lose ${money(qty * c.cost)}`;
   const earn = o.earnings && o.earnings.date <= p.expiry ? `<p class="tk-warn">📅 Earnings ${esc(o.earnings.label)}, before this contract expires: option prices usually drop right after a report.</p>` : "";
   const what = leg === "spread" ? "spread" : "option";
-  return `${legs.spread ? `<div class="tk-legs"><button class="${leg === "call" ? "on" : ""}" onclick="mapTicketLeg('call')">Single call<small>${money(c.cost)}</small></button><button class="${leg === "spread" ? "on" : ""}" onclick="mapTicketLeg('spread')">Call spread<small>${money(sp.cost)} · gain capped</small></button></div>` : ""}
+  return `<div id="tkCt">${tkContractHTML(sym, c, T)}</div>${legs.spread ? `<div class="tk-legs"><button class="${leg === "call" ? "on" : ""}" onclick="mapTicketLeg('call')">Single call<small>${money(c.cost)}</small></button><button class="${leg === "spread" ? "on" : ""}" onclick="mapTicketLeg('spread')">Call spread<small>${money(sp.cost)} · gain capped</small></button></div>` : ""}
     <div class="tk-order">
       <div class="tk-r"><span>${leg === "spread" ? `Buy the $${sp.long_strike} call and sell the $${sp.short_strike} call as one order: cheaper, but the gain stops at $${sp.short_strike}` : c.estimated ? `Estimated price once it breaks out (about ${money(c.quote_now)} now)` : "Buy to open, limit near the middle of bid and ask"}</span></div>
       <div class="tk-r big"><span>Contract</span><b>${esc(contract)}</b></div>
@@ -10899,6 +10968,46 @@ body.map-v2 #bf-walls, body.map-v2 #bf-news, body.map-v2 #bf-history { display: 
 .mp-cxd { padding: 0 0 10px 30px; font-size: 12px; line-height: 1.5; color: var(--mp-mut); display: grid; gap: 6px; }
 .mp-cxd .mp-nw { border-top: 0; padding: 2px 0; }
 
+
+/* ---- Patch 209: the trade ticket redesign (dark palette from the approved mockup; light theme keeps its own) */
+html:not([data-theme="light"]) .tkt { --tk-card: #090F1A; --tk-line: #26364A; --tk-ink: #EEF1F5; --tk-mut: #9EA8B6; --tk-panel: #0E1828; --tk-deep: #0B1321; }
+.tkt { --tk-amber: #E0BA70; --tk-panel: color-mix(in srgb, var(--tk-ink) 4%, var(--tk-card)); --tk-deep: color-mix(in srgb, var(--tk-ink) 2%, var(--tk-card));
+  --tkl-red: rgba(240,0,96,.28); --tkl-slate: color-mix(in srgb, var(--tk-ink) 16%, transparent); --tkl-green: rgba(0,200,152,.32); --tkl-deep: rgba(0,200,152,.16); }
+html[data-theme="light"] .tkt { --tk-amber: #9a6700; }
+.tk-h2 { display: flex; align-items: flex-start; gap: 10px; } .tk-id { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 10px; }
+.tk-id b { font-size: 26px; font-weight: 800; letter-spacing: -.03em; } .tk-px { font: 600 16px var(--mono, ui-monospace, monospace); }
+.tk-id small { flex-basis: 100%; font-size: 12px; margin-top: -2px; } .tk-id small.u { color: #00C898; } .tk-id small.d { color: #F00060; }
+.tk-setup { margin-left: auto; font: 600 10.5px var(--mono, ui-monospace, monospace); letter-spacing: .06em; color: var(--tk-mut); border: 1px solid var(--tk-line); background: var(--tk-panel); border-radius: 999px; padding: 6px 11px; white-space: nowrap; }
+.tk-h2 .tk-x { margin-left: 4px; } .tk-h2 .tk-setup + .tk-x { margin-left: 2px; } .tk-h2 > .tk-x:nth-child(2) { margin-left: auto; }
+.tk-st-top { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tk-st.t-wait { background: #13120E; border: 1px solid #363226; border-left: 4px solid var(--tk-amber); } .tk-st.t-wait > .tk-st-top b { color: var(--tk-amber); text-transform: uppercase; letter-spacing: .02em; }
+html[data-theme="light"] .tk-st.t-wait { background: #FBF6EA; border-color: #EBDDBB; border-left-color: var(--tk-amber); }
+.tk-st.t-wait > span { color: var(--tk-ink); }
+.tk-verdict { font: 600 10px var(--mono, ui-monospace, monospace); letter-spacing: .05em; color: var(--tk-amber); border: 1px solid #363226; border-radius: 999px; padding: 3px 8px; white-space: nowrap; }
+html[data-theme="light"] .tk-verdict { border-color: #EBDDBB; }
+.tk-line { padding: 2px 0 0; } .tk-lh { font: 600 10.5px var(--mono, ui-monospace, monospace); letter-spacing: .07em; color: var(--tk-mut); margin-bottom: 4px; }
+.tk-lt { position: relative; height: 118px; }
+.tk-track { position: absolute; left: 0; right: 0; top: 50px; height: 8px; border-radius: 4px; }
+.tk-tick { position: absolute; top: -5px; width: 3px; height: 18px; border-radius: 1px; transform: translateX(-50%); }
+.tk-tick.red { background: #F00060; } .tk-tick.amber { background: var(--tk-amber); } .tk-tick.green { background: #00C898; }
+.tk-now { position: absolute; top: 50%; width: 12px; height: 12px; border-radius: 50%; background: #00C898; transform: translate(-50%, -50%); box-shadow: 0 0 0 3px var(--tk-card), 0 0 0 5px #00C898; z-index: 1; }
+.tk-lab { position: absolute; transform: translateX(-50%); text-align: center; font: 700 13px var(--mono, ui-monospace, monospace); white-space: nowrap; }
+.tk-lab i { display: block; font-style: normal; font: 700 10px var(--mono, ui-monospace, monospace); letter-spacing: .06em; margin-bottom: 1px; }
+.tkt .tk-lab { color: var(--tk-ink); } .tkt .tk-lab.nowl { color: #00C898; }
+.tk-lab.p-up { top: 2px; } .tk-lab.p-dn { top: 70px; } .tk-lab.p-dn2 { top: 72px; }
+ .tk-lab.c-am i { color: var(--tk-amber); } .tk-lab.c-gr i { color: #00C898; } .tk-lab.c-rd i { color: #F00060; }
+.tk-lab.nowl { top: 98px; color: #00C898; font-size: 12px; } .tk-lab.nowl i { display: inline; font-size: 12px; }
+.tk-lc { font-size: 12.5px; color: var(--tk-mut); text-align: center; margin-top: 2px; }
+.tk-ct { background: var(--tk-panel); border: 1px solid var(--tk-line); border-radius: 14px; padding: 13px 14px; display: grid; gap: 9px; }
+.tk-ct-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .tk-ct-h b { font-size: 16px; letter-spacing: -.01em; }
+.tk-ct-pill { font: 700 10px var(--mono, ui-monospace, monospace); letter-spacing: .05em; color: #00C898; background: rgba(0,200,152,.12); border-radius: 8px; padding: 5px 9px; white-space: nowrap; }
+.tk-q { display: flex; gap: 16px; font: 500 14px var(--mono, ui-monospace, monospace); color: var(--tk-mut); } .tk-q b { color: var(--tk-ink); }
+.tk-sp { height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--tk-ink) 10%, transparent); overflow: hidden; } .tk-sp i { display: block; height: 100%; border-radius: 3px; background: color-mix(in srgb, var(--tk-ink) 35%, transparent); }
+.tk-sp.wide i { background: #9E8656; }
+.tk-spc { margin: 0; color: var(--tk-amber); font-size: 12.5px; } .tk-intr { margin: 0; color: var(--tk-mut); font-size: 12.5px; }
+.tk-kill { margin: 2px 0 0; padding-top: 10px; border-top: 1px solid var(--tk-line); font-size: 13px; line-height: 1.5; } .tk-kill span { display: block; color: var(--tk-mut); }
+.tk-lkpill { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font: 700 10px var(--mono, ui-monospace, monospace); letter-spacing: .05em; color: #00C898; background: rgba(0,200,152,.12); border-radius: 999px; padding: 4px 9px; }
+.tk-lkpill i { width: 7px; height: 7px; border-radius: 50%; background: #00C898; }
 /* ---- trade ticket */
 .mp-tradebtn { background: #000 !important; border-color: #000 !important; color: #fff !important; }
 .tk-back { position: fixed; inset: 0; z-index: 1000; background: rgba(5,7,10,.55); backdrop-filter: blur(3px); display: grid; place-items: center; padding: 16px; }
