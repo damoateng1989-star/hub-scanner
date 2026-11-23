@@ -35,6 +35,7 @@ MAX_OPEN = int(os.getenv("PAPER_OPT_MAX_OPEN", 10))
 MAX_PREMIUM = float(os.getenv("PAPER_OPT_MAX_PREMIUM", 2000))
 MAX_SPREAD = float(os.getenv("PAPER_OPT_MAX_SPREAD_PCT", 0.15))
 MIN_DTE_ENTRY, EXIT_DTE = 14, 7
+HARD_STOP = float(os.getenv("PAPER_OPT_HARD_STOP", 0.50))    # Nov 23 (owner): sell when the contract has lost half its premium
 
 
 def enabled() -> bool:
@@ -253,7 +254,8 @@ def run_check_opt() -> list[str]:
 
 
 def sync_opt() -> list[str]:
-    """Every 5 minutes in market hours: the stock (never the option price) touching the shelf closes the option."""
+    """Every 5 minutes in market hours: the stock touching the target closes the option; so does the hard stop,
+    the contract marked at or below HARD_STOP under its fill (Nov 23)."""
     if not db.open_trades(kind=KIND) or not _ready():
         return []
     msgs = []
@@ -264,8 +266,19 @@ def sync_opt() -> list[str]:
                 px = data.latest_price(t["symbol"])
                 if (px - t["target"]) * t["direction"] >= 0:
                     msgs.append(_close(b, t, "follow-through"))
-                elif _dte(t) < EXIT_DTE:
+                    continue
+                if _dte(t) < EXIT_DTE:
                     msgs.append(_close(b, t, "expiry week"))
+                    continue
+                # the hard stop: the contract itself, from the paper account's position (mark price vs our fill)
+                try:
+                    pos = b._req("GET", f"/v2/positions/{t['occ']}")
+                    mark = float(pos.get("current_price") or 0)
+                except Exception as e:
+                    log.info("paper-opt mark for %s unavailable: %s", t["occ"], e)
+                    mark = 0
+                if mark > 0 and t["entry_price"] and mark <= t["entry_price"] * (1 - HARD_STOP):
+                    msgs.append(_close(b, t, "hard stop"))
             except Exception as e:
                 log.warning("paper-opt sync failed for %s: %s", t["symbol"], e)
     for m in msgs:
