@@ -106,7 +106,95 @@ def _compute(contracts: list, spot: float, today: date) -> dict | None:
     return {"call_wall": cw, "put_wall": pw, "flip": flip, "expiry": exp.isoformat()}
 
 
-def _fetch_contracts(symbol: str, force: bool = False) -> list:
+# ---------------------------------------------------------------- Nov 23: the chain from Alpaca (gamma + open interest)
+_ALPACA_DAYS = 70          # expiries out to ~10 weeks: the monthly >=7 DTE and the 8 nearest expiries summed() uses
+_TRADING_BASES = ("https://api.alpaca.markets", "https://paper-api.alpaca.markets")
+_TRADING_BASE: list = []
+
+
+def _alpaca_ok() -> bool:
+    return os.getenv("DATA_PROVIDER", "alpaca").strip().lower() == "alpaca" and bool(os.getenv("ALPACA_API_KEY")) and bool(os.getenv("ALPACA_SECRET_KEY"))
+
+
+def _alpaca_headers() -> dict:
+    return {"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""), "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")}
+
+
+def _alpaca_oi(sym: str, lo: float | None, hi: float | None, exp_lte: str) -> dict:
+    """{OCC symbol: open interest} from Alpaca's contracts list (trading API; live keys first, then paper)."""
+    params = dict(underlying_symbols=sym, status="active", limit=10000, expiration_date_gte=date.today().isoformat(),
+                  expiration_date_lte=exp_lte)
+    if lo and hi:
+        params.update(strike_price_gte=f"{lo:.2f}", strike_price_lte=f"{hi:.2f}")
+    bases = _TRADING_BASE or list(_TRADING_BASES)
+    last = None
+    for base in bases:
+        out, token, ok = {}, None, False
+        for _ in range(10):
+            if token:
+                params["page_token"] = token
+            r = requests.get(f"{base}/v2/options/contracts", headers=_alpaca_headers(), params=params, timeout=20)
+            if r.status_code in (401, 403):
+                last = r.status_code
+                break
+            r.raise_for_status()
+            j = r.json()
+            ok = True
+            for c in j.get("option_contracts") or []:
+                try:
+                    out[c["symbol"]] = float(c.get("open_interest") or 0)
+                except (TypeError, ValueError):
+                    pass
+            token = j.get("next_page_token")
+            if not token:
+                break
+        if ok:
+            if not _TRADING_BASE:
+                _TRADING_BASE.append(base)
+            return out
+    raise RuntimeError(f"Alpaca contracts refused ({last})")
+
+
+def _alpaca_contracts(sym: str, spot: float | None) -> list:
+    """Slim tuples (expiry, is_call, strike, gamma, oi, volume) built from Alpaca: greeks from the option snapshots,
+    open interest from the contracts list. Same shape as the Cboe path, so every caller is unchanged."""
+    lo = hi = None
+    if spot and spot > 0:
+        lo, hi = spot * (1 - _BAND - 0.05), spot * (1 + _BAND + 0.05)
+    exp_lte = (date.today() + timedelta(days=_ALPACA_DAYS)).isoformat()
+    params = dict(feed=os.getenv("ALPACA_OPTIONS_FEED", "indicative"), limit=1000, expiration_date_gte=date.today().isoformat(),
+                  expiration_date_lte=exp_lte)
+    if lo and hi:
+        params.update(strike_price_gte=f"{lo:.2f}", strike_price_lte=f"{hi:.2f}")
+    snaps, token = {}, None
+    for _ in range(12):
+        if token:
+            params["page_token"] = token
+        r = requests.get(f"https://data.alpaca.markets/v1beta1/options/snapshots/{sym.replace('.', '')}",
+                         headers=_alpaca_headers(), params=params, timeout=20)
+        r.raise_for_status()
+        j = r.json()
+        snaps.update(j.get("snapshots") or {})
+        token = j.get("next_page_token")
+        if not token:
+            break
+    oi = _alpaca_oi(sym.replace(".", ""), lo, hi, exp_lte)
+    out = []
+    for occ, sn in snaps.items():
+        p = _occ(occ)
+        if not p:
+            continue
+        g = (sn.get("greeks") or {}).get("gamma")
+        if g is None:
+            continue
+        vol = (sn.get("dailyBar") or {}).get("v") or 0
+        out.append((p[0], p[1], p[2], float(g), float(oi.get(occ, 0)), float(vol)))
+    if not out:
+        raise RuntimeError("no Alpaca option greeks returned")
+    return out
+
+
+def _fetch_contracts(symbol: str, force: bool = False, spot: float | None = None) -> list:
     """Slim chain cache; normally once/day, with force=True for scheduled GEX snapshots. [] on failure."""
     sym = (symbol or "").upper()
     today = date.today().isoformat()
@@ -117,11 +205,14 @@ def _fetch_contracts(symbol: str, force: bool = False) -> list:
     if not force and time.time() - _FAILED.get(sym, 0) < _RETRY:
         return []
     try:
-        r = requests.get(_URL.format(sym), headers={"User-Agent": "NextShelf/1.0"}, timeout=20)
-        r.raise_for_status()
-        contracts = _slim((r.json().get("data") or {}).get("options") or [])
+        if _alpaca_ok():                  # Nov 23: Cboe's free feed started refusing the server (403); Alpaca is the licensed source
+            contracts = _alpaca_contracts(sym, spot)
+        else:
+            r = requests.get(_URL.format(sym), headers={"User-Agent": "NextShelf/1.0"}, timeout=20)
+            r.raise_for_status()
+            contracts = _slim((r.json().get("data") or {}).get("options") or [])
     except Exception as e:
-        log.warning("walls failed for %s: %s", sym, e)
+        log.warning("walls failed for %s: %s", sym, str(e)[:160])
         _FAILED[sym] = time.time()        # a blip shouldn't blank the whole day: try again in an hour
         return []
     with _LOCK:
@@ -189,7 +280,7 @@ def summed(symbol: str, spot: float | None, fetch: bool = True, n_exp: int = SUM
             return None
         spot = float(spot)
         if fetch:
-            contracts = _fetch_contracts(sym)
+            contracts = _fetch_contracts(sym, spot=float(spot))
         else:
             with _LOCK:
                 contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
@@ -245,7 +336,7 @@ def next_levels(symbol: str, spot: float | None, fetch: bool = True) -> dict | N
             return None
         spot = float(spot)
         if fetch:
-            contracts = _fetch_contracts(sym)
+            contracts = _fetch_contracts(sym, spot=float(spot))
         else:
             with _LOCK:
                 contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
@@ -308,7 +399,7 @@ def walls(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         if not spot or float(spot) <= 0:
             return None
         if fetch:
-            contracts = _fetch_contracts(sym)
+            contracts = _fetch_contracts(sym, spot=float(spot))
         else:
             with _LOCK:
                 contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
@@ -332,7 +423,7 @@ def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> 
             return None
         spot = float(spot)
         if fetch:
-            contracts = _fetch_contracts(sym)
+            contracts = _fetch_contracts(sym, spot=float(spot))
         else:
             with _LOCK:
                 contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
@@ -393,7 +484,7 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
             return None
         spot = float(spot)
         if fetch:
-            contracts = _fetch_contracts(sym)
+            contracts = _fetch_contracts(sym, spot=float(spot))
         else:
             with _LOCK:
                 contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
@@ -577,7 +668,7 @@ def snapshot_symbol(symbol: str, spot: float | None) -> bool:
     try:
         if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym) or not spot or float(spot) <= 0:
             return False
-        contracts = _fetch_contracts(sym, force=True)
+        contracts = _fetch_contracts(sym, force=True, spot=float(spot))
         if not contracts:
             return False
         now = datetime.now(_NY)
@@ -649,7 +740,7 @@ def board(symbol: str, spot: float | None, at: str | None = None) -> dict | None
         with _LOCK:
             contracts = _CHAIN_CACHE.get((sym, date.today().isoformat()), [])
         if not contracts:
-            contracts = _fetch_contracts(sym)
+            contracts = _fetch_contracts(sym, spot=float(spot))
         if not contracts:
             return None
         grid_ = _board_grid(contracts, float(spot))
