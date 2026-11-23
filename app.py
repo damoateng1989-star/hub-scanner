@@ -2166,6 +2166,7 @@ class BrokerOptionImpactBody(BaseModel):
     units: int
     order_type: str = "LIMIT"
     price: float | None = None
+    time_in_force: str = "Day"
 
 
 def _snap_reason(e: Exception) -> str | None:

@@ -2706,6 +2706,8 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 #shelfOptHost { margin-top: 14px; }
+.sopt-tif { margin-top: 12px; } .sopt-tif label { display: block; margin-bottom: 7px; color: #91a0b3; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+.sopt-tif-note { display: block; margin-top: 6px; font-size: 11.5px; color: var(--muted); } .sopt-tif-fixed { font-size: 13px; color: var(--ink); } .sopt-tif-fixed small { color: var(--muted); }
 .sopt-guard { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; background: rgba(242,193,78,.1); border: 1px solid rgba(242,193,78,.35); color: #F5D58A; font-size: 12.5px; line-height: 1.45; } .sopt-guard b { color: #F2C14E; }
 .soc-guard { margin: 12px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(242,193,78,.1); border: 1px solid rgba(242,193,78,.35); display: grid; gap: 2px; font-size: 12.5px; line-height: 1.45; } .soc-guard b { color: #F2C14E; font-size: 13px; } .soc-guard span { color: #E9D9AE; }
 /* Nov 22 (owner): Webull's soft teal-green for the live trade flow (Confirm, Buy to open / Call, Place order, I'm in) */
@@ -4114,7 +4116,7 @@ function renderShelfTradeCard(sym) {
 // mid by default) or market; SnapTrade previews it, then only that exact order can be confirmed. Long options only.
 let SOPT = null, SOPT_PRESET = null, POS = null;
 async function shelfOptLoad(sym) {
-  SOPT = {sym, chain: null, exp: null, call: true, strike: null, action: "BUY_TO_OPEN", qty: 1, type: "LIMIT", price: null, preview: null, req: 0, t: null};
+  SOPT = {sym, chain: null, exp: null, call: true, strike: null, action: "BUY_TO_OPEN", qty: 1, type: "LIMIT", tif: "Day", price: null, preview: null, req: 0, t: null};
   shelfOptPaint();
   try {
     const c = await api(`/api/broker/options/chain/${encodeURIComponent(sym)}`);
@@ -4151,6 +4153,7 @@ function shelfOptSet(f, v) {
   else if (f === "qty") SOPT.qty = Math.max(1, Math.min(100, Math.round(+v) || 1));
   else if (f === "price") { SOPT.price = +v; SOPT.preview = null; shelfOptQueue(); return shelfOptPaintBits(); }
   else SOPT[f] = v;
+  if (SOPT.type === "MARKET") SOPT.tif = "Day";         // GTC only with a limit price
   shelfOptPaint(); shelfOptQueue();
 }
 function shelfOptQueue() { if (!SOPT) return; SOPT.preview = null; clearTimeout(SOPT.t); SOPT.t = setTimeout(shelfOptPreview, 450); }
@@ -4162,7 +4165,7 @@ async function shelfOptPreview() {
   if (S.type === "LIMIT" && !(S.price > 0)) { out.textContent = "Enter a valid limit price."; return; }
   const req = ++S.req; out.textContent = "Checking the order with SnapTrade…"; shelfOptPaintBits();
   try {
-    const r = await api("/api/broker/options/impact", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, action: S.action, units: S.qty, order_type: S.type, price: S.type === "LIMIT" ? S.price : null})});
+    const r = await api("/api/broker/options/impact", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, action: S.action, units: S.qty, order_type: S.type, price: S.type === "LIMIT" ? S.price : null, time_in_force: S.tif || "Day"})});
     if (S !== SOPT || req !== S.req) return;
     S.preview = r.preview_id;
     const fee = shelfTradeFee(r.impact || {}), unit = S.type === "LIMIT" ? S.price : k.mid, est = unit * 100 * S.qty;
@@ -4174,7 +4177,7 @@ async function shelfOptPreview() {
 async function shelfOptSubmit() {
   const S = SOPT, k = shelfOptContract(); if (!S || !S.preview || !k) { toast("A fresh preview is required first."); return; }
   const d = new Date(k.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}) + " '" + k.expiry.slice(2, 4);
-  const line = `${S.action === "BUY_TO_OPEN" ? "BUY TO OPEN" : "SELL TO CLOSE"} ${S.qty} × ${S.sym} ${d} $${k.strike} ${k.call ? "Call" : "Put"} · ${S.type === "LIMIT" ? "Limit $" + S.price.toFixed(2) : "Market"} · Day`;
+  const line = `${S.action === "BUY_TO_OPEN" ? "BUY TO OPEN" : "SELL TO CLOSE"} ${S.qty} × ${S.sym} ${d} $${k.strike} ${k.call ? "Call" : "Put"} · ${S.type === "LIMIT" ? "Limit $" + S.price.toFixed(2) : "Market"} · ${S.tif === "GTC" ? "GTC" : "Day"}`;
   if (!(await soptConfirm(S, k, d))) return;
   const pv = S.preview; S.preview = null; S.req++; shelfOptPaintBits();
   const out = $("soptImpact"); if (out) out.textContent = "Submitting the checked order to your brokerage…";
@@ -4197,13 +4200,13 @@ function soptConfirm(S, k, d) {
       <p class="soc-sub">${esc(S.sym)} ${esc(d)} · ${buy ? "Buy to open" : "Sell to close"}</p>
       <div class="soc-rows">
         <div><span>Contracts</span><b>${S.qty} × 100 shares</b></div>
-        <div><span>Order</span><b>${S.type === "LIMIT" ? "Limit " + money(S.price) : "Market"} · Day</b></div>
+        <div><span>Order</span><b>${S.type === "LIMIT" ? "Limit " + money(S.price) : "Market"} · ${S.tif === "GTC" ? "Good till cancelled" : "Day"}</b></div>
         <div><span>Bid / ask now</span><b>${money(k.bid)} / ${money(k.ask)}</b></div>
         <div class="soc-tot"><span>${buy ? "Total cost" : "Est. proceeds"}</span><b>${money(tot)}</b></div>
         ${buy ? `<div class="soc-risk"><span>Most you can lose</span><b>${money(tot)}</b></div>` : ""}
       </div>
       ${G ? `<div class="soc-guard"><b>⚠ ${esc(G.title)}</b><span>${esc(G.text)} You can still place it; it's your call.</span></div>` : ""}
-      <p class="soc-note">This goes straight to your brokerage. ${S.type === "LIMIT" ? "It fills only at " + money(S.price) + " or better, today." : "A market order fills at whatever price is available."}</p>
+      <p class="soc-note">This goes straight to your brokerage. ${S.type === "LIMIT" ? "It fills only at " + money(S.price) + " or better, " + (S.tif === "GTC" ? "and stays open until it fills or you cancel it." : "today.") : "A market order fills at whatever price is available."}</p>
       <div class="soc-acts"><button type="button" class="soc-cancel">Cancel</button><button type="button" class="soc-go ${buy ? "buy" : "sell"}">${G ? "Place anyway" : "Place order · " + money(tot)}</button></div>
     </div>`;
     const done = (v) => { document.removeEventListener("keydown", key, true); el.classList.add("out"); setTimeout(() => el.remove(), 160); resolve(v); };
@@ -4432,10 +4435,12 @@ function shelfOptPaint() {
     </div>
     <div class="shelf-qty-row"><div><label>Quantity</label><small>Contracts (100 shares each)</small></div><div class="shelf-stepper"><button type="button" aria-label="Fewer contracts" onclick="shelfOptSet('qty', ${S.qty - 1})">−</button><b>${S.qty}</b><button type="button" aria-label="More contracts" onclick="shelfOptSet('qty', ${S.qty + 1})">+</button></div></div>
     ${S.type === "LIMIT" ? `<div class="shelf-limit-wrap"><label>Limit price per share · USD</label><input type="number" min="0.01" step="0.01" value="${S.price > 0 ? S.price.toFixed(2) : ""}" oninput="shelfOptSet('price', this.value)"></div>` : `<p class="shelf-trade-note" style="margin:6px 0">Market orders on options can fill far from the mid when the spread is wide. A limit is safer.</p>`}
-    <div class="shelf-price-rows"><div><span>${S.action === "BUY_TO_OPEN" ? "Total cost · most you can lose" : "Total proceeds"}</span><b id="soptTotal">—</b></div><div><span>Time in force</span><b>Day</b></div></div>
+    <div class="sopt-tif"><label>Time in force</label>${S.type === "LIMIT" ? seg("tif", [["Day", "Day"], ["GTC", "Good till cancelled"]]) : `<div class="sopt-tif-fixed">Day <small>(market orders are day only)</small></div>`}
+      <small class="sopt-tif-note">${S.tif === "GTC" ? "Stays open on later days until it fills or you cancel it (your broker may cap how long)." : "Expires at today's close if it hasn't filled."}</small></div>
+    <div class="shelf-price-rows"><div><span>${S.action === "BUY_TO_OPEN" ? "Total cost · most you can lose" : "Total proceeds"}</span><b id="soptTotal">—</b></div></div>
     <div id="soptImpact" class="broker-impact-result shelf-impact" aria-live="polite">Checking the order with SnapTrade…</div>
     ${(() => { const g = soptGuard(S, k); return g ? `<p class="sopt-guard"><b>⚠ ${esc(g.title)}</b> · ${esc(g.text)}</p>` : ""; })()}
-    <button id="soptConfirm" type="button" class="shelf-confirm disabled-submit" onclick="shelfOptSubmit()" disabled><b id="soptConfirmLabel">Confirm</b><small>${S.type === "LIMIT" ? "Limit" : "Market"} · Day · ${BROKER_ACCOUNTS[0] ? esc(shelfTradeAccountLabel(BROKER_ACCOUNTS[0]).broker) : "no broker connected"}</small></button>
+    <button id="soptConfirm" type="button" class="shelf-confirm disabled-submit" onclick="shelfOptSubmit()" disabled><b id="soptConfirmLabel">Confirm</b><small>${S.type === "LIMIT" ? "Limit" : "Market"} · ${S.tif === "GTC" ? "GTC" : "Day"} · ${BROKER_ACCOUNTS[0] ? esc(shelfTradeAccountLabel(BROKER_ACCOUNTS[0]).broker) : "no broker connected"}</small></button>
     <p class="shelf-trade-note">Long options only: buy to open, sell to close. You confirm every order; nothing is placed until you do.</p>
   </div><div id="soptMine"></div>`;
   posMine(S.sym);

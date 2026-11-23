@@ -418,11 +418,17 @@ def _option_form(payload: dict) -> dict:
             raise ValueError("A valid limit price is required")
         if not 0 < price < 100000:
             raise ValueError("Enter a valid limit price")
-    return dict(occ=occ, action=action, units=units, order_type=order_type, price=price)
+    tif = str(payload.get("time_in_force") or "Day").strip().upper()
+    tif = {"DAY": "Day", "GTC": "GTC"}.get(tif)
+    if not tif:
+        raise ValueError("Time in force must be Day or GTC")
+    if tif == "GTC" and order_type != "LIMIT":
+        raise ValueError("Good-till-cancelled needs a limit price")
+    return dict(occ=occ, action=action, units=units, order_type=order_type, price=price, tif=tif)
 
 
 def _option_call(client, fn, uid: str, secret: str, account_id: str, f: dict):
-    return fn(account_id=account_id, user_id=uid, user_secret=secret, order_type=f["order_type"], time_in_force="Day",
+    return fn(account_id=account_id, user_id=uid, user_secret=secret, order_type=f["order_type"], time_in_force=f.get("tif") or "Day",
               limit_price=None if f["price"] is None else f"{f['price']:.2f}",
               price_effect=None if f["order_type"] == "MARKET" else ("DEBIT" if f["action"] == "BUY_TO_OPEN" else "CREDIT"),
               legs=[{"instrument": {"symbol": f["occ"], "instrument_type": "OPTION"}, "action": f["action"], "units": f["units"]}])
@@ -444,7 +450,7 @@ def option_impact(user: dict, payload: dict) -> dict:
                                 "expires": now + _PREVIEW_TTL}
     return {"preview_id": preview_id, "expires_in_seconds": _PREVIEW_TTL,
             "order": {"contract": f["occ"], "action": f["action"], "units": f["units"], "order_type": f["order_type"],
-                      "limit_price": f["price"]},
+                      "limit_price": f["price"], "time_in_force": f["tif"]},
             "impact": body if isinstance(body, dict) else {"impact": body}}
 
 
