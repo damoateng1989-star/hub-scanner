@@ -159,6 +159,15 @@ async def lifespan(_app: FastAPI):
     except Exception as e:
         log.warning("lab resume failed: %s", e)
     sched = BackgroundScheduler(timezone="America/New_York")
+    # Patch 208: Lookout — the kill and the clock on each 4H close, 3 minutes after that close's scan; earnings eve
+    import lookout as _lookout
+    for t in SCAN_TIMES:
+        h, m = (int(x) for x in t.split(":"))
+        m += 3; h += m // 60; m %= 60
+        sched.add_job(_lookout.evaluate_closes, CronTrigger(day_of_week="mon-fri", hour=h, minute=m, timezone="America/New_York"),
+                      misfire_grace_time=1800, coalesce=True, max_instances=1)
+    sched.add_job(_lookout.evaluate_earnings_eve, CronTrigger(day_of_week="mon-fri", hour=16, minute=25, timezone="America/New_York"),
+                  misfire_grace_time=1800, coalesce=True, max_instances=1)
     for t in SCAN_TIMES:
         h, m = t.split(":")
         sched.add_job(scanner.scan_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
@@ -2035,6 +2044,48 @@ def _broker_error(exc: Exception, safe_message: str | None = None):
     log.error("SnapTrade request failed: exception=%s status=%s reason=%s",
               type(exc).__name__, status, str(reason)[:160] if reason else "unavailable")
     raise HTTPException(502, safe_message or "Brokerage service could not complete the request")
+
+
+# ---------------------------------------------------------------- Patch 208: Lookout (a member's own watches; private)
+class LookoutStart(BaseModel):
+    ticker: str
+    kind: str = "hub"
+    direction: int = 1
+    contract: str | None = None
+    contract_occ: str | None = None
+    qty: float | None = None
+    entry_price: float | None = None
+    edge: float
+    target: float
+    kill: float
+
+
+class LookoutClose(BaseModel):
+    exit_price: float | None = None
+
+
+@app.post("/api/lookout/start")
+async def lookout_start(body: LookoutStart, u: dict = User):
+    import lookout
+    try:
+        return await run_in_threadpool(lookout.start_watch, u, body.dict())
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/lookout")
+def lookout_mine(u: dict = User):
+    import lookout
+    return lookout.mine(u)
+
+
+@app.post("/api/lookout/{row_id}/close")
+def lookout_close(row_id: int, body: LookoutClose, u: dict = User):
+    import lookout
+    try:
+        return lookout.close_watch(u, row_id, body.exit_price)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
 
 
 @app.post("/api/broker/register")

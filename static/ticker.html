@@ -306,6 +306,14 @@ html[data-theme="light"] .oxc svg .cur { stroke: #0D1117; } html[data-theme="lig
 .oxg .em { background: rgba(196,168,255,.08); } .oxg thead th.em { color: #c4a8ff; } .oxg td.em b { font-weight: 800; }
 .oxg-n { font-size: 11.5px; color: #7D8794; margin: 4px 0 0; }
 html[data-theme="light"] .oxg tbody th, html[data-theme="light"] .oxg td b { color: #0D1117; } html[data-theme="light"] .oxg th, html[data-theme="light"] .oxg td { border-color: rgba(15,23,42,.08); }
+.lk-door { margin-top: 10px; width: 100%; padding: 9px 12px; border-radius: 10px; font: 600 13px var(--sans); background: rgba(61,214,140,.1); color: #9FE8C2; border: 1px solid rgba(61,214,140,.35); cursor: pointer; }
+.lkt-back { position: fixed; inset: 0; z-index: 2000; background: rgba(4,6,10,.62); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.lkt { width: min(400px, 100%); background: #1B1E25; border: 1px solid #2E333D; border-radius: 20px; padding: 18px; color: #E6EBF0; font-family: var(--sans); }
+.lkt-badge { display: inline-block; font: 700 10.5px var(--mono, monospace); letter-spacing: .1em; text-transform: uppercase; color: #9FE8C2; background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.3); padding: 4px 8px; border-radius: 999px; margin-bottom: 10px; }
+.lkt h3 { margin: 0 0 4px; font-size: 19px; } .lkt p { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: #9AA4B2; } .lkt small { display: block; text-align: center; margin-top: 10px; font-size: 12px; color: #8A93A0; }
+.lkt-rows { background: #14161B; border: 1px solid #262A33; border-radius: 14px; padding: 4px 14px; } .lkt-rows div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #22262E; font-size: 13px; color: #9AA4B2; } .lkt-rows div:first-child { border-top: 0; }
+.lkt-rows b { color: #E6EBF0; font-family: var(--mono, monospace); } .lkt-rows b.d { color: #FF8A80; } .lkt-rows input { width: 100px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2E333D; background: #1B1E25; color: #E6EBF0; text-align: right; }
+.lkt-acts { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 14px; } .lkt-acts button { padding: 12px; border-radius: 12px; border: 0; font: 650 14px var(--sans); cursor: pointer; } .lkt-x { background: #262A33; color: #E6EBF0; } .lkt-go { background: #16A34A; color: #fff; }
 #optionsSwing .ox-earn,#optionsSwing .oc-earn { margin:10px 0; padding:9px 12px; border:1px solid rgba(196,168,255,.35); border-radius:10px; color:#c4a8ff; background:rgba(124,58,237,.10); font-size:13px; line-height:1.45; }
 #optionsSwing .ox2 + .ox2 { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); } #optionsSwing .oc { padding:12px 0; }
 #optionsSwing .oc-t b { display:block; color:var(--ink); font:700 20px var(--sans); } #optionsSwing .oc-t small { display:block; margin:4px 0 14px; color:var(--muted); font-size:14px; }
@@ -904,6 +912,30 @@ async function loadSwingCard() {
   host.innerHTML = heading + renderSwingCard(c);
 }
 
+// Patch 208: the second door — "I'm in — watch this" for a trade placed in the member's own broker app
+function tkLookout(x) {
+  const pl = x.plan, up = pl.direction !== -1, k = x.contract, el = document.createElement("div"); el.className = "lkt-back";
+  const contract = k ? `${x.sym} ${k.expiry} $${k.strike} ${x.side === "puts" ? "Put" : "Call"}` : null;
+  el.innerHTML = `<div class="lkt" role="dialog" aria-modal="true"><span class="lkt-badge">Watch a trade</span><h3>Let Lookout watch your trade</h3>
+    <p>You placed the order — it stays yours. Lookout watches this position against the plan and taps you when something changes. It never places an order.</p>
+    <div class="lkt-rows"><div><span>${contract ? "Position" : "Stock"}</span><b>${esc(contract || x.sym)}</b></div>
+      <div><span>Your fill (optional)</span><input type="number" step="0.01" min="0" id="lktFill"></div><div><span>Size (optional)</span><input type="number" step="1" min="0" id="lktQty"></div>
+      <div><span>Plan dies on a close ${up ? "below" : "above"}</span><b class="d">${money(pl.kill)}</b></div><div><span>Target</span><b>${money(pl.target)}</b></div></div>
+    <div class="lkt-acts"><button type="button" class="lkt-x">Cancel</button><button type="button" class="lkt-go">I'm in</button></div>
+    <small>Alerts go to your phone. Cancel keeps the trade — it just isn't watched.</small></div>`;
+  const done = () => el.remove();
+  el.addEventListener("click", e => { if (e.target === el) done(); });
+  el.querySelector(".lkt-x").onclick = done;
+  el.querySelector(".lkt-go").onclick = async () => {
+    const r = await fetch("/api/lookout/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ticker: x.sym, kind: "hub", direction: pl.direction,
+      contract, qty: +document.getElementById("lktQty").value || null, entry_price: +document.getElementById("lktFill").value || null, edge: pl.edge, target: pl.target, kill: pl.kill})});
+    const j = await r.json().catch(() => ({}));
+    el.querySelector(".lkt").innerHTML = r.ok ? `<h3>Lookout is watching ${esc(x.sym)}</h3><p>You'll get a tap when the plan dies, the target is touched, the window closes, or earnings are next.</p><div class="lkt-acts"><button type="button" class="lkt-go" style="grid-column:1/-1">Done</button></div>`
+      : `<h3>Couldn't start the watch</h3><p>${esc(j.detail || "Sign in and try again.")}</p><div class="lkt-acts"><button type="button" class="lkt-go" style="grid-column:1/-1">OK</button></div>`;
+    el.querySelector(".lkt-go").onclick = done;
+  };
+  document.body.appendChild(el);
+}
 function renderSwingCard(c) {
   if (!c) return '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
   const head = `<div class="sw-head"><b>Swing play</b><span class="ox-edu">Educational</span>${c.setup ? `<span class="sw-setup">${esc(c.setup)}</span>` : ""}${c.grade ? `<span class="sw-grade">${esc(c.grade)}</span>` : ""}</div>`;
@@ -926,7 +958,8 @@ function renderSwingCard(c) {
       ["Wrong if", esc(s.wrong_if)],
     ];
     const ct = s.contract ? `<p class="sw-contract">${esc(s.contract.expiry)} $${s.contract.strike} ${s.contract.side}s · $${s.contract.cost_mid.toFixed(2)} mid</p>` : "";
-    return `<div class="sw-side ${cls}"><h4>${esc(s.label)}</h4><div class="sw-rows">${rows.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div>${ct}</div>`;
+    const lk = cls === "fav" && s.plan ? `<button type="button" class="lk-door" onclick='tkLookout(${JSON.stringify({sym: c.symbol || SYM, plan: s.plan, contract: s.contract, side: s.side})})'>👁 I'm in — watch this</button>` : "";
+    return `<div class="sw-side ${cls}"><h4>${esc(s.label)}</h4><div class="sw-rows">${rows.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div>${ct}${lk}</div>`;
   };
   return head + `<div class="sw-sides">${side(c.favored, "fav")}${c.opposite ? side(c.opposite, "opp") : ""}</div>` + ctx + asof;
 }

@@ -2706,6 +2706,18 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 #shelfOptHost { margin-top: 14px; }
+.soc-live.lk-ok { color: #9FE8C2; background: rgba(61,214,140,.12); border-color: rgba(61,214,140,.3); } .soc-live.lk-ok i { background: #3DD68C; box-shadow: 0 0 0 3px rgba(61,214,140,.18); }
+.lk .soc-sub { line-height: 1.5; } .lk-items { display: grid; gap: 8px; margin: 12px 2px 14px; } .lk-items div { display: grid; gap: 1px; font-size: 12.5px; line-height: 1.45; } .lk-items b { color: #E6EBF0; font-size: 13px; } .lk-items span { color: #9AA4B2; }
+.lk-in { align-items: center; } .lk-in i { font-style: normal; color: #6F7885; font-size: 11px; margin-left: 4px; } .lk-in input { width: 110px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2E333D; background: #1B1E25; color: #E6EBF0; font: 600 13px var(--mono, ui-monospace, monospace); text-align: right; }
+.lk-door { margin-top: 10px; width: 100%; padding: 9px 12px !important; border-radius: 10px !important; font-size: 13px !important; font-weight: 600 !important; background: rgba(61,214,140,.1) !important; color: #9FE8C2 !important; border: 1px solid rgba(61,214,140,.35) !important; }
+.lk-watch { margin: 0 0 18px; padding: 12px 16px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); }
+.lk-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; } .lk-h b { font: 600 15px var(--sans); color: var(--ink); } .lk-h span { font-size: 12px; color: var(--muted); }
+.lk-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+.lk-tk { font: 700 14px var(--mono, ui-monospace, monospace) !important; padding: 4px 8px !important; border-radius: 8px !important; } .lk-mid { flex: 1; min-width: 0; } .lk-mid b { display: block; font-size: 13.5px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .lk-mid small { font-size: 11.5px; color: var(--muted); }
+.lk-st { font: 600 11px var(--sans); padding: 3px 8px; border-radius: 999px; white-space: nowrap; } .lk-w { background: rgba(124,147,255,.14); color: #C9D4FF; } .lk-t { background: rgba(61,214,140,.14); color: #3DD68C; } .lk-d { background: rgba(255,107,94,.14); color: #FF8A80; } .lk-c { background: rgba(242,193,78,.14); color: #F2C14E; }
+.lk-out { font-size: 12px !important; padding: 5px 10px !important; border-radius: 8px !important; white-space: nowrap; }
+.lk-closed { margin-top: 8px; } .lk-closed summary { cursor: pointer; font-size: 12.5px; color: var(--muted); padding: 6px 0; } .lk-log { font-size: 12.5px; color: var(--ink); padding: 5px 0; border-top: 1px solid var(--line); } .lk-log span { color: var(--muted); } .lk-priv { font-size: 11.5px; color: var(--muted); margin: 6px 0 0; }
+@media (max-width: 420px) { .lk-row { flex-wrap: wrap; } .lk-mid { flex-basis: calc(100% - 70px); } }
 .pos-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 4px 0 18px; } .pos-sum > div { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--surface); }
 .pos-sum small, .pos-g small { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 3px; } .pos-sum b { font: 650 18px var(--mono, ui-monospace, monospace); color: var(--ink); }
 .pos-hd { margin: 18px 0 8px; font: 600 11px var(--mono, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -2884,6 +2896,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
   <div class="ck-chips" id="ckChips" hidden></div>
   <div class="retest" id="retest" hidden></div>
+  <div class="lk-watch" id="lkWatch" hidden></div>
   <div class="mbrief" id="mbrief" hidden></div>
   <div class="pulse" id="pulse" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
@@ -4153,6 +4166,7 @@ async function shelfOptSubmit() {
     const r = await api("/api/broker/options/order", {method: "POST", body: JSON.stringify({preview_id: pv, confirm: true})});
     if (out) out.innerHTML = `<b>Order submitted</b> · ${esc(line)}<details class="shelf-impact-raw"><summary>Brokerage response</summary><pre class="broker-position-json">${esc(JSON.stringify(r.order || {}, null, 2))}</pre></details>`;
     toast("Options order submitted."); setTimeout(() => posMine(S.sym, true), 2500);
+    if (S.action === "BUY_TO_OPEN") lookoutAfterOrder(S, k, d);     // Patch 208: success path only
   } catch (e) { if (out) out.textContent = e.message || "The brokerage did not confirm the order."; toast(e.message || "Order failed."); }
 }
 // the real-order confirmation: the exact order, what it costs, where it goes; Cancel is the default (Esc / tap outside)
@@ -4255,6 +4269,93 @@ function nsConfirm(o) {
     el.querySelector(".soc-cancel").onclick = () => done(false); el.querySelector(".soc-go").onclick = () => done(true);
     document.addEventListener("keydown", key, true); document.body.appendChild(el); el.querySelector(".soc-cancel").focus();
   });
+}
+// ---------------------------------------------------------------- Patch 208: Lookout (watch, never trade)
+function lookoutPlanFromTicket(sym, wantDir) {
+  // the SAME numbers the ticket's safety-net row shows: trigger/entry, stop, target (long); the plan's own for a short
+  const c4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(sym);
+  if (!st) return null;
+  const P = mapPlan(sym, st);
+  if (wantDir === 1) { const T = mapTicketPlan(P, st); return {direction: 1, edge: P.phase === 0 ? P.trig : T.entry, kill: T.stop, target: T.target, kind: (P.steps || "hub").replace("_short", "")}; }
+  if (P.dir === -1 && P.stop != null && P.shelf != null) return {direction: -1, edge: P.trig, kill: P.stop, target: P.shelf, kind: (P.steps || "hub").replace("_short", "")};
+  return null;
+}
+function lookoutAfterOrder(S, k, d) {
+  const dir = k.call ? 1 : -1, plan = lookoutPlanFromTicket(S.sym, dir);
+  if (!plan || !(plan.kill > 0) || !(plan.target > 0)) { toast("Lookout needs a plan in this direction, so this one isn't offered."); return; }
+  const unit = S.type === "LIMIT" ? S.price : k.mid;
+  lookoutWindow({ticker: S.sym, contract: `${S.sym} ${d} $${k.strike} ${k.call ? "Call" : "Put"}`, contract_occ: k.symbol, qty: S.qty, entry_price: unit,
+    limitLine: `${S.qty} × ${S.type === "LIMIT" ? "limit " + money(S.price) : "market"} · ${money(unit * 100 * S.qty)}`, placed: true, ...plan});
+}
+function lookoutWindow(o) {
+  const up = o.direction !== -1, el = document.createElement("div"); el.className = "soc-back";
+  const items = [["The kill", `A 4-hour close ${up ? "below" : "above"} ${money(o.kill)} ends the plan. Closes only — a dip during the candle doesn't count.`],
+    ["The target", `First touch of ${money(o.target)}. One alert; you decide whether to hold for the next shelf.`],
+    ["The clock", "When the window this setup gives itself runs out (the same clock as the track record)."],
+    ["Earnings", "The evening before a report that lands inside the watch."]];
+  el.innerHTML = `<div class="soc lk" role="dialog" aria-modal="true" aria-labelledby="lkT">
+    <div class="soc-top"><span class="soc-live lk-ok"><i></i>${o.placed ? "Order placed" : "Watch a trade"}</span></div>
+    <h3 id="lkT">Let Lookout watch your trade</h3>
+    <p class="soc-sub">You placed the order — it stays yours. Lookout watches this position against the plan and taps you when something changes. It never places an order.</p>
+    <div class="soc-rows">${o.contract ? `<div><span>Position</span><b>${esc(o.contract)}</b></div>` : `<div><span>Stock</span><b>${esc(o.ticker)}</b></div>`}
+      ${o.limitLine ? `<div><span>Order</span><b>${esc(o.limitLine)}</b></div>` : ""}
+      ${o.placed ? "" : `<div class="lk-in"><span>Your fill <i>optional</i></span><input type="number" step="0.01" min="0" id="lkFill" placeholder="${o.contract ? "per contract" : "per share"}"></div><div class="lk-in"><span>Size <i>optional</i></span><input type="number" step="1" min="0" id="lkQty" placeholder="${o.contract ? "contracts" : "shares"}"></div>`}
+      <div class="soc-risk"><span>Plan dies on a close ${up ? "below" : "above"}</span><b>${money(o.kill)}</b></div></div>
+    <div class="lk-items">${items.map(([t, w]) => `<div><b>${t}</b><span>${esc(w)}</span></div>`).join("")}</div>
+    <div class="soc-acts"><button type="button" class="soc-cancel">Cancel</button><button type="button" class="soc-go buy">I'm in</button></div>
+    <p class="soc-note" style="margin:10px 2px 0;text-align:center">Alerts go to your phone. Cancel keeps the trade — it just isn't watched.</p></div>`;
+  const done = () => { document.removeEventListener("keydown", key, true); el.remove(); };
+  const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); done(); } };
+  el.addEventListener("click", (e) => { if (e.target === el) done(); });
+  el.querySelector(".soc-cancel").onclick = done;      // nothing stored, nothing sent
+  el.querySelector(".soc-go").onclick = async () => {
+    const body = {ticker: o.ticker, kind: o.kind || "hub", direction: o.direction, contract: o.contract || null, contract_occ: o.contract_occ || null,
+      qty: o.qty ?? (+($("lkQty") && $("lkQty").value) || null), entry_price: o.entry_price ?? (+($("lkFill") && $("lkFill").value) || null),
+      edge: o.edge, target: o.target, kill: o.kill};
+    try {
+      const r = await api("/api/lookout/start", {method: "POST", body: JSON.stringify(body)});
+      done(); toast(`Lookout is watching ${o.ticker}.${r.safety_alerts_off ? " Your ticket's touch alerts for it were switched off — Lookout covers them." : ""}`);
+      loadWatching(true);
+    } catch (e) { toast(e.message || "Couldn't start the watch."); }
+  };
+  document.addEventListener("keydown", key, true); document.body.appendChild(el); el.querySelector(".soc-go").focus();
+}
+function lookoutFromCard(sym, f) {
+  const pl = f && f.plan; if (!pl) return toast("This card has no plan to watch.");
+  if (!ME || ME.guest) { location.href = "/login#signup"; return; }
+  const k = f.contract;
+  lookoutWindow({ticker: sym, direction: pl.direction, edge: pl.edge, target: pl.target, kill: pl.kill, kind: "hub",
+    contract: k ? `${sym} ${k.expiry} $${k.strike} ${k.side === "put" || f.side === "puts" ? "Put" : "Call"}` : null, placed: false});
+}
+let LK = null;
+async function loadWatching(force) {
+  const el = $("lkWatch"); if (!el) return;
+  if (!ME || ME.guest) { el.hidden = true; return; }
+  if (!LK || force) { try { LK = await api("/api/lookout"); } catch (e) { el.hidden = true; return; } }
+  const live = LK.live || [], closed = LK.closed || [];
+  if (!live.length && !closed.length) { el.hidden = true; return; }
+  const word = {watching: ["Watching", "w"], target_hit: ["Target touched", "t"], dead: ["Plan is dead", "d"], window_closed: ["Window closed", "c"]};
+  const row = (r) => `<div class="lk-row"><button type="button" class="lk-tk" onclick="openBrief('${esc(r.ticker)}')">${esc(r.ticker)}</button>
+      <div class="lk-mid"><b>${esc(r.contract || "Shares")}</b><small>${r.state === "watching" || r.state === "target_hit" ? `${r.days_left ?? "–"} day${r.days_left === 1 ? "" : "s"} left · stop ${money(r.kill)} · target ${money(r.target)}` : `stop was ${money(r.kill)}`}</small></div>
+      <span class="lk-st lk-${(word[r.state] || ["", ""])[1]}">${(word[r.state] || [r.state])[0]}</span><button type="button" class="lk-out" onclick="lookoutOut(${r.id}, '${esc(r.ticker)}')">I'm out</button></div>`;
+  const log = (r) => `<div class="lk-log"><b>${esc(r.ticker)}</b> ${esc(r.contract || "Shares")} <span>${esc({member: "you closed it", auto_dead: "closed after the plan died", auto_window_closed: "closed after the window", position_closed: "left your account"}[r.close_reason] || r.close_reason || "")}${r.exit_price ? ` · out at ${money(r.exit_price)}` : ""} · ${r.closed_at ? new Date(r.closed_at).toLocaleDateString("en-US", {month: "short", day: "numeric"}) : ""}</span></div>`;
+  el.innerHTML = (live.length ? `<div class="lk-h"><b>Watching</b><span>Lookout taps you when something changes. It never trades.</span></div>${live.map(row).join("")}` : "")
+    + (closed.length ? `<details class="lk-closed"><summary>Your closed watches · ${closed.length}</summary>${closed.map(log).join("")}<p class="lk-priv">Private to you. Never part of the track record.</p></details>` : "");
+  el.hidden = false;
+}
+async function lookoutOut(id, sym) {
+  const xp = await new Promise(resolve => {
+    const el = document.createElement("div"); el.className = "soc-back";
+    el.innerHTML = `<div class="soc" role="dialog" aria-modal="true"><h3>Done with ${esc(sym)}?</h3><p class="soc-sub">This stops the watch. It doesn't touch your position or any order.</p>
+      <div class="soc-rows"><div class="lk-in"><span>Exit price <i>optional</i></span><input type="number" step="0.01" min="0" id="lkExit"></div></div>
+      <div class="soc-acts" style="margin-top:14px"><button type="button" class="soc-cancel">Keep watching</button><button type="button" class="soc-go buy">I'm out</button></div></div>`;
+    const fin = (v) => { el.remove(); resolve(v); };
+    el.querySelector(".soc-cancel").onclick = () => fin(false); el.querySelector(".soc-go").onclick = () => fin({p: +$("lkExit").value || null});
+    el.addEventListener("click", (e) => { if (e.target === el) fin(false); }); document.body.appendChild(el);
+  });
+  if (!xp) return;
+  try { await api(`/api/lookout/${id}/close`, {method: "POST", body: JSON.stringify({exit_price: xp.p})}); toast(`Stopped watching ${sym}.`); loadWatching(true); }
+  catch (e) { toast(e.message || "Couldn't stop the watch."); }
 }
 function shelfOptPaintBits() {
   const S = SOPT; if (!S) return; const k = shelfOptContract(), b = $("soptConfirm");
@@ -7387,6 +7488,7 @@ function renderToday() {
   renderWeek();
   if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet
   renderRetest();
+  loadWatching();
   loadPulse();
   renderRule();
   renderKpis();
@@ -7937,7 +8039,8 @@ function swingCardHTML(c) {
       ["Wrong if", esc(s.wrong_if)],
     ];
     const ct = s.contract ? `<p class="sw-contract">${esc(s.contract.expiry)} ${s.contract.strike} ${s.contract.side}s · ${s.contract.cost_mid.toFixed(2)} mid</p>` : "";
-    return `<div class="sw-side ${cls}"><h4>${esc(s.label)}</h4><div class="sw-rows">${rows.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div>${ct}</div>`;
+    const lk = cls === "fav" && s.plan ? `<button type="button" class="lk-door" onclick='lookoutFromCard(${JSON.stringify(c.symbol)}, ${JSON.stringify({plan: s.plan, side: s.side, contract: s.contract})})'>👁 I'm in — watch this</button>` : "";
+    return `<div class="sw-side ${cls}"><h4>${esc(s.label)}</h4><div class="sw-rows">${rows.map(([l, v]) => `<div><span>${l}</span><b>${v}</b></div>`).join("")}</div>${ct}${lk}</div>`;
   };
   return head + `<div class="sw-sides">${side(c.favored, "fav")}${c.opposite ? side(c.opposite, "opp") : ""}</div>` + ctx + asof;
 }
@@ -9341,6 +9444,7 @@ function askSikaPlayHTML(ticker, c) {
     + `<div class="ask-play-level wrong"><div class="k">Wrong if</div><div class="v">${esc(money(trig))}<small>${isCalls ? "4H close back below the trigger" : "4H close back above the trigger"}</small></div></div>`
     + `</div>`
     + idea
+    + (f.plan ? `<button type="button" class="lk-door" onclick='lookoutFromCard(${JSON.stringify(ticker)}, ${JSON.stringify({plan: f.plan, side: f.side, contract: f.contract})})'>👁 I'm in — watch this</button>` : "")
     + gammaBlock
     + flowBlock
     + `<div class="ask-play-ask"><div class="ask-label">Ask Sika about this setup</div><div class="ask-play-chips">${chips}</div></div>`;

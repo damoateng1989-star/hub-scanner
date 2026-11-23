@@ -1321,6 +1321,11 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
     (hub triggers and breakdown triggers, double-bottom necklines and gap-day highs going up; double-top necklines going down, as a heads-up).
     One alert per stock per 4H candle. Cheap: uses each ticker's last scanned status and one batched price request."""
     now = pd.Timestamp.now(tz="UTC") if now is None else now
+    try:      # Patch 208: Lookout — first touch of a watched position's target (fail-open)
+        import lookout
+        lookout.evaluate_touches(now)
+    except Exception:
+        log.exception("lookout touches")
     try:
         price_alerts_check(now)
     except Exception as e:

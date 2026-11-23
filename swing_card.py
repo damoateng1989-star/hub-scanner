@@ -466,6 +466,8 @@ def _side(d, edge, target, res, hub, S, atr, sh, op, regime, role):
         confirm=confirm,
         wrong_if=f"4H close back {'below' if d == 1 else 'above'} {_money(edge)}",
         contract=_contract_for(op, d),
+        # Patch 208: the same numbers as plain values, so "I'm in — watch this" binds Lookout to what the card shows
+        plan=dict(direction=d, edge=round(float(edge), 2), target=round(float(target), 2), kill=round(float(edge), 2)),
     )
 
 
