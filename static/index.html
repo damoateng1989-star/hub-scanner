@@ -10817,7 +10817,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
 .hm-t { position: absolute; box-sizing: border-box; border: 1px solid var(--bg, #0E0F12); border-radius: 3px; padding: 0; margin: 0; cursor: pointer; display: grid; place-items: center; overflow: hidden; transition: filter .12s; }
 .hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
 .hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
-.hm-up { background: #00C46A; } .hm-down { background: #FF3B30; } .hm-edge { background: #FFC400; } .hm-edgedn { background: #C99212; }   /* Patch 204: sharper */
+.hm-up { background: #00C898; } .hm-down { background: #F00060; }   /* Nov 23 (owner): the board's Broke out / Broke down colours */ .hm-edge { background: #FFC400; } .hm-edgedn { background: #C99212; }   /* Patch 204: sharper */
 .hm-rest { background: rgba(160,190,230,.07); box-shadow: inset 0 0 0 1px rgba(170,200,240,.14); }   /* Nov 22 (owner): flat glass */   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #181A20; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
 .hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
 html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-sh { color: #0D1117; } html[data-theme="light"] .hm-none { background: #e6e8ee; box-shadow: none; } html[data-theme="light"] .hm-none span { color: #8a909c; }
@@ -10826,25 +10826,25 @@ html[data-theme="light"] .hm-rest { background: #6C7BD8; } html[data-theme="ligh
 .hm-tip.on { opacity: 1; }
 /* Patch 176: stacked tiles go quiet (darkened fill + static ring); the pulse now marks the retest */
 .hm-t.hm-stk, .hm-t.hm-stk3 { background-image: linear-gradient(rgba(0,0,0,.42), rgba(0,0,0,.42)); z-index: 1;
-  --skc: 61,214,140; --skw: 3px; box-shadow: inset 0 0 0 var(--skw) rgba(var(--skc), .55); }
+  --skc: 0,200,152; --skw: 3px; box-shadow: inset 0 0 0 var(--skw) rgba(var(--skc), .55); }
 .hm-t.hm-stk3 { --skw: 2px; }
-.hm-t.hm-dn { --skc: 255,107,94; }
+.hm-t.hm-dn { --skc: 240,0,96; }
 @keyframes hmStk {
   0%, 100% { box-shadow: inset 0 0 0 var(--skw) rgba(var(--skc), .95), inset 0 0 4px rgba(var(--skc), .3), 0 0 0 0 rgba(var(--skc), 0); }
   50% { box-shadow: inset 0 0 0 var(--skw) rgba(var(--skc), 1), inset 0 0 18px rgba(var(--skc), .9), 0 0 12px 3px rgba(var(--skc), .65); } }
 @keyframes skBlink { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--skc), .8), 0 0 6px rgba(var(--skc), 1); }
   50% { opacity: .2; box-shadow: 0 0 0 5px rgba(var(--skc), 0), 0 0 0 rgba(var(--skc), 0); } }
 .hm-t.hm-xs::after { display: none; }
-.hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3, .hm-lg i.hm-lg-stkdn { background: transparent; border: 2px solid #3DD68C; box-sizing: border-box; --skc: 61,214,140; }
+.hm-lg i.hm-lg-stk, .hm-lg i.hm-lg-stk3, .hm-lg i.hm-lg-stkdn { background: transparent; border: 2px solid #00C898; box-sizing: border-box; --skc: 0,200,152; }
 .hm-lg i.hm-lg-stk3 { border-width: 1.5px; }
-.hm-lg i.hm-lg-stkdn { border-color: #FF6B5E; --skc: 255,107,94; }
-.hm-t.hm-rt { --skc: 61,214,140; --skw: 3px; z-index: 1; animation: hmStk 1.4s ease-in-out infinite; }
-.hm-t.hm-rt.hm-dn { --skc: 255,107,94; }
+.hm-lg i.hm-lg-stkdn { border-color: #F00060; --skc: 240,0,96; }
+.hm-t.hm-rt { --skc: 0,200,152; --skw: 3px; z-index: 1; animation: hmStk 1.4s ease-in-out infinite; }
+.hm-t.hm-rt.hm-dn { --skc: 240,0,96; }
 .hm-t.hm-rt::after { content: ""; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; border-radius: 50%;
   background: rgb(var(--skc)); animation: skBlink 1s ease-in-out infinite; }
-.hm-t.hm-rtw { --skc: 61,214,140; box-shadow: inset 0 0 0 2px rgba(var(--skc), .6); }
-.hm-t.hm-rtw.hm-dn { --skc: 255,107,94; }
-.hm-lg i.hm-lg-rt, .hm-lg i.hm-lg-rtdn { background: transparent; border: 2px solid #3DD68C; box-sizing: border-box; animation: skBlink 1s ease-in-out infinite; --skc: 61,214,140; }
+.hm-t.hm-rtw { --skc: 0,200,152; box-shadow: inset 0 0 0 2px rgba(var(--skc), .6); }
+.hm-t.hm-rtw.hm-dn { --skc: 240,0,96; }
+.hm-lg i.hm-lg-rt, .hm-lg i.hm-lg-rtdn { background: transparent; border: 2px solid #00C898; box-sizing: border-box; animation: skBlink 1s ease-in-out infinite; --skc: 0,200,152; }
 .hm-lg i.hm-lg-rtdn { border-color: #FF6B5E; --skc: 255,107,94; }
 .hm-lg i.hm-lg-rtw { background: transparent; border: 2px solid rgba(61,214,140,.55); box-sizing: border-box; }
 @media (prefers-reduced-motion: reduce) { .hm-t.hm-rt, .hm-t.hm-rt::after, .hm-lg i { animation: none; }
