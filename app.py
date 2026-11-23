@@ -2097,6 +2097,129 @@ def lookout_close(row_id: int, body: LookoutClose, u: dict = User):
         raise HTTPException(404, str(e))
 
 
+# ---------------------------------------------------------------- Chat (Nov 23): Pro posts, every member reads
+def _chat_can_post(u: dict) -> bool:
+    return bool(u.get("is_admin")) or auth.is_pro(u)
+
+
+@app.get("/api/chat")
+def chat_rooms(u: dict = User):
+    import chat
+    if u.get("guest"):
+        raise HTTPException(401, "Sign in to read the chat")
+    return dict(rooms=[dict(id=r[0], name=r[1], about=r[2]) for r in chat.ROOMS], can_post=_chat_can_post(u),
+                shown_as=chat.display_name(u), has_name=bool((u.get("name") or "").strip()) and "@" not in (u.get("name") or ""),
+                muted_until=chat.muted_until(u["id"]), is_admin=bool(u.get("is_admin")), max_len=chat.MAX_LEN)
+
+
+class ChatName(BaseModel):
+    name: str
+
+
+@app.post("/api/chat/name")
+def chat_name(body: ChatName, u: dict = User):
+    """The name members see in chat: first name + last initial is shown. No emails, links or numbers."""
+    import re as _re
+    n = _re.sub(r"\s+", " ", body.name).strip()[:40]
+    if len(n) < 2 or "@" in n or _re.search(r"\d{4,}|https?:|www\.|\.(com|net|org|io)\b", n, _re.I):
+        raise HTTPException(400, "Use your first name (and a last name if you like). No emails, links or numbers.")
+    db.update_user(u["id"], name=n)
+    import chat
+    return dict(ok=True, shown_as=chat.display_name(dict(id=u["id"], name=n)))
+
+
+@app.get("/api/chat/{room}")
+def chat_read(room: str, after: int = 0, before: int = 0, u: dict = User):
+    import chat
+    if u.get("guest"):
+        raise HTTPException(401, "Sign in to read the chat")
+    try:
+        return chat.messages(u, room, after=max(0, after), before=max(0, before))
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+
+
+class ChatPost(BaseModel):
+    body: str
+
+
+@app.post("/api/chat/{room}")
+def chat_post(room: str, body: ChatPost, u: dict = User):
+    import chat
+    if u.get("guest"):
+        raise HTTPException(401, "Sign in to chat")
+    try:
+        return chat.post(u, room, body.body, _chat_can_post(u))
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+class ChatReport(BaseModel):
+    reason: str = ""
+
+
+@app.post("/api/chat/msg/{mid}/report")
+def chat_report(mid: int, body: ChatReport, u: dict = User):
+    import chat
+    if u.get("guest"):
+        raise HTTPException(401, "Sign in first")
+    auth.throttle(f"chatrep:{u['id']}", limit=20, window=3600)
+    try:
+        chat.report(u, mid, body.reason)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return dict(ok=True)
+
+
+@app.delete("/api/chat/msg/{mid}")
+def chat_delete(mid: int, u: dict = User):
+    import chat
+    try:
+        chat.delete(u, mid)
+    except LookupError as e:
+        raise HTTPException(404, str(e))
+    except PermissionError as e:
+        raise HTTPException(403, str(e))
+    return dict(ok=True)
+
+
+@app.get("/api/admin/chat/reports")
+def chat_queue(u: dict = Admin):
+    import chat
+    return dict(reports=chat.queue())
+
+
+class ChatModBody(BaseModel):
+    action: str                 # delete | dismiss | mute | unmute
+    hours: int = 24
+
+
+@app.post("/api/admin/chat/msg/{mid}")
+def chat_moderate(mid: int, body: ChatModBody, u: dict = Admin):
+    import chat
+    r = db._run("SELECT user_id FROM chat_messages WHERE id=?", (mid,)).fetchone()
+    if not r:
+        raise HTTPException(404, "Message not found")
+    if body.action == "delete":
+        chat.delete(u, mid)
+    elif body.action == "dismiss":
+        chat.resolve(mid, "dismissed")
+    elif body.action == "mute":
+        chat.delete(u, mid)
+        return dict(ok=True, muted_until=chat.mute(u, r["user_id"], body.hours, "reported message"))
+    elif body.action == "unmute":
+        chat.unmute(r["user_id"])
+    else:
+        raise HTTPException(400, "Unknown action")
+    return dict(ok=True)
+
+
 # ---------------------------------------------------------------- Trade Diary (every member, private; Nov 23)
 @app.get("/api/diary")
 async def diary_list(sync: int = 0, u: dict = User):

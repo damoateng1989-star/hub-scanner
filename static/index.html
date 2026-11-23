@@ -2939,6 +2939,47 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 @keyframes lkPulse { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .lk-pulse::before, .lk-pulse::after { animation: none; opacity: 0; } }
 </style>
+<style>
+/* Nov 23: member chat. Pro posts, everyone signed in reads. */
+body.on-chat .scout-fab { display: none !important; }
+.ch-rooms { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: 0 0 10px; }
+.ch-rooms::-webkit-scrollbar { display: none; }
+.ch-rooms button { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; color: var(--muted); font: inherit; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.ch-rooms button.on { background: var(--ink); color: var(--bg); border-color: transparent; }
+.ch-rule { font-size: 12px; color: var(--muted); background: var(--sunk); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; line-height: 1.5; }
+.ch-wrap { border: 1px solid var(--line); border-radius: 16px; background: var(--surface); display: flex; flex-direction: column; height: calc(100dvh - 300px); min-height: 360px; }
+@media (max-width: 899px) { .ch-wrap { height: calc(100dvh - 290px); } }
+.ch-list { flex: 1; overflow-y: auto; padding: 6px 14px; overscroll-behavior: contain; }
+.ch-day { text-align: center; font-size: 11px; color: var(--faint); margin: 12px 0 4px; }
+.ch-m { display: flex; gap: 10px; padding: 8px 0; }
+.ch-m + .ch-m.same { padding-top: 0; } .ch-m.same .ch-av { visibility: hidden; height: 0; } .ch-m.same .ch-n { display: none; }
+.ch-av { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; flex: none; }
+.ch-av.s0 { background: #2A3550; color: #AFC0FF; } .ch-av.s1 { background: #14352B; color: #2FE0B4; } .ch-av.s2 { background: #3A2430; color: #FF8FB5; }
+.ch-av.s3 { background: #3A3320; color: #E0BA70; } .ch-av.s4 { background: #2B2440; color: #C3AFFF; } .ch-av.s5 { background: #1F3340; color: #7FD3F7; }
+.ch-b { min-width: 0; flex: 1; }
+.ch-n { font-weight: 600; font-size: 13.5px; } .ch-n small { font-weight: 400; color: var(--faint); font-size: 11px; margin-left: 6px; }
+.ch-badge { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 999px; margin-left: 5px; background: rgba(0,200,152,.14); color: #00C898; }
+.ch-badge.own { background: rgba(224,186,112,.16); color: #C99A3C; }
+.ch-t { font-size: 14px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.ch-t.del { color: var(--faint); font-style: italic; }
+.ch-tk { font: 600 12px var(--mono, ui-monospace, monospace); background: rgba(124,147,255,.14); color: #7C93FF; border-radius: 6px; padding: 1px 5px; cursor: pointer; border: 0; }
+.ch-card { white-space: normal; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--sunk); font-size: 12.5px; cursor: pointer; display: block; width: 100%; text-align: left; color: inherit; font-family: inherit; }
+.ch-card b { font-weight: 600; } .ch-card .u { color: #00C898; } .ch-card .d { color: #F00060; }
+.ch-acts { display: flex; gap: 12px; margin-top: 3px; } .ch-acts button { background: none; border: 0; padding: 0; color: var(--faint); font: inherit; font-size: 11.5px; cursor: pointer; }
+.ch-acts button:hover { color: var(--ink); }
+.ch-box { border-top: 1px solid var(--line); padding: 10px; display: flex; gap: 8px; align-items: flex-end; }
+.ch-box textarea { flex: 1; resize: none; min-height: 40px; max-height: 120px; background: var(--sunk); border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font: inherit; font-size: 14px; color: var(--ink); line-height: 1.4; }
+.ch-box button { background: var(--wb-green-flat, #48AE8A); color: #fff; border: 0; border-radius: 10px; padding: 10px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+.ch-box button:disabled { opacity: .5; }
+.ch-err { color: #F00060; font-size: 12.5px; padding: 0 12px 8px; }
+.ch-ro { border-top: 1px solid var(--line); padding: 12px 14px; font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 10px; }
+.ch-ro .btnx { margin-left: auto; }
+.ch-empty { text-align: center; color: var(--muted); padding: 40px 12px; font-size: 14px; }
+.ch-q { border: 1px solid rgba(240,0,96,.35); background: rgba(240,0,96,.06); border-radius: 14px; padding: 10px 12px; margin-bottom: 12px; }
+.ch-q h3 { margin: 0 0 6px; font-size: 14px; } .ch-qi { border-top: 1px solid var(--line); padding: 8px 0; font-size: 13px; }
+.ch-qi:first-of-type { border-top: 0; } .ch-qi .r { color: var(--muted); font-size: 12px; } .ch-qi .a { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.ch-new { position: sticky; bottom: 6px; margin: 0 auto; display: block; background: var(--ink); color: var(--bg); border: 0; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+</style>
 </head>
 <body class="term">
 <aside class="side" id="side" aria-label="Sections">
@@ -2948,7 +2989,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   </div>
   <div class="sb-scroll">
     <div class="sb-label">Market</div>
-    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#diary" data-nav="diary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m8.5 15 2.2 2 4.8-4.5"/></svg><span>Trade diary</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a>
+    <a class="sb-item" href="#today" data-nav="today"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg><span>Today</span></a><a class="sb-item" href="#discover" data-nav="discover"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg><span>Browse setups</span></a><a class="sb-item" href="#alerts" data-nav="alerts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg><span>Alerts</span></a><a class="sb-item" href="#diary" data-nav="diary"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="m8.5 15 2.2 2 4.8-4.5"/></svg><span>Trade diary</span></a><a class="sb-item" href="#chat" data-nav="chat"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12.5a7.5 7.5 0 0 1-11.2 6.5L4 20l1.1-4.3A7.5 7.5 0 1 1 20 12.5z"/><path d="M8.5 12h.01M12 12h.01M15.5 12h.01"/></svg><span>Chat</span></a><a class="sb-item" href="#lab" data-nav="lab" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.5 3.5h5M10.5 3.5v6L5 19a1.3 1.3 0 0 0 1.1 2h11.8A1.3 1.3 0 0 0 19 19l-5.5-9.5v-6"/></svg><span>Lab</span></a>
     <div class="sb-label">Yours</div>
     <a class="sb-item" href="#list" data-nav="list"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7.9-5.6-4-3.9 5.6-.8z"/></svg><span>Watchlist</span></a><a class="sb-item" href="#results" data-nav="results"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M5 15l4.5-4.5 3.5 3L19 7"/></svg><span>Track record</span></a><a class="sb-item" href="#admin" data-nav="admin" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
     <a class="sb-item" href="#paper" data-nav="paper" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.5"/><path d="M8 8.5h8M8 12.5h8M8 16.5h5"/></svg><span>Paper trades</span></a><a class="sb-item" href="#positions" data-nav="positions" data-admin><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5h16"/><path d="M6.5 16V11M11 16V7M15.5 16v-4M20 16V9"/></svg><span>Positions</span></a>
@@ -2970,7 +3011,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 </aside>
 <nav><div class="wrap">
   <a class="brand ns-logo" href="/" title="NextShelf home"><img class="ns-mark ns-mark-dark" src="/logo-mark-dark.png" alt="" aria-hidden="true"><img class="ns-mark ns-mark-light" src="/logo-mark-light.png" alt="" aria-hidden="true">Next<span>Shelf</span></a>
-  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#cinema" data-tab="cinema">Cinema</a><a href="#results" data-tab="results">Results</a><a href="#diary" data-tab="diary">Diary</a><a href="#account" data-tab="account">Account</a></div>
+  <div class="toptabs"><a href="#today" data-tab="today">Today</a><a href="#discover" data-tab="discover">Browse setups</a><a href="#list" data-tab="list">Watchlist</a><a href="#cinema" data-tab="cinema">Cinema</a><a href="#results" data-tab="results">Results</a><a href="#diary" data-tab="diary">Diary</a><a href="#chat" data-tab="chat">Chat</a><a href="#account" data-tab="account">Account</a></div>
   <div class="navr">
     <button type="button" class="theme-btn top-theme" data-theme-btn onclick="nsToggleTheme()" aria-label="Switch theme"><svg class="ic-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="ic-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
     <a href="#guide" class="helpbtn" title="How it works" aria-label="How it works">?</a>
@@ -2992,6 +3033,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <div class="retest" id="retest" hidden></div>
   <div class="lk-watch" id="lkWatch" hidden></div>
   <a class="dy-mini" id="dyMini" href="#diary" hidden></a>
+  <a class="dy-mini" id="chMini" href="#chat" hidden><span style="font-size:20px" aria-hidden="true">💬</span><span><div class="k">Member chat</div><div class="v" style="font-size:15px">Talk setups with other members</div></span><span class="go">Open ›</span></a>
   <div class="mbrief" id="mbrief" hidden></div>
   <div class="pulse" id="pulse" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
@@ -3111,6 +3153,10 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <div class="vh"><h1>Your <em>positions.</em></h1><p id="posSub">Live from your connected broker.</p>
     <span class="toggle"><button class="chip" type="button" onclick="loadPositions(true)">↻ Refresh</button></span></div>
   <div id="posBody"><div class="loading"><span class="spin"></span>Loading…</div></div>
+</section>
+<section data-view="chat" hidden>
+  <div class="vh"><h1>Member <em>chat.</em></h1><p>Talk setups with other NextShelf members.</p></div>
+  <div id="chBody"><div class="loading"><span class="spin"></span>Loading…</div></div>
 </section>
 <section data-view="diary" hidden>
   <div class="vh"><h1>Trade <em>diary.</em></h1><p>Every trade, why you took it, and what you'd do better. Only you can see it.</p></div>
@@ -4108,8 +4154,8 @@ async function testCall(btn) {
 
 // ---------------------------------------------------------------- navigation
 const ALIAS = { watch: "list", board: "discover", record: "results", journal: "diary" };   // Nov 23: the setup journal gave way to the Trade Diary
-const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "diary", "account", "paper", "positions", "guide", "lab", "admin"];
-const NAV_FOR = { alerts: "today", diary: "diary", paper: "account", positions: "account", guide: "", lab: "account", admin: "account" };
+const VIEWS = ["today", "list", "discover", "cinema", "results", "alerts", "diary", "chat", "account", "paper", "positions", "guide", "lab", "admin"];
+const NAV_FOR = { alerts: "today", diary: "diary", chat: "chat", paper: "account", positions: "account", guide: "", lab: "account", admin: "account" };
 let CUR = "today";
 function showTab() {
   let tab = (location.hash || "#today").slice(1);
@@ -4130,6 +4176,8 @@ function showTab() {
   if (CUR === "guide") renderGloss();
   if (CUR === "lab") loadLab();
   if (CUR === "diary") loadDiary();
+  if (CUR === "chat") loadChat(); else clearTimeout(CH.timer);
+  document.body.classList.toggle("on-chat", CUR === "chat");      // the Sika button would sit on top of the messages
   if (CUR === "admin") loadAdmin();
   window.scrollTo(0, 0);
 }
@@ -4621,6 +4669,130 @@ function diaryTagOrder(S, k, r) {
     const ref = Array.isArray(o) ? (o[0] && o[0].brokerage_order_id) : (o.brokerage_order_id || (o.order && o.order.brokerage_order_id) || "");
     api("/api/diary/tag", {method: "POST", body: JSON.stringify({order_ref: ref || "", ticker: S.sym, occ: k.symbol, setup: P && P.setupName ? P.setupName : "", timing, plan})}).catch(() => {});
   } catch (e) {}
+}
+// ---------------------------------------------------------------- Nov 23: member chat (Pro posts, everyone signed in reads)
+const CH = {meta: null, room: "general", msgs: [], last: 0, timer: null, busy: false};
+function chTime(iso) { return new Date(iso).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); }
+function chDay(iso) { const d = new Date(iso).toLocaleDateString("en-CA", {timeZone: "America/New_York"}); return d === dyTodayKey() ? "Today" : new Date(d + "T12:00:00").toLocaleDateString("en-US", {weekday: "long", month: "short", day: "numeric"}); }
+function chInit(name) { const p = String(name || "?").split(/\s+/); return ((p[0] || "?")[0] + (p[1] ? p[1][0] : "")).toUpperCase(); }
+function chBody(t) {
+  return esc(t).replace(/\$([A-Z]{1,5}(?:\.[A-Z])?)\b/g, (m, s) => `<button type="button" class="ch-tk" onclick="openBrief('${s}')">$${s}</button>`);
+}
+function chCard(t) {
+  const m = /\$([A-Z]{1,5}(?:\.[A-Z])?)\b/.exec(t || ""); if (!m) return "";
+  try {
+    const sym = m[1], st = findStatus(sym); if (!st) return "";
+    const P = mapPlan(sym, st); if (!P || P.trig == null) return "";
+    const T = mapTicketPlan(P, st);
+    return `<button type="button" class="ch-card" onclick="openBrief('${sym}')"><b>${sym} · ${esc(P.setupName || "Setup")}</b> · trigger ${money(P.trig)}${T && T.target ? ` · target <span class="u">${money(T.target)}</span>` : ""}${T && T.stop ? ` · stop <span class="d">${money(T.stop)}</span>` : ""}</button>`;
+  } catch (e) { return ""; }
+}
+async function loadChat() {
+  const el = $("chBody"); if (!el) return;
+  if (!ME || ME.guest) { el.innerHTML = `<div class="ch-empty">Sign in to join the member chat.<br><a href="/login" style="color:var(--ink)">Sign in →</a></div>`; return; }
+  try { CH.meta = await api("/api/chat"); } catch (e) { el.innerHTML = `<div class="ch-empty">${esc(friendly(e))}</div>`; return; }
+  const saved = (() => { try { return localStorage.getItem("ns_chat_room"); } catch (e) { return null; } })();
+  if (saved && CH.meta.rooms.some(r => r.id === saved)) CH.room = saved;
+  await chOpen(CH.room);
+}
+async function chOpen(room) {
+  CH.room = room; CH.msgs = []; CH.last = 0;
+  try { localStorage.setItem("ns_chat_room", room); } catch (e) {}
+  chPaint(true);
+  try { const d = await api(`/api/chat/${room}`); if (CH.room !== room) return; CH.msgs = d.messages; CH.last = CH.msgs.length ? CH.msgs[CH.msgs.length - 1].id : 0; }
+  catch (e) { toast(friendly(e)); }
+  chPaint(true); chQueue(); chPoll();
+}
+function chPoll() {
+  clearTimeout(CH.timer);
+  CH.timer = setTimeout(async () => {
+    if (CUR !== "chat") return;
+    if (!document.hidden && !CH.busy) {
+      try {
+        const room = CH.room, d = await api(`/api/chat/${room}?after=${CH.last}`);
+        if (room === CH.room && d.messages.length) {
+          const fresh = d.messages.filter(m => !CH.msgs.some(x => x.id === m.id));
+          CH.msgs.push(...fresh); CH.last = CH.msgs[CH.msgs.length - 1].id; chPaintList(false);
+        }
+      } catch (e) {}
+    }
+    chPoll();
+  }, 4000);
+}
+function chPaint(scroll) {
+  const el = $("chBody"); if (!el || !CH.meta) return;
+  const M = CH.meta, room = M.rooms.find(r => r.id === CH.room) || M.rooms[0];
+  const box = M.muted_until ? `<div class="ch-ro">You're muted in chat for now. You can still read every room.</div>`
+    : M.can_post && !M.has_name ? `<div class="ch-ro" style="flex-wrap:wrap">Pick the name members will see before you post.<span style="display:flex;gap:8px;width:100%"><input id="chName" maxlength="40" placeholder="Your first name" style="flex:1;background:var(--sunk);border:1px solid var(--line);border-radius:10px;padding:9px 12px;color:var(--ink);font:inherit"><button class="btnx primary sm" onclick="chSetName()">Save</button></span></div>`
+    : M.can_post ? `<div class="ch-err" id="chErr" hidden></div><div class="ch-box"><textarea id="chIn" rows="1" maxlength="${M.max_len}" placeholder="Message #${esc(room.name)} · tag a ticker with $, like $WMT" aria-label="Message"></textarea><button type="button" id="chSend" onclick="chSend()">Send</button></div>`
+    : `<div class="ch-ro">Posting is for Pro members. You can read every room.${typeof startCheckout === "function" ? `<button class="btnx primary sm" onclick="location.hash='#account'">Go Pro</button>` : ""}</div>`;
+  el.innerHTML = `<div id="chQ"></div><div class="ch-rooms">${M.rooms.map(r => `<button type="button" class="${r.id === CH.room ? "on" : ""}" onclick="chOpen('${r.id}')" title="${esc(r.about)}"># ${esc(r.name)}</button>`).join("")}</div>
+    <div class="ch-rule"><b>House rules:</b> share setups and lessons, not tips. No "buy this now", no pumping, no promises, no links or contact details. Not financial advice. Tap Report on anything that breaks the rules.</div>
+    <div class="ch-wrap"><div class="ch-list" id="chList"></div>${box}</div>`;
+  const ta = $("chIn");
+  if (ta) {
+    ta.addEventListener("input", () => { ta.style.height = "auto"; ta.style.height = Math.min(120, ta.scrollHeight) + "px"; const er = $("chErr"); if (er) er.hidden = true; });
+    ta.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey && !matchMedia("(max-width: 899px)").matches) { e.preventDefault(); chSend(); } });
+  }
+  chPaintList(scroll);
+}
+function chPaintList(forceBottom) {
+  const L = $("chList"); if (!L) return;
+  const near = forceBottom || L.scrollHeight - L.scrollTop - L.clientHeight < 120;
+  if (!CH.msgs.length) { L.innerHTML = `<div class="ch-empty">No messages in #${esc(CH.room)} yet.${CH.meta.can_post ? " Start the conversation." : ""}</div>`; return; }
+  let h = "", day = "", prev = null;
+  for (const m of CH.msgs) {
+    const d = chDay(m.at); if (d !== day) { h += `<div class="ch-day">${d}</div>`; day = d; prev = null; }
+    const same = prev && prev.name === m.name && !m.deleted && new Date(m.at) - new Date(prev.at) < 5 * 60000;
+    h += `<div class="ch-m${same ? " same" : ""}" data-id="${m.id}"><div class="ch-av s${m.seed}">${esc(chInit(m.name))}</div><div class="ch-b">
+      <div class="ch-n">${esc(m.name)}${m.badge ? `<span class="ch-badge${m.badge === "Owner" ? " own" : ""}">${m.badge}</span>` : ""}<small>${chTime(m.at)}</small></div>
+      ${m.deleted ? `<div class="ch-t del">Message removed</div>` : `<div class="ch-t">${chBody(m.body)}</div>${chCard(m.body)}
+      <div class="ch-acts">${m.mine || CH.meta.is_admin ? `<button type="button" onclick="chDelete(${m.id})">Delete</button>` : ""}${!m.mine ? (m.reported ? `<button type="button" disabled>Reported</button>` : `<button type="button" onclick="chReport(${m.id})">Report</button>`) : ""}</div>`}
+    </div></div>`;
+    prev = m;
+  }
+  L.innerHTML = h;
+  if (near) L.scrollTop = L.scrollHeight;
+}
+async function chSetName() {
+  const v = ($("chName") || {}).value || "";
+  try { const r = await api("/api/chat/name", {method: "POST", body: JSON.stringify({name: v})}); CH.meta.has_name = true; CH.meta.shown_as = r.shown_as; toast(`You'll show as ${r.shown_as}`); chPaint(false); }
+  catch (e) { toast(friendly(e)); }
+}
+async function chSend() {
+  const ta = $("chIn"), b = $("chSend"), er = $("chErr"); if (!ta || CH.busy) return;
+  const body = ta.value.trim(); if (!body) return;
+  CH.busy = true; b.disabled = true;
+  try {
+    const m = await api(`/api/chat/${CH.room}`, {method: "POST", body: JSON.stringify({body})});
+    if (!CH.msgs.some(x => x.id === m.id)) CH.msgs.push(m); CH.last = Math.max(CH.last, m.id);
+    ta.value = ""; ta.style.height = "auto"; chPaintList(true);
+  } catch (e) { if (er) { er.textContent = friendly(e); er.hidden = false; } }
+  finally { CH.busy = false; b.disabled = false; ta.focus(); }
+}
+async function chDelete(id) {
+  if (!(await nsConfirm({badge: "Chat", title: "Delete this message?", sub: "It's replaced with \"Message removed\" for everyone.", stay: "Keep it", go: "Delete", goCls: "sell"}))) return;
+  try { await api(`/api/chat/msg/${id}`, {method: "DELETE"}); const m = CH.msgs.find(x => x.id === id); if (m) { m.deleted = true; m.body = ""; } chPaintList(false); chQueue(); }
+  catch (e) { toast(friendly(e)); }
+}
+async function chReport(id) {
+  if (!(await nsConfirm({badge: "Chat", title: "Report this message?", sub: "The owner reviews every report. The author isn't told who reported it.", stay: "Cancel", go: "Report", goCls: "sell"}))) return;
+  try { await api(`/api/chat/msg/${id}/report`, {method: "POST", body: JSON.stringify({reason: ""})}); const m = CH.msgs.find(x => x.id === id); if (m) m.reported = true; chPaintList(false); toast("Reported. Thanks for keeping the chat clean."); }
+  catch (e) { toast(friendly(e)); }
+}
+// the owner's queue: reported messages, right above the rooms
+async function chQueue() {
+  const el = $("chQ"); if (!el || !CH.meta || !CH.meta.is_admin) return;
+  let d; try { d = await api("/api/admin/chat/reports"); } catch (e) { return; }
+  if (!d.reports.length) { el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="ch-q"><h3>Reported messages · ${d.reports.length}</h3>${d.reports.map(r => `<div class="ch-qi"><b>${esc(r.author)}</b> in #${esc(r.room)} · ${r.n} report${r.n > 1 ? "s" : ""}${r.muted_until ? " · muted" : ""}
+    <div style="margin-top:3px">${esc(r.body)}</div><div class="a"><button class="chip" onclick="chMod(${r.message_id},'delete')">Delete</button><button class="chip" onclick="chMod(${r.message_id},'mute')">Delete + mute 24h</button><button class="chip" onclick="chMod(${r.message_id},'dismiss')">Keep it</button></div></div>`).join("")}</div>`;
+}
+async function chMod(id, action) {
+  try { await api(`/api/admin/chat/msg/${id}`, {method: "POST", body: JSON.stringify({action, hours: 24})});
+    if (action !== "dismiss") { const m = CH.msgs.find(x => x.id === id); if (m) { m.deleted = true; m.body = ""; } chPaintList(false); }
+    toast(action === "dismiss" ? "Kept." : action === "mute" ? "Deleted and muted for 24 hours." : "Deleted."); chQueue(); }
+  catch (e) { toast(friendly(e)); }
 }
 // ---------------------------------------------------------------- Patch 208: Lookout (watch, never trade)
 function lookoutPlanFromTicket(sym, wantDir) {
@@ -7964,7 +8136,7 @@ function renderToday() {
   renderWeek();
   if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet
   renderRetest();
-  loadWatching(); loadDiaryMini();
+  loadWatching(); loadDiaryMini(); { const c = $("chMini"); if (c) c.hidden = !ME || ME.guest; }
   loadPulse();
   renderRule();
   renderKpis();
