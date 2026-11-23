@@ -107,8 +107,11 @@ def a_candidates(window: str) -> list[dict]:
         if s_.get("grade") != "A" or s_.get("outcome") != "pending" or not s_.get("entry_time") or s_.get("stop") is None:
             continue
         t = pd.Timestamp(s_["entry_time"]).tz_convert(engine.NY)
-        fresh = (t.normalize() == today and t.hour == 9) if window == "midday" else \
-                (t.normalize() < today and t.hour == 13 and (today - t.normalize()).days <= 4)
+        if window == "1030":   # Nov 23 (owner): one entry window at 10:30 AM, A+ only (hub A retest with a clear path)
+            fresh = t.normalize() < today and (today - t.normalize()).days <= 4 and str(s_.get("id", "")).split("|")[1:2] == ["hub"]
+        else:
+            fresh = (t.normalize() == today and t.hour == 9) if window == "midday" else \
+                    (t.normalize() < today and t.hour == 13 and (today - t.normalize()).days <= 4)
         if fresh:
             rows.append(s_)
     if not rows:
@@ -122,6 +125,15 @@ def a_candidates(window: str) -> list[dict]:
         px = (live.get(r["symbol"]) or {}).get("price") or r["entry"]
         if not (r["stop"] < px < r["target"]):
             continue                               # already stopped or already at the target: nothing left to enter
+        if window == "1030":
+            try:                                   # A+ = the card's own call: the retest's path to the target was clear
+                ur = scanner.universe_record(r["symbol"], "hub")
+                if not ur or ur.get("variant") != "a":
+                    log.info("paper-opt skipped %s (A, not A+: path not clear)", r["symbol"])
+                    continue
+            except Exception as e:
+                log.warning("A+ check failed for %s: %s", r["symbol"], e)
+                continue
         try:
             e = earnings.lookup(r["symbol"])
             if e and e.get("days") is not None and e["days"] <= 7:
@@ -187,7 +199,7 @@ def enter_daily_opt(window: str = "midday") -> list[str] | None:
                          opt_delta=k.get("delta"), opt_premium=round(fill * 100 * qty, 2))
             msgs.append(f"🧪📈 Paper OPTIONS experiment: BUY {qty} {c['symbol']} {k['expiry']} ${k['strike']:g} "
                         f"{'call' if c['d'] == 1 else 'put'} @ {_money(fill)} (premium {_money(fill * 100 * qty)})\n"
-                        f"A setup: {c['setup']} at {_money(c['price'])}, aiming for {_money(c['target'])}. "
+                        f"{'A+' if window == '1030' else 'A'} setup: {c['setup']} at {_money(c['price'])}, aiming for {_money(c['target'])}. "
                         f"Exits on the stock: the target, a close below the stop {_money(c['edge'])}, "
                         f"{scanner.SETTINGS.horizon} candles, or under {EXIT_DTE} days to expiry. Max loss is the premium.")
     for m in msgs:
