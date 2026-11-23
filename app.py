@@ -2108,6 +2108,25 @@ class BrokerOptionImpactBody(BaseModel):
     price: float | None = None
 
 
+def _snap_reason(e: Exception) -> str | None:
+    """SnapTrade's own explanation for a refused options request (owner-only screens), never URLs or credentials:
+    the API's JSON detail/message, or the SDK's argument-check message. Transport errors (which carry the request URL,
+    including the user secret) are never echoed."""
+    import json as _j
+    body = getattr(e, "body", None)
+    if body:
+        try:
+            d = _j.loads(body) if isinstance(body, (str, bytes)) else body
+            msg = d.get("detail") or d.get("message") or d.get("error") if isinstance(d, dict) else None
+            if msg:
+                return "Broker said: " + str(msg)[:220]
+        except Exception:
+            pass
+    if type(e).__name__ in ("SchemaValidationError", "ApiTypeError", "ApiValueError"):
+        return "Order format problem: " + str(e)[:200]
+    return None
+
+
 @app.get("/api/broker/options/chain/{symbol}")
 async def broker_option_chain(symbol: str, u: dict = Admin):
     """The option chain for the options ticket (expiries within ~45 days, strikes within ±8%), bid/ask/mid per contract."""
@@ -2134,7 +2153,7 @@ async def broker_option_impact(body: BrokerOptionImpactBody, u: dict = Admin):
     try:
         return await run_in_threadpool(snaptrade.option_impact, u, body.dict())
     except Exception as e:
-        _broker_error(e)
+        _broker_error(e, _snap_reason(e))
 
 
 @app.post("/api/broker/options/order")
@@ -2144,7 +2163,7 @@ async def broker_option_order(body: BrokerOrderBody, u: dict = Admin):
     try:
         return {"order": await run_in_threadpool(snaptrade.place_checked_option, u, body.preview_id)}
     except Exception as e:
-        _broker_error(e)
+        _broker_error(e, _snap_reason(e))
 
 
 @app.post("/api/broker/order")

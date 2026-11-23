@@ -422,7 +422,7 @@ def _option_form(payload: dict) -> dict:
 
 
 def _option_call(client, fn, uid: str, secret: str, account_id: str, f: dict):
-    return fn(account_id=account_id, user_id=uid, user_secret=secret, order_type=f["order_type"], time_in_force="DAY",
+    return fn(account_id=account_id, user_id=uid, user_secret=secret, order_type=f["order_type"], time_in_force="Day",
               limit_price=None if f["price"] is None else f"{f['price']:.2f}",
               price_effect=None if f["order_type"] == "MARKET" else ("DEBIT" if f["action"] == "BUY_TO_OPEN" else "CREDIT"),
               legs=[{"instrument": {"symbol": f["occ"], "instrument_type": "OPTION"}, "action": f["action"], "units": f["units"]}])
