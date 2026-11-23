@@ -147,28 +147,36 @@ def run(notify: bool = True) -> list[dict]:
 
 
 def _line(r: dict) -> str:
-    sign = lambda x: f"{(0.0 if abs(x) < 0.005 else x):+.2f}%"
+    """Nov 23 (owner): every number in the trade's direction, so a failed breakdown reads −12%, not +12%."""
+    dr = int(r.get("direction") or 1)
+    sign = lambda x: f"{(0.0 if abs(x) < 0.005 else x):+.2f}%".replace("-", "−")
     back = "back inside the hub" if r.get("kind") == "breakout" else "stop"
-    passed = r.get("target") is not None and (float(r["target"]) - float(r["entry"])) * int(r.get("direction") or 1) <= 0
+    passed = r.get("target") is not None and (float(r["target"]) - float(r["entry"])) * dr <= 0
     flag = (" · 🎯 touched target" if r["hit_target"] else f" · ⛔ touched {back}" if r["hit_stop"]
             else " · target already reached at entry" if passed else "")
-    fav = r.get("fav_pct") if r.get("fav_pct") is not None else r["close_pct"]
+    fav = r.get("fav_pct") if r.get("fav_pct") is not None else r["close_pct"] * dr
     icon = "🟢" if fav > 0 else "🔴" if fav < 0 else "⚪"
+    best, worst = (r["high_pct"], r["low_pct"]) if dr == 1 else (-r["low_pct"], -r["high_pct"])
     return (f"{icon} <b>{html.escape(r['symbol'])}</b> {html.escape(r['setup'] or '')} · entry ${r['entry']:,.2f}\n"
-            f"   open {sign(r['open_pct'])} · high {sign(r['high_pct'])} · low {sign(r['low_pct'])} · close <b>{sign(r['close_pct'])}</b>{flag}")
+            f"   open {sign(r['open_pct'] * dr)} · best {sign(best)} · worst {sign(worst)} · close <b>{sign(fav)}</b>{flag}")
 
 
 def text(rows: list[dict]) -> str:
     st = stats()
-    out = ["📋 <b>Next-day check</b> · how yesterday's setups and breakouts did today"]
-    for kind, title, stop_word in (("setup", "Confirmed setups", "the stop"), ("breakout", "Breakouts & breakdowns", "back inside the hub")):
-        rs, s = [r for r in rows if (r.get("kind") or "setup") == kind], st.get(kind) or {}
+    out = ["📋 <b>Next-day check</b> · how yesterday's setups and breakouts did today",
+           "<i>Results in the trade's direction: + went its way, − went against it.</i>"]
+    groups = (("setup", 1, "Confirmed setups · longs", "the stop"), ("setup", -1, "Confirmed setups · shorts", "the stop"),
+              ("breakout", 1, "Breakouts · longs", "back inside the hub"),
+              ("breakout", -1, "Breakdowns · shorts (watch only)", "back inside the hub"))
+    for kind, dr, title, stop_word in groups:
+        rs = [r for r in rows if (r.get("kind") or "setup") == kind and int(r.get("direction") or 1) == dr]
         if not rs:
             continue
+        s = (st.get(kind) or {}).get("long" if dr == 1 else "short") or {}
         out.append(f"\n<b>{title}</b>\n" + "\n".join(_line(r) for r in rs[:12]) + (f"\n…and {len(rs) - 12} more" if len(rs) > 12 else ""))
         if s.get("n"):
             out.append(f"<i>All {s['n']} so far: {s['green_pct']}% went their way by the next close, avg {s['avg_fav']:+.2f}%, "
-                       f"{s['stop_pct']}% touched {stop_word}, {s['target_pct']}% touched the target.</i>")
+                       f"{s['stop_pct']}% touched {stop_word}, {s['target_pct']}% touched the target.</i>".replace("+-", "−"))
     return "\n".join(out)
 
 
@@ -193,6 +201,8 @@ def stats() -> dict:
     for kind in ("setup", "breakout"):
         rs = [r for r in rows(20000) if (r.get("kind") or "setup") == kind]
         out[kind] = _agg(rs)
+        out[kind]["long"] = _agg([r for r in rs if int(r.get("direction") or 1) == 1])
+        out[kind]["short"] = _agg([r for r in rs if int(r.get("direction") or 1) == -1])
         out[kind]["by_setup"] = [dict(setup=k, **_agg([r for r in rs if (r["setup"] or "Other") == k]))
                                  for k in sorted({r["setup"] or "Other" for r in rs})]
     return out
