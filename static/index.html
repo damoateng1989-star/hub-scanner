@@ -7020,13 +7020,21 @@ async function mapTicketCopy(btn) {
 }
 async function mapTicketAlert(label, price, dir) {
   if (!MAP_TK) return;
+  // Nov 23: toggle just this chip in place (no repaint of the whole ticket, so the card doesn't jump or re-check the order)
+  const btn = document.querySelector(`.tk-als .tk-al-${label}`);
+  const mark = (on) => { if (!btn) return; btn.classList.toggle("on", on); btn.setAttribute("aria-pressed", on);
+    const dot = btn.querySelector(".tk-al-dot"), ok = dot && dot.querySelector(".tk-al-ok");
+    if (on && dot && !ok) dot.insertAdjacentHTML("beforeend", `<i class="tk-al-ok">${TK_AL_ICON.ok}</i>`); if (!on && ok) ok.remove(); };
+  if (btn && btn.dataset.busy) return;
   const x = MAP_TK.alerts.find(a => a.label === label);
+  if (btn) btn.dataset.busy = "1";
+  mark(!x);
   try {
     if (x) { await api(`/api/alerts/price/${x.id}`, {method: "DELETE"}); MAP_TK.alerts = MAP_TK.alerts.filter(a => a !== x); toast("Alert removed"); }
     else { const r = await api("/api/alerts/price", {method: "POST", body: JSON.stringify({symbol: MAP_TK.sym, price, direction: dir, label})});
       MAP_TK.alerts.push({id: r.id, label, price, direction: dir}); toast(`You'll get an alert at ${money(price)}`); }
-  } catch (e) { toast(friendly(e)); }
-  mapTicketPaint();
+  } catch (e) { mark(!!x); toast(friendly(e)); }
+  if (btn) delete btn.dataset.busy; else mapTicketPaint();
 }
 function mapPlanToggle() {
   const sym = BRIEF_SYM, st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || findStatus(sym), P = mapPlan(sym, st);
