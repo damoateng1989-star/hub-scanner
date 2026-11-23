@@ -266,6 +266,19 @@ html[data-theme="light"] #swingPlay .sw-ctx { color:#78350f; background:#fffbeb;
 #optionsSwing .ox-lock { padding:16px; border:1px dashed var(--line-2); border-radius:14px; background:var(--bg); } #optionsSwing .ox-lock b { color:var(--ink); font-size:15px; } #optionsSwing .ox-lock p { color:var(--muted); margin:6px 0 12px; }
 #optionsSwing .ox-lock a { display:inline-flex; padding:7px 11px; border:1px solid var(--line-2); border-radius:9px; color:var(--ink); text-decoration:none; font-size:13px; }
 #optionsSwing .ox-demo { margin:0 0 10px; padding:6px 10px; border:1px solid rgba(255,138,76,.4); border-radius:8px; color:#ff8a4c; font-size:12.5px; } #optionsSwing .ox-closed { display:block; margin:0 0 10px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; color:var(--muted); font-size:13px; }
+.oxg { margin: 10px 0 4px; } .oxg-h { font-size: 12.5px; line-height: 1.5; color: #9AA4B2; margin: 0 0 6px; } .oxg-h b { color: #c4a8ff; font-weight: 600; }
+.oxg table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+
+.oxg thead th, .oxg tbody th { text-transform: none !important; letter-spacing: .02em !important; font-size: 10.5px !important; }
+.oxg tbody th { font: 600 12.5px var(--sans, Inter, sans-serif) !important; letter-spacing: 0 !important; color: #E6EBF0 !important; } .oxg tbody th small { font: 400 11px var(--sans, Inter, sans-serif) !important; color: #7D8794 !important; }
+.oxg th, .oxg td { white-space: normal; padding: 6px 4px; border-bottom: 1px solid rgba(255,255,255,.07); text-align: right; vertical-align: top; }
+.oxg thead th { font: 600 10.5px var(--mono, ui-monospace, monospace); color: #7D8794; letter-spacing: .02em; }
+.oxg tbody th { text-align: left; font-weight: 600; color: #E6EBF0; width: 31%; } .oxg tbody th small { display: block; font-weight: 400; color: #7D8794; font-size: 10.5px; margin-top: 2px; }
+.oxg td b { display: block; font: 600 12.5px var(--mono, ui-monospace, monospace); color: #E6EBF0; } .oxg td small { display: block; font: 500 11px var(--mono, ui-monospace, monospace); margin-top: 1px; }
+.oxg td small.up { color: #3DD68C; } .oxg td small.dn { color: #FF6B5E; }
+.oxg .em { background: rgba(196,168,255,.08); } .oxg thead th.em { color: #c4a8ff; } .oxg td.em b { font-weight: 800; }
+.oxg-n { font-size: 11.5px; color: #7D8794; margin: 4px 0 0; }
+html[data-theme="light"] .oxg tbody th, html[data-theme="light"] .oxg td b { color: #0D1117; } html[data-theme="light"] .oxg th, html[data-theme="light"] .oxg td { border-color: rgba(15,23,42,.08); }
 #optionsSwing .ox-earn,#optionsSwing .oc-earn { margin:10px 0; padding:9px 12px; border:1px solid rgba(196,168,255,.35); border-radius:10px; color:#c4a8ff; background:rgba(124,58,237,.10); font-size:13px; line-height:1.45; }
 #optionsSwing .ox2 + .ox2 { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); } #optionsSwing .oc { padding:12px 0; }
 #optionsSwing .oc-t b { display:block; color:var(--ink); font:700 20px var(--sans); } #optionsSwing .oc-t small { display:block; margin:4px 0 14px; color:var(--muted); font-size:14px; }
@@ -903,6 +916,23 @@ async function loadOptionsPanel() {
   try { const r = await fetch("/api/options/" + encodeURIComponent(SYM), {signal: AbortSignal.timeout(45000)}); if (!r.ok) throw new Error("options request failed"); host.innerHTML = heading + renderOptionsPanel(await r.json()); }
   catch (e) { host.innerHTML = heading + '<p class="ox-note">Options prices aren\'t available right now.</p>'; }
 }
+/* Patch 206: the scenario grid options.py already prices (c.scen), shown read-only inside "Show the math".
+   Every value comes from c.scen; the only arithmetic here is P/L per contract = (value - mid) x 100. */
+function oxGridHTML(c, p, o) {
+  const sc = c && c.scen, mid = c ? +c.mid : 0;
+  if (!sc || !Array.isArray(sc.tgt) || !Array.isArray(sc.fail) || !Array.isArray(sc.days) || !(mid > 0)) return "";
+  const M = sc.iv_mults || [], iD = M.indexOf(0.7), iU = M.indexOf(1), iE = M.indexOf(1.3), di = sc.days.indexOf(sc.need);
+  if (iD < 0 || iU < 0 || iE < 0 || di < 0 || !sc.tgt[di]) return "";
+  const er = !!(o && o.earnings && o.earnings.date && p.expiry && o.earnings.date <= p.expiry);
+  const tdW = d => (+d % 1 ? d : Math.round(d)) + " trading day" + (+d === 1 ? "" : "s");
+  const cell = (v, em) => { const pl = (v - mid) * 100; return '<td' + (em ? ' class="em"' : '') + '><b>' + money(v) + '</b><small class="' + (pl >= 0 ? "up" : "dn") + '">' + (pl >= 0 ? "+" : "−") + money(Math.abs(pl)) + '</small></td>'; };
+  const row = (lbl, sub, vals) => '<tr><th scope="row">' + lbl + '<small>' + sub + '</small></th>' + cell(vals[iD], er) + cell(vals[iU], false) + cell(vals[iE], false) + '</tr>';
+  return '<div class="oxg"><p class="oxg-h">Same prices, different volatility. Modeled, not quotes.' + (er ? ' <b>Earnings fall before this contract expires — the −30% column is the one to plan around.</b>' : '') + '</p>' +
+    '<table><thead><tr><th></th><th' + (er ? ' class="em"' : '') + '>IV −30%</th><th>IV unchanged</th><th>IV +30%</th></tr></thead><tbody>' +
+    row("At the aim", "in ~" + tdW(sc.days[di]) + " · " + sc.remain[di] + " days left", sc.tgt[di]) +
+    row("If it fails", "~" + tdW(sc.fail_days) + " · " + sc.fail_remain + " days left", sc.fail) +
+    '</tbody></table><p class="oxg-n">Option value, with profit or loss per contract under it.</p></div>';
+}
 function renderOptionsPanel(o) {
   if (!o || !Array.isArray(o.plans) || !o.plans.length) return '<p class="ox-note">' + esc(o && o.message || "No options swing to plan right now.") + '</p>';
   const sgn = v => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
@@ -920,9 +950,9 @@ function renderOptionsPanel(o) {
       '<div><span>If the ' + move + ' fails <i class="ox-sim">simulated</i></span><b>≈ ' + money(c.at_fail) + ' <em class="dn">' + sgn(c.at_fail_pct) + '</em></b></div><div><span>Gain at the aim <i class="ox-sim">simulated</i></span><b class="' + (good ? "oc-gain" : "oc-lossv") + '">≈ ' + (gain >= 0 ? "+" : "−") + money(Math.abs(gain)) + '</b></div><div><span>Max loss</span><b>' + money(c.cost) + '</b></div>' +
       '<p class="oc-note">Per contract (100 shares). The gain is not capped, so this is what the plan aims for, not a ceiling; the loss is capped at what you pay.</p></div>' +
       (good ? "" : '<p class="oc-warn">⚠ Loses money even if the stock reaches ' + money(p.target) + ': the move is too small to pay for this contract\'s time value. Skip it.</p>') +
-      '<details class="oc-more"><summary>Show the math</summary><div class="oc-rows"><div><span>Breakeven at expiry</span><b>' + money(c.breakeven) + '</b></div><div><span>Expiry</span><b>' + day(p.expiry) + " · " + esc(p.dte) + ' days</b></div><div><span>Strike</span><b>' + esc(c.label) + " · delta " + esc(c.delta) + '</b></div><div><span>Bid / ask now</span><b>' + (c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted") + '</b></div><div><span>Implied volatility</span><b>' + esc(c.iv) + '%</b></div></div>' +
+      '<details class="oc-more"><summary>Show the math</summary><div class="oc-rows"><div><span>Breakeven at expiry</span><b>' + money(c.breakeven) + '</b></div><div><span>Expiry</span><b>' + day(p.expiry) + " · " + esc(p.dte) + ' days</b></div><div><span>Strike</span><b>' + esc(c.label) + " · delta " + esc(c.delta) + '</b></div><div><span>Bid / ask now</span><b>' + (c.bid > 0 ? money(c.bid) + " / " + money(c.ask) : "not quoted") + '</b></div><div><span>Implied volatility</span><b>' + esc(c.iv) + '%</b></div></div>' + oxGridHTML(c, p, o) +
       '<p class="oc-note"><b>Simulated:</b> the values at the aim and on a failure are Black-Scholes estimates, not real quotes. The cost' + (c.estimated ? " assumes the stock is at " + money(p.entry) + " when it breaks out" : " is the middle of the bid and ask") + '; the other values assume the volatility stays the same.</p></details>' +
-      '<p class="oc-note oc-assume">Figures assume the aim is reached in about ' + esc(p.days_to_target) + " trading day" + (p.days_to_target === 1 ? "" : "s") + " at today\'s implied volatility (" + esc(c.iv) + '%). Slower moves or falling volatility mean less.</p>' +
+      '<p class="oc-note oc-assume">Figures assume the aim is reached in about ' + esc(p.days_to_target) + " trading day" + (p.days_to_target === 1 ? "" : "s") + " at today\'s implied volatility (" + esc(c.iv) + '%). Slower moves or falling volatility mean less.' + (p.days_src === "assumed" ? " (Too few past setups to measure the pace, so ~3 days is assumed.)" : "") + '</p>' +
       (c.wide_spread ? '<p class="oc-warn">⚠ Wide bid/ask spread (' + money(c.bid) + " / " + money(c.ask) + '). Use a limit order near the middle.</p>' : "") + '</div>';
   };
   const plans = o.plans.map(p => {

@@ -186,11 +186,11 @@ def _contract_view(c: dict, S_entry: float, target: float, fail_px: float, days_
                 wide_spread=bool(spread and spread > 0.15), quote_now=round(quote, 2), estimated=prep)
 
 
-# Patch 205: scenario grid. The same Black-Scholes as above, priced at several implied-volatility levels and several
-# times-to-target, so the card can show IV unchanged / contraction / expansion and let the member change the assumptions
-# without a second pricing engine in the browser. Display only.
+# Scenario grid (unnumbered; rendered by Patch 206). The same Black-Scholes as above, priced at several implied-volatility levels and several
+# times-to-target, so the card can show IV unchanged / contraction / expansion side by side without pricing anything in
+# the browser. Display only.
 SCEN_IV = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]      # IV x this (0.7 = a 30% contraction)
-FAIL_DAYS = 1                                                            # a failed breakout shows on the next 4H closes
+FAIL_DAYS = 1                                                            # a failed breakout shows on the next 4H closes (priced 1 day out, like at_fail)
 
 
 def _scen_days(need: float, dte: int) -> list[float]:
@@ -210,9 +210,12 @@ def _scenarios(S_entry: float, K: float, dte: int, iv: float, call: bool, need: 
     def row(px, td):  # option value with the stock at px after td trading days (7/5 calendar days each, as before)
         T = max(0.0, dte - td * 7 / 5) / 365
         return [round(bs_price(px, K, T, iv * m, call), 2) for m in SCEN_IV]
+    def fail_row(px):  # same clock as the headline at_fail: one calendar day out
+        T = max(0.0, dte - FAIL_DAYS) / 365
+        return [round(bs_price(px, K, T, iv * m, call), 2) for m in SCEN_IV]
     return dict(iv_mults=SCEN_IV, days=days, need=float(need), fail_days=FAIL_DAYS,
-                remain=[round(max(0.0, dte - d * 7 / 5)) for d in days], fail_remain=round(max(0.0, dte - FAIL_DAYS * 7 / 5)),
-                tgt=[row(target, d) for d in days], fail=row(fail_px, FAIL_DAYS))
+                remain=[round(max(0.0, dte - d * 7 / 5)) for d in days], fail_remain=round(max(0.0, dte - FAIL_DAYS)),
+                tgt=[row(target, d) for d in days], fail=fail_row(fail_px))
 
 
 def _one(sym: str, rows: list[dict], d: int, entry: float, edge: float, target: float, target_kind: str,
