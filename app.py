@@ -2221,6 +2221,25 @@ class BrokerOptionImpactBody(BaseModel):
     time_in_force: str = "Day"
 
 
+_BROKER_PLAIN = [   # Nov 23 (owner): plain words for the brokerage's common refusals
+    (("buying power", "insufficient fund", "insufficient balance", "not enough cash", "insufficient cash"), "Insufficient balance"),
+    (("market is closed", "market closed", "outside trading hours", "not open for trading"), "The market's closed for this order"),
+    (("options level", "option level", "not approved for option", "options trading is not enabled"), "Your account isn't approved for this options order"),
+    (("price is too far", "price band", "limit price"), "Your broker refused that limit price"),
+]
+
+
+def _broker_plain(msg: str) -> str:
+    import re
+    low = msg.lower()
+    for keys, plain in _BROKER_PLAIN:
+        if any(k in low for k in keys):
+            return plain
+    msg = re.sub(r"^\s*Trade [0-9a-f-]{8,}:\s*", "", msg, flags=re.I)                   # "Trade <uuid>: ..."
+    msg = re.sub(r"^\s*Order rejected by brokerage\s*[-:]\s*", "", msg, flags=re.I)
+    return (msg.strip() or "Your broker refused the order")[:200]
+
+
 def _snap_reason(e: Exception) -> str | None:
     """SnapTrade's own explanation for a refused options request (owner-only screens), never URLs or credentials:
     the API's JSON detail/message, or the SDK's argument-check message. Transport errors (which carry the request URL,
@@ -2232,7 +2251,7 @@ def _snap_reason(e: Exception) -> str | None:
             d = _j.loads(body) if isinstance(body, (str, bytes)) else body
             msg = d.get("detail") or d.get("message") or d.get("error") if isinstance(d, dict) else None
             if msg:
-                return "Broker said: " + str(msg)[:220]
+                return _broker_plain(str(msg))
         except Exception:
             pass
     if type(e).__name__ in ("SchemaValidationError", "ApiTypeError", "ApiValueError"):
