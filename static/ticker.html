@@ -553,6 +553,11 @@ html .ns-logo span{font-weight:700 !important}
 .ns-logo .ns-mark-light{display:none}
 html[data-theme="light"] .ns-logo .ns-mark-light{display:inline-block}
 html[data-theme="light"] .ns-logo .ns-mark-dark{display:none}
+.lk-pulse { position: relative; display: inline-flex; vertical-align: middle; flex: none; }
+.lk-pulse::before, .lk-pulse::after { content: ""; position: absolute; inset: -3px -5px; border-radius: 999px; border: 1.5px solid rgba(61,214,140,.6); pointer-events: none; animation: lkPulse 2.4s ease-out infinite; }
+.lk-pulse::after { animation-delay: 1.2s; }
+@keyframes lkPulse { 0% { transform: scale(.85); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .lk-pulse::before, .lk-pulse::after { animation: none; opacity: 0; } }
 </style>
 </head>
 <body>
@@ -916,7 +921,7 @@ async function loadSwingCard() {
 // Patch 208: the second door — "I'm in — watch this" for a trade placed in the member's own broker app
 // Patch 210: the Lookout mark, two round eyes (also binoculars). Ratios from R = 36; the pupils take the ground's colour
 // via --lk-bg (set by the container), so the mark sits right on the sheet, a panel or the pill's tint.
-const lkEyes = (w = 24, on = true) => `<svg class="lk-eyes" width="${w}" height="${Math.round(w * 72 / 134)}" viewBox="0 0 134 72" fill="none" role="img" aria-label="Lookout${on ? "" : " (watch ended)"}"><circle cx="36" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="98" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="36" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="98" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="36" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/><circle cx="98" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/></svg>`;
+const lkEyes = (w = 24, on = true) => `<svg class="lk-eyes" width="${w}" height="${Math.round(w * 72 / 134)}" viewBox="0 0 134 72" fill="none" role="img" aria-label="Lookout${on ? "" : " (watch ended)"}"><circle cx="36" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="98" cy="36" r="32" stroke="var(--lk-ring, #EEF1F5)" stroke-width="4"/><circle cx="36" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="98" cy="36" r="16.5" fill="${on ? "#3DD68C" : "#6C7686"}"/><circle cx="36" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/><circle cx="98" cy="36" r="7.5" fill="var(--lk-bg, #07090D)"/></svg>`.replace(/^/, on ? '<span class="lk-pulse">' : "") + (on ? "</span>" : "");   // owner (Nov 23): option B, a ring ripples out while watching
 function tkLookout(x) {
   const pl = x.plan, up = pl.direction !== -1, k = x.contract, el = document.createElement("div"); el.className = "lkt-back";
   const contract = k ? `${x.sym} ${k.expiry} $${k.strike} ${x.side === "puts" ? "Put" : "Call"}` : null;
