@@ -912,6 +912,11 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         extra = (lambda s_=sym, d_=d, c_=close2, ed_=edge, t_=pend["target"]: options.alert_line(s_, d_, c_, ed_, t_))
                     if db.add_alert(f"{sym}|retest|{c4.index[i0].isoformat()}", sym, "retest",
                                     c4.index[j].isoformat(), msg):
+                        try:   # Nov 23: the A+ log behind Admin's "setups this month" (A+ = an A hub long with a clear path)
+                            clear = bool(grade["is_a"]) and d == 1 and _clear_path_at(c4, res, pend, j, close2, A2)
+                            db.log_retest(sym, d, c4.index[j].isoformat(), grade.get("grade"), clear)
+                        except Exception as ex_:
+                            log.warning("retest log for %s failed: %s", sym, ex_)
                         # Nov 20: members get the one hub retest that passed the Lab — A grade, longs
                         notify.symbol_alert(sym, "retest", msg, speech, pro_extra=extra, candle_start=c4.index[j],
                                             members=bool(grade["is_a"]) and d == 1, flow_extra=tape_)

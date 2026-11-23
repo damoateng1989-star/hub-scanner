@@ -2015,6 +2015,11 @@ class InviteBody(BaseModel):
     code: str = ""
 
 
+@app.get("/api/admin/setups-month")
+def admin_setups_month(u: dict = Admin):
+    return db.setups_month(30)
+
+
 # ---------------------------------------------------------------- database backups (Nov 23)
 @app.get("/api/admin/backup")
 def admin_backup_status(u: dict = Admin):

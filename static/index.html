@@ -4102,8 +4102,8 @@ async function loadAdmin() {
         <p>${esc(x.message)}</p>
         <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
         : `<p class="note">No messages yet.</p>`}</div>`;
-    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="backupBox"><h3>Backups</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
-  loadInvites(); loadBackups();
+    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="setupsBox"><h3>Setups this month</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="backupBox"><h3>Backups</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
+  loadInvites(); loadBackups(); loadSetupsMonth();
   api("/api/admin/subscribers").then(d => {
     $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
       <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
@@ -4127,6 +4127,17 @@ async function memberBroker(uid, on) {
   catch (e) { toast(friendly(e)); }
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
+// Nov 23: how many hub breakouts, retests, A and A+ setups the scans alerted on in the last 30 days
+async function loadSetupsMonth() {
+  const box = $("setupsBox"); if (!box) return;
+  let d; try { d = await api("/api/admin/setups-month"); } catch (e) { box.innerHTML = failedHTML("setups", e, "loadSetupsMonth()"); return; }
+  const since = d.tracking_since ? new Date(d.tracking_since.replace(" ", "T") + "Z").toLocaleDateString("en-US", {month: "short", day: "numeric"}) : "today";
+  const n = (v, l) => `<div class="dy-m"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+  box.innerHTML = `<h3>Setups this month</h3><p>What the scans alerted on in the last ${d.days} days.</p>
+    <div class="dy-grid" style="margin:8px 0">${n(d.breakouts, "Hub breakouts")}${n(d.retests, "Retests")}${n(d.a_long, "A retests (long)")}${n(d.a_plus, "A+")}</div>
+    ${d.recent.length ? `<p style="margin:6px 0 4px"><b>Latest A and A+</b></p>${d.recent.map(x => `<p class="note" style="margin:2px 0">${esc(x.symbol)} · <b>${x.grade}</b> · ${new Date(x.at.replace(" ", "T") + "Z").toLocaleDateString("en-US", {month: "short", day: "numeric"})}</p>`).join("")}` : `<p class="note">No A retests in the last ${d.days} days.</p>`}
+    <p class="note" style="margin-top:8px">A+ (an A hub long with a clear path) is counted from ${since}, when this log started. Older retests show their A or B grade only.</p>`;
+}
 // Nov 23: database backups: nightly at 2:17 AM ET, kept 14 deep on the disk, copied off the server when a bucket is set
 async function loadBackups(run) {
   const box = $("backupBox"); if (!box) return;

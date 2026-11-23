@@ -666,3 +666,44 @@ def fire_price_alert(aid: int):
 
 def delete_price_alert(uid: int, aid: int):
     _run("DELETE FROM price_alerts WHERE id=? AND user_id=?", (aid, uid))
+
+
+# ---------------------------------------------------------------- Nov 23: retest log (Admin "setups this month")
+def _retest_log_table():
+    with _lock:
+        _conn.execute("""CREATE TABLE IF NOT EXISTS retest_log (
+            symbol TEXT, direction INTEGER, retest_time TEXT, grade TEXT, clear_path INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (symbol, retest_time))""")
+        _conn.commit()
+
+
+def log_retest(symbol: str, direction: int, retest_time: str, grade: str | None, clear_path: bool) -> None:
+    _retest_log_table()
+    with _lock:
+        _conn.execute("INSERT OR IGNORE INTO retest_log (symbol, direction, retest_time, grade, clear_path) VALUES (?,?,?,?,?)",
+                      (symbol, int(direction), retest_time, grade or "", int(bool(clear_path))))
+        _conn.commit()
+
+
+def setups_month(days: int = 30) -> dict:
+    """Hub breakouts and retests the scans alerted on over the last `days` days. Retests before the log existed are
+    read from the alerts themselves (A or B from the message); A+ (clear path) is only known from the log."""
+    _retest_log_table()
+    since = f"-{int(days)} days"
+    brk = _conn.execute("SELECT COUNT(*) n FROM alerts WHERE type='breakout' AND created_at >= datetime('now', ?)", (since,)).fetchone()[0]
+    rows = _conn.execute("SELECT symbol, candle_time, message, created_at FROM alerts WHERE type='retest' AND created_at >= datetime('now', ?) ORDER BY created_at DESC",
+                         (since,)).fetchall()
+    log_rows = {(r[0], r[1]): r for r in _conn.execute(
+        "SELECT symbol, retest_time, grade, clear_path, direction FROM retest_log WHERE created_at >= datetime('now', ?)", (since,)).fetchall()}
+    first_log = _conn.execute("SELECT MIN(created_at) FROM retest_log").fetchone()[0]
+    items, a = [], 0
+    for sym, ct, msg, created in rows:
+        lg = log_rows.get((sym, ct))
+        g = (lg[2] if lg else ("A" if "A setup, entry" in (msg or "") else "B" if "B setup, entry" in (msg or "") else "")) or ""
+        long_ = (lg[4] == 1) if lg else ("held above" in (msg or ""))
+        plus = bool(lg and lg[3] and g == "A" and long_)
+        if g == "A" and long_:
+            a += 1
+        items.append(dict(symbol=sym, at=created, grade="A+" if plus else g or "watch", long=long_, known=bool(lg)))
+    return dict(days=days, breakouts=brk, retests=len(rows), a_long=a, a_plus=sum(1 for x in items if x["grade"] == "A+"),
+                tracking_since=first_log, recent=[x for x in items if x["grade"] in ("A+", "A")][:12])
