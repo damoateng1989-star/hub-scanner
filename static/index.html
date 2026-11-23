@@ -2700,6 +2700,9 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b, .mp-legend .lg-h span { padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.14); background: rgba(10,12,16,.55); color: #E6EBF0; text-shadow: none; }
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
+.board-symbol .board-co { display: block; flex-basis: 100%; font: 500 11.5px var(--sans, Inter, sans-serif); color: #9AA4B2; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+@media (min-width: 900px) { .board-table .board-symbol .board-co { white-space: normal; max-width: 120px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }
+#gxbResults button small { color: #9AA4B2; font-weight: 500; margin-left: 4px; }
 .mp-legend .lg-h i { font: 500 12px var(--sans, Inter, sans-serif); font-style: normal; color: #C9D1D9; max-width: 38vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
 html[data-theme="light"] .mp-legend .lg-h i { color: #334155; text-shadow: none; }
 @media (max-width: 700px) { .mp-legend .lg-h i { max-width: 34vw; } }
@@ -2817,7 +2820,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
   <div class="vh"><h1>My <em>list.</em></h1><p>The stocks you follow. Tap one to see its chart and price levels.</p></div>
   <form class="cmd" id="add" autocomplete="off">
     <span class="pre">$</span>
-    <input id="sym" placeholder="Add a ticker, e.g. NVDA" autocapitalize="characters" maxlength="10" aria-label="Ticker">
+    <input id="sym" placeholder="Add a ticker or company, e.g. NVDA" autocapitalize="characters" autocomplete="off" maxlength="40" aria-label="Ticker or company name" list="nsSymList"><datalist id="nsSymList"></datalist>
     <button type="button" id="scanBtn">Scan now</button>
     <button class="ghost" id="addBtn">+ Add</button>
   </form>
@@ -2960,7 +2963,7 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 <div class="ask-pop" id="askPop" hidden role="dialog" aria-label="Ask Sika">
   <div class="sp-head"><div><span class="sika-ava" id="askAva"></span><b>Sika</b><small class="live-pill">Live</small></div><button class="bf-x" onclick="askSikaClose()" aria-label="Close">✕</button></div>
   <div class="ask-body" id="askBody"></div>
-  <div class="ask-row"><input id="askInput" type="text" placeholder="Enter a ticker or ask Sika a question" autocomplete="off" autocapitalize="sentences" spellcheck="false" onkeydown="if(event.key==='Enter')askSikaSend()"><button class="sp-go ask-send" type="button" onclick="askSikaSend()">Send</button></div>
+  <div class="ask-row"><input id="askInput" type="text" placeholder="Enter a ticker, a company or ask Sika a question" autocomplete="off" autocapitalize="sentences" spellcheck="false" onkeydown="if(event.key==='Enter')askSikaSend()"><button class="sp-go ask-send" type="button" onclick="askSikaSend()">Send</button></div>
   <p class="ask-foot">Sika's read — not financial advice.</p>
 </div>
 
@@ -3350,7 +3353,8 @@ async function loadAlerts() {
 
 $("add").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const sym = $("sym").value.trim();
+  let sym = $("sym").value.trim();
+  if (sym && !nsName(sym)) { const f = nsFindSym(sym); if (f) sym = f; }   // "Microsoft" -> MSFT
   $("err").textContent = "";
   if (!sym) { $("err").textContent = "Enter a ticker first"; return; }
   $("addBtn").disabled = true; $("addBtn").textContent = "Adding…";
@@ -3361,7 +3365,7 @@ $("add").addEventListener("submit", async (e) => {
   clearTimeout(slowMsg); if ($("err").textContent.startsWith("Still working")) $("err").textContent = ""; $("err").style.color = "";
   $("addBtn").disabled = false; $("addBtn").textContent = "+ Add";
 });
-$("sym").addEventListener("input", () => { $("err").textContent = ""; });
+$("sym").addEventListener("input", () => { $("err").textContent = ""; nsFillList(); });
 
 $("chips").addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-f]"); if (!b) return;
@@ -4601,7 +4605,7 @@ function gaugeHTML(st) {
 function renderStrip() {
   const el = $("sbShelves"); if (!el) return;
   const rows = TICKERS.filter(t => t.status && !t.status.error);
-  el.innerHTML = rows.length ? rows.map(t => `<div class="sb-shelf-row"><button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(LIVE[t.symbol] ? {...t.status, last_close: LIVE[t.symbol].price} : t.status)}
+  el.innerHTML = rows.length ? rows.map(t => `<div class="sb-shelf-row"><button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" title="${esc(nsName(t.symbol) || t.symbol)}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(LIVE[t.symbol] ? {...t.status, last_close: LIVE[t.symbol].price} : t.status)}
       <small>${liveOther(t.status) ? `${esc(liveOther(t.status).name)} · ${liveOther(t.status).state === "breakout_up" ? "broke out" : "broke down"}` : STATE_WORD[t.status.state] || "No setup yet"}</small></button><button class="sb-rm" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">×</button></div>`).join("")
     : `<p style="color:#646B78;font-size:13px;margin:4px 8px">Add tickers to see where each one sits against its hub.</p>`;
 }
@@ -7249,7 +7253,7 @@ function renderInstitutionalBoard(){
   const STALE_OF=boardStaleOf(BOARD_DATA);
   const q=($("boardSearch")?.value||"").trim().toUpperCase();
   const sel=BOARD_SEL.length?BOARD_SEL:[BOARD_KIND];      // several chips: a stock must match every one of them
-  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=sel.every(k=>boardKindMatch(r,k));return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q));});
+  let rows=boardRows().filter(r=>{const label=boardStatus(r,r._kind)[0];const inKind=sel.every(k=>boardKindMatch(r,k));return inKind&&(!q||String(r.symbol).includes(q)||label.toUpperCase().includes(q)||(q.length>1&&nsName(r.symbol).toUpperCase().includes(q)));});
   rows.sort((a,b)=>{
     // Patch 165: the default All view ("tier" sort): live setups first (grade A→B→C→D→?), then your
     // watchlist, then the rest by the size of the day's move. Returning 0 keeps the board's own order
@@ -7292,7 +7296,7 @@ function renderInstitutionalBoard(){
     const context=kind==="live"?(r.label||"4H close confirmed").split(", ").slice(-1)[0]:h.sessions!=null?h.sessions+" sessions"+(h.grade?" · "+(h.grade==="warehouse"?"Warehouse":"Ledge"):""):kind==="recent"?"Completed setup":"";
     const px = (typeof LIVE !== "undefined" && LIVE[r.symbol] && LIVE[r.symbol].price != null) ? LIVE[r.symbol].price : r.last_close;
     const rStale=STALE_OF(r);
-    return '<tr'+(rStale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small></div></td>'+
+    return '<tr'+(rStale?' class="board-row-stale"':'')+'><td data-label="Instrument"><div class="board-symbol"><a href="/t/'+encodeURIComponent(r.symbol)+'">'+esc(r.symbol)+'</a><small>4H</small>'+(nsName(r.symbol)?'<span class="board-co">'+esc(nsName(r.symbol))+'</span>':'')+'</div></td>'+
       '<td data-label="Setup"><span class="board-state '+status[1]+'">'+status[0].split(' · ').map((t,i)=>i?'<small class="bs-sub">'+esc(t)+'</small>':esc(t)+(status[1]==='up'?' ↑':status[1]==='down'?' ↓':'')).join('')+'</span>'+(kind==="live"?stkBadge(r.symbol,["Stacked Shelf"]):"")+(kind==="live"&&boardCandles(r)===0?'<span class="board-state new new">NEW</span>':'')+(kind==="live"&&r.retest&&r.retest.candles_left>0?(r.retest.near?'<span class="board-state rt rt-now">RETESTING NOW</span>':'<span class="board-state rt rt-wait" title="The retest window closes '+retestBy(r.retest.candles_left)+' ET">RETEST · UNTIL '+retestBy(r.retest.candles_left,true).toUpperCase()+'</span>'):'')+(kind==="live"?strengthChip(r.strength,r.state!=="breakdown")+volChip(r.rvol)+pathChip(r)+tapeChip(r):'')+'</td><td data-label="Last price">'+money(px)+boardDayPctHTML(r,px)+(rStale?'<small class="board-stale" title="Not refreshed in the latest sweep — updated '+esc(r.updated_at||"")+'. See the ticker page for current levels.">Stale</small>':'')+'</td><td data-label="Position">'+esc(posLine)+'</td><td data-label="Range">'+rangeCell+'</td>'+
       '<td data-label="Hub low">'+(h.low==null?"":money(h.low))+'</td><td data-label="Hub high">'+(h.high==null?"":money(h.high))+'</td>'+
       '<td data-label="Distance to edge"><span class="board-distance">'+edge+'</span></td><td data-label="Next shelf / target"><span class="board-shelf">'+(shelf==null?"":money(shelf))+'</span>'+(kind==="live"&&r.gamma_line?'<small class="gwall" title="'+esc(r.gamma_line)+'">'+(r.gamma_capped?"🧱 Wall "+money(r.gamma_wall)+" caps it":"🧱 Open gamma")+'</small>':'')+'</td>'+
@@ -7421,7 +7425,7 @@ async function loadBoard() {
   try { paintHeatmap(); } catch (e) {}      // Patch 176: the retest outlines need the board rows
   $("board").innerHTML = setupTabs(b) + '<div id="setupBoard" hidden></div><div id="hubBoard">' +
     (b.locked?'<div class="board-lock"><div><strong>'+b.live_count+' confirmed breakouts · '+b.near_count+' approaching a hub edge</strong><p>Live breakout and near-edge detail is available with Pro access.</p></div><a class="upsell" href="#account">View Pro access →</a></div>':"")+
-    '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
+    '<div class="board-toolbar"><div class="board-search"><input id="boardSearch" type="search" placeholder="Search ticker, company or setup…" oninput="renderInstitutionalBoard()" aria-label="Search market monitor"></div>'+
     '<div class="board-filters"><button class="board-filter active" data-kind="setups" onclick="filterInstitutionalBoard(\'setups\')" title="Live breakouts and breakdowns (including those retesting) and hubs at the edge: what can become a trade">Setups</button>'+
     '<button class="board-filter" data-kind="all" onclick="filterInstitutionalBoard(\'all\')">All</button>'+
     '<button class="board-filter" data-kind="a" onclick="filterInstitutionalBoard(\'a\')" title="Live breakouts and breakdowns whose setup grades A">A only</button>'+
@@ -7776,8 +7780,8 @@ function filterGexBoardTickers(q) {
   const box = $("gxbResults"); if (!box) return;
   const v = (q || "").trim().toUpperCase();
   if (!v) { box.hidden = true; box.innerHTML = ""; return; }
-  const hits = GEX_BOARD_TICKERS.filter(t => t.symbol.includes(v) || (t.name || "").toUpperCase().includes(v)).slice(0,18);
-  box.innerHTML = hits.map(t=>'<button onclick="selectGexBoardTicker(\''+esc(t.symbol)+'\')">'+esc(t.symbol)+(t.on_watchlist?' · WATCHLIST':'')+'</button>').join("")
+  const hits = GEX_BOARD_TICKERS.filter(t => t.symbol.includes(v) || (t.name || nsName(t.symbol)).toUpperCase().includes(v)).slice(0,18);
+  box.innerHTML = hits.map(t=>'<button onclick="selectGexBoardTicker(\''+esc(t.symbol)+'\')">'+esc(t.symbol)+(nsName(t.symbol)?' <small>'+esc(nsName(t.symbol))+'</small>':'')+(t.on_watchlist?' · WATCHLIST':'')+'</button>').join("")
     || '<span class="gxb-meta">No ticker found in this universe.</span>';
   box.hidden = false;
 }
@@ -8730,7 +8734,8 @@ async function askSikaProcess(raw, skipEcho) {
   if (!skipEcho) askSikaSay(`<b>${esc(raw)}</b>`, "ask-you");
   // "show me all", "give me all", "more", "the rest" right after a setups list: the whole list (and never Allstate's ticker ALL)
   const more = !!ASK_LAST_SCAN && !/^\s*ALL\s*$/.test(raw) && /^\s*(please\s+)?((give|show|list)\s+(me\s+)?)?(them\s+)?(all|more|the rest|everything|all of them|the full list)(\s+(of them|setups|please))?\s*[.!?]*\s*$/i.test(raw);
-  const ticker = raw.toUpperCase().replace(/\$/g, "").trim();
+  let ticker = raw.toUpperCase().replace(/\$/g, "").trim();
+  if (!more && !nsName(ticker)) { const f = nsFindSym(raw); if (f) ticker = f; }   // "Microsoft" -> MSFT
   if (!more && /^[A-Z][A-Z0-9.-]{0,9}$/.test(ticker)) {
     if (ASK_SYMBOL !== ticker) { ASK_SYMBOL = ticker; ASK_HISTORY = []; }
     askSikaHistory("user", `Let's discuss ${ticker}.`);
@@ -10495,7 +10500,30 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { const v = 
 
 /* company names for the chart legend (static, fetched once) */
 window.NS_NAMES = window.NS_NAMES || {};
-fetch("/api/names").then(r => r.ok ? r.json() : {}).then(n => { window.NS_NAMES = n || {}; try { const l = window.MAP_LWC_LEG; if (l && l._repaint) l._repaint(); } catch (e) {} }).catch(() => {});
+function nsName(sym) { return (window.NS_NAMES || {})[String(sym || "").toUpperCase()] || ""; }
+const _nsNorm = t => String(t || "").toLowerCase().replace(/\(.*?\)/g, " ").replace(/[.,'’&-]/g, " ")
+  .replace(/\b(inc|incorporated|corp|corporation|co|company|plc|ltd|holdings?|group|the|class [ab])\b/g, " ").replace(/\s+/g, " ").trim();
+/* "Microsoft", "apple", "applied materials" -> the ticker; exact name only (after dropping Inc./Corp./Class A), so a question never turns into a ticker */
+function nsFindSym(q) {
+  const n = _nsNorm(q); if (!n) return null;
+  const N = window.NS_NAMES || {}; let hit = null;
+  for (const k in N) if (_nsNorm(N[k]) === n) { hit = k; break; }   // first match wins (GOOG before GOOGL is fine)
+  return hit;
+}
+/* up to 8 suggestions for a box: ticker prefix first, then names that start with / contain the text */
+function nsSuggest(q) {
+  const v = String(q || "").trim(); if (!v) return [];
+  const U = v.toUpperCase(), L = v.toLowerCase(), N = window.NS_NAMES || {}, a = [], b = [], c = [];
+  for (const k in N) { const nm = N[k].toLowerCase();
+    if (k.startsWith(U)) a.push(k); else if (v.length > 1 && (nm.startsWith(L) || _nsNorm(nm).startsWith(L))) b.push(k); else if (v.length > 2 && nm.includes(L)) c.push(k); }
+  a.sort((x, y) => x.length - y.length || x.localeCompare(y));
+  return a.concat(b, c).slice(0, 8);
+}
+function nsFillList() {
+  const dl = document.getElementById("nsSymList"), inp = document.getElementById("sym"); if (!dl || !inp) return;
+  dl.innerHTML = nsSuggest(inp.value).map(k => `<option value="${k}">${esc(nsName(k))}</option>`).join("");
+}
+fetch("/api/names").then(r => r.ok ? r.json() : {}).then(n => { window.NS_NAMES = n || {}; try { if (typeof renderInstitutionalBoard === "function" && typeof BOARD_DATA !== "undefined" && BOARD_DATA) renderInstitutionalBoard(); } catch (e) {} try { const l = window.MAP_LWC_LEG; if (l && l._repaint) l._repaint(); } catch (e) {} }).catch(() => {});
 </script>
 </body>
 </html>
