@@ -313,7 +313,7 @@ html[data-theme="light"] .oxg tbody th, html[data-theme="light"] .oxg td b { col
 .lkt h3 { margin: 0 0 4px; font-size: 19px; } .lkt p { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: #9AA4B2; } .lkt small { display: block; text-align: center; margin-top: 10px; font-size: 12px; color: #8A93A0; }
 .lkt-rows { background: #14161B; border: 1px solid #262A33; border-radius: 14px; padding: 4px 14px; } .lkt-rows div { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #22262E; font-size: 13px; color: #9AA4B2; } .lkt-rows div:first-child { border-top: 0; }
 .lkt-rows b { color: #E6EBF0; font-family: var(--mono, monospace); } .lkt-rows b.d { color: #FF8A80; } .lkt-rows input { width: 100px; padding: 6px 8px; border-radius: 8px; border: 1px solid #2E333D; background: #1B1E25; color: #E6EBF0; text-align: right; }
-.lkt-acts { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 14px; } .lkt-acts button { padding: 12px; border-radius: 12px; border: 0; font: 650 14px var(--sans); cursor: pointer; } .lkt-x { background: #262A33; color: #E6EBF0; } .lkt-go { background: #16A34A; color: #fff; }
+.lkt-acts { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 14px; } .lkt-acts button { padding: 12px; border-radius: 12px; border: 0; font: 650 14px var(--sans); cursor: pointer; } .lkt-x { background: #262A33; color: #E6EBF0; } .lkt-go { background: linear-gradient(90deg, #42A07E, #4FBC97); color: #fff; }
 #optionsSwing .ox-earn,#optionsSwing .oc-earn { margin:10px 0; padding:9px 12px; border:1px solid rgba(196,168,255,.35); border-radius:10px; color:#c4a8ff; background:rgba(124,58,237,.10); font-size:13px; line-height:1.45; }
 #optionsSwing .ox2 + .ox2 { margin-top:22px; padding-top:18px; border-top:1px solid var(--line); } #optionsSwing .oc { padding:12px 0; }
 #optionsSwing .oc-t b { display:block; color:var(--ink); font:700 20px var(--sans); } #optionsSwing .oc-t small { display:block; margin:4px 0 14px; color:var(--muted); font-size:14px; }
@@ -916,13 +916,13 @@ async function loadSwingCard() {
 function tkLookout(x) {
   const pl = x.plan, up = pl.direction !== -1, k = x.contract, el = document.createElement("div"); el.className = "lkt-back";
   const contract = k ? `${x.sym} ${k.expiry} $${k.strike} ${x.side === "puts" ? "Put" : "Call"}` : null;
-  el.innerHTML = `<div class="lkt" role="dialog" aria-modal="true"><span class="lkt-badge">Watch a trade</span><h3>Let Lookout watch your trade</h3>
-    <p>You placed the order — it stays yours. Lookout watches this position against the plan and taps you when something changes. It never places an order.</p>
+  el.innerHTML = `<div class="lkt" role="dialog" aria-modal="true"><span class="lkt-badge">Watch a trade · ${esc(x.sym)}</span><h3>Hi, I'm Lookout 👋</h3>
+    <p>I'll keep an eye on the trade you placed, if you let me. The trade stays yours: I never buy, sell or touch an order. I just tap you on the shoulder when something changes.</p>
     <div class="lkt-rows"><div><span>${contract ? "Position" : "Stock"}</span><b>${esc(contract || x.sym)}</b></div>
       <div><span>Your fill (optional)</span><input type="number" step="0.01" min="0" id="lktFill"></div><div><span>Size (optional)</span><input type="number" step="1" min="0" id="lktQty"></div>
-      <div><span>Plan dies on a close ${up ? "below" : "above"}</span><b class="d">${money(pl.kill)}</b></div><div><span>Target</span><b>${money(pl.target)}</b></div></div>
-    <div class="lkt-acts"><button type="button" class="lkt-x">Cancel</button><button type="button" class="lkt-go">I'm in</button></div>
-    <small>Alerts go to your phone. Cancel keeps the trade — it just isn't watched.</small></div>`;
+      <div><span>Plan ends on a close ${up ? "below" : "above"}</span><b class="d">${money(pl.kill)}</b></div><div><span>Target</span><b>${money(pl.target)}</b></div></div>
+    <div class="lkt-acts"><button type="button" class="lkt-x">Not now</button><button type="button" class="lkt-go">Yes, watch it</button></div>
+    <small>Alerts go to your phone. "Not now" keeps the trade, I just won't watch it.</small></div>`;
   const done = () => el.remove();
   el.addEventListener("click", e => { if (e.target === el) done(); });
   el.querySelector(".lkt-x").onclick = done;
@@ -930,7 +930,7 @@ function tkLookout(x) {
     const r = await fetch("/api/lookout/start", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({ticker: x.sym, kind: "hub", direction: pl.direction,
       contract, qty: +document.getElementById("lktQty").value || null, entry_price: +document.getElementById("lktFill").value || null, edge: pl.edge, target: pl.target, kill: pl.kill})});
     const j = await r.json().catch(() => ({}));
-    el.querySelector(".lkt").innerHTML = r.ok ? `<h3>Lookout is watching ${esc(x.sym)}</h3><p>You'll get a tap when the plan dies, the target is touched, the window closes, or earnings are next.</p><div class="lkt-acts"><button type="button" class="lkt-go" style="grid-column:1/-1">Done</button></div>`
+    el.querySelector(".lkt").innerHTML = r.ok ? `<h3>👀 Watching ${esc(x.sym)}</h3><p>Done. I'll tap you when the plan dies, the target is touched, time runs out, or earnings are next.</p><div class="lkt-acts"><button type="button" class="lkt-go" style="grid-column:1/-1">Done</button></div>`
       : `<h3>Couldn't start the watch</h3><p>${esc(j.detail || "Sign in and try again.")}</p><div class="lkt-acts"><button type="button" class="lkt-go" style="grid-column:1/-1">OK</button></div>`;
     el.querySelector(".lkt-go").onclick = done;
   };

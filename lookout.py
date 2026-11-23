@@ -97,6 +97,21 @@ def window_end_for(ticker: str) -> str:
 _OCC = re.compile(r"^[A-Z]{1,6}\d{6}[CP]\d{8}$")
 
 
+def preview(ticker: str) -> dict:
+    """What the window says before the member opts in: the date the plan's clock runs out and any earnings inside it."""
+    t = str(ticker or "").strip().upper()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", t):
+        raise ValueError("Unknown ticker")
+    wend = window_end_for(t)
+    try:
+        import earnings
+        e = earnings.lookup(t)
+        edate = e["date"] if e and e["date"] <= wend else None
+    except Exception:
+        edate = None
+    return dict(window_end=wend, earnings_date=edate)
+
+
 def start_watch(user: dict, p: dict) -> dict:
     ticker = str(p.get("ticker") or "").strip().upper()
     if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", ticker):

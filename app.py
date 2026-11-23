@@ -2073,6 +2073,15 @@ async def lookout_start(body: LookoutStart, u: dict = User):
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/lookout/preview")
+async def lookout_preview(ticker: str, u: dict = User):
+    import lookout
+    try:
+        return await run_in_threadpool(lookout.preview, ticker)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/api/lookout")
 def lookout_mine(u: dict = User):
     import lookout
