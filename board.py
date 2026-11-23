@@ -667,13 +667,14 @@ def _chart_expiry(now: pd.Timestamp) -> pd.Timestamp:
     return end.tz_convert("UTC") + pd.Timedelta(minutes=3)
 
 
-def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False) -> dict:
+def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False, ext: bool = False) -> dict:
     """The stock panel's chart, served from a cache until the next close; only the forming candle is refreshed per call."""
     sym = scanner.clean_symbol(sym)
     if tf not in ("1h", "2h", "3h", "4h", "1d"):
         tf = "4h"
     t0, now = time.time(), pd.Timestamp.now(tz="UTC")
-    key = (sym, tf, bool(lab_mode))
+    ext = bool(ext) and tf in ("1h", "2h", "3h")      # extended hours: finer intraday views only
+    key = (sym, tf, bool(lab_mode), ext)
     hit = _CHART_CACHE.get(key)
     if hit and hit[0] > now and not fresh:
         out = dict(hit[1])
@@ -688,12 +689,15 @@ def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False)
             out["forming"] = _forming(sym) if tf == "4h" else None
             out["timing"] = dict(cached=True, total=round((time.time() - t0) * 1000))
             return out
-    out = _build_chart(sym, tf, lab_mode)
+    out = _build_chart(sym, tf, lab_mode, ext)
     with _CHART_LOCK:
         if len(_CHART_CACHE) > 400:                 # stay small on a 512 MB server
             for k in sorted(_CHART_CACHE, key=lambda k: _CHART_CACHE[k][0])[:100]:
                 _CHART_CACHE.pop(k, None)
-        _CHART_CACHE[key] = (_chart_expiry(now), {k: v for k, v in out.items() if k not in ("forming", "timing")})
+        exp = _chart_expiry(now)
+        if ext:                                     # pre-market / after-hours candles keep forming between closes
+            exp = min(exp, now + pd.Timedelta(minutes=5))
+        _CHART_CACHE[key] = (exp, {k: v for k, v in out.items() if k not in ("forming", "timing")})
     out["timing"]["total"] = round((time.time() - t0) * 1000)
     return out
 
@@ -732,7 +736,7 @@ def warm_charts(symbols: list[str] | None = None):
     log.info("warmed %d charts", n)
 
 
-def _build_chart(sym: str, tf: str, lab_mode: bool) -> dict:
+def _build_chart(sym: str, tf: str, lab_mode: bool, ext: bool = False) -> dict:
     tm = {}
     t0 = time.time()
     c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
@@ -741,6 +745,8 @@ def _build_chart(sym: str, tf: str, lab_mode: bool) -> dict:
         raise ValueError("no price data")
     if tf == "1d":
         frame = engine.to_daily(c4)                     # the view's candles; all analysis stays on c4
+    elif tf in ("1h", "2h", "3h") and ext:              # + pre-market and after-hours candles (display only)
+        frame = engine.to_hours_ext(scanner.load_raw(sym, scanner.SCAN_DAYS), int(tf[0]), now=pd.Timestamp.now(tz="UTC")).iloc[-900:]
     elif tf in ("1h", "2h", "3h"):                      # finer views regroup the same 30-minute bars (display only)
         frame = engine.to_hours(scanner.load_raw(sym, scanner.SCAN_DAYS), int(tf[0]), now=pd.Timestamp.now(tz="UTC")).iloc[-700:]
     else:
@@ -756,7 +762,8 @@ def _build_chart(sym: str, tf: str, lab_mode: bool) -> dict:
 
     has_vol = "Volume" in frame.columns
     candles = [dict(time=t(i), open=round(r.Open, 2), high=round(r.High, 2), low=round(r.Low, 2), close=round(r.Close, 2),
-                    volume=(int(r.Volume) if has_vol and pd.notna(r.Volume) else None))
+                    volume=(int(r.Volume) if has_vol and pd.notna(r.Volume) else None),
+                    **({"s": r.session} if ext and r.session != "reg" else {}))
                for i, r in frame.iterrows()]
     hubs = [dict(start=t(idx[h["start_i"]]), end=t(idx[h["end_i"]]), low=round(h["low"], 2), high=round(h["high"], 2),
                  sessions=h["sessions"], active=h["active"]) for h in res["hubs"]]
@@ -766,7 +773,7 @@ def _build_chart(sym: str, tf: str, lab_mode: bool) -> dict:
     t2 = time.time()
     forming = _forming(sym) if tf == "4h" else None
     tm["forming"] = round((time.time() - t2) * 1000)
-    out = dict(symbol=sym, tf=tf, candles=candles, hubs=hubs, trades=trades, status=st, forming=forming, timing=tm,
+    out = dict(symbol=sym, tf=tf, ext=ext, candles=candles, hubs=hubs, trades=trades, status=st, forming=forming, timing=tm,
                stats=engine.stats(res["trades"]), watching=db.get_ticker(sym) is not None)
     try:      # other setups, drawn as lines on the chart
         t3 = time.time()

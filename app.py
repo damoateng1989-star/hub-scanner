@@ -1722,9 +1722,9 @@ async def forming_candle(symbol: str, u: dict = User):
 
 
 @app.get("/api/chart/{symbol}")
-async def chart_data(symbol: str, response: Response, tf: str = "4h", fresh: int = 0, u: dict = User):
+async def chart_data(symbol: str, response: Response, tf: str = "4h", fresh: int = 0, ext: int = 0, u: dict = User):
     try:
-        d = await run_in_threadpool(lambda: board.chart(symbol, tf=tf, lab_mode=bool(u and u["is_admin"]), fresh=bool(fresh)))
+        d = await run_in_threadpool(lambda: board.chart(symbol, tf=tf, lab_mode=bool(u and u["is_admin"]), fresh=bool(fresh), ext=bool(ext)))
     except Exception as e:
         raise HTTPException(400, str(e))
     tm = d.get("timing") or {}           # where the time went (browser dev tools show it under Timing; also logged)

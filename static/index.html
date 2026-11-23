@@ -2702,6 +2702,13 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h span { color: #C9D1D9; }
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
+.mp-legend .lg-x { margin-top: 1px; font: 500 11px var(--sans, Inter, sans-serif); color: #B4BDC9; text-shadow: 0 1px 2px rgba(0,0,0,.8), 0 0 4px rgba(0,0,0,.6); }
+.mp-legend .lg-x b { font: 600 11.5px var(--mono, ui-monospace, monospace); color: #E6EBF0; margin: 0 2px; }
+html[data-theme="light"] .mp-legend .lg-x { color: #475569; } html[data-theme="light"] .mp-legend .lg-x b { color: #0D1117; }
+.mp-extkey i { opacity: .55; }
+.mp-sess { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 1; }
+.mp-sess i { position: absolute; top: 0; } .mp-sess i.pre { background: rgba(245,185,74,.07); } .mp-sess i.post { background: rgba(91,140,255,.08); }
+html[data-theme="light"] .mp-sess i.pre { background: rgba(217,145,20,.09); } html[data-theme="light"] .mp-sess i.post { background: rgba(59,110,230,.08); }
 .board-symbol .board-co { display: block; flex-basis: 100%; font: 500 11.5px var(--sans, Inter, sans-serif); color: #9AA4B2; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
 @media (min-width: 900px) { .board-table .board-symbol .board-co { white-space: normal; max-width: 120px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; } }
 #gxbResults button small { color: #9AA4B2; font-weight: 500; margin-left: 4px; }
@@ -4920,6 +4927,16 @@ let MAP_Q = null;   // which Sika question is open
 const MAP_TFS = [["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "1D"]];
 let MAP_TF = (() => { try { const v = localStorage.getItem("ns-map-tf"); return MAP_TFS.some(([k]) => k === v) ? v : "4h"; } catch (e) { return "4h"; } })();
 let MAP_DCH = null;      // the daily chart for the open stock (fetched when 1D is picked)
+// Nov 22: Regular / Extended hours on the 1H-3H views (pre-market 4:00-9:30 and after hours 4:00-8:00 shaded; display only)
+let MAP_EXT = (() => { try { return localStorage.getItem("ns-map-ext") === "1"; } catch (e) { return false; } })();
+const mapExtOn = () => MAP_EXT && (MAP_TF === "1h" || MAP_TF === "2h" || MAP_TF === "3h");
+const MAP_EXT_K = {"1h": 17 / 7, "2h": 9 / 4, "3h": 7 / 3};   // candles per day with / without extended hours: same time span either way
+function mapExtSet(on) {
+  on = !!on; if (on === MAP_EXT) return;
+  MAP_EXT = on; MAP_HOVER = null; MAP_DCH = null; if (typeof MAP_RP !== "undefined" && MAP_RP) mapReplayStop(true);
+  try { localStorage.setItem("ns-map-ext", on ? "1" : "0"); } catch (e) {}
+  paintMap();
+}
 const MAP_RANGE_SETS = {"1h": [["2D", 14], ["1W", 35], ["2W", 70], ["1M", 147]], "2h": [["1W", 20], ["2W", 40], ["1M", 84], ["2M", 168]],
                         "3h": [["1W", 15], ["2W", 30], ["1M", 63], ["3M", 189]],
                         "4h": [["1W", 10], ["2W", 20], ["1M", 42], ["3M", 126]], "1d": [["1M", 21], ["3M", 63], ["6M", 126]]};
@@ -5089,7 +5106,7 @@ function mapTimeAxis(cs, cx, yBase, xMax, daily) {
   return out.join("");
 }
 function mapChart(P, chart, W) {
-  const want = Math.max(8, Math.min(MAP_N, 200));
+  const want = mapExtOn() && chart && chart.ext ? Math.max(8, Math.min(Math.round(MAP_N * (MAP_EXT_K[MAP_TF] || 1)), 460)) : Math.max(8, Math.min(MAP_N, 200));
   const cs = chart && chart.symbol === P.sym ? (chart.candles || []).slice(-want) : [];
   const fc = mapFormingCandle(P, chart, cs);
   if (fc) { cs.push(fc); if (cs.length > want) cs.shift(); }
@@ -5193,7 +5210,7 @@ function mapLwcKey(D) {
   // everything the chart draws: if none of it changed, a repaint of the panel can keep the chart as it is
   if (!D || !D.cs || !D.cs.length) return null;
   const P = D.P || {}, last = D.cs[D.cs.length - 1], g = GAMMA[P.sym];
-  return JSON.stringify([P.sym, !!D.daily, MAP_TF, mapCloudOn(), document.documentElement.dataset.theme, candleColors(), D.cs.length, D.cs[0].time,
+  return JSON.stringify([P.sym, !!D.daily, MAP_TF, mapExtOn(), mapCloudOn(), document.documentElement.dataset.theme, candleColors(), D.cs.length, D.cs[0].time,
     [last.time, last.open, last.high, last.low, last.close, last.volume], P.trig, P.stop, P.shelf, P.atrTarget, P.oldHigh, P.dir,
     P.hub && [P.hub.high, P.hub.low], P.obst && [P.obst.level, P.obst.name], P.retest && P.retest.edge,
     g && g !== "loading" ? [g.call_wall, g.put_wall] : null, P.px,
@@ -5267,7 +5284,11 @@ function mapCloudCalc(full) {
 }
 // the candle series' data: the candles, plus 26 empty future slots when the cloud is on (room for the projection)
 function mapSeriesData(D) {
-  const real = D.cs.filter(x => Number.isFinite(+x.time) && Number.isFinite(+x.open) && Number.isFinite(+x.high) && Number.isFinite(+x.low) && Number.isFinite(+x.close)).map(x => ({time: +x.time, open: +x.open, high: +x.high, low: +x.low, close: +x.close}));
+  const real = D.cs.filter(x => Number.isFinite(+x.time) && Number.isFinite(+x.open) && Number.isFinite(+x.high) && Number.isFinite(+x.low) && Number.isFinite(+x.close)).map(x => {
+    const b = {time: +x.time, open: +x.open, high: +x.high, low: +x.low, close: +x.close};
+    if (x.s && MAP_LWC_UPDN) { const c = (b.close >= b.open ? MAP_LWC_UPDN[0] : MAP_LWC_UPDN[1]); if (/^#[0-9a-f]{6}$/i.test(c)) b.color = b.wickColor = b.borderColor = c + "8C"; }   // pre-market / after hours: dimmer
+    return b;
+  });
   MAP_CLOUD_WS = 0;
   if (!real.length || !mapCloudOn()) return real;
   try {
@@ -5439,9 +5460,24 @@ function initLightweightMapChart() {
     if (document.fonts && document.fonts.load) {
       document.fonts.load('700 12px "JetBrains Mono"').then(() => { chart.applyOptions({}); }).catch(() => {});
     }
+    MAP_LWC_UPDN = [up, down];
     const candles = chart.addSeries(L.CandlestickSeries,{upColor:up,downColor:down,borderVisible:false,wickUpColor:up,wickDownColor:down,priceLineVisible:false,lastValueVisible:true});
     const prevWs = MAP_CLOUD_WS;
     candles.setData(mapSeriesData(D));   // Patch 180: + 26 empty future slots when the cloud is on
+    if (D.cs.some(x => x.s)) {   // pre-market (amber) and after hours (blue): solid bands behind each run of those candles
+      const el = chart.chartElement(); el.style.position = "relative";
+      const ov = document.createElement("div"); ov.className = "mp-sess"; el.appendChild(ov);
+      const runs = []; let r0 = null;
+      D.cs.forEach((x, i) => { if (x.s && (!r0 || r0.s !== x.s)) { r0 = {s: x.s, a: +x.time, b: +x.time}; runs.push(r0); } else if (x.s) r0.b = +x.time; else r0 = null; });
+      const drawSess = () => { try {
+        const ts = chart.timeScale(), sp = ts.options().barSpacing, ph = chart.panes()[0].getHeight(), W = ts.width();
+        ov.innerHTML = runs.map(r => { const xa = ts.timeToCoordinate(r.a), xb = ts.timeToCoordinate(r.b); if (xa == null || xb == null) return "";
+          const l = Math.max(0, xa - sp / 2), w = Math.min(W, xb + sp / 2) - l; return w > 0 ? `<i class="${r.s}" style="left:${l}px;width:${w}px;height:${ph}px"></i>` : ""; }).join("");
+      } catch (e) {} };
+      chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(drawSess));
+      new ResizeObserver(() => requestAnimationFrame(drawSess)).observe(el);
+      requestAnimationFrame(drawSess);
+    }
     MAP_LWC_UPDN = [up, down];
     const vol = chart.addSeries(L.HistogramSeries,{priceFormat:{type:"volume"},priceScaleId:"",lastValueVisible:false,priceLineVisible:false},1);
     const volPane = chart.panes()[1];
@@ -5557,13 +5593,23 @@ function initLightweightMapChart() {
       const _nm = (window.NS_NAMES || {})[String(BRIEF_SYM || "").toUpperCase()] || "";
       const head = `<div class="lg-h"><b>${esc(BRIEF_SYM || "")}</b>${_nm ? `<i>${esc(_nm)}</i>` : ""}<span>${TFW}</span></div>`;
       if (!b) { LEG.innerHTML = head; return; }
+      const cb = D.cs.find(x => +x.time === +b.time), SW = {pre: "Pre-market", post: "After hours"};
+      let extLine = "";
+      if (mapExtOn()) {
+        const lastC = D.cs[D.cs.length - 1], regC = [...D.cs].reverse().find(x => !x.s);
+        const ex = typeof EXT !== "undefined" && EXT[BRIEF_SYM] && EXT[BRIEF_SYM].session && EXT[BRIEF_SYM].price != null ? EXT[BRIEF_SYM] : null;
+        const sess = b._hover ? (cb && cb.s) : (ex ? ex.session : lastC && lastC.s), px = b._hover ? null : (ex ? +ex.price : lastC && lastC.s ? +lastC.close : null);
+        if (b._hover && sess) extLine = `<div class="lg-x">${SW[sess]}</div>`;
+        else if (sess && px != null && regC) { const d = px - regC.close, dp = d / regC.close * 100, k = d >= 0 ? "u" : "d";
+          extLine = `<div class="lg-x">${SW[sess] || "Extended"} <b>${px.toFixed(2)}</b> <span class="${k}">${d >= 0 ? "+" : ""}${d.toFixed(2)} (${d >= 0 ? "+" : ""}${dp.toFixed(2)}%)</span></div>`; }
+      }
       const prev = D.cs[D.cs.findIndex(x => +x.time === +b.time) - 1], ch = prev ? b.close - prev.close : b.close - b.open, pc = prev ? ch / prev.close * 100 : (b.close - b.open) / b.open * 100;
       const c = (v, ref) => v >= ref ? "u" : "d";
-      LEG.innerHTML = head + `<div class="lg-o"><span>O <b class="${c(b.open, prev ? prev.close : b.open)}">${(+b.open).toFixed(2)}</b></span><span>H <b class="u">${(+b.high).toFixed(2)}</b></span><span>L <b class="d">${(+b.low).toFixed(2)}</b></span><span>C <b class="${ch >= 0 ? "u" : "d"}">${(+b.close).toFixed(2)}</b></span><span class="${ch >= 0 ? "u" : "d"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)} (${ch >= 0 ? "+" : ""}${pc.toFixed(2)}%)</span></div>`;
+      LEG.innerHTML = head + `<div class="lg-o"><span>O <b class="${c(b.open, prev ? prev.close : b.open)}">${(+b.open).toFixed(2)}</b></span><span>H <b class="u">${(+b.high).toFixed(2)}</b></span><span>L <b class="d">${(+b.low).toFixed(2)}</b></span><span>C <b class="${ch >= 0 ? "u" : "d"}">${(+b.close).toFixed(2)}</b></span><span class="${ch >= 0 ? "u" : "d"}">${ch >= 0 ? "+" : ""}${ch.toFixed(2)} (${ch >= 0 ? "+" : ""}${pc.toFixed(2)}%)</span></div>` + extLine;
     };
     const legLast = () => { const l = D.cs[D.cs.length - 1]; legPaint(l ? {time: l.time, open: +l.open, high: +l.high, low: +l.low, close: +l.close} : null); };
     legLast(); LEG._repaint = legLast;
-    chart.subscribeCrosshairMove(p => { const b = p && p.seriesData && p.seriesData.get(candles); if (b && p.point) legPaint({time: p.time, open: b.open, high: b.high, low: b.low, close: b.close}); else legLast(); });
+    chart.subscribeCrosshairMove(p => { const b = p && p.seriesData && p.seriesData.get(candles); if (b && p.point) legPaint({time: p.time, open: b.open, high: b.high, low: b.low, close: b.close, _hover: true}); else legLast(); });
     chart.subscribeCrosshairMove(param=>{
       const tip=$("mpTip"),xh=$("mpXh"),cw=$("mpCw"); if(!tip||!cw)return;
       // Hovering/tapping the RETEST pill explains why the setup waits before entry.
@@ -5844,7 +5890,7 @@ function paintMap() {
   mapBodyHome();                         // put the lower sections back before redrawing (they live inside the map's left column)   // typing: don't redraw under the cursor
   const sym = BRIEF_SYM, chart4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart4 && chart4.status) || findStatus(sym);
   // the candles drawn: daily when 1D is picked and loaded, else the 4-hour chart (levels and status always come from 4H)
-  const altOk = MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF;
+  const altOk = MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF && !!MAP_DCH.ext === mapExtOn();
   const chart = MAP_TF !== "4h" ? (altOk && chart4 ? {...MAP_DCH, status: chart4.status, tf: MAP_TF} : null) : chart4;
   if (MAP_TF !== "4h" && chart4 && !altOk) mapLoadDaily(sym);
   if (!st || st.last_close == null) { el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()">← Back</button><h3>${esc(sym)}</h3><button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>`; return; }
@@ -5887,7 +5933,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${ME && ME.is_admin && !rp ? `<button class="mp-planbtn" onclick="journalNew('${esc(sym)}')" title="Write a journal note about this stock">✎ Journal</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<button class="mp-planbtn mp-stylebtn" onclick="chartStyleOpen(this, event)" aria-haspopup="dialog">🎨 Style</button><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div>${cloudTf && !rp ? (cloudOk ? `<button class="mp-planbtn mp-cloudbtn ${cloudOn ? "on" : ""}" onclick="mapCloudToggle()" aria-pressed="${cloudOn}">☁ Cloud</button>` : `<button class="mp-planbtn mp-cloudbtn" disabled title="Not enough history for the cloud">☁ Cloud</button>`) : ""}<div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${ME && ME.is_admin && !rp ? `<button class="mp-planbtn" onclick="journalNew('${esc(sym)}')" title="Write a journal note about this stock">✎ Journal</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<button class="mp-planbtn mp-stylebtn" onclick="chartStyleOpen(this, event)" aria-haspopup="dialog">🎨 Style</button><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div>${["1h", "2h", "3h"].includes(MAP_TF) && !rp ? `<div class="mp-rng mp-ext" role="group" aria-label="Trading hours"><button class="${MAP_EXT ? "" : "on"}" onclick="mapExtSet(false)" title="Market hours, 9:30 AM to 4:00 PM ET">Regular</button><button class="${MAP_EXT ? "on" : ""}" onclick="mapExtSet(true)" title="Adds pre-market (4:00 to 9:30 AM) and after hours (4:00 to 8:00 PM). Display only.">Extended</button></div>` : ""}${cloudTf && !rp ? (cloudOk ? `<button class="mp-planbtn mp-cloudbtn ${cloudOn ? "on" : ""}" onclick="mapCloudToggle()" aria-pressed="${cloudOn}">☁ Cloud</button>` : `<button class="mp-planbtn mp-cloudbtn" disabled title="Not enough history for the cloud">☁ Cloud</button>`) : ""}<div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F5B94A"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#5B8CFF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
@@ -5990,7 +6036,7 @@ function mapReplayBar() {
 function mapReplayRedraw() {
   const cw = $("mpCw"), svg = cw && cw.querySelector("svg"), bar = document.querySelector(".mp-rp");
   if (!svg || !bar || !BRIEF_CHART) return paintMap();
-  const ch = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM && MAP_DCH.tf === MAP_TF ? {...MAP_DCH, tf: MAP_TF} : BRIEF_CHART;
+  const ch = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM && MAP_DCH.tf === MAP_TF && !!MAP_DCH.ext === mapExtOn() ? {...MAP_DCH, tf: MAP_TF} : BRIEF_CHART;
   const tmp = document.createElement("div"); tmp.innerHTML = mapReplayChart(ch, MAP_W()); svg.replaceWith(tmp.firstElementChild);
   tmp.innerHTML = mapReplayBar(); const nb = tmp.firstElementChild;
   bar.querySelector(".mp-rp-say").replaceWith(nb.querySelector(".mp-rp-say"));
@@ -5999,7 +6045,7 @@ function mapReplayRedraw() {
 }
 function mapReplayStart() {
   MAP_WI = null; mapHideTip();
-  const chart = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM && MAP_DCH.tf === MAP_TF ? MAP_DCH : BRIEF_CHART; if (!chart) return;
+  const chart = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === BRIEF_SYM && MAP_DCH.tf === MAP_TF && !!MAP_DCH.ext === mapExtOn() ? MAP_DCH : BRIEF_CHART; if (!chart) return;
   MAP_RP = {sym: BRIEF_SYM, k: Math.min(3, mapReplayCandles(chart).length - 1), play: true, fast: false};
   paintMap(); mapReplayTick();
 }
@@ -6213,7 +6259,7 @@ function mapCalcOut(P0, wi) {
 // while dragging, redraw only the chart and the numbers (the chart's element must survive: it holds the pointer)
 function mapDragRedraw() {
   const sym = BRIEF_SYM, c4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (c4 && c4.status) || findStatus(sym);
-  const chart = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF ? {...MAP_DCH, tf: MAP_TF} : c4;
+  const chart = MAP_TF !== "4h" && MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF && !!MAP_DCH.ext === mapExtOn() ? {...MAP_DCH, tf: MAP_TF} : c4;
   const cw = $("mpCw"), svg = cw && cw.querySelector("svg"); if (!svg || !MAP_WI) return;
   const P0 = mapPlan(sym, st), tmp = document.createElement("div");
   tmp.innerHTML = mapChart({...P0, stop: MAP_WI.stop, shelf: MAP_WI.target, planning: true}, chart, MAP_W());
@@ -6228,8 +6274,9 @@ function mapCalcSave() {
 }
 async function mapLoadDaily(sym) {
   const tf = MAP_TF, key = sym + "|" + tf;
-  if (mapLoadDaily.busy === key) return; mapLoadDaily.busy = key;
-  try { const c = await api(`/api/chart/${encodeURIComponent(sym)}?tf=${tf}`); if (BRIEF_SYM === sym && MAP_TF === tf) { MAP_DCH = c; paintMap(); } }
+  const ext = mapExtOn();
+  if (mapLoadDaily.busy === key + ext) return; mapLoadDaily.busy = key + ext;
+  try { const c = await api(`/api/chart/${encodeURIComponent(sym)}?tf=${tf}${ext ? "&ext=1" : ""}`); if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DCH = c; paintMap(); } }
   catch (e) {} finally { mapLoadDaily.busy = null; }
 }
 function mapTf(tf) {
@@ -9542,7 +9589,7 @@ html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="l
 @media(max-width:559px){.mp-lwc{height:390px;min-height:350px;}}
 .mp-lwc-foot { display:flex; justify-content:flex-end; padding:5px 8px 0; font-size:10px; color:var(--mp-mut); }
 .mp-lwc-foot a { color:inherit; text-decoration:none; } .mp-lwc-foot a:hover{text-decoration:underline;}
-.mp-ctop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mp-ctop { display: flex; align-items: center; justify-content: space-between; gap: 8px 10px; flex-wrap: wrap; }
 .mp-rng { display: inline-flex; border: 1px solid var(--mp-line); border-radius: 9px; padding: 2px; gap: 2px; }
 .mp-rng button { background: none; border: 0; color: var(--mp-mut); font: 600 12px var(--sans, system-ui); padding: 4px 9px; border-radius: 7px; cursor: pointer; }
 .mp-rng button.on { background: color-mix(in srgb, var(--mp-hub) 18%, transparent); color: var(--mp-hub); }

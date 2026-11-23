@@ -100,6 +100,41 @@ def to_hours(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None) ->
     return out.drop(columns="_end")
 
 
+PRE_MIN = 4 * 60           # 4:00 pre-market open
+POST_END = 20 * 60         # 20:00 after-hours close
+
+
+def to_hours_ext(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None) -> pd.DataFrame:
+    """Intraday bars incl. pre-market (4:00-9:30) and after-hours (16:00-20:00) -> N-hour candles with a `session`
+    column ("pre" / "reg" / "post"). Each session is grouped on its own (pre anchored at 4:00 and cut at 9:30, regular
+    anchored at 9:30 exactly like to_hours, after-hours anchored at 16:00), so the regular candles are identical to the
+    Regular view. Display only: nothing is ever scanned on these."""
+    if bars.empty:
+        return bars.assign(session=pd.Series(dtype=str))
+    df = bars.tz_convert(NY)
+    mins = df.index.hour * 60 + df.index.minute
+    df = df[(mins >= PRE_MIN) & (mins < POST_END)]
+    if df.empty:
+        return df.assign(session=pd.Series(dtype=str))
+    mins = np.asarray(df.index.hour * 60 + df.index.minute)
+    sess = np.where(mins < OPEN_MIN, "pre", np.where(mins < CLOSE_MIN, "reg", "post"))
+    lo = np.where(sess == "pre", PRE_MIN, np.where(sess == "reg", OPEN_MIN, CLOSE_MIN))
+    hi = np.where(sess == "pre", OPEN_MIN, np.where(sess == "reg", CLOSE_MIN, POST_END))
+    k = (mins - lo) // (hours * 60)
+    day = df.index.normalize()
+    start = day + pd.to_timedelta(lo + k * hours * 60, unit="m")
+    end = day + pd.to_timedelta(np.minimum(lo + (k + 1) * hours * 60, hi), unit="m")
+    df = df.assign(_start=start, _end=end, session=sess)
+    out = df.groupby("_start").agg(
+        Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),
+        Close=("Close", "last"), _end=("_end", "first"), session=("session", "first"),
+        **({"Volume": ("Volume", "sum")} if "Volume" in df.columns else {}))
+    if now is not None:
+        out = out[out["_end"] <= pd.Timestamp(now).tz_convert(NY)]
+    out.index.name = None
+    return out.drop(columns="_end")
+
+
 def to_daily(c4: pd.DataFrame) -> pd.DataFrame:
     """4H candles -> daily candles (regular hours only, finished candles).
     Aggregates the 4H frame, so the daily view can never disagree with the

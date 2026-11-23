@@ -450,15 +450,18 @@ def _demo(symbol: str, days: int) -> pd.DataFrame:
     now = pd.Timestamp.now(tz="America/New_York")
     first = pd.Timestamp("2023-01-02", tz="America/New_York")   # fixed start = same prices on every call
     sessions = pd.bdate_range(first, now.normalize(), tz="America/New_York")
-    offsets = pd.to_timedelta([9 * 60 + 30 + 30 * k for k in range(13)], unit="m")
+    # 4:00 AM-8:00 PM like Alpaca: pre-market and after-hours bars too (quieter, thinner); the scanner keeps 9:30-4:00
+    offsets = pd.to_timedelta([4 * 60 + 30 * k for k in range(32)], unit="m")
     idx = pd.DatetimeIndex([d + o for d in sessions for o in offsets])
     idx = idx[idx + pd.Timedelta(minutes=30) <= now]
+    m = np.asarray(idx.hour * 60 + idx.minute)
+    reg = (m >= 570) & (m < 960)
     vol = np.repeat(rng.choice([0.0012, 0.004, 0.006], size=len(sessions) // 3 + 2,
-                               p=[0.35, 0.4, 0.25]), 39)[:len(idx)]
+                               p=[0.35, 0.4, 0.25]), 96)[:len(idx)] * np.where(reg, 1.0, 0.3)
     close = (50 + rng.random() * 400) * np.exp(np.cumsum(rng.normal(0, 1, len(idx)) * vol))
     spread = close * 0.002
     move = np.abs(np.diff(np.log(close), prepend=np.log(close[0]))) / np.maximum(vol, 1e-9)
-    volume = np.round(rng.lognormal(13, 0.35, len(idx)) * (0.6 + 0.5 * np.minimum(move, 4)))
+    volume = np.round(rng.lognormal(13, 0.35, len(idx)) * (0.6 + 0.5 * np.minimum(move, 4)) * np.where(reg, 1.0, 0.06))
     df = pd.DataFrame({"Open": close, "High": close + spread, "Low": close - spread, "Close": close, "Volume": volume}, index=idx)
     return df[df.index >= now - pd.Timedelta(days=days)].tz_convert("UTC")
 
