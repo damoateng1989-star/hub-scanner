@@ -166,6 +166,9 @@ async def lifespan(_app: FastAPI):
         m += 3; h += m // 60; m %= 60
         sched.add_job(_lookout.evaluate_closes, CronTrigger(day_of_week="mon-fri", hour=h, minute=m, timezone="America/New_York"),
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
+    import backup as _backup   # Nov 23: nightly database backup (local snapshots + off-server when a bucket is set)
+    sched.add_job(_backup.run, CronTrigger(hour=2, minute=17, timezone="America/New_York"), id="db_backup", replace_existing=True,
+                  misfire_grace_time=3600)
     sched.add_job(_lookout.evaluate_earnings_eve, CronTrigger(day_of_week="mon-fri", hour=16, minute=25, timezone="America/New_York"),
                   misfire_grace_time=1800, coalesce=True, max_instances=1)
     for t in SCAN_TIMES:
@@ -1968,6 +1971,28 @@ class InviteBody(BaseModel):
     note: str = ""
     max_uses: int = 1
     code: str = ""
+
+
+# ---------------------------------------------------------------- database backups (Nov 23)
+@app.get("/api/admin/backup")
+def admin_backup_status(u: dict = Admin):
+    import backup
+    return backup.status()
+
+
+@app.post("/api/admin/backup")
+async def admin_backup_now(u: dict = Admin):
+    import backup
+    return await run_in_threadpool(backup.run)
+
+
+@app.get("/api/admin/backup/latest")
+def admin_backup_download(u: dict = Admin):
+    import backup
+    p = backup.latest()
+    if not p:
+        raise HTTPException(404, "No backup yet. Tap Back up now first.")
+    return FileResponse(p, media_type="application/gzip", filename=p.name, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/admin/invites")

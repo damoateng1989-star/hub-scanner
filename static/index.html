@@ -4087,8 +4087,8 @@ async function loadAdmin() {
         <p>${esc(x.message)}</p>
         <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
         : `<p class="note">No messages yet.</p>`}</div>`;
-    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
-  loadInvites();
+    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="backupBox"><h3>Backups</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
+  loadInvites(); loadBackups();
   api("/api/admin/subscribers").then(d => {
     $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
       <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
@@ -4107,6 +4107,23 @@ async function memberDetail(uid) {
     <div class="mdet-t">${x.tickers.length ? x.tickers.map(t => `<span>${esc(t)}</span>`).join("") : `<span class="none">No tickers on their watchlist</span>`}</div></div>`;
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
+// Nov 23: database backups: nightly at 2:17 AM ET, kept 14 deep on the disk, copied off the server when a bucket is set
+async function loadBackups(run) {
+  const box = $("backupBox"); if (!box) return;
+  let d;
+  try { d = run ? await api("/api/admin/backup", {method: "POST"}) : await api("/api/admin/backup"); if (run) d = await api("/api/admin/backup"); }
+  catch (e) { box.innerHTML = failedHTML("backups", e, "loadBackups()"); return; }
+  const when = (iso) => iso ? new Date(iso).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"}) : "never";
+  box.innerHTML = `<h3>Backups</h3>
+    <p>Every night at 2:17 AM ET the database is copied to a backup. The last ${d.count || 0} are kept${d.latest_mb != null ? ` (latest ${d.latest_mb} MB)` : ""}.</p>
+    <p>Last backup: <b>${when(d.last_at)}</b>${d.last_error ? ` · <span style="color:#F00060">${esc(d.last_error)}</span>` : ""}</p>
+    <p>${d.offsite ? `Off the server: <b>on</b> · last upload ${when(d.offsite_at)}${d.offsite_error ? ` · <span style="color:#F00060">${esc(d.offsite_error)}</span>` : ""}`
+      : `Off the server: <b>not set up</b>. Backups sit on the same disk as the app, so they survive restarts but not a lost disk. Add a private bucket (Cloudflare R2 or Backblaze B2) and set <code>BACKUP_S3_BUCKET</code>, <code>BACKUP_S3_KEY</code>, <code>BACKUP_S3_SECRET</code> and <code>BACKUP_S3_ENDPOINT</code> on Render.`}</p>
+    ${d.on_disk ? "" : `<p style="color:#F00060">The app isn't on a Render disk (<code>DATA_DIR=/data</code>), so backups are lost on each deploy.</p>`}
+    <div class="row" style="gap:8px"><button class="btnx sm" onclick="this.disabled=true;this.textContent='Backing up…';loadBackups(true)">Back up now</button>
+      ${d.latest ? `<a class="btnx sm" href="/api/admin/backup/latest" download>Download latest</a>` : ""}</div>
+    <p class="note" style="margin-top:8px">A backup holds every member's data. Keep downloads and the bucket private.</p>`;
+}
 async function loadInvites() {
   const box = $("invitesBox"); if (!box) return;
   let d; try { d = await api("/api/admin/invites"); } catch (e) { box.innerHTML = failedHTML("invites", e, "loadInvites()"); return; }
