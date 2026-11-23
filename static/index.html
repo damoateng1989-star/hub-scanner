@@ -5450,6 +5450,7 @@ async function openBrief(sym, focus) {
   const sideT = setTimeout(side, 1500);
   if (ME && ME.is_admin) loadBrokerAccounts();
   try {
+    if (MAP_TF !== "4h") mapLoadDaily(sym);        // Nov 23: the picked view loads alongside the 4H, not after it
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     clearTimeout(sideT); side();
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
@@ -6229,7 +6230,7 @@ function initLightweightMapChart() {
   if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
   document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove()); MAP_LWC_FOOT = null;
   if (!host || !D || !L || !D.cs || !D.cs.length) {
-    if (host) host.innerHTML = '<div class="mp-lwc-empty">Chart data is loading…</div>';
+    if (host) host.innerHTML = `<div class="mp-lwc-empty">${MAP_DERR && MAP_DERR === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadErrHTML() : "Chart data is loading…"}</div>`;
     return;
   }
   try {
@@ -6455,7 +6456,7 @@ function mapFormingPoll(sym) {
         if (BRIEF_SYM !== sym) return;
         if (old && (!now || now.time !== old.time)) {           // the candle closed: pull the finished chart
           const c = await api(`/api/chart/${encodeURIComponent(sym)}?fresh=1`);
-          if (BRIEF_SYM === sym) { BRIEF_CHART = c; MAP_DCH = null; briefHead(sym, c.status); }
+          if (BRIEF_SYM === sym) { BRIEF_CHART = c; MAP_DCH = null; for (const k of [...MAP_DCACHE.keys()]) if (k.startsWith(sym + "|")) MAP_DCACHE.delete(k); briefHead(sym, c.status); }
         } else { BRIEF_CHART.forming = now; paintMap(); }
       } catch (e) {}
     }
@@ -6683,7 +6684,7 @@ function paintMap() {
   // the candles drawn: daily when 1D is picked and loaded, else the 4-hour chart (levels and status always come from 4H)
   const altOk = MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF && !!MAP_DCH.ext === mapExtOn();
   const chart = MAP_TF !== "4h" ? (altOk && chart4 ? {...MAP_DCH, status: chart4.status, tf: MAP_TF} : null) : chart4;
-  if (MAP_TF !== "4h" && chart4 && !altOk) mapLoadDaily(sym);
+  if (MAP_TF !== "4h" && !altOk) mapLoadDaily(sym);
   if (!st || st.last_close == null) { el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()">← Back</button><h3>${esc(sym)}</h3><button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>`; return; }
   const P0 = mapPlan(sym, st), steps = MAP_STEPS[P0.steps];
   const canPlan = !P0.watch && P0.trig != null && P0.stop != null && P0.shelf != null && P0.dir === 1;
@@ -6724,7 +6725,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? (EXT[sym].session === "pre" ? "PRE-MARKET" : "") : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<button class="mp-planbtn mp-stylebtn" onclick="chartStyleOpen(this, event)" aria-haspopup="dialog">🎨 Style</button><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div>${["1h", "2h", "3h"].includes(MAP_TF) && !rp ? `<div class="mp-rng mp-ext" role="group" aria-label="Trading hours"><button class="${MAP_EXT ? "" : "on"}" onclick="mapExtSet(false)" title="Market hours, 9:30 AM to 4:00 PM ET">Regular</button><button class="${MAP_EXT ? "on" : ""}" onclick="mapExtSet(true)" title="Adds pre-market (4:00 to 9:30 AM) and after hours (4:00 to 8:00 PM). Display only.">Extended</button></div>` : ""}${cloudTf && !rp ? (cloudOk ? `<button class="mp-planbtn mp-cloudbtn ${cloudOn ? "on" : ""}" onclick="mapCloudToggle()" aria-pressed="${cloudOn}">☁ Cloud</button>` : `<button class="mp-planbtn mp-cloudbtn" disabled title="Not enough history for the cloud">☁ Cloud</button>`) : ""}<div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F5B94A"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#5B8CFF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : EXN ? "" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<button class="mp-planbtn mp-stylebtn" onclick="chartStyleOpen(this, event)" aria-haspopup="dialog">🎨 Style</button><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div>${["1h", "2h", "3h"].includes(MAP_TF) && !rp ? `<div class="mp-rng mp-ext" role="group" aria-label="Trading hours"><button class="${MAP_EXT ? "" : "on"}" onclick="mapExtSet(false)" title="Market hours, 9:30 AM to 4:00 PM ET">Regular</button><button class="${MAP_EXT ? "on" : ""}" onclick="mapExtSet(true)" title="Adds pre-market (4:00 to 9:30 AM) and after hours (4:00 to 8:00 PM). Display only.">Extended</button></div>` : ""}${cloudTf && !rp ? (cloudOk ? `<button class="mp-planbtn mp-cloudbtn ${cloudOn ? "on" : ""}" onclick="mapCloudToggle()" aria-pressed="${cloudOn}">☁ Cloud</button>` : `<button class="mp-planbtn mp-cloudbtn" disabled title="Not enough history for the cloud">☁ Cloud</button>`) : ""}<div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F5B94A"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#5B8CFF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
@@ -7066,13 +7067,30 @@ function mapCalcSave() {
   const sym = BRIEF_SYM, st = (BRIEF_CHART && BRIEF_CHART.symbol === sym && BRIEF_CHART.status) || findStatus(sym);
   if (MAP_WI && $("mpCalcOut")) $("mpCalcOut").innerHTML = mapCalcOut(mapPlan(sym, st), MAP_WI);
 }
-async function mapLoadDaily(sym) {
-  const tf = MAP_TF, key = sym + "|" + tf;
-  const ext = mapExtOn();
-  if (mapLoadDaily.busy === key + ext) return; mapLoadDaily.busy = key + ext;
-  try { const c = await api(`/api/chart/${encodeURIComponent(sym)}?tf=${tf}${ext ? "&ext=1" : ""}`); if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DCH = c; paintMap(); } }
-  catch (e) {} finally { mapLoadDaily.busy = null; }
+// Nov 23: the 1H/2H/3H/1D (and extended) candles. Kept per stock/view for a few minutes so flipping back is instant,
+// fetched alongside the 4H chart (not after it), retried once, and a failure says so instead of "loading" forever.
+const MAP_DCACHE = new Map(); let MAP_DERR = null;
+async function mapLoadDaily(sym, force) {
+  const tf = MAP_TF, ext = mapExtOn(), key = sym + "|" + tf + "|" + ext;
+  const hit = MAP_DCACHE.get(key), age = hit ? Date.now() - hit.t : Infinity;
+  if (hit && !force && age < (ext ? 4 : 10) * 60000) {
+    if (MAP_DCH !== hit.c) { MAP_DCH = hit.c; if (BRIEF_SYM === sym) paintMap(); }
+    if (age < 60000) return;                 // fresh enough: no refetch
+  }
+  if (mapLoadDaily.busy === key) return; mapLoadDaily.busy = key;
+  if (MAP_DERR === key) { MAP_DERR = null; }
+  const url = `/api/chart/${encodeURIComponent(sym)}?tf=${tf}${ext ? "&ext=1" : ""}`;
+  try {
+    let c;
+    try { c = await api(url, {timeout: 20000}); }
+    catch (e) { await new Promise(r => setTimeout(r, 1200)); c = await api(url, {timeout: 25000}); }
+    MAP_DCACHE.set(key, {t: Date.now(), c}); if (MAP_DCACHE.size > 40) MAP_DCACHE.delete(MAP_DCACHE.keys().next().value);
+    if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DCH = c; paintMap(); }
+  } catch (e) {
+    if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DERR = key; const h = document.querySelector("#bfMap .mp-lwc-empty"); if (h) h.innerHTML = mapLoadErrHTML(); }
+  } finally { if (mapLoadDaily.busy === key) mapLoadDaily.busy = null; }
 }
+function mapLoadErrHTML() { return `The chart didn't load. <button type="button" class="mp-planbtn" onclick="MAP_DERR=null;this.parentElement.textContent='Chart data is loading…';mapLoadDaily(BRIEF_SYM,true)">Try again</button>`; }
 function mapTf(tf) {
   if (tf === MAP_TF) return;
   MAP_TF = tf; MAP_HOVER = null; if (MAP_RP) mapReplayStop(true);
