@@ -55,6 +55,20 @@ MODULES = [
          ("Price jumps 1% above the hub top at 11 AM, then closes back inside at 1:30 PM. Is that a breakout?",
           ["Yes, it went above the hub", "No, the candle closed back inside: it was a wick", "Only if volume was high"],
           1, "Only the 4-hour close counts. A spike that closes back inside is a wick.")),
+        ("extended-hours", "Pre-market and after hours: what counts", 3, """
+<p>The stock market's main session runs from <b>9:30 AM to 4:00 PM Eastern</b>. Around it there are two quieter sessions: <b>pre-market</b> from 4:00 to 9:30 AM, and <b>after hours</b> from 4:00 to 8:00 PM. Prices move in both, often on news or earnings.</p>
+<h2>What NextShelf counts</h2>
+<p>Only the main session. Hubs, breakouts, retests, grades and alerts are all built from the two regular 4-hour closes (1:30 PM and 4:00 PM). A stock that jumps above its hub after hours hasn't broken out: the next regular close decides it.</p>
+<h2>Why: thin trading</h2>
+<p>Far fewer shares change hands outside the main session. A few orders can push the price a long way, and spreads are wide. A price that looks dramatic at 6 PM can be gone by 9:31 AM.</p>
+<h2>Seeing it on the chart</h2>
+<p>On the 1H, 2H and 3H views, the <b>Extended</b> button adds those sessions to the chart: pre-market is shaded amber, after hours blue. The legend shows the latest extended price against the 4:00 PM close. It's there for context, so you can see an earnings reaction or a gap forming, not to trade on.</p>""",
+         ["Main session: 9:30 AM to 4:00 PM ET. Pre-market 4:00 to 9:30 AM, after hours 4:00 to 8:00 PM.",
+          "Setups, grades and alerts use regular-hours closes only.",
+          "Extended prices are thin and jumpy: context, not confirmation."],
+         ("A stock's hub top is $50. After hours it trades at $51.20 on news. What happened to the setup?",
+          ["It broke out, because it's above $50", "Nothing yet; the next regular 4-hour close decides it", "It failed, because after-hours moves always reverse"],
+          1, "After-hours prices don't confirm anything. A regular 4-hour close above $50 would.")),
         ("shelves", "Shelves: where price may go next", 3, """
 <p>Old hubs don't disappear. When price spent days pausing at a level in the past, that level often matters again later. NextShelf calls those earlier ranges <b>shelves</b>.</p>
 <p>When a stock breaks out of its current hub, NextShelf looks for the <b>nearest shelf in the direction of the break</b>. That shelf becomes the aim: the place where price has paused before, and where it may pause again.</p>
@@ -172,6 +186,24 @@ MODULES = [
          ("Two records both average +0.50% per trade. One rests on 320 trades, the other on 31. Which deserves more trust?",
           ["The 31 — fresher trades count more", "They're equal — the average is the same", "The 320 — a large sample can't be carried by a few lucky trades"],
           2, "n is the evidence under the average. A small sample can be dragged around by two or three lucky trades; a large one can't.")),
+        ("sector-pulse", "Sector pulse: is the wind at your back?", 3, """
+<p>Stocks don't move alone. Money rotates between groups: for a few weeks it pours into technology, then into energy, then into utilities. A breakout in a group that money is rotating into has a tailwind. One in a group money is leaving is fighting it.</p>
+<h2>How the pulse measures it</h2>
+<p>NextShelf compares each of the 11 sector funds with the S&amp;P 500. <b>5D</b> and <b>20D</b> are the sector's return over the last 5 and 20 trading days <i>minus</i> the market's. +2.00 means the sector beat the market by 2 percentage points; −2.00 means it lagged by 2.</p>
+<ul><li><b>Rotating in</b>: beating the market over both 5 and 20 days.</li>
+<li><b>Rotating out</b>: lagging over both.</li>
+<li><b>Mixed</b>: one up, one down. The story is changing.</li>
+<li>The <b>arrow</b> shows whether the 20-day number is rising or falling compared with a week ago.</li></ul>
+<h2>Where it lives</h2>
+<p>The full table sits above the market map on Browse setups. Today shows one line: the leading and lagging sector, and when setups bunch up, a note like "4 of today's 6 live setups are in Technology."</p>
+<h2>How to use it</h2>
+<p>As context only. The pulse never changes a grade, an alert or the order of the board. A strong setup in a fading sector can still work; it's just worth knowing the wind is in its face.</p>""",
+         ["The pulse is each sector's return minus the S&P 500's, over 5 and 20 days.",
+          "Rotating in = beating the market on both; rotating out = lagging on both.",
+          "It's context, never a grade: it doesn't change alerts or rankings."],
+         ("Technology shows 5D +1.40 and 20D +3.10. What does that mean?",
+          ["Tech stocks rose 1.4% and 3.1%", "Tech beat the S&P 500 by 1.4 and 3.1 points: rotating in", "Every tech setup is now an A"],
+          1, "The numbers are relative to the market. Positive on both means rotating in. It's context, not a grade.")),
         ("the-game-plan", "The game plan: aim, and where you're wrong", 3, """
 <p>Every NextShelf setup comes with the same three parts. Knowing all three <i>before</i> you trade is what turns a setup into a plan.</p>
 <ul><li><b>The entry:</b> the retest close, once a 4-hour close outside the hub has given the heads-up.</li>
@@ -187,6 +219,23 @@ MODULES = [
          ("You entered an A retest at $50 with a stop 1 ATR ($1) below. A 4-hour candle closes at $48.80. What does the plan say?",
           ["Hold, it might come back", "The stop was hit: exit", "Buy more at a better price"],
           1, "A close past the stop is the 'wrong if' condition. The plan says the trade is over.")),
+        ("lookout", "Lookout: let NextShelf watch your trade", 3, """
+<p>The hardest part of a swing trade isn't the entry. It's the days after: checking the price at work, wondering if a dip means it's over, forgetting earnings are on Thursday. <b>Lookout</b> does the watching for you.</p>
+<h2>Starting a watch</h2>
+<p>After you take a trade, tap <b>I'm in — watch this</b> on the swing play card. Add your fill price and size if you like (both optional), then <b>Yes, watch it</b>. Lookout binds to the exact plan the card showed you: its trigger, target and the level where the idea is wrong.</p>
+<h2>What it taps you about</h2>
+<ul><li><b>The plan dies</b>: a 4-hour close back past the stop. Closes only: a dip during the candle that recovers by the close doesn't count, the same rule as the setups themselves.</li>
+<li><b>The target is touched</b>: the first touch only. Whether you take profit or hold for the next shelf is up to you.</li>
+<li><b>Time runs out</b>: every setup gets a window to work, the same clock the track record uses. When it closes, you hear about it.</li>
+<li><b>Earnings are tomorrow</b>: the evening before a report that lands inside the watch, because the plan says be out before the print.</li></ul>
+<h2>What it never does</h2>
+<p>Lookout never buys, sells, or touches an order. The trade is yours from start to finish; Lookout just taps you on the shoulder. When you're done, tap <b>I'm out</b> on Today's Watching list. Your closed watches stay in a private log and never enter the track record.</p>""",
+         ["Tap \"I'm in — watch this\" after you take a trade; Lookout binds to the card's plan.",
+          "It alerts once each: plan dead (on a close), target touched, time up, earnings tomorrow.",
+          "It never trades. Your watches are private and never part of the record."],
+         ("You're watching a trade with a stop at $95. At 11 AM the stock dips to $94, and the 1:30 PM candle closes at $96. What does Lookout do?",
+          ["Sends \"the plan is dead\" at 11 AM", "Nothing: the 1:30 close is above $95, so the plan is alive", "Sells your position"],
+          1, "Lookout judges the stop on 4-hour closes, never on dips, and it never trades.")),
         ("dont-chase", "Don't chase: the first-half rule", 3, """
 <p>The worst time to enter a breakout is after most of the move has happened. You pay a high price, the remaining reward is small, and the distance to your exit is large.</p>
 <h2>The first-half rule</h2>
@@ -275,6 +324,22 @@ $10,000 account, 1% risk = $100. Retest entry $50, stop 1 ATR below at $48 ($2 a
          ("You buy a call before earnings. The stock rises 2%, but your call loses value. The most likely reason?",
           ["The broker made an error", "IV crush after the report", "Calls lose value when stocks rise"],
           1, "After earnings, IV usually drops. That can outweigh a small move in your favour.")),
+        ("options-what-if", "The what-if tools: volatility, time and the profit chart", 4, """
+<p>An option's value depends on three things moving at once: the stock's price, the time left, and implied volatility. The options card shows one estimate at the aim. Open <b>Show the math</b> to see how that estimate changes when the other two move.</p>
+<h2>The volatility table</h2>
+<p>Same stock prices, three volatility levels: <b>IV −30%</b>, <b>IV unchanged</b>, and <b>IV +30%</b>, at the aim and if the setup fails. Each cell shows the option's value and the profit or loss per contract. When earnings fall before the contract expires, the −30% column is highlighted: after a report IV usually drops, and that's the column to plan around.</p>
+<h2>The profit chart</h2>
+<p>Below the table, drag across the chart to read the profit or loss at any stock price. Green above zero, red below, flattening at the most you can lose. The markers show Now, Fail, Breakeven and Target.</p>
+<h2>The date slider</h2>
+<p>Slide from today to expiry and watch the curve sag: that's time decay. The green tick marks the day the setup typically reaches its aim. Compare it with expiry and you'll see why a slow move can lose money even when you're right about the direction.</p>
+<h2>Modeled, not quotes</h2>
+<p>Every number comes from a pricing model (Black-Scholes) using the market's current inputs. Real prices will differ, especially when the bid-ask spread is wide. Use the tools to understand the shape of the bet, not as a promise of what you'll get.</p>""",
+         ["Show the math has a volatility table (IV −30%, unchanged, +30%) at the aim and on failure.",
+          "Drag the profit chart for any price; slide the date to see time decay.",
+          "Everything is modeled, not a quote: real fills differ, especially with wide spreads."],
+         ("Earnings land before your call expires. Which column of the volatility table should you plan around?",
+          ["IV +30%, because earnings move stocks", "IV unchanged, because it's the middle", "IV −30%, because IV usually drops after the report"],
+          2, "After earnings, implied volatility usually contracts, so the −30% column is the realistic case.")),
         ("expiry-and-strike", "Choosing expiry and strike", 3, """
 <p>Two choices decide most of how an options trade behaves.</p>
 <h2>Expiry: buy time</h2>
@@ -491,6 +556,7 @@ GLOSSARY = [
         ("Shelf", "An earlier range where price paused before. Old pauses often matter again, so a shelf is a likely place for price to stall.", "shelves"),
         ("Next shelf", "The nearest shelf in the direction of the break. It's the aim of the trade.", "shelves"),
         ("Air pocket", "A stretch of price with very little in it: no shelves, no stacks. Price tends to move through air pockets quickly, in either direction.", "clear-path"),
+        ("Extended hours", "Trading outside the main 9:30 AM to 4:00 PM session: pre-market (4:00 to 9:30 AM) and after hours (4:00 to 8:00 PM ET). Thin and jumpy. NextShelf's setups use regular-hours closes only; the chart's Extended button shows these sessions shaded, for context.", "extended-hours"),
     ]),
     ("The trade", [
         ("Breakout / breakdown", "A 4-hour candle that closes outside the hub: above the top (breakout) or below the bottom (breakdown). It's the heads-up, not the entry.", "trade-your-first-setup"),
@@ -553,6 +619,8 @@ GLOSSARY = [
         ("Time decay (theta)", "The part of an option's price you pay for time, shrinking every day and faster near expiry. A small move your way can still lose money.", "time-decay"),
         ("Implied volatility (IV)", "The market's guess of how much a stock will move, built into the option's price. Higher IV, pricier options.", "implied-volatility"),
         ("IV crush", "The sharp drop in IV right after earnings. It can wipe out the gain from a move that went your way.", "implied-volatility"),
+        ("What-if table", "Inside Show the math: the option's modeled value and profit or loss at IV −30%, unchanged and +30%, at the aim and on failure. With earnings before expiry, the −30% column is the one to plan around.", "options-what-if"),
+        ("Profit chart and date slider", "Drag across the chart for the profit or loss at any stock price; slide from today to expiry to watch time decay. Modeled with Black-Scholes, not quotes.", "options-what-if"),
         ("Bid-ask spread", "The gap between the price buyers pay and sellers get. Wide spreads cost you the moment you buy; use a limit order near the middle.", "expiry-and-strike"),
         ("The tape / flow confirmed", "Money spent buying calls at the ask minus money spent buying puts at the ask, over the break day and the session before. When it's large for that stock, the break was backed by real money: flow confirmed. A past fact about the break, not a forecast.", "flow-confirmed"),
         ("Gamma / GEX", "Gamma exposure: where options dealers are positioned by strike. Big gamma strikes can act like magnets or walls for price.", None),
@@ -565,6 +633,8 @@ GLOSSARY = [
         ("Moving averages", "The average close over the last 9, 21, 50 or 200 candles. NextShelf counts them as a level only when two or more cluster together.", "clear-path"),
         ("Ichimoku cloud", "The shaded band on the chart (settings 9 · 26 · 52). Shown for context only: it is never part of a grade or an alert.", None),
         ("VIX", "The market's fear gauge, from S&P 500 option prices. High VIX means a jumpy market, where gaps and false breaks are more common.", None),
+        ("Sector pulse", "Each of the 11 sectors compared with the S&P 500 over 5 and 20 days. Rotating in means beating the market on both; rotating out means lagging on both. Context only: never a grade.", "sector-pulse"),
+        ("Relative strength (5D / 20D)", "A sector's return minus the S&P 500's over the last 5 or 20 trading days, in percentage points. +2.00 means it beat the market by 2 points.", "sector-pulse"),
     ]),
     ("In the app", [
         ("Today", "The first screen after you log in: the brief, the three chips (VIX, Retesting now, Waiting) and the hero card.", "find-a-setups"),
@@ -572,8 +642,11 @@ GLOSSARY = [
         ("Board (Browse setups)", "Every setup across the stocks NextShelf scans. Chips filter it: Setups (the default), A only, All, and more.", "find-a-setups"),
         ("Watchlist", "The tickers you follow. Only those can alert you; the free tier covers 3.", "trade-your-first-setup"),
         ("Morning brief", "A weekday message at the time you choose: the stocks closest to a breakout, breakouts still in play, and your watchlist.", None),
-        ("Sika", "The assistant on each stock's panel. It explains the setup in plain English from NextShelf's rules and past prices. Education only.", None),
+        ("Sika", "The assistant on each stock's panel (the robot in the corner). Tap it on a stock for \"Explain this chart\", \"What do the lines mean?\" and \"When is it wrong?\", or ask your own question. Plain English from NextShelf's rules and past prices. Education only.", None),
         ("Results", "The track record page: every setup NextShelf found, with its outcome.", "reading-the-track-record"),
+        ("Lookout", "Opt-in watching for a trade you took: it taps you when the plan dies (on a close), the target is touched, time runs out, or earnings are tomorrow. It never trades, and your watches stay private.", "lookout"),
+        ("The kill", "The level where the plan is wrong, judged on a 4-hour close (never a dip during the candle). In Lookout, a close past it means \"the plan is dead\".", "lookout"),
+        ("The window (the clock)", "The time a setup gets to work: 10 four-hour candles from the breakout, the same clock the track record uses for \"ran out of time\".", "lookout"),
         ("The Lab", "Where every rule is tested on two years of history before it reaches you, and re-tested as data comes in.", None),
     ]),
 ]
