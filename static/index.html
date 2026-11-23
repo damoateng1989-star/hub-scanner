@@ -2697,7 +2697,9 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend { position: absolute; left: 10px; top: 8px; z-index: 6; pointer-events: none; font: 500 11.5px/1.45 var(--mono, "JetBrains Mono", ui-monospace, monospace); color: #9AA0AC;
   text-shadow: 0 1px 2px rgba(0,0,0,.7); }
 .mp-legend .lg-h { display: flex; gap: 6px; align-items: center; margin-bottom: 2px; }
-.mp-legend .lg-h b, .mp-legend .lg-h span { padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(255,255,255,.14); background: rgba(10,12,16,.55); color: #E6EBF0; text-shadow: none; }
+.mp-legend .lg-h b, .mp-legend .lg-h span { padding: 0; border: 0; background: none; color: #E6EBF0; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
+.mp-legend .lg-h { gap: 8px; }
+.mp-legend .lg-h span { color: #C9D1D9; }
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 .board-symbol .board-co { display: block; flex-basis: 100%; font: 500 11.5px var(--sans, Inter, sans-serif); color: #9AA4B2; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
@@ -2709,7 +2711,8 @@ html[data-theme="light"] .mp-legend .lg-h i { color: #334155; text-shadow: none;
 .mp-legend .lg-o { display: flex; flex-wrap: wrap; gap: 3px 10px; }
 .mp-legend .u { color: #3DD68C; } .mp-legend .d { color: #FF6B5E; }
 html[data-theme="light"] .mp-legend { color: #5B6472; text-shadow: none; }
-html[data-theme="light"] .mp-legend .lg-h b, html[data-theme="light"] .mp-legend .lg-h span { background: rgba(255,255,255,.8); border-color: rgba(15,23,42,.14); color: #0D1117; }
+html[data-theme="light"] .mp-legend .lg-h b, html[data-theme="light"] .mp-legend .lg-h span { background: none; color: #0D1117; text-shadow: none; }
+html[data-theme="light"] .mp-legend .lg-h span { color: #334155; }
 html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="light"] .mp-legend .d { color: #D93A2B; }
 @media (max-width: 560px) { .mp-legend { font-size: 10.5px; left: 8px; top: 6px; } .mp-legend .lg-o { max-width: 230px; } }
 </style>
