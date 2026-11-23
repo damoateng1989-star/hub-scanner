@@ -3198,6 +3198,15 @@ html[data-theme="light"] .mp-legend .u { color: #0F9D63; } html[data-theme="ligh
 <div id="sheet" hidden><div class="sheet-card"><button class="x" onclick="closeSheet()" aria-label="Close">×</button><div id="sheetBody"></div></div></div>
 
 <script>
+// Nov 23 (owner, option C): the safety-net chips get an icon in a coloured dot: bolt = trigger/entry, shield = stop, target = target
+const _tkSvg = (d, w = 2) => `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const TK_AL_ICON = {
+  trigger: _tkSvg('<path d="M13 3 4 14h7l-1 7 9-11h-7z"/>'),
+  entry: _tkSvg('<path d="M13 3 4 14h7l-1 7 9-11h-7z"/>'),
+  stop: _tkSvg('<path d="M12 3 5 6v5c0 4.5 3 8.3 7 10 4-1.7 7-5.5 7-10V6z"/>'),
+  target: _tkSvg('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r=".6" fill="currentColor"/>'),
+  ok: _tkSvg('<path d="m6 12.5 4 4 8-9"/>', 3.2),
+};
 const STATES = {
   forming: ["Inside hub", "--hub"], watching: ["Hub just ended", "--idle"],
   breakout_up: ["Breakout ↑", "--up"], breakdown: ["Breakdown ↓", "--down"],
@@ -6893,7 +6902,7 @@ function mapTicketHTML() {
   const order = `${sym} · ${T.name}\nBUY ${shares} shares · limit ${money(T.entry)}\nSTOP LOSS (sell stop) ${money(T.stop)}\nTAKE PROFIT (sell limit) ${money(T.target)}\nRisk ${money(shares * rps)} · reward ${money(shares * gps)} · ${rr.toFixed(2)}R`;
   const ex = c4 && c4.exchange, al = (MAP_TK && MAP_TK.alerts) || [];
   const has = (lab) => al.find(x => x.label === lab);
-  const alBtn = (lab, price, dir, text) => { const x = has(lab); return `<button class="tk-al ${x ? "on" : ""}" onclick="mapTicketAlert('${lab}', ${price}, ${dir})">${x ? "✓ " : "🔔 "}${text} ${money(price)}</button>`; };
+  const alBtn = (lab, price, dir, text) => { const x = has(lab); return `<button class="tk-al tk-al-${lab} ${x ? "on" : ""}" onclick="mapTicketAlert('${lab}', ${price}, ${dir})" aria-pressed="${x}"><span class="tk-al-dot">${TK_AL_ICON[lab] || TK_AL_ICON.trigger}${x ? `<i class="tk-al-ok">${TK_AL_ICON.ok}</i>` : ""}</span>${text} <b>${money(price)}</b></button>`; };
   const tone = {wait: ["Not yet", "t-wait"], ready: ["Order ready: waits for the pullback", "t-ready"], now: ["At the entry now", "t-now"]}[T.state];
   return `<div class="tk-back" onclick="if(event.target===this)mapTicketClose()"><div class="tkt" role="dialog" aria-label="Trade ${esc(sym)}">
     <div class="tk-h"><b>Trade ${esc(sym)}</b><span>${esc(T.name)}</span><button class="tk-x" onclick="mapTicketClose()" aria-label="Close">✕</button></div>
@@ -10905,6 +10914,15 @@ html[data-theme="light"] .tkt { --tk-card: #F8F9FD; --tk-line: rgba(13,17,23,.1)
 .tk-als { display: flex; flex-wrap: wrap; gap: 6px; }
 .tk-al { border: 1px solid var(--tk-line); background: none; color: var(--tk-ink); border-radius: 9px; padding: 7px 10px; font: 600 12px var(--sans, system-ui); cursor: pointer; }
 .tk-al.on { border-color: var(--tk-up); color: var(--tk-up); background: color-mix(in srgb, var(--tk-up) 10%, transparent); }
+/* Nov 23 (owner, option C): neutral pill, the level's icon in a coloured dot; a set alert gets a small check */
+.tk-als .tk-al { display: inline-flex; align-items: center; gap: 7px; border-radius: 999px; padding: 5px 12px 5px 5px; font-weight: 600; font-size: 12.5px; color: var(--tk-ink); border-color: var(--tk-line); background: color-mix(in srgb, var(--tk-ink) 4%, transparent); }
+.tk-als .tk-al b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.tk-al-dot { position: relative; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #7C93FF; color: #0E0F12; flex: 0 0 auto; }
+.tk-al-stop .tk-al-dot { background: #F00060; color: #fff; } .tk-al-target .tk-al-dot { background: #00C898; color: #0E0F12; }
+.tk-al-ok { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: var(--tk-ink); color: var(--tk-card); display: grid; place-items: center; font-style: normal; box-shadow: 0 0 0 2px var(--tk-card); }
+.tk-al-ok svg { width: 9px; height: 9px; }
+.tk-als .tk-al.on { color: var(--tk-ink); border-color: var(--tk-line-2, var(--tk-line)); background: color-mix(in srgb, var(--tk-ink) 8%, transparent); }
+.tk-als .tk-al:hover { background: color-mix(in srgb, var(--tk-ink) 9%, transparent); }
 @media (max-width: 559px) { .tk-back { place-items: end center; padding: 0; } .tkt { border-radius: 18px 18px 0 0; max-height: 92vh; } }
 
 /* Context pop-out */
