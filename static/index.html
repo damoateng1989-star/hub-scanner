@@ -2706,6 +2706,27 @@ html[data-theme="light"] .cs-pal:not([style*="var(--panel"]) b { color: #E6EBF0;
 .mp-legend .lg-h b { font: 700 12px var(--sans, Inter, sans-serif); letter-spacing: .02em; }
 .mp-legend .lg-h span { font: 500 12px var(--sans, Inter, sans-serif); }
 #shelfOptHost { margin-top: 14px; }
+.soc-back { position: fixed; inset: 0; z-index: 2000; background: rgba(4,6,10,.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 18px; animation: socIn .16s ease-out; }
+.soc-back.out { opacity: 0; transition: opacity .15s; } @keyframes socIn { from { opacity: 0; } to { opacity: 1; } }
+.soc { width: min(400px, 100%); background: #1B1E25; border: 1px solid #2E333D; border-radius: 20px; padding: 18px 18px 16px; box-shadow: 0 24px 70px rgba(0,0,0,.55); color: #E6EBF0; animation: socUp .18s ease-out; }
+@keyframes socUp { from { transform: translateY(10px) scale(.98); } to { transform: none; } }
+.soc-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.soc-live { display: inline-flex; align-items: center; gap: 6px; font: 700 10.5px var(--mono, ui-monospace, monospace); letter-spacing: .1em; text-transform: uppercase; color: #FFB4AA; background: rgba(255,107,94,.12); border: 1px solid rgba(255,107,94,.3); padding: 4px 8px; border-radius: 999px; }
+.soc-live i { width: 6px; height: 6px; border-radius: 50%; background: #FF6B5E; box-shadow: 0 0 0 3px rgba(255,107,94,.18); }
+.soc-acct { font-size: 12px; color: #8A93A0; }
+.soc h3 { margin: 0; font: 650 20px/1.25 var(--sans); letter-spacing: -.01em; color: #F2F4F7; } .soc-sub { margin: 3px 0 14px; font-size: 13px; color: #9AA4B2; }
+.soc-rows { background: #14161B; border: 1px solid #262A33; border-radius: 14px; padding: 4px 14px; }
+.soc-rows > div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; font-size: 13.5px; color: #9AA4B2; border-top: 1px solid #22262E; } .soc-rows > div:first-child { border-top: 0; }
+.soc-rows b { color: #E6EBF0; font: 600 13.5px var(--mono, ui-monospace, monospace); text-align: right; }
+.soc-rows .soc-tot b { font-size: 16px; } .soc-rows .soc-risk b { color: #FF8A80; }
+.soc-note { margin: 12px 2px 14px; font-size: 12.5px; line-height: 1.5; color: #8A93A0; }
+.soc-acts { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
+.soc-acts button { all: unset; box-sizing: border-box; text-align: center; cursor: pointer; padding: 13px 10px; border-radius: 13px; font: 650 14.5px var(--sans); }
+.soc-acts .soc-cancel { background: #262A33; color: #E6EBF0; } .soc-acts .soc-cancel:hover { background: #2E333D; } .soc-cancel:focus-visible, .soc-go:focus-visible { outline: 2px solid #8FB4FF; outline-offset: 2px; }
+.soc-go.buy { background: #16A34A; color: #fff; } .soc-go.buy:hover { background: #15923F; } .soc-go.sell { background: #B91C1C; color: #fff; }
+html[data-theme="light"] .soc { background: #fff; border-color: #E3E7ED; color: #0D1117; } html[data-theme="light"] .soc h3 { color: #0D1117; }
+html[data-theme="light"] .soc-rows { background: #F6F8FA; border-color: #E3E7ED; } html[data-theme="light"] .soc-rows > div { border-color: #E9EDF2; } html[data-theme="light"] .soc-rows b { color: #0D1117; }
+html[data-theme="light"] .soc-acts .soc-cancel { background: #EEF1F5; color: #0D1117; }
 .sopt .shelf-seg button.on { background: #e2e8f0 !important; color: #0f172a !important; } .sopt .shelf-seg button.on.buy { background: #16a34a !important; color: #fff !important; } .sopt .shelf-seg button.on.sell { background: #b91c1c !important; color: #fff !important; }
 .sopt-grid label { font-size: 10px !important; letter-spacing: .08em; text-transform: uppercase; color: #91a0b3 !important; } .sopt-grid { display: grid; grid-template-columns: 1.2fr .9fr 1.4fr; gap: 10px; margin: 10px 0 8px; }
 .sopt-grid label, .sopt label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
@@ -4097,7 +4118,7 @@ async function shelfOptSubmit() {
   const S = SOPT, k = shelfOptContract(); if (!S || !S.preview || !k) { toast("A fresh preview is required first."); return; }
   const d = new Date(k.expiry + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"}) + " '" + k.expiry.slice(2, 4);
   const line = `${S.action === "BUY_TO_OPEN" ? "BUY TO OPEN" : "SELL TO CLOSE"} ${S.qty} × ${S.sym} ${d} $${k.strike} ${k.call ? "Call" : "Put"} · ${S.type === "LIMIT" ? "Limit $" + S.price.toFixed(2) : "Market"} · Day`;
-  if (!confirm("You are about to submit a REAL options order.\n\n" + line + "\n\nSubmit this exact order?")) return;
+  if (!(await soptConfirm(S, k, d))) return;
   const pv = S.preview; S.preview = null; S.req++; shelfOptPaintBits();
   const out = $("soptImpact"); if (out) out.textContent = "Submitting the checked order to your brokerage…";
   try {
@@ -4105,6 +4126,36 @@ async function shelfOptSubmit() {
     if (out) out.innerHTML = `<b>Order submitted</b> · ${esc(line)}<details class="shelf-impact-raw"><summary>Brokerage response</summary><pre class="broker-position-json">${esc(JSON.stringify(r.order || {}, null, 2))}</pre></details>`;
     toast("Options order submitted.");
   } catch (e) { if (out) out.textContent = e.message || "The brokerage did not confirm the order."; toast(e.message || "Order failed."); }
+}
+// the real-order confirmation: the exact order, what it costs, where it goes; Cancel is the default (Esc / tap outside)
+function soptConfirm(S, k, d) {
+  return new Promise(resolve => {
+    const acct = BROKER_ACCOUNTS[0], al = acct ? shelfTradeAccountLabel(acct) : null, buy = S.action === "BUY_TO_OPEN";
+    const unit = S.type === "LIMIT" ? S.price : k.mid, tot = unit * 100 * S.qty;
+    const el = document.createElement("div"); el.className = "soc-back";
+    el.innerHTML = `<div class="soc" role="alertdialog" aria-modal="true" aria-labelledby="socT">
+      <div class="soc-top"><span class="soc-live"><i></i>Real order</span><span class="soc-acct">${al ? esc(al.broker) + (al.masked ? " " + esc(al.masked) : "") : ""}</span></div>
+      <h3 id="socT">${buy ? "Buy" : "Sell"} ${S.qty} ${esc(S.sym)} $${k.strike} ${k.call ? "call" : "put"}${S.qty > 1 ? "s" : ""}</h3>
+      <p class="soc-sub">${esc(S.sym)} ${esc(d)} · ${buy ? "Buy to open" : "Sell to close"}</p>
+      <div class="soc-rows">
+        <div><span>Contracts</span><b>${S.qty} × 100 shares</b></div>
+        <div><span>Order</span><b>${S.type === "LIMIT" ? "Limit " + money(S.price) : "Market"} · Day</b></div>
+        <div><span>Bid / ask now</span><b>${money(k.bid)} / ${money(k.ask)}</b></div>
+        <div class="soc-tot"><span>${buy ? "Total cost" : "Est. proceeds"}</span><b>${money(tot)}</b></div>
+        ${buy ? `<div class="soc-risk"><span>Most you can lose</span><b>${money(tot)}</b></div>` : ""}
+      </div>
+      <p class="soc-note">This goes straight to your brokerage. ${S.type === "LIMIT" ? "It fills only at " + money(S.price) + " or better, today." : "A market order fills at whatever price is available."}</p>
+      <div class="soc-acts"><button type="button" class="soc-cancel">Cancel</button><button type="button" class="soc-go ${buy ? "buy" : "sell"}">Place order · ${money(tot)}</button></div>
+    </div>`;
+    const done = (v) => { document.removeEventListener("keydown", key, true); el.classList.add("out"); setTimeout(() => el.remove(), 160); resolve(v); };
+    const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); done(false); } };
+    el.addEventListener("click", (e) => { if (e.target === el) done(false); });
+    el.querySelector(".soc-cancel").onclick = () => done(false);
+    el.querySelector(".soc-go").onclick = () => done(true);
+    document.addEventListener("keydown", key, true);
+    document.body.appendChild(el);
+    el.querySelector(".soc-cancel").focus();
+  });
 }
 function shelfOptPaintBits() {
   const S = SOPT; if (!S) return; const k = shelfOptContract(), b = $("soptConfirm");
