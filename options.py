@@ -360,11 +360,16 @@ def _plan(sym: str) -> dict:
         p = _one(sym, rows_for(d), d, last, h["high"] if d == 1 else h["low"], st["target"], st.get("target_kind", "atr"), res, iv0, "live", "Hub")
         out.update(mode="live", plans=[p] if p else [])
     else:
+        pa = None
         try:      # a live breakout on another setup (triangle, channel, support/resistance)
             pa = patterns.analyze_all(c4, res, S)
             lv = next((x for x in pa["live"] if x["state"] in ("breakout_up", "breakdown")), None)
         except Exception:
             lv = None
+        # Nov 23: a double bottom/top still forming (waiting on the neckline) gets a prep plan, like a hub does,
+        # so a "Not yet" double bottom card doesn't say "no breakout or hub" on the Options tab.
+        dbl = next((x for x in (pa or {}).get("live", []) if x["kind"] in ("double_bottom", "double_top") and x["state"] == "forming"
+                    and x.get("p") and x["p"].get("neck")), None)
         if lv:
             t = lv["trade"]
             p = _one(sym, rows_for(t["direction"]), t["direction"], last, t["edge"], t["target"], lv["target_kind"], res, iv0, "live", patterns.KINDS[lv["kind"]], lv["kind"])
@@ -379,6 +384,13 @@ def _plan(sym: str) -> dict:
                 if p:
                     pl.append(p)
             out.update(mode="prep", plans=pl)
+        elif dbl:
+            k = dbl["kind"]
+            d = 1 if k == "double_bottom" else -1
+            edge = float(dbl["p"]["neck"])
+            tgt = edge + d * abs(edge - float(dbl["p"]["peak"]))      # the measured move: the same target the card and ticket show
+            p = _one(sym, rows_for(d), d, edge, edge, tgt, "measured", res, iv0, "prep", patterns.KINDS[k], k)
+            out.update(mode="prep", plans=[p] if p else [])
         else:
             out["message"] = "No breakout or hub right now, so there's no options swing to plan. Let the trade come to you."
     if not out["plans"] and _side and not any(_side.values()) and not out.get("message"):
