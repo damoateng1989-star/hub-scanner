@@ -192,14 +192,19 @@ def register(user: dict) -> dict:
     return {"registered": True, "already_registered": False}
 
 
-def portal(user: dict) -> str:
+BROKERS = {"WEBULL": "Webull", "ROBINHOOD": "Robinhood"}     # Nov 23: the brokerages NextShelf offers to link
+
+
+def portal(user: dict, broker: str | None = None) -> str:
     client = _client()
     uid, secret = _credentials(user)
-    response = client.authentication.login_snap_trade_user(
-        user_id=uid, user_secret=secret,
-        connection_type="trade-if-available" if user.get("is_admin") else "read",   # members link read-only
-        connection_portal_version="v4", dark_mode=True,
-    )
+    kw = dict(user_id=uid, user_secret=secret,
+              connection_type="trade-if-available" if user.get("is_admin") else "read",   # members link read-only
+              connection_portal_version="v4", dark_mode=True)
+    b = str(broker or "").upper()
+    if b in BROKERS:
+        kw["broker"] = b                  # open SnapTrade's page straight on this brokerage (adds a link; others stay)
+    response = client.authentication.login_snap_trade_user(**kw)
     body = _plain(getattr(response, "body", response))
     if isinstance(body, dict):
         url = body.get("redirectURI") or body.get("redirectUri") or body.get("redirect_uri") or body.get("url")

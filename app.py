@@ -2414,9 +2414,9 @@ async def broker_register(u: dict = BrokerUser):
 
 
 @app.post("/api/broker/portal")
-async def broker_portal(u: dict = BrokerUser):
+async def broker_portal(broker: str = "", u: dict = BrokerUser):
     try:
-        url = await run_in_threadpool(snaptrade.portal, u)
+        url = await run_in_threadpool(snaptrade.portal, u, broker or None)
         return {"url": url}
     except Exception as e:
         _broker_error(e)

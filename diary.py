@@ -329,10 +329,10 @@ def round_trips(fills: list[dict]) -> list[dict]:
     """Pair filled orders (oldest first) into trades per instrument. A close with nothing open (the opening order is
     older than the history window) is skipped rather than guessed."""
     by: dict[str, list] = {}
-    for f in fills:
-        by.setdefault(f["key"], []).append(f)
+    for f in fills:     # per account too (Nov 23: Webull + Robinhood), so a buy in one never pairs with a sell in the other
+        by.setdefault((f.get("acct") or "", f["key"]), []).append(f)
     out = []
-    for key, fs in by.items():
+    for (_acct, key), fs in by.items():
         pos, cur = 0.0, None
         for f in fs:
             s = _signed(f["action"], f["qty"], pos)
@@ -387,7 +387,7 @@ def _fills(orders: list[dict]) -> list[dict]:
         out.append(dict(id=str(o.get("id") or ""), key=key, kind="option" if opt else "stock",
                         ticker=(o.get("underlying") if opt else o.get("symbol")) or key, occ=o.get("occ") if opt else None,
                         contract=label, action=str(o.get("action") or "").upper(), qty=float(o.get("filled") or 0),
-                        price=o.get("avg_fill"), time=_ts(o.get("updated") or o.get("placed")) or _now()))
+                        price=o.get("avg_fill"), time=_ts(o.get("updated") or o.get("placed")) or _now(), acct=str(o.get("account_id") or "")))
     return sorted(out, key=lambda f: f["time"])
 
 

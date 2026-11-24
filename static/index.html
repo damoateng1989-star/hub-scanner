@@ -4039,21 +4039,22 @@ async function loadAccount() {
 }
 function brokerPreviewCard(owner = true) {
   return `<div class="acct broker-preview">
-    <div class="broker-head"><div><div class="broker-kicker">${owner ? "Brokerage · owner access" : "Brokerage · read-only"}</div><div class="broker-title">${owner ? "Trade from NextShelf" : "Link your Webull"}</div>
-      <p class="broker-copy">${owner ? "Connect Webull through SnapTrade." : "NextShelf can see your positions and orders, and log your trades in your Trade Diary. It can't place, change or cancel anything."} Your brokerage password is entered only on SnapTrade's secure connection page.</p></div>
+    <div class="broker-head"><div><div class="broker-kicker">${owner ? "Brokerage · owner access" : "Brokerage · read-only"}</div><div class="broker-title">${owner ? "Trade from NextShelf" : "Link your brokerage"}</div>
+      <p class="broker-copy">${owner ? "Connect Webull or Robinhood through SnapTrade. Orders go to Webull." : "NextShelf can see your positions and orders, and log your trades in your Trade Diary. It can't place, change or cancel anything."} Your brokerage password is entered only on SnapTrade's secure connection page.</p></div>
       <span class="broker-status" id="brokerStatus"><i></i> Checking</span></div>
     <div class="broker-divider"></div>
     <div id="brokerAccounts"><p class="broker-copy">Loading connected brokerage accounts…</p></div>
-    <div class="broker-actions"><button class="broker-connect" type="button" onclick="connectBroker()" hidden>Connect Webull</button>
+    <div class="broker-actions"><button class="broker-connect" type="button" data-broker="WEBULL" onclick="connectBroker('WEBULL', this)" hidden>Connect Webull</button><button class="broker-connect" type="button" data-broker="ROBINHOOD" onclick="connectBroker('ROBINHOOD', this)" hidden>Connect Robinhood</button>
       <button type="button" class="sec" onclick="loadBrokerAccounts()">Refresh accounts</button></div>
-    ${owner ? "" : `<p class="broker-copy" style="margin-top:8px"><a href="#positions" style="color:inherit">See your positions →</a> · To unlink, remove NextShelf in SnapTrade or your Webull app.</p>`}
+    ${owner ? "" : `<p class="broker-copy" style="margin-top:8px"><a href="#positions" style="color:inherit">See your positions →</a> · To unlink, remove NextShelf in SnapTrade or your broker's app.</p>`}
     <div id="brokerMessage" class="broker-subnote" aria-live="polite">${owner ? "Brokerage access is owner-only during this prototype." : "Read-only link, switched on for testing."}</div>
   </div>`;
 }
 let BROKER_ACCOUNTS = [];
-async function connectBroker() {
+async function connectBroker(broker, btn) {
   const msg = $("brokerMessage");
-  const btn = document.querySelector(".broker-connect");
+  btn = btn || document.querySelector(".broker-connect");
+  const bname = broker === "ROBINHOOD" ? "Robinhood" : "Webull";
   let stage = "Starting connection";
   if (btn) { btn.disabled = true; btn.textContent = "Connecting…"; }
   if (msg) msg.textContent = "Registering your secure brokerage connection…";
@@ -4062,7 +4063,7 @@ async function connectBroker() {
     await api("/api/broker/register", {method:"POST"});
     stage = "Requesting the secure connection link";
     if (msg) msg.textContent = "Opening the secure SnapTrade connection…";
-    const result = await api("/api/broker/portal", {method:"POST"});
+    const result = await api("/api/broker/portal?broker=" + encodeURIComponent(broker || ""), {method:"POST"});
     if (!result || typeof result.url !== "string" || !/^https:\/\//i.test(result.url)) {
       throw new Error("SnapTrade did not return a valid secure connection link.");
     }
@@ -4072,23 +4073,24 @@ async function connectBroker() {
     window.location.assign(result.url);
   } catch (e) {
     if (msg) msg.textContent = stage + " failed: " + (e.message || "Unknown error") + ". Please try again; if it repeats, send us this message.";
-    if (btn) { btn.disabled = false; btn.textContent = "Try Connect Webull Again"; }
+    if (btn) { btn.disabled = false; btn.textContent = `Try Connect ${bname} Again`; }
   }
 }
 async function loadBrokerAccounts() {
   // Fetch account data even when the Account page is not mounted (e.g. from the ticker ticket).
   const host = $("brokerAccounts"), status = $("brokerStatus"), msg = $("brokerMessage");
   let stage = "Checking saved SnapTrade credentials";
-  const connectBtn = document.querySelector(".broker-connect");
-  if (connectBtn) { connectBtn.hidden = true; connectBtn.disabled = true; }
+  const btns = [...document.querySelectorAll(".broker-connect")];
+  const showConnect = (have) => btns.forEach(b => { const on = !have.some(a => String(a.brokerage || "").toUpperCase().includes(b.dataset.broker)); b.hidden = !on; b.disabled = !on; });
+  btns.forEach(b => { b.hidden = true; b.disabled = true; });
   try {
     const credentialState = await api("/api/broker/status");
     const member = !(ME && ME.is_admin);     // Nov 23: read-only testers start from scratch, so they get the Connect button
     if (member && !credentialState.credentials_available) {
       BROKER_ACCOUNTS = [];
       if (status) status.innerHTML = '<i></i> Not linked';
-      if (host) host.innerHTML = '<p class="broker-copy">Tap Connect Webull, sign in on SnapTrade\'s page, then come back here.</p>';
-      if (connectBtn) { connectBtn.hidden = false; connectBtn.disabled = false; }
+      if (host) host.innerHTML = '<p class="broker-copy">Tap Connect Webull or Connect Robinhood, sign in on SnapTrade\'s page, then come back here.</p>';
+      showConnect([]);
       if (msg) msg.textContent = "Read-only link, switched on for testing.";
       return;
     }
@@ -4102,7 +4104,8 @@ async function loadBrokerAccounts() {
     }
     stage = "Retrieving your existing accounts from SnapTrade";
     const data = await api("/api/broker/accounts");
-    BROKER_ACCOUNTS = data.accounts || [];
+    // Nov 23: Webull first, so orders (owner) and the Positions page default to it; Robinhood is added alongside
+    BROKER_ACCOUNTS = (data.accounts || []).slice().sort((a, b) => (/webull/i.test(b.brokerage) ? 1 : 0) - (/webull/i.test(a.brokerage) ? 1 : 0));
     if (status) status.innerHTML = '<i></i> ' + (data.connected ? "Connected" : "No accounts returned");
     if (host) host.innerHTML = BROKER_ACCOUNTS.length ? BROKER_ACCOUNTS.map(a => `
       <div class="broker-account-row">
@@ -4112,10 +4115,10 @@ async function loadBrokerAccounts() {
       </div>`).join("") : '<p class="broker-copy">SnapTrade returned zero brokerage accounts for the saved NextShelf user. This does not prove your Webull authorization was deleted. Do not reconnect yet; investigate the existing SnapTrade authorization first.</p>';
     if (msg) msg.textContent = data.connected ? "Existing connected account data is provided by SnapTrade and may be cached by the brokerage." : "Saved credentials are present, but SnapTrade returned no accounts. No new connection was started.";
     if (member && !BROKER_ACCOUNTS.length) {      // registered, but the SnapTrade step wasn't finished
-      if (host) host.innerHTML = '<p class="broker-copy">No Webull account linked yet. Tap Connect Webull to finish linking.</p>';
+      if (host) host.innerHTML = '<p class="broker-copy">No brokerage linked yet. Tap Connect Webull or Connect Robinhood to finish linking.</p>';
       if (msg) msg.textContent = "Read-only link, switched on for testing.";
-      if (connectBtn) { connectBtn.hidden = false; connectBtn.disabled = false; }
     }
+    if (member || BROKER_ACCOUNTS.length) showConnect(BROKER_ACCOUNTS);     // offer the broker that isn't linked yet
     if (BRIEF_SYM && ME && ME.is_admin && $("shelfTradeCard")) renderShelfTradeCard(BRIEF_SYM);
   } catch (e) {
     BROKER_ACCOUNTS = [];
@@ -4205,7 +4208,7 @@ async function memberDetail(uid) {
     <div class="mdet-t">${x.tickers.length ? x.tickers.map(t => `<span>${esc(t)}</span>`).join("") : `<span class="none">No tickers on their watchlist</span>`}</div></div>`;
 }
 async function memberBroker(uid, on) {
-  try { await api(`/api/admin/users/${uid}/broker`, {method: "POST", body: JSON.stringify({on})}); toast(on ? "They can link Webull now (read-only)." : "Broker link turned off."); memberDetail(uid); }
+  try { await api(`/api/admin/users/${uid}/broker`, {method: "POST", body: JSON.stringify({on})}); toast(on ? "They can link Webull or Robinhood now (read-only)." : "Broker link turned off."); memberDetail(uid); }
   catch (e) { toast(friendly(e)); }
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
@@ -4604,10 +4607,12 @@ function soptConfirm(S, k, d) {
   });
 }
 // ---------------------------------------------------------------- positions & orders (owner, Nov 22)
+let POS_ACCT = null;   // Nov 23: which linked account the Positions page shows (Webull by default)
+function posPick(id) { POS_ACCT = id; loadPositions(true); }
 async function posFetch(force) {
   if (!BROKER_ACCOUNTS.length && typeof loadBrokerAccounts === "function") { try { await loadBrokerAccounts(); } catch (e) {} }
-  const a = BROKER_ACCOUNTS[0]; if (!a) return {none: true};
-  if (POS && !force && Date.now() - POS._t < 20000) return POS;
+  const a = BROKER_ACCOUNTS.find(x => x.account_id === POS_ACCT) || BROKER_ACCOUNTS[0]; if (!a) return {none: true};
+  if (POS && !force && POS._acct && POS._acct.account_id === a.account_id && Date.now() - POS._t < 20000) return POS;
   const r = await api(`/api/broker/portfolio?account_id=${encodeURIComponent(a.account_id)}`);
   POS = Object.assign(r, {_t: Date.now(), _acct: a}); return POS;
 }
@@ -4631,8 +4636,10 @@ async function loadPositions(force) {
   const el = $("posBody"); if (!el) return;
   if (!POS || force) el.innerHTML = loadingHTML("Reading your positions from the broker…");
   let P; try { P = await posFetch(force); } catch (e) { el.innerHTML = `<p class="pos-empty">${esc(e.message || "Couldn't read your positions.")}</p>`; return; }
-  if (P.none) { el.innerHTML = `<p class="pos-empty">No broker connected. Connect Webull on the <a href="#account">Account page</a>.</p>`; return; }
-  const al = shelfTradeAccountLabel(P._acct); $("posSub").textContent = `Live from ${al.broker}${al.masked ? " " + al.masked : ""} · updated ${new Date(P._t).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"})}`;
+  if (P.none) { el.innerHTML = `<p class="pos-empty">No broker connected. Connect Webull or Robinhood on the <a href="#account">Account page</a>.</p>`; return; }
+  const al = shelfTradeAccountLabel(P._acct), upd = `updated ${new Date(P._t).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit"})}`;
+  if (BROKER_ACCOUNTS.length > 1) $("posSub").innerHTML = `Live from <select onchange="posPick(this.value)" aria-label="Account">${BROKER_ACCOUNTS.map(x => { const l = shelfTradeAccountLabel(x); return `<option value="${esc(x.account_id)}" ${x.account_id === P._acct.account_id ? "selected" : ""}>${esc(l.broker)}${l.masked ? " " + esc(l.masked) : ""}</option>`; }).join("")}</select> · ${upd}`;
+  else $("posSub").textContent = `Live from ${al.broker}${al.masked ? " " + al.masked : ""} · ${upd}`;
   const opts = P.positions.filter(r => r.kind === "option"), stk = P.positions.filter(r => r.kind !== "option" && r.kind !== "cash");
   const tv = P.positions.reduce((a, r) => a + (r.value || 0), 0), tpl = P.positions.reduce((a, r) => a + (r.pl || 0), 0);
   const open = P.orders.filter(o => o.open), past = P.orders.filter(o => !o.open);
