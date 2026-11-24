@@ -1261,7 +1261,7 @@ window.nsStamp = (s) => { if (!s) return ""; const d = new Date(String(s).replac
     }
     window.NS_SIGNUPS_OPEN = c.signups_open === true;
     if (member || c.signups_open === true) document.querySelectorAll("[data-cta]").forEach(a => {
-      a.href = member ? "/app" : "/login#signup"; a.textContent = member ? "Open the app" : "Start free";
+      a.href = member ? "/app" : "/login#signup"; a.textContent = member ? "Open the app" : "Start for free";
     });
   });
 
@@ -1662,7 +1662,7 @@ document.querySelectorAll(".lm").forEach(function (m) {
       : st === "edge" ? `${s} is close to its trigger. Members get an alert the moment a 4-hour candle closes through it.`
       : st === "locked" ? `${s} has something happening right now. Its live state and Shelf card are for members.`
       : `${s} has no setup right now. Members get an alert the moment it starts one.`;
-    const cta = $("pkCta"); cta.textContent = open ? "Start free" : "Join the waitlist"; cta.href = open ? "/login#signup" : "#join";
+    const cta = $("pkCta"); cta.textContent = open ? "Start for free" : "Join the waitlist"; cta.href = open ? "/login#signup" : "#join";
     $("pkPop").hidden = false;
   });
   $("pkCta").addEventListener("click", () => { $("pkPop").hidden = true; });
