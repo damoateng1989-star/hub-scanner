@@ -6800,8 +6800,12 @@ class MapLabelsPaneView {
           const yHi = yOf(d.hub.high), yLo = yOf(d.hub.low);
           if (yHi != null && yLo != null && yLo > yHi) {
             // Nov 24 (owner): no blue fill over the candles — the hub is its two edges as thin lines, and its label
-            ctx.globalAlpha = .9; ctx.strokeStyle = d.hubColor; ctx.lineWidth = 1;
-            ctx.beginPath(); ctx.moveTo(0, Math.round(yHi) + .5); ctx.lineTo(W, Math.round(yHi) + .5); ctx.moveTo(0, Math.round(yLo) + .5); ctx.lineTo(W, Math.round(yLo) + .5); ctx.stroke();
+            // Nov 24 (owner): the hub as a box — an outline from hub high to hub low, a whisper of fill, candles stay clear
+            const bx = .5, by = Math.round(yHi) + .5, bw = W - 1, bh = Math.round(yLo) - Math.round(yHi);
+            ctx.globalAlpha = .07; ctx.fillStyle = d.hubColor;
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 6); ctx.fill(); } else ctx.fillRect(bx, by, bw, bh);
+            ctx.globalAlpha = .95; ctx.strokeStyle = d.hubColor; ctx.lineWidth = 1.25;
+            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 6); ctx.stroke(); } else ctx.strokeRect(bx, by, bw, bh);
             ctx.globalAlpha = 1;
             if (W >= MAP_LABEL_MIN_W) {
               ctx.font = "600 11px 'JetBrains Mono',ui-monospace,monospace"; ctx.textBaseline = "middle";
