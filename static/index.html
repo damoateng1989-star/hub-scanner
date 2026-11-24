@@ -116,6 +116,18 @@ html[data-theme="light"] .mp-more { background: #fff; border-color: #DCE1E8; } h
 .cmp-tape { font: 600 10px var(--mono); color: #7C93FF; }
 .arow.cmp.mine { background: var(--surface, #15171C); border: 1px solid var(--line); border-radius: 12px; margin: 4px 8px; }
 .retest-rule { display: block; font-weight: 400; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 3px; }
+
+/* Patch 218: CROSSED */
+.xr-tag { font: 700 10px var(--mono); letter-spacing: .08em; color: #3DD68C; background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.35); padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+.xr-tag.done { color: var(--muted); background: rgba(154,160,172,.1); border-color: rgba(154,160,172,.3); }
+.xr-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 10px; margin: 10px 0; background: var(--surface, #15171C); }
+.xr-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; } .xr-head span { font: 500 12px var(--mono); color: var(--muted); }
+.xr-plan { display: grid; gap: 4px; }
+.xr-plan div { display: grid; grid-template-columns: 70px auto 1fr; gap: 10px; align-items: baseline; }
+.xr-plan span { font: 700 10.5px var(--mono); letter-spacing: .08em; color: var(--muted); } .xr-plan b { font: 700 14px var(--mono); } .xr-plan small { color: var(--muted); font-size: 12px; }
+.xr-meta { font: 500 12px var(--mono); color: var(--muted); margin: 8px 0 0; }
+.xr-rec { font-size: 12px; color: var(--muted); margin: 8px 0 0; line-height: 1.5; } .xr-rec b { color: var(--text, #E9EBEF); font-weight: 600; }
+.xr-watch { margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -3195,6 +3207,7 @@ html[data-theme="light"] .ns-sugg { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
   <div class="vpill" id="vPill" hidden></div>
   <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
   <div class="ck-chips" id="ckChips" hidden></div>
+  <div class="retest xr" id="crossed" hidden></div>
   <div class="retest" id="retest" hidden></div>
   <div class="lk-strip" id="lkStrip" hidden></div>
   <a class="cine-strip" id="cineStrip" href="#cinema" hidden></a>
@@ -5453,6 +5466,49 @@ async function renderCineStrip() {
     <span class="cs-t"><small>WHILE YOU WAIT</small><b>${esc(f.title)} is playing in the Screening Room</b></span><span class="go">›</span>`;
   el.hidden = false;
 }
+
+// ---------------------------------------------------------------- Patch 218: CROSSED — a hub's first trigger cross, a measured setup
+const XR_WORD = {live: "CROSSED", target: "Reached the target", stop: "Stopped", dead: "Dead: closed back inside", expired: "Expired: 10 closes"};
+function xrTime(iso) { try { return new Date(iso).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) { return ""; } }
+function xrPlanHTML(x, full) {
+  const live = x.state === "live";
+  return `<div class="xr-plan">
+    <div><span>TRIGGER</span><b>${money(x.trigger)}</b><small>crossed ${x.at_close ? "at the close" : xrTime(x.cross_at)}</small></div>
+    <div><span>ENTRY</span><b>${money(x.trigger)}</b><small>buy-stop at the trigger</small></div>
+    <div><span>TARGET</span><b class="u-up">${money(x.target)}</b><small>the next shelf</small></div>
+    <div><span>STOP</span><b class="u-down">${money(x.stop)}</b><small>1 ATR under the trigger</small></div>
+    <div><span>KILL</span><b>${money(x.hub_high)}</b><small>a 4H close back inside the hub</small></div>
+  </div>${full ? `<p class="xr-meta">${live ? `${x.closes_left} of 10 four-hour closes left${x.window ? ` · clock ends ${esc(x.window)}` : ""}` : `${esc(XR_WORD[x.state] || x.state)}${x.ret_trig != null ? ` · ${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}% from the trigger` : ""}`}${x.first_px && x.first_px > x.trigger * 1.002 ? ` · first seen at ${money(x.first_px)} (a gap fills above the trigger)` : ""}</p>` : ""}`;
+}
+function xrRecordHTML(rec) {
+  if (!rec) return "";
+  return `<p class="xr-rec"><b>Cross entries: ${rec.avg > 0 ? "+" : ""}${Number(rec.avg).toFixed(2)}% per signal · PF ${Number(rec.pf).toFixed(1)} · ${Number(rec.n).toLocaleString()} signals</b> (2-year test). Per signal, not per trade: a skipped opportunity scores 0, so it doesn't compare like-for-like with the retest lines.</p>`;
+}
+function renderCrossed() {
+  const el = $("crossed"); if (!el) return;
+  const xs = (BOARD && BOARD.crosses) || [];
+  if (!xs.length) { el.hidden = true; el.innerHTML = ""; return; }
+  const live = xs.filter(x => x.state === "live"), done = xs.filter(x => x.state !== "live");
+  const row = (x) => `<a class="arow cmp${x.watching ? " mine" : ""}" href="#today" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(--up)">
+      <span class="t"><span class="c1"><span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
+      <span class="c2"><small>trigger ${money(x.trigger)} · target ${money(x.target)} · stop ${money(x.stop)} · dead on a 4H close under ${money(x.hub_high)}</small></span></span><span class="go">›</span></a>`;
+  el.innerHTML = `<div class="week-head"><div class="week-k">CROSSED · ${live.length}</div></div>
+    <p class="retest-rule" style="margin:2px 0 8px">The first cross of a hub's top, with the plan: a buy-stop at the trigger, the next shelf as the target, out on a 4H close back inside. The early entry, measured; the trade is yours.</p>
+    ${live.map(row).join("")}${done.length ? `<div class="retest-sub" style="margin-top:8px">Resolved · ${done.length}</div>${done.map(row).join("")}` : ""}`;
+  el.hidden = false;
+}
+async function paintBriefCross(sym) {
+  if (!ME || ME.guest) return;
+  let x = null;
+  try { x = (await api("/api/cross/" + encodeURIComponent(sym))).cross; } catch (e) { return; }
+  const body = $("bfBody"); if (!x || BRIEF_SYM !== sym || !body) return;
+  let el = $("bfCross"); if (!el) { el = document.createElement("div"); el.id = "bfCross"; }
+  body.prepend(el);
+  const live = x.state === "live";
+  el.innerHTML = `<div class="xr-card"><div class="xr-head"><b class="xr-tag${live ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b><span>Hub ${money(x.hub_low)}–${money(x.hub_high)} · cross entry</span></div>
+    ${xrPlanHTML(x, true)}${xrRecordHTML(x.record)}
+    ${live ? `<button type="button" class="btnx sm xr-watch" onclick='lookoutWindow({ticker: ${JSON.stringify(sym)}, direction: 1, edge: ${x.trigger}, target: ${x.target}, kill: ${x.hub_high}, kind: "cross", placed: false})'>${lkEyes(18)} Watch this trade</button>` : ""}</div>`;
+}
 // ---------------------------------------------------------------- Patch 208: Lookout (watch, never trade)
 function lookoutPlanFromTicket(sym, wantDir) {
   // the SAME numbers the ticket's safety-net row shows: trigger/entry, stop, target (long); the plan's own for a short
@@ -5493,7 +5549,7 @@ function lookoutWindow(o) {
     </div>
     <div class="soc-acts"><button type="button" class="soc-cancel">Not now</button><button type="button" class="soc-go buy">Yes, watch it</button></div>
     <p class="lk-foot" id="lkFoot">Alerts go to your phone. "Not now" keeps the trade, I just won't watch it.</p></div>`;
-  api(`/api/lookout/preview?ticker=${encodeURIComponent(o.ticker)}`).then(r => {
+  api(`/api/lookout/preview?ticker=${encodeURIComponent(o.ticker)}&kind=${encodeURIComponent(o.kind || "hub")}`).then(r => {
     const c = el.querySelector("#lkClock"), e = el.querySelector("#lkEarn");
     if (c && r.window_end) c.textContent = `The window this setup gives itself closes (${dd(r.window_end)}).`;
     if (e) e.textContent = r.earnings_date ? `${esc(o.ticker)} reports ${dd(r.earnings_date)}; I'll tell you the evening before.` : "None inside this watch right now. If one appears, I'll tell you the evening before.";
@@ -6347,7 +6403,7 @@ async function openBrief(sym, focus) {
     if (MAP_TF !== "4h") mapLoadDaily(sym);        // Nov 23: the picked view loads alongside the 4H, not after it
     BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
     clearTimeout(sideT); side();
-    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
+    if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); paintBriefCross(sym); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
   } catch (e) {
     clearTimeout(sideT); side();
     if (BRIEF_SYM !== sym) return;
@@ -9143,7 +9199,7 @@ function renderToday() {
   renderPremarket();
   renderWeek();
   if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet
-  renderRetest();
+  renderRetest(); renderCrossed();
   loadWatching(); loadDiaryMini(); { const c = $("chMini"); if (c) c.hidden = !ME || ME.guest; }
   loadPulse();
   renderRule();

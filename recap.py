@@ -77,7 +77,13 @@ def build(u: dict | None) -> dict:
     except Exception:
         upd = None
     fresh = bool(upd is not None and upd.date() == today.date() and upd.hour * 60 + upd.minute >= 16 * 60)
-    return dict(swept_at=upd.strftime("%-I:%M %p").replace("AM", "AM").lstrip("0") if upd is not None else None,
+    try:      # Patch 218 §7: the cross forward log, both scorings (shown once the first row has closed)
+        import cross
+        xs = cross.forward_summary()
+        xs["rec_avg"] = cross.record()["avg"]
+    except Exception:
+        xs = dict(n=0)
+    return dict(cross=xs, swept_at=upd.strftime("%-I:%M %p").replace("AM", "AM").lstrip("0") if upd is not None else None,
                 swept_day=upd.strftime("%a %b %-d") if upd is not None else None, fresh=fresh,
                 date=today.strftime("%a %b %-d"), pro=pro, universe=b["universe"], new_count=len(new), held_count=len(held),
                 near_count=len(b["near"]), new=new_rows if pro else [], near=near_rows if pro else [],
@@ -126,6 +132,13 @@ def text(d: dict) -> str:
     if not d["events"] and not d["mine"]:
         L.append("Quiet day on your watchlist. No trade is a fine trade." if d["watching"] else
                  "Your watchlist is empty. Add a few stocks and NextShelf will watch them while you work.")
+    xs = d.get("cross") or {}
+    if xs.get("n"):
+        L += ["", "📈 Cross entries (managed)",
+              f"• {_n(xs['n'], 'closed setup')} since {xs['since']}, {xs.get('live', 0)} live · "
+              f"{xs['avg_trig']:+.2f}% per signal from the trigger · {xs['avg_touch']:+.2f}% from the first touch "
+              f"(the gap is the fill cost: {xs['fill_cost']:+.2f}%)",
+              f"• The 2-year test: {xs.get('rec_avg', 0):+.2f}% per signal from the trigger."]
     L += ["", "Next decision points: tomorrow's 4H closes at 1:30 PM and 4:00 PM ET.",
           "Don't force trades. Let the trade come to you.", "Educational, not financial advice."]
     if APP_URL:

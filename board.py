@@ -401,6 +401,11 @@ def _scan_board() -> int:
                         FRESH_RT.append(dict(symbol=sym, **rn_))
                 except Exception as e:
                     log.warning("board retest check failed for %s: %s", sym, e)
+                try:      # Patch 218: cross setups, against the status this stock had before this close
+                    import cross
+                    cross.on_close(sym, c4, json.loads((db.board_row(sym) or {}).get("status") or "{}"))
+                except Exception as e:
+                    log.warning("cross close check failed for %s: %s", sym, e)
                 bs = _board_status(c4, res)
                 if dv20 is not None:
                     bs["dv20"] = round(dv20)

@@ -1222,6 +1222,20 @@ def pulse_data(u: dict = User):
         return dict(rows=[])
 
 
+@app.get("/api/cross/{symbol}")
+def cross_for(symbol: str, u: dict | None = Maybe):
+    """Patch 218: the stock's cross setup (live, or resolved in the last 3 days) with its per-signal record."""
+    import cross
+    return {"cross": cross.for_symbol(scanner.clean_symbol(symbol)) if u else None}
+
+
+@app.get("/api/admin/cross-log")
+def cross_log(u: dict = Admin):
+    """Patch 218 §7: the forward log, both scorings."""
+    import cross
+    return dict(summary=cross.forward_summary(), rows=cross._rows("ORDER BY cross_at DESC LIMIT 200"))
+
+
 @app.get("/api/board")
 def board_data(u: dict | None = Maybe):
     b = board.board()
@@ -1229,8 +1243,14 @@ def board_data(u: dict | None = Maybe):
         return dict(updated=b.get("updated"), universe=b.get("universe"), guest=True, locked=True,
                     live_count=len(b["live"]), near_count=len(b["near"]), forming_count=len(b["forming"]),
                     live=[], near=[], forming=[], recent=[], setups=[], setups_locked=0)
+    try:      # Patch 218 §4: cross setups are public on the board (the phone is what the gate filters)
+        import cross
+        b["crosses"] = cross.board_rows()
+    except Exception as e:
+        log.warning("board crosses failed: %s", e)
+        b["crosses"] = []
     mine = set(db.user_symbols(u["id"]))
-    for group in ("live", "near", "forming", "recent", "setups"):     # Patch 216: setups too (gap fades), per member
+    for group in ("live", "near", "forming", "recent", "setups", "crosses"):     # Patch 216: setups too (gap fades), per member
         for r in b.get(group) or []:
             r["watching"] = r["symbol"] in mine
     try:      # Patch 165: the board's live-first order needs each live row's setup grade. This is a
@@ -2291,10 +2311,10 @@ async def lookout_start(body: LookoutStart, u: dict = User):
 
 
 @app.get("/api/lookout/preview")
-async def lookout_preview(ticker: str, u: dict = User):
+async def lookout_preview(ticker: str, kind: str = "hub", u: dict = User):
     import lookout
     try:
-        return await run_in_threadpool(lookout.preview, ticker)
+        return await run_in_threadpool(lookout.preview, ticker, kind)
     except ValueError as e:
         raise HTTPException(400, str(e))
 

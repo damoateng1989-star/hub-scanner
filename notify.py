@@ -12,13 +12,15 @@ import telegram_bot
 
 log = logging.getLogger("notify")
 PRO_ONLY_TYPES = {"preclose"}        # pre-close warnings are a Pro feature
+# Patch 218: "cross" (a hub's first trigger cross, a measured setup) reaches members who watch the stock.
 # Nov 20: members get the trade and nothing else — the breakout heads-up, the "back at the edge" heads-up, and the
 # retest itself (hub and double bottom/top). Hub formed, early read, unconfirmed, pre-close, premarket gap, the live
 # trigger-cross note, other-pattern alerts and the every-A digest are admin-only now. Their own price alerts and the
 # daily summaries go by other paths and are unaffected. MEMBER_ALERT_TYPES (comma list) overrides.
 import os as _os
 MEMBER_TYPES = set(filter(None, (_os.getenv("MEMBER_ALERT_TYPES") or
-                                 "breakout,breakdown,retesting_now,retest,retest_double").split(",")))
+                                 "breakout,breakdown,retesting_now,retest,retest_double,cross").split(",")))
+MEMBER_TYPES.add("cross")       # Patch 218 §6: always — the gate (watchlist / tape) lives in cross.py
 MEMBER_BREAKOUT_STYLES = {"hub", "double", "gapfade"}    # breakouts of setups that have a trade plan (not triangles etc.)
 
 

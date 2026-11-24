@@ -233,7 +233,18 @@ UNIVERSE_RECORD = {
                                     "Flat overall and negative lately: −0.33% in the later half, −0.52% over the last 6 months (28 trades), "
                                     "−0.43% without its 5 best stocks."),
                 overall=dict(label="Hub retests", avg=-0.41, pf=0.57, n=8175, win=36.3,
-                             early=-0.32, late=-0.49, mix="Retest entry, all hubs")),
+                             early=-0.32, late=-0.49, mix="Retest entry, all hubs"),
+                # Patch 218 (Nov 24): Arm A of the trigger-cross Lab test (lab_trigcross.py, Nov 24 4:47 PM run,
+                # Dec 2024 – Nov 2026, universe 543). Per SIGNAL: an opportunity the entry skips scores 0.
+                cross=dict(label="Hub breakouts — cross entry", avg=0.56, pf=1.8, n=3576, win=55.2,
+                           early=0.52, late=0.60, recent=0.61, without_top5=0.51,
+                           mix="Per signal: every qualified hub's first trigger cross (3,576 signals); "
+                               "buy-stop at the trigger, shelf target, 1 ATR stop, dead on a 4H close "
+                               "back inside, 10-candle horizon",
+                           caveat="Per signal, not per trade — an opportunity the entry skips scores 0, "
+                                  "so this line never compares like-for-like with the per-trade lines. "
+                                  "Backtest fills assume the trigger price; a gap through the trigger "
+                                  "fills worse live. The forward log grades live fills.")),
 }
 
 
@@ -1045,6 +1056,11 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         sent.append(msg)
     except Exception as ex:
         log.warning("double retest check failed for %s: %s", sym, ex)
+    try:      # Patch 218: cross setups — a touch first seen at this close, and the live ones' 4H-close exits
+        import cross
+        cross.on_close(sym, c4, json.loads((db.get_ticker(sym) or {}).get("status") or "{}"))
+    except Exception as e:
+        log.warning("cross close check failed for %s: %s", sym, e)
     db.update_ticker(sym, c4.index[-1].isoformat(), json.dumps(status))
     return status, sent
 
@@ -1441,6 +1457,11 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
         price_alerts_check(now)
     except Exception as e:
         log.warning("price alerts check failed: %s", e)
+    try:      # Patch 218: a qualified hub's first trigger cross is a setup (created and logged whatever the alert gate says)
+        import cross
+        cross.check(now)
+    except Exception:
+        log.exception("cross check")
     if not TRIGGER_ALERTS or not data.market_open(now):
         return []
     rows = db.list_tickers()

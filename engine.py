@@ -566,6 +566,8 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
             st["trigger_up"] = round(max(h["high"], float(prev.min()) + s.k * atr_now), 2)
         if atr_now == atr_now and atr_now > 0:
             st["atr"] = round(atr_now, 2)
+            # Patch 218: the cross setup's target exactly as the trigger-cross Lab measured it (from the hub high)
+            st["cross_target"] = round(float(target_for(res["hubs"], h, 1, atr_now, s)[0]), 2)
             st["trigger_down"] = round(min(h["low"], float(prev.max()) - s.k * atr_now), 2)
             # Shelves measured from the trigger (the entry), not the hub edge.
             # The trigger can sit above the hub high (prev closes + k*ATR), and a shelf

@@ -123,6 +123,7 @@ MODULES = [
         ("the-retest", "Wait for the retest: the A setup", 4, """
 <p>NextShelf replayed <b>every hub breakout across 543 stocks over two years</b>, more than 22,000 of them. Entering at the breakout close lost money on average: wins averaged about +1%, but losses averaged about −2%, because a failed breakout gives back the whole run-up you paid for. No exit rule fixed that. Changing <i>where you get in</i> did.</p>
 <div style="margin:18px 0;padding:14px 6px 6px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><svg viewBox="0 0 640 300" role="img" aria-label="Diagram: a breakout close above the hub top, a pullback to the hub top that closes above it (the retest entry), and a stop 1 ATR below" style="display:block;width:100%;height:auto;"><line x1="40" y1="44" x2="600" y2="44" stroke="#8a9aae" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="34" font-family="JetBrains Mono, monospace" font-size="12" fill="#8a9aae">next shelf — the aim</text><rect x="40" y="160" width="560" height="60" fill="rgba(47,84,235,0.08)"/><line x1="40" y1="160" x2="600" y2="160" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><line x1="40" y1="220" x2="600" y2="220" stroke="#2F54EB" stroke-width="1.5" stroke-dasharray="6 5"/><text x="40" y="240" font-family="JetBrains Mono, monospace" font-size="12" fill="#2F54EB">hub</text><g fill="#141412"><rect x="100" y="176" width="14" height="26"/><rect x="160" y="182" width="14" height="22"/><rect x="220" y="172" width="14" height="28"/></g><rect x="290" y="112" width="16" height="56" fill="#3DD68C"/><text x="298" y="102" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">breakout: heads-up</text><rect x="360" y="122" width="14" height="22" fill="#DC0058"/><line x1="447" y1="132" x2="447" y2="170" stroke="#3DD68C" stroke-width="2"/><rect x="440" y="140" width="14" height="16" fill="#3DD68C"/><circle cx="447" cy="148" r="20" fill="none" stroke="#141412" stroke-width="1.5"/><text x="600" y="96" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">retest: dips to the top,</text><text x="600" y="112" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#141412">closes above it = entry</text><line x1="420" y1="196" x2="600" y2="196" stroke="#DC0058" stroke-width="1.5" stroke-dasharray="4 4"/><text x="600" y="212" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="12" fill="#DC0058">stop: 1 ATR below the entry</text></svg><p style="font-size:13px;color:#5b6672;margin:6px 12px 8px;"><b style="color:#141412;">The retest, drawn.</b> The breakout close is the heads-up. A later candle dips back to the hub top and closes above it: that close is the entry, with a stop 1 ATR below.</p></div>
+<p>Waiting isn't the only measured entry: when price crosses the hub top and runs, the <a href="/learn/the-cross">cross</a> is the early one.</p>
 <h2>What counts as a retest</h2>
 <p>Within <b>5 four-hour candles</b> of the breakout, a candle that <b>dips back to within a quarter of an ATR of the hub edge</b> and <b>closes on the breakout side, within half an ATR of the edge</b>. A close back inside the hub first ends it: the breakout failed. Only the first retest counts.</p>
 <h2>The A setup</h2>
@@ -142,6 +143,30 @@ MODULES = [
          ("A hub broke out at $105 over a $100–$104 hub. Two candles later one dips to $104.10 and closes at $104.60. What is that?",
           ["A failed breakout", "The retest: a pullback to the edge that held", "Nothing; only the breakout matters"],
           1, "It pulled back to the hub top and closed above it, close to the edge. That's the retest, and if it grades A it's the entry.")),
+        ("the-cross", "The cross: the early entry", 5, """
+<p>The retest waits for price to come back to the hub. Sometimes it never does: the stock crosses the top of its hub and keeps going. NextShelf measured what happens if you take the <b>first cross</b> itself, with a plan, instead of waiting.</p>
+<h2>What the Lab measured</h2>
+<p>Over two years and 543 stocks, the Lab took every qualified hub (4+ sessions, room 1.5× or more) and found the first time price touched the hub top: <b>3,576 signals</b>. It scored three entries on every one of them, and an entry that never happened scored zero. That's <b>per-signal</b> accounting: it counts the trades you miss as well as the ones you take.</p>
+<ul><li><b>The cross entry:</b> +0.56% per signal, profit factor 1.8, about 55% of trades won. It held up in both halves, over the last six months, and without its five best stocks.</li>
+<li><b>Waiting for the retest:</b> +0.04% per signal. The retest is still good when it comes, but it only came on about 8% of these signals.</li>
+<li><b>Why:</b> on <b>60.5%</b> of signals, price reached the target before any retest. Waiting meant watching most of the good moves go by.</li></ul>
+<p>One more number: the first 4-hour candle after a cross closed back inside the hub only <b>6.7%</b> of the time. Those are the ones the plan's kill rule throws out quickly, at a small loss. So a rough first day after a break doesn't mean the managed trade is bad: the plan decides on closes, not on the first wobble.</p>
+<h2>The plan</h2>
+<ul><li><b>Entry:</b> a buy-stop at the trigger (the hub top). It fills the moment price crosses.</li>
+<li><b>Target:</b> the next shelf above.</li>
+<li><b>Stop:</b> 1 ATR below the trigger, printed as an exact price.</li>
+<li><b>Kill:</b> a 4-hour close back inside the hub ends it. Closes only: a wick back inside doesn't count.</li>
+<li><b>Clock:</b> 10 four-hour candles from the cross, then it's over.</li></ul>
+<h2>The honest caveat: the fill</h2>
+<p>The test booked every entry at the trigger price. In real life, a stock that gaps over the trigger fills your stop order higher, and that costs you. NextShelf logs every live cross twice: from the trigger, the way the test scored it, and from the price it actually crossed at. The difference is the real fill cost, and it's published in the daily recap.</p>
+<div style="margin:18px 0;padding:12px 16px;border:1px solid #e3e7ec;border-radius:16px;background:#f7f8f9;"><p style="margin:0;"><b>In plain words:</b> the retest is the careful entry. The cross is the early entry. Both are measured; neither is a guess.</p></div>
+<p>NextShelf shows the cross on the board as <b>CROSSED</b>, with the plan and the record. It never places the order. The trade, and the size, are yours.</p>""",
+         ["The cross entry buys the first touch of the hub top with a buy-stop: +0.56% per signal over 3,576 signals.",
+          "Waiting for the retest missed the target on 60.5% of signals; both entries are measured.",
+          "Plan: shelf target, stop 1 ATR below the trigger, dead on a 4H close back inside, 10 candles."],
+         ("A stock crosses its hub top at $50.00 and the first price you see is $50.40. Which price does the record use, and which do you get?",
+          ["Both are $50.40", "The record books $50.00; a stop order on that gap fills nearer $50.40", "The record uses the 4-hour close"],
+          1, "The test booked fills at the trigger. A gap through it fills higher live, which is why NextShelf logs both prices and publishes the difference.")),
         ("clear-path", "Clear path: the road to the target, and the A+ grade", 5, """
 <p>The previous lesson graded the retest. This one grades the <b>road</b>: the stretch of price between the hub edge, where you enter, and the next shelf, which is the aim. Sometimes that road is empty. Sometimes it has furniture in it.</p>
 <h2>What a stack is</h2>

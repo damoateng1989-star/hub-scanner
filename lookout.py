@@ -97,12 +97,29 @@ def window_end_for(ticker: str) -> str:
 _OCC = re.compile(r"^[A-Z]{1,6}\d{6}[CP]\d{8}$")
 
 
-def preview(ticker: str) -> dict:
+def cross_window_end(ticker: str) -> str | None:
+    """Patch 218 §8: a cross watch's clock — 10 four-hour closes counted from the cross candle's own close."""
+    try:
+        import alert_format
+        import cross
+        import engine
+        r = cross.for_symbol(ticker)
+        if not r or r["state"] != "live":
+            return None
+        row = db._run("SELECT cross_candle FROM cross_setups WHERE id=?", (r["id"],)).fetchone()
+        end = engine.candle_end(pd.Timestamp(row["cross_candle"]).tz_convert(NY))
+        t = alert_format._closes_after(end.date(), end.hour * 60 + end.minute, cross.HORIZON - 1)
+        return t.date().isoformat() if t is not None else None
+    except Exception:
+        return None
+
+
+def preview(ticker: str, kind: str = "hub") -> dict:
     """What the window says before the member opts in: the date the plan's clock runs out and any earnings inside it."""
     t = str(ticker or "").strip().upper()
     if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", t):
         raise ValueError("Unknown ticker")
-    wend = window_end_for(t)
+    wend = (cross_window_end(t) if kind == "cross" else None) or window_end_for(t)
     try:
         import earnings
         e = earnings.lookup(t)
@@ -138,7 +155,7 @@ def start_watch(user: dict, p: dict) -> dict:
         edate = e["date"] if e else None
     except Exception:
         edate = None
-    wend = window_end_for(ticker)
+    wend = (cross_window_end(ticker) if str(p.get("kind") or "") == "cross" else None) or window_end_for(ticker)
     if edate and edate > wend:
         edate = None                                      # outside the watch: no earnings-eve alert
     cur = db._run("""INSERT INTO watched_positions (user_id, ticker, kind, direction, contract, contract_occ, qty, entry_price,
