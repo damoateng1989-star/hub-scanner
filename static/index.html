@@ -6891,6 +6891,50 @@ function mapCloudCalc(full) {
   return {pts, fut};
 }
 // the candle series' data: the candles, plus 26 empty future slots when the cloud is on (room for the projection)
+
+// ---------------------------------------------------------------- Nov 24: VWAP, RSI and MACD on the chart (display only)
+const indPref = () => { try { return Object.assign({vwap: true, rsi: true, macd: true}, JSON.parse(localStorage.getItem("ns-ind") || "{}")); } catch (e) { return {vwap: true, rsi: true, macd: true}; } };
+function setInd(k, on) { const p = indPref(); p[k] = !!on; try { localStorage.setItem("ns-ind", JSON.stringify(p)); } catch (e) {} if (typeof paintMap === "function") paintMap(); }
+function indEma(v, n) { const k = 2 / (n + 1), out = []; let e = null; v.forEach((x, i) => { e = e == null ? x : x * k + e * (1 - k); out.push(i >= n - 1 ? e : null); }); return out; }
+function mapIndicators(chart, candles, D, IND, up, down) {
+  const L = window.LightweightCharts;
+  const cs = D.cs.filter(x => Number.isFinite(+x.time) && Number.isFinite(+x.close) && Number.isFinite(+x.high) && Number.isFinite(+x.low));
+  if (cs.length < 30) return;
+  const T = cs.map(x => +x.time), C = cs.map(x => +x.close);
+  if (IND.vwap && !D.daily) {          // VWAP, reset each trading day (all sessions shown)
+    let day = null, pv = 0, vv = 0; const pts = [];
+    cs.forEach(x => { const d = Math.floor(+x.time / 86400); if (d !== day) { day = d; pv = 0; vv = 0; }
+      const v = Math.max(0, +x.volume || 0), tp = (+x.high + +x.low + +x.close) / 3; pv += tp * v; vv += v;
+      if (vv > 0) pts.push({time: +x.time, value: pv / vv}); });
+    const vw = chart.addSeries(L.LineSeries, {color: "rgba(233,235,239,.75)", lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, title: "VWAP"});
+    vw.setData(pts);
+  }
+  let pane = 2;
+  if (IND.rsi) {                        // RSI 14 (Wilder)
+    const n = 14, out = []; let ag = 0, al = 0;
+    for (let i = 1; i < C.length; i++) { const ch = C[i] - C[i - 1], g = Math.max(ch, 0), l = Math.max(-ch, 0);
+      if (i <= n) { ag += g / n; al += l / n; } else { ag = (ag * (n - 1) + g) / n; al = (al * (n - 1) + l) / n; }
+      if (i >= n) out.push({time: T[i], value: al === 0 ? 100 : 100 - 100 / (1 + ag / al)}); }
+    const r = chart.addSeries(L.LineSeries, {color: "#7C93FF", lineWidth: 1, priceLineVisible: false, lastValueVisible: true, title: "RSI 14",
+      autoscaleInfoProvider: () => ({priceRange: {minValue: 0, maxValue: 100}})}, pane);
+    r.setData(out);
+    [70, 30].forEach(v => r.createPriceLine({price: v, color: "rgba(154,160,172,.45)", lineWidth: 1, lineStyle: L.LineStyle.Dashed, axisLabelVisible: true, title: ""}));
+    pane++;
+  }
+  if (IND.macd) {                       // MACD 12 / 26 / 9
+    const e12 = indEma(C, 12), e26 = indEma(C, 26), m = C.map((_, i) => e12[i] != null && e26[i] != null ? e12[i] - e26[i] : null);
+    const mi = m.map((v, i) => [v, i]).filter(([v]) => v != null), sig = indEma(mi.map(([v]) => v), 9);
+    const ml = [], sl = [], hs = [];
+    mi.forEach(([v, i], j) => { ml.push({time: T[i], value: v}); if (sig[j] != null) { sl.push({time: T[i], value: sig[j]}); const h = v - sig[j];
+      hs.push({time: T[i], value: h, color: (h >= 0 ? up : down) + (/^#[0-9a-f]{6}$/i.test(up) ? "AA" : "")}); } });
+    const hh = chart.addSeries(L.HistogramSeries, {priceLineVisible: false, lastValueVisible: false, title: "MACD 12·26·9"}, pane);
+    hh.setData(hs);
+    const a = chart.addSeries(L.LineSeries, {color: "#5B8CFF", lineWidth: 1, priceLineVisible: false, lastValueVisible: false}, pane); a.setData(ml);
+    const b = chart.addSeries(L.LineSeries, {color: "#F5A623", lineWidth: 1, priceLineVisible: false, lastValueVisible: false}, pane); b.setData(sl);
+  }
+  const H = chart.panes();    // share the height by weight: price 6, volume 1, each indicator 1.6
+  try { H.forEach((p, i) => p.setStretchFactor && p.setStretchFactor(i === 0 ? 7 : i === 1 ? 0.9 : 1.6)); } catch (e) {}
+}
 function mapSeriesData(D) {
   const real = D.cs.filter(x => Number.isFinite(+x.time) && Number.isFinite(+x.open) && Number.isFinite(+x.high) && Number.isFinite(+x.low) && Number.isFinite(+x.close)).map(x => {
     const b = {time: +x.time, open: +x.open, high: +x.high, low: +x.low, close: +x.close};
@@ -7057,6 +7101,8 @@ function initLightweightMapChart() {
     // Nov 24: with session bands (pre-market / after hours) the chart paints on a see-through background over the
     // host's colour, so the bands can sit BEHIND the candles instead of tinting (blurring) them from above.
     const sessBands = D.cs.some(x => x.s);
+    const IND = indPref(), indPanes = (IND.rsi ? 1 : 0) + (IND.macd ? 1 : 0);
+    host.style.height = indPanes ? `${(matchMedia("(max-width: 700px)").matches ? 330 : 430) + indPanes * 96}px` : "";
     host.style.background = sessBands ? bg : "";
     const chart = L.createChart(host, {
       width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 390,
@@ -7093,9 +7139,10 @@ function initLightweightMapChart() {
     MAP_LWC_UPDN = [up, down];
     const vol = chart.addSeries(L.HistogramSeries,{priceFormat:{type:"volume"},priceScaleId:"",lastValueVisible:false,priceLineVisible:false},1);
     const volPane = chart.panes()[1];
-    if (volPane) volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
+    if (volPane && !indPanes) volPane.setHeight(Math.max(58, Math.round((host.clientHeight||390)*.19)));
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
+    try { mapIndicators(chart, candles, D, IND, up, down); } catch (e) { console.warn("indicators", e); }
     const mapPriceLines = [];
     // Levels to watch: a line that sits on a stack of 2+ kinds of level gets an "N×" tag on its label
     const LVd = LEVELS[D.P.sym] && LEVELS[D.P.sym].d, LVs = LVd ? [...LVd.above, ...LVd.below].filter(x => x.kinds >= 2) : [], LVtol = LVd ? LVd.tolerance : 0, LVused = new Set();
@@ -10007,6 +10054,7 @@ function chartStyleHTML() {
     return `<button class="cs-pal ${cur === k ? "on" : ""}" style="background:${th.bg || "var(--panel, #181A20)"}" onclick="setCandle({theme:'${k}', mono:false, up:null, down:null})" aria-pressed="${cur === k}"><span><i style="background:${u}"></i><i style="background:${d}"></i></span><b>${th.name}</b></button>`; };
   return `<div class="cs-h"><b>Chart style</b><small>Saved on this device</small><button class="cs-x" onclick="chartStyleClose()" aria-label="Close">✕</button></div>
     <div class="cs-k">Palette</div><div class="cs-pals">${Object.entries(CHART_THEMES).map(([k, th]) => sw(k, th)).join("")}</div>
+    <div class="cs-k">Indicators</div><div class="cs-types">${[["vwap", "VWAP"], ["rsi", "RSI"], ["macd", "MACD"]].map(([k, l]) => `<button class="${indPref()[k] ? "on" : ""}" onclick="setInd('${k}', ${!indPref()[k]});const pp_=$('chartStylePop');if(pp_)pp_.innerHTML=chartStyleHTML()">${l}</button>`).join("")}</div>
     <div class="cs-k">Candles</div><div class="cs-types">${[["candles", "Candles"], ["hollow", "Hollow"], ["bars", "Bars"], ["line", "Line"]].map(([k, l]) => `<button class="${t === k ? "on" : ""}" onclick="setCandle({type:'${k}'})">${l}</button>`).join("")}</div>`;
 }
 function chartStyleOpen(btn, ev) {
