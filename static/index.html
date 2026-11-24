@@ -2906,7 +2906,7 @@ html[data-theme="light"] .oxg tbody th, html[data-theme="light"] .oxg td b { col
 .mp-legend .lg-x b { font: 600 11.5px var(--mono, ui-monospace, monospace); color: #E6EBF0; margin: 0 2px; }
 html[data-theme="light"] .mp-legend .lg-x { color: #475569; } html[data-theme="light"] .mp-legend .lg-x b { color: #0D1117; }
 .mp-extkey i { opacity: .55; }
-.mp-sess { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 1; }
+.mp-sess { position: absolute; left: 0; top: 0; right: 0; bottom: 0; pointer-events: none; z-index: 0; }
 .mp-sess i { position: absolute; top: 0; } .mp-sess i.pre { background: rgba(245,185,74,.07); } .mp-sess i.post { background: rgba(91,140,255,.08); }
 html[data-theme="light"] .mp-sess i.pre { background: rgba(217,145,20,.09); } html[data-theme="light"] .mp-sess i.post { background: rgba(59,110,230,.08); }
 .board-symbol .board-co { display: block; flex-basis: 100%; font: 500 11.5px var(--sans, Inter, sans-serif); color: #9AA4B2; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
@@ -7051,9 +7051,13 @@ function initLightweightMapChart() {
     const TH = chartTheme();
     const bg = TH ? TH.bg : light ? "#F8F9FD" : "#121418", grid = TH ? TH.grid : light ? "rgba(13,17,23,.07)" : "rgba(255,255,255,.07)";
     const colors = candleColors(), up = colors[0] || "#22C55E", down = colors[1] || "#EF4444";
+    // Nov 24: with session bands (pre-market / after hours) the chart paints on a see-through background over the
+    // host's colour, so the bands can sit BEHIND the candles instead of tinting (blurring) them from above.
+    const sessBands = D.cs.some(x => x.s);
+    host.style.background = sessBands ? bg : "";
     const chart = L.createChart(host, {
       width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 390,
-      layout: {background:{type:"solid",color:bg}, textColor:TH ? TH.text : light?"#5b6472":"#9AA0AC", fontFamily:'"JetBrains Mono",ui-monospace,monospace', fontSize:11},
+      layout: {background:{type:"solid",color:sessBands ? "rgba(0,0,0,0)" : bg}, textColor:TH ? TH.text : light?"#5b6472":"#9AA0AC", fontFamily:'"JetBrains Mono",ui-monospace,monospace', fontSize:11},
       grid:{vertLines:{color:grid},horzLines:{color:grid}},
       rightPriceScale:{borderColor:grid,scaleMargins:{top:.08,bottom:.08}},
       timeScale:{borderColor:grid,timeVisible:!D.daily,secondsVisible:false,rightOffset:4,barSpacing:Math.max(4,Math.min(12,host.clientWidth/(D.cs.length+10))),fixLeftEdge:false},
@@ -7071,7 +7075,7 @@ function initLightweightMapChart() {
     candles.setData(mapSeriesData(D));   // Patch 180: + 26 empty future slots when the cloud is on
     if (D.cs.some(x => x.s)) {   // pre-market (amber) and after hours (blue): solid bands behind each run of those candles
       const el = chart.chartElement(); el.style.position = "relative";
-      const ov = document.createElement("div"); ov.className = "mp-sess"; el.appendChild(ov);
+      const ov = document.createElement("div"); ov.className = "mp-sess"; el.appendChild(ov); const tb_ = el.querySelector("table"); if (tb_) { tb_.style.position = "relative"; tb_.style.zIndex = "1"; }
       const runs = []; let r0 = null;
       D.cs.forEach((x, i) => { if (x.s && (!r0 || r0.s !== x.s)) { r0 = {s: x.s, a: +x.time, b: +x.time}; runs.push(r0); } else if (x.s) r0.b = +x.time; else r0 = null; });
       const drawSess = () => { try {
