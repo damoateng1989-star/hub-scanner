@@ -57,6 +57,15 @@ html[data-theme="light"] .hm-rest { background: rgba(40,90,150,.08) !important; 
 .foc-j div.on { color: var(--ink); } .foc-j div.on i { border-color: #00C898; box-shadow: 0 0 0 4px color-mix(in srgb, #00C898 20%, transparent); color: #00C898; }
 .foc .u { color: #00C898; } .foc .d { color: #F00060; } .foc .fo-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
 @media (max-width: 700px) { .foc-strip { grid-template-columns: 1fr 1fr; } .foc-strip > div { border-left: 0; border-top: 1px solid var(--line); } .foc-strip > div:first-child { grid-column: 1 / -1; border-top: 0; } .foc-host { height: 320px; } }
+
+.foc-rpb { border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 600 12.5px var(--sans); padding: 6px 12px; border-radius: 10px; cursor: pointer; }
+.foc-rp { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.foc-rp .ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.foc-rp .ctl button, .foc-rp .ctl select { border: 1px solid var(--line); background: var(--sunk); color: var(--ink); font: 600 12.5px var(--mono); padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+.foc-rp .ctl input[type=range] { flex: 1; min-width: 120px; }
+.foc-rp .cap { margin-top: 8px; font-size: 13.5px; line-height: 1.5; min-height: 40px; }
+.foc-rp .cap b { font-family: var(--mono); }
+.foc-rp .log { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.6; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -4267,6 +4276,7 @@ async function foChartLoad(force) {
 }
 function foChartPaint() {
   const box = $("foChartBox"), D = FOC.data; if (!box || !D) return;
+  clearTimeout(FRPT); FRP = null;
   const t = foLevels(), bars = D.bars || [], last = bars.length ? bars[bars.length - 1][4] : null;
   const st = t ? t.state : "none", d = t && t.entry ? (t.target > t.entry ? 1 : -1) : 0;
   const now = etNow(), wk = now.getDay() > 0 && now.getDay() < 6, mins = now.getHours() * 60 + now.getMinutes();
@@ -4281,7 +4291,7 @@ function foChartPaint() {
   const step = !t ? -1 : st === "building" ? 0 : st === "set" || st === "nobreak" ? 1 : st === "long" || st === "short" ? 2 : st === "done" ? 3 : -1;
   const J = [["9:30", "Range building"], ["10:30", "Range set"], ["⚡", d === -1 ? "Broke below" : "Broke above"], ["⚑", "Target or stop"]];
   box.innerHTML = `<div class="foc-top"><span class="sym">MNQ</span><span class="px">${last != null ? n(last) : "–"}</span><span class="ct">${esc(D.contract)} · Micro Nasdaq-100 · $${D.point_usd}/pt</span><span class="mk">● ${glob ? "Globex open" : "Market closed"}</span></div>
-    <div class="foc-bar">${seg("tf", [[30, "30m"], [60, "1H"], [240, "4H"]], FOC.tf)}${seg("days", [[2, "2D"], [5, "1W"], [10, "2W"]], FOC.days)}</div>
+    <div class="foc-bar"><button type="button" class="foc-rpb" onclick="foReplayStart()">▶ Replay</button>${seg("tf", [[30, "30m"], [60, "1H"], [240, "4H"]], FOC.tf)}${seg("days", [[2, "2D"], [5, "1W"], [10, "2W"]], FOC.days)}</div>
     <div class="foc-host" id="focHost"></div>
     ${D.trimmed ? `<div class="fo-n" style="margin-top:6px">${D.trimmed} bad print${D.trimmed > 1 ? "s" : ""} in the data trimmed (wicks far past the rest of their day).</div>` : ""}
     <div class="foc-strip"><div class="st"><b>${esc(status[0])}</b><div class="s">${esc(status[1])}</div></div>
@@ -4322,6 +4332,94 @@ function foChartPaint() {
   }
   ch.timeScale().fitContent();
   new ResizeObserver(() => { try { ch.applyOptions({width: host.clientWidth}); } catch (e) {} }).observe(host);
+}
+
+// Replay (Nov 23, owner): one session's opening range, bar by bar: the range at 10:30, the break, the exit.
+let FRP = null, FRPT = null;
+function foSessions() {      // RTH days in the loaded bars, newest first: {day, bars: [{time(ET clock s), o,h,l,c}]}
+  const D = FOC.data; if (!D) return [];
+  const by = new Map();
+  for (const b of D.bars) { const et = b[0] + foEtOff(b[0]), dt = new Date(et * 1000), hm = dt.getUTCHours() * 60 + dt.getUTCMinutes();
+    if (hm < 570 || hm >= 960) continue; const k = dt.toISOString().slice(0, 10);
+    if (!by.has(k)) by.set(k, []); by.get(k).push({time: et, open: b[1], high: b[2], low: b[3], close: b[4], hm}); }
+  return [...by.entries()].filter(([, v]) => v.length >= 8 && v[0].hm === 570).map(([day, bars]) => ({day, bars})).sort((a, b) => a.day < b.day ? 1 : -1);
+}
+function foOrbEvents(bars, pv) {   // the same rule as the live test, on one session's 30-minute bars; returns events by bar index
+  const ev = {}, hhmm = (b) => { const m = b.hm + 30, h = Math.floor(m / 60); return `${h > 12 ? h - 12 : h}:${String(m % 60).padStart(2, "0")}${h >= 12 ? " PM" : ""}`; };
+  if (bars.length < 2) return {ev};
+  const hi = Math.max(bars[0].high, bars[1].high), lo = Math.min(bars[0].low, bars[1].low), n = foNum;
+  ev[1] = {kind: "range", hi, lo, text: `<b>10:30</b> · Range set: <b>${n(lo)}–${n(hi)}</b> (${n(hi - lo)} pts). Waiting for a 30-minute close outside it until 2 PM.`};
+  let tr = null;
+  for (let i = 2; i < bars.length; i++) {
+    const b = bars[i];
+    if (!tr) {
+      if (b.hm >= 840) { ev[i] = {kind: "none", text: `<b>2:00 PM</b> · No close outside the range. No trade today; that's part of the rule.`}; break; }
+      const d = b.close > hi ? 1 : b.close < lo ? -1 : 0;
+      if (d) { const entry = b.close, stop = d === 1 ? lo : hi, target = entry + d * Math.abs(entry - stop);
+        tr = {d, entry, stop, target, i}; ev[i] = {kind: "entry", ...tr, text: `<b>${hhmm(b)}</b> · Closed ${d === 1 ? "above" : "below"} the range → <b>${d === 1 ? "long" : "short"}</b> at ${n(entry)}. Stop ${n(stop)} (other side) · target ${n(target)} (1R) · risk $${Math.round(Math.abs(entry - stop) * pv)} / contract.`}; }
+      continue;
+    }
+    const hitS = tr.d === 1 ? b.low <= tr.stop : b.high >= tr.stop, hitT = tr.d === 1 ? b.high >= tr.target : b.low <= tr.target;
+    if (hitS || hitT) { const px = hitS ? tr.stop : tr.target, pts = (px - tr.entry) * tr.d;
+      ev[i] = {kind: hitS ? "stop" : "target", px, text: `<b>${hhmm(b)}</b> · ${hitS ? "Stop hit" : "Target hit ✓"}: ${pts >= 0 ? "+" : ""}${n(pts)} pts · ${foUsd(pts * pv)} per contract before costs.`}; tr = null; break; }
+    if (i === bars.length - 1) { const pts = (b.close - tr.entry) * tr.d; ev[i] = {kind: "close", px: b.close, text: `<b>4:00 PM</b> · Neither hit: closed at ${n(b.close)}, ${pts >= 0 ? "+" : ""}${n(pts)} pts · ${foUsd(pts * pv)} per contract before costs.`}; }
+  }
+  return {ev, hi, lo};
+}
+function foReplayStart(day) {
+  const S = foSessions(); if (!S.length) { toast ? toast("No full session in the loaded data yet.") : 0; return; }
+  const ses = S.find(x => x.day === day) || S[0];
+  FRP = {day: ses.day, days: S.map(x => x.day), bars: ses.bars, k: 1, play: true, fast: false, ...foOrbEvents(ses.bars, FOC.data.point_usd)};
+  foReplayDraw(true); foReplayTick();
+}
+function foReplayStop() { clearTimeout(FRPT); FRP = null; foChartPaint(); }
+function foReplayTick() {
+  clearTimeout(FRPT); if (!FRP || !FRP.play) return;
+  FRPT = setTimeout(() => { if (!FRP) return;
+    if (FRP.k >= FRP.bars.length - 1) { FRP.play = false; foReplayDraw(); return; }
+    FRP.k++; foReplayDraw(); const hit = FRP.ev[FRP.k];
+    if (hit) { clearTimeout(FRPT); FRPT = setTimeout(foReplayTick, FRP.fast ? 900 : 2000); } else foReplayTick();
+  }, FRP.fast ? 180 : 450);
+}
+function foReplayDraw(rebuild) {
+  const box = $("foChartBox"); if (!box || !FRP) return;
+  const host = $("focHost"), L = window.LightweightCharts; if (!host || !L) return;
+  if (rebuild || !FRP.cs) {
+    if (FOC.chart) { try { FOC.chart.remove(); } catch (e) {} }
+    const light = document.documentElement.dataset.theme === "light", TH = chartTheme(), [up, down] = (candleColors() || []).length ? candleColors() : ["#22C55E", "#EF4444"];
+    const bg = TH ? TH.bg : light ? "#F8F9FD" : "#121418", grid = TH ? TH.grid : light ? "rgba(13,17,23,.07)" : "rgba(255,255,255,.07)";
+    const ch = L.createChart(host, {width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 400,
+      layout: {background: {type: "solid", color: bg}, textColor: TH ? TH.text : light ? "#5b6472" : "#9AA0AC", fontFamily: '"JetBrains Mono",ui-monospace,monospace', fontSize: 11},
+      grid: {vertLines: {color: grid}, horzLines: {color: grid}}, rightPriceScale: {borderColor: grid}, timeScale: {borderColor: grid, timeVisible: true, secondsVisible: false, rightOffset: 2}});
+    const vals = FRP.bars.flatMap(b => [b.high, b.low]), lo = Math.min(...vals), hi = Math.max(...vals);
+    FRP.cs = ch.addSeries(L.CandlestickSeries, {upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down, priceLineVisible: false,
+      autoscaleInfoProvider: () => ({priceRange: {minValue: lo - (hi - lo) * .15, maxValue: hi + (hi - lo) * .15}})});
+    FRP.lines = []; FOC.chart = ch; FRP.mk = L.createSeriesMarkers ? L.createSeriesMarkers(FRP.cs, []) : null;
+    let rp = box.querySelector(".foc-rp"); if (!rp) { rp = document.createElement("div"); rp.className = "foc-rp"; host.after(rp); }
+  }
+  const k = FRP.k, shown = FRP.bars.slice(0, k + 1);
+  FRP.cs.setData(shown.map(({hm, ...c}) => c));
+  try { FOC.chart.timeScale().setVisibleLogicalRange({from: -1, to: FRP.bars.length + 1}); } catch (e) {}
+  FRP.lines.forEach(pl => { try { FRP.cs.removePriceLine(pl); } catch (e) {} }); FRP.lines = [];
+  const add = (price, title, color, style) => FRP.lines.push(FRP.cs.createPriceLine({price, title, color, lineWidth: 1, lineStyle: style ?? 0, axisLabelVisible: true}));
+  const evs = Object.entries(FRP.ev).filter(([i]) => +i <= k).map(([i, e]) => ({i: +i, ...e}));
+  const rng = evs.find(e => e.kind === "range"), ent = evs.find(e => e.kind === "entry"), out = evs.find(e => ["stop", "target", "close"].includes(e.kind));
+  if (rng) { add(rng.hi, "RANGE HIGH", "#7f9ec7", ent ? 2 : 0); add(rng.lo, "RANGE LOW", "#7f9ec7", ent ? 2 : 0); }
+  if (ent) { add(ent.target, "TARGET 1R", "#00C898"); add(ent.entry, "ENTRY", "#F2C14E"); add(ent.stop, "STOP", "#F00060"); }
+  if (FRP.mk) FRP.mk.setMarkers([ent && {time: FRP.bars[ent.i].time, position: ent.d === 1 ? "belowBar" : "aboveBar", color: ent.d === 1 ? "#00C898" : "#F00060", shape: ent.d === 1 ? "arrowUp" : "arrowDown", text: "BREAK"},
+    out && {time: FRP.bars[out.i].time, position: "aboveBar", color: out.kind === "target" ? "#00C898" : out.kind === "stop" ? "#F00060" : "#9AA0AC", shape: "circle", text: out.kind === "target" ? "TARGET" : out.kind === "stop" ? "STOP" : "4 PM"}].filter(Boolean));
+  const cur = evs.length ? evs[evs.length - 1] : null, b = FRP.bars[k];
+  const tlab = `${Math.floor((b.hm + 30) / 60) > 12 ? Math.floor((b.hm + 30) / 60) - 12 : Math.floor((b.hm + 30) / 60)}:${String((b.hm + 30) % 60).padStart(2, "0")}`;
+  const dayLab = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"});
+  const rp = box.querySelector(".foc-rp");
+  rp.innerHTML = `<div class="ctl"><button type="button" onclick="FRP.play=!FRP.play;if(FRP.play&&FRP.k>=FRP.bars.length-1)FRP.k=1;foReplayDraw();foReplayTick()">${FRP.play ? "❚❚" : "▶"}</button>
+      <button type="button" onclick="FRP.play=false;FRP.k=Math.max(1,FRP.k-1);foReplayDraw()" aria-label="Back one bar">◀</button><button type="button" onclick="FRP.play=false;FRP.k=Math.min(FRP.bars.length-1,FRP.k+1);foReplayDraw()" aria-label="Forward one bar">▶|</button>
+      <input type="range" min="1" max="${FRP.bars.length - 1}" value="${k}" oninput="FRP.play=false;FRP.k=+this.value;foReplayDraw()" aria-label="Replay position">
+      <button type="button" onclick="FRP.fast=!FRP.fast;foReplayDraw()">${FRP.fast ? "2×" : "1×"}</button>
+      <select onchange="foReplayStart(this.value)" aria-label="Session">${FRP.days.map(d => `<option value="${d}" ${d === FRP.day ? "selected" : ""}>${dayLab(d)}</option>`).join("")}</select>
+      <button type="button" onclick="foReplayStop()" aria-label="Close replay">✕</button></div>
+    <div class="cap">${cur ? cur.text : `<b>${tlab}</b> · The range is building (9:30–10:30).`}<span class="fo-n" style="display:block">Bar ending ${tlab} ET · ${dayLab(FRP.day)}</span></div>
+    ${evs.length > 1 ? `<div class="log">${evs.slice(0, -1).map(e => e.text).join("<br>")}</div>` : ""}`;
 }
 // ---------------------------------------------------------------- Nov 23: futures opening range (owner-only forward test)
 let FO = null;
