@@ -634,7 +634,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
         return _dbstk_rows(sym, c4, res, s)
     if only_tests == "gapstk":                                # only the Stacked Gap Fade test
         return _gapstk_rows(sym, c4, res, s)
-    if only_tests and only_tests != "regime":                 # a light run: just the test-only setups (floor bounce, hub edge)
+    if only_tests and only_tests not in ("regime", "pfprint", "flags"):     # a light run: just the test-only setups (floor bounce, hub edge)
         atr = res["atr"].to_numpy(float)
         day = c4.index.tz_convert(engine.NY).normalize()
         dvol = (c4["Volume"] * c4["Close"]).groupby(day).sum() if "Volume" in c4.columns else None
@@ -661,6 +661,10 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
     out = []
     if only_tests == "regime":      # the regime test: only hub and double retests, the live alerts' rows
         other = [t for t in other if t.get("kind") in ("double_top", "double_bottom")]
+    elif only_tests == "pfprint":   # Nov 24 PF print: double bottoms (with clear path) + gap fade, as the full run scores them
+        other = [t for t in other if t.get("kind") in ("double_bottom", "gapfade")]
+    elif only_tests == "flags":     # Nov 24 flags retest test: bull and bear flags only
+        other = [t for t in other if t.get("kind") in ("flag_bull", "flag_bear")]
     else:
         try:
             out += _floor_rows(sym, c4, res, s, atr, dvol, day, mc, regime, own)
@@ -674,7 +678,9 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
             out += _gapgo_rows(sym, c4, s)
         except Exception:
             traceback.print_exc()
-    for t in [dict(x, kind="hub") for x in res["trades"]] + other:
+    hubs_in = [] if only_tests in ("pfprint", "flags") else [dict(x, kind="hub") for x in res["trades"]]
+    st_hist = None
+    for t in hubs_in + other:
         kind = t.get("kind", "hub")
         grp = GROUP_OF.get(kind)
         if not grp or t["outcome"] == "pending" or t.get("chase") or t.get("i0") is None:
@@ -733,7 +739,7 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
             ex[key] = _exit(close, i0, d, entry, target, stop, hz)
         ex["half"] = _exit_half(close, i0, d, entry, target, edge, risk_mid if risk_mid > 0 else d * (entry - edge), s.horizon)
         f["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex.items() if v is not None}
-        if "edge" in f["ex"] and only_tests != "regime":
+        if "edge" in f["ex"] and only_tests not in ("regime", "pfprint", "flags"):
             out.append(f)
 
         # --- Patch 79: the same breakout, entered on the retest instead ---
@@ -784,6 +790,15 @@ def trades_for(sym: str, c4: pd.DataFrame, s: engine.Settings, regime: pd.Series
                     f2["rr_nt"] = {"nt_atr": f2.get("rr"), "nt_trig": (t_trig - entry2) / risk2 if risk2 > 0 else None,
                                    "nt_high": (t_high - entry2) / risk2 if risk2 > 0 else None}
                 f2["ex"] = {k: (round(v[0], 3), v[1]) for k, v in ex2.items() if v is not None}
+                if only_tests == "pfprint" and grp == "double" and d == 1:     # clear path at the retest bar (the hub print's rule)
+                    try:
+                        import stacked
+                        if st_hist is None:
+                            st_hist = stacked.History(c4, res)
+                        chk = stacked.check(st_hist.at(j, own_hub=h, price=entry2), 1, edge, entry2, target, stacked.tol(entry2, float(A2)))
+                        f2["st_path"] = bool(chk["clear_path"])
+                    except Exception:
+                        traceback.print_exc()
                 if "edge" in f2["ex"]:
                     out.append(f2)
     return out
@@ -1002,6 +1017,22 @@ LIVE_RULES = [
      lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase") and r.get("with_mkt") is True, "far"),
     ("rg_db_calm", "Regime · Double bottoms A retest: calm market",
      lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase") and r.get("calm") is True, "far"),
+    # Nov 24 PF print (spec "PF print — doubles + gap fade"): the published rules, plus the doubles clear / blocked split
+    ("pf_db", "PF print · Double bottom A retests (headline; must reproduce +0.28% / 236 / 75%)",
+     lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase"), "far"),
+    ("pf_db_clear", "PF print · Double bottom A retests, clear path",
+     lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase") and r.get("st_path") is True, "far"),
+    ("pf_db_blocked", "PF print · Double bottom A retests, blocked",
+     lambda r: r["grp"] == "double" and r.get("entry") == "retest" and r["d"] == 1 and r.get("pm") and not r.get("chase") and r.get("st_path") is not True, "far"),
+    ("pf_gap", "PF print · Gap fade & rip (headline; must reproduce +2.76% / 341 / 60%)",
+     lambda r: r["grp"] == "gapfade", "edge"),
+    # Nov 24 flags retest test (spec "Flags retest Lab test"): baseline, no filters, the hub A card's exit (1 ATR stop)
+    ("flg_bull", "Flags · Bull flag retests (no filters, 1 ATR stop)",
+     lambda r: r["grp"] == "flag" and r.get("entry") == "retest" and r["d"] == 1, "atr10"),
+    ("flg_bear", "Flags · Bear flag retests (short, no filters, 1 ATR stop)",
+     lambda r: r["grp"] == "flag" and r.get("entry") == "retest" and r["d"] == -1, "atr10"),
+    ("flg_all", "Flags · Combined (the reconciliation card)",
+     lambda r: r["grp"] == "flag" and r.get("entry") == "retest", "atr10"),
     # test only (Nov 19): the Stacked Double Bottom — DB A retests with stacked trigger / stacked target / clear path
     ("db_base", "Test · Double bottom: all A retests (the baseline, measured target)",
      lambda r: r["grp"] == "dbstk", "db_shelf"),
@@ -1317,13 +1348,13 @@ def _rss_mb() -> float:
         return 0.0
 
 
-TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_", "gs_", "db_", "rg_")      # graduation rows a tests-only run measures
+TEST_KEYS = ("floor_", "edge_", "gapgo_", "stk_", "gs_", "db_", "rg_", "pf_", "flg_")      # graduation rows a tests-only run measures
 
 
 # ---------------------------------------------------------------- named tests: progress that survives a stop (Nov 19)
 # The Stacked / gap-open tests keep only a few thousand small rows, so their progress is saved after every chunk.
 # If one stops (memory guard, a deploy, a restart), tapping the same test again carries on from that stock.
-NAMED_TESTS = ("gapgo", "stacked", "gapstk", "dbstk", "regime")
+NAMED_TESTS = ("gapgo", "stacked", "gapstk", "dbstk", "regime", "pfprint", "flags")
 TPROG = db.DATA_DIR / "lab_test_progress.json"
 
 
@@ -1529,7 +1560,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         if only_tests:
             # keep the last full run's tables and live-rule checks; replace only the test rows
             prev = (json.loads(db.get_setting("lab_exits") or "{}").get("result") or {})
-            tk = ("gapgo_",) if only_tests == "gapgo" else ("stk_",) if only_tests == "stacked" else ("gs_",) if only_tests == "gapstk" else ("db_",) if only_tests == "dbstk" else ("rg_",) if only_tests == "regime" else TEST_KEYS
+            tk = ("gapgo_",) if only_tests == "gapgo" else ("stk_",) if only_tests == "stacked" else ("gs_",) if only_tests == "gapstk" else ("db_",) if only_tests == "dbstk" else ("rg_",) if only_tests == "regime" else ("pf_",) if only_tests == "pfprint" else ("flg_",) if only_tests == "flags" else TEST_KEYS
             mine = [g for g in out["graduation"] if g["key"].startswith(tk)]
             keep = [g for g in (prev.get("graduation") or []) if not g["key"].startswith(tk)]
             out = dict(prev or out, graduation=keep + mine, tests_run=pd.Timestamp.now(tz="UTC").isoformat(),

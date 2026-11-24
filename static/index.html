@@ -6112,11 +6112,12 @@ async function loadLab() {
       <td>${st.win_rate ?? "–"}${st.win_rate == null ? "" : "%"}</td><td style="${pc(st.avg_ret)}">${sign(st.avg_ret)}</td></tr>` : "";
   const kindName = { symmetric: "Symmetric ◇", ascending: "Ascending ◢", descending: "Descending ◥" };
   const live = (S.live || []);
-  setTimeout(loadNextDay, 0); setTimeout(loadConfluence, 0);
+  setTimeout(loadNextDay, 0); setTimeout(loadConfluence, 0); setTimeout(loadLabTrig, 0);
   $("lab").innerHTML = `
     <div id="labNextDay"></div>
     <div id="labConfluence"></div>
     <div id="labExits"></div>
+    <div id="labTrig"></div>
     <div class="panel"><div class="ph"><h2>What's being tested</h2></div>
       <p class="note" style="padding:0 18px 16px;margin:0">A <b>tightening hub</b> is a range that narrows: highs falling and/or lows rising, so the end of the range is at most 60% as wide as the start. The rules are the same as for hubs: breakout = a 4-hour close outside the lines, target = next shelf, failed = close back inside.</p></div>
     <div class="panel"><div class="ph"><h2>Last ${S.days || 200} days, ${S.symbols || 0} stocks</h2><span class="note">${S.updated ? "updated " + when(S.updated) : "runs with each Discover scan"}</span></div>
@@ -6136,6 +6137,32 @@ async function loadLab() {
 }
 // ---------------------------------------------------------------- Lab: which breakouts work, and which exit works
 let LABX = null, LABX_EXIT = "edge", LABX_GROUP = "hub", LABX_POLL = null, LABX_ENTRY = "breakout";
+
+// ---------------------------------------------------------------- Nov 24: trigger-cross test (Arms A / B / C), per signal
+async function loadLabTrig() {
+  const box = $("labTrig"); if (!box) return;
+  let T; try { T = await api("/api/admin/lab/trigcross"); } catch (e) { box.innerHTML = ""; return; }
+  const R = T.result, p = (v) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%";
+  const ck = (c, k) => c.checks ? (c.checks[k] ? "✓" : "✕") : "";
+  const card = (name, c, perSig) => !c || !c.n ? "" : `<tr><td><b>${name}</b>${c.passed ? ' <span style="color:var(--up)">passes</span>' : ""}</td><td>${c.n}${perSig ? ` · ${c.entered} in (${c.entry_rate}%)` : ""}</td>
+      <td>${c.win ?? "–"}%</td><td style="color:var(${c.avg > 0 ? "--up" : "--down"})"><b>${p(c.avg)}</b></td><td>${c.pf ?? "–"}</td>
+      <td>${p(c.early)} ${ck(c, "early")}</td><td>${p(c.late)} ${ck(c, "late")}</td><td>${p(c.recent)} (${c.recent_n}) ${ck(c, "recent")}</td><td>${p(c.ex_top5)} ${ck(c, "ex_top5")}</td></tr>`;
+  const D = R && R.diag, P = R && R.repro;
+  box.innerHTML = `<div class="panel"><div class="ph"><h2>Trigger-cross test</h2><span class="note">${T.finished ? "finished " + when(T.finished) : ""}</span></div>
+    <p class="note" style="padding:0 18px 10px;margin:0">Hub breakouts (up), per signal: every qualified hub's first trigger cross is one signal, and an arm that doesn't enter scores 0.
+      <b>A</b> enters on the cross · <b>B</b> is the standing rule (confirmed 4H close, then the retest) · <b>C</b> is the 1H break-and-retest within 2 sessions. Same exits for all three.</p>
+    <div style="padding:0 18px 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${T.status === "running" ? `<span class="note" style="margin:0">Running… ${T.done || 0} / ${T.total || "?"} stocks · ${T.signals || 0} signals</span><button class="btnx sm" onclick="api('/api/admin/lab/trigcross/stop',{method:'POST'}).then(loadLabTrig)">Stop</button>`
+        : `<button class="btnx sm" onclick="this.disabled=true;api('/api/admin/lab/trigcross/run?years=2',{method:'POST'}).then(loadLabTrig).catch(e=>{toast(friendly(e));loadLabTrig()})">${R ? "Run again" : "Run the trigger-cross test"} (2 years)</button>`}
+      ${T.error ? `<span class="note" style="color:var(--down);margin:0">${esc(T.error)}</span>` : ""}</div>
+    ${R ? `<div class="tbl" style="padding:0 18px 10px"><table><tr><th>Card</th><th>Signals</th><th>Win (entered)</th><th>Avg per signal</th><th>PF (entered)</th><th>Early</th><th>Late</th><th>Last 6 mo (n)</th><th>W/o top 5</th></tr>
+        ${card("A · cross entry", R.A, false)}${card("B · standing rule", R.B, true)}${card("C · 1H break-and-retest", R.C, true)}</table></div>
+      <p class="note" style="padding:0 18px 6px;margin:0"><b>Reproduction gate</b> (Arm B's entered trades vs the hub A card, +0.50% · n≈319 · won ≈52%): ${P.n} trades · ${p(P.avg)} · won ${P.win ?? "–"}% · PF ${P.pf ?? "–"} — <b style="color:var(${P.ok ? "--up" : "--down"})">${P.ok ? "reproduces" : "does not reproduce"}</b></p>
+      <p class="note" style="padding:0 18px 6px;margin:0"><b>Diagnostics:</b> ${D.signals} signals · missed move ${D.missed}% · filter save rate ${D.saved}% · B entry rate ${D.b_rate}% (median ${D.b_bars_median ?? "–"} bars to entry) ·
+        C entry rate ${D.c_rate}% · median hours to entry: C ${D.c_hours_median ?? "–"} vs B ${D.b_hours_median ?? "–"} · C caught ${D.c_caught_b_zeroes} of B's ${D.b_zeroes} zeroes · both entered ${D.overlap}</p>
+      <p class="note" style="padding:0 18px 14px;margin:0"><b>Verdict (decided in advance):</b> ${esc(R.verdict)}</p>` : ""}</div>`;
+  if (T.status === "running") setTimeout(() => { if (CUR === "lab") loadLabTrig(); }, 15000);
+}
 async function loadLabExits() {
   const box = $("labExits"); if (!box) return;
   try { LABX = await api("/api/admin/lab/exits"); } catch (e) { box.innerHTML = failedHTML("the exit test", e, "loadLabExits()"); return; }
@@ -6176,7 +6203,9 @@ function renderLabExits() {
            <button class="btnx sm" title="Only the Stacked Shelf test: A+B hub retests with stacked trigger / stacked target / clear path, using only price levels known at the time." onclick="runLabExits(this, 'stacked')">Run Stacked Shelf test</button>
            <button class="btnx sm" title="Only the Stacked Gap Fade test: gap fade & rip trades with the gap-day high stacked / 2R target on a stack / clear path, price levels known at the time." onclick="runLabExits(this, 'gapstk')">Run Stacked Gap Fade test</button>
            <button class="btnx sm" title="Only the Stacked Double Bottom test: double bottom A retests with the neckline stacked / target on a stack / clear path, price levels known at the time." onclick="runLabExits(this, 'dbstk')">Run Stacked Double Bottom test</button>
-           <button class="btnx sm" title="The regime test: the live A retests (hub longs, double bottoms) split by market conditions — SPY above its 50/200-day, momentum, calm vs volatile. Run it at 5 years." onclick="runLabExits(this, 'regime')">Run market regime test</button></span>`}</div>`
+           <button class="btnx sm" title="The regime test: the live A retests (hub longs, double bottoms) split by market conditions — SPY above its 50/200-day, momentum, calm vs volatile. Run it at 5 years." onclick="runLabExits(this, 'regime')">Run market regime test</button>
+           <button class="btnx sm" title="Nov 24 PF print: double bottom A retests (headline, clear path, blocked) and gap fade & rip, in the Step 0 format. Must reproduce the published numbers before they're read." onclick="runLabExits(this, 'pfprint')">Run PF print (doubles + gap fade)</button>
+           <button class="btnx sm" title="Nov 24 flags test: bull and bear flag retests, no filters, the hub A card's exit (1 ATR stop). Judged separately at the standard gate." onclick="runLabExits(this, 'flags')">Run flags test</button></span>`}</div>`
     + (L.status === "stopped" ? `<p class="note" style="padding:0 18px 8px;margin:0">The last run was stopped.${L.error ? " " + esc(L.error) : ""}${R ? " The results below are from the last run that finished." : ""}</p>` : "")
     + (L.status === "done" && L.tests_only && R && R.tests_run ? `<p class="note" style="padding:0 18px 8px;margin:0">The Test · rows below are from a tests-only run (${new Date(R.tests_run).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}). Everything else is from the last full run.</p>` : "")
     + (L.status === "running" ? `<p class="note" style="padding:0 18px 8px;margin:0">${L.trades_so_far || 0} breakouts found so far${L.failed ? ` · ${L.failed} stocks couldn't download (${esc(L.failed_msg || "")})` : ""}. You can leave this page; it keeps going.</p>` : "");

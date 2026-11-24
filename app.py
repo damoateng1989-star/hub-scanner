@@ -1951,8 +1951,32 @@ def admin_lab_exits_run(years: int = 2, tests_only: bool = False, test: str = ""
     import lab_exits
     if years not in lab_exits.YEARS_OK:
         raise HTTPException(400, "Pick 2, 3, 5 or 10 years")
-    only = test if test in ("gapgo", "stacked", "gapstk", "dbstk", "regime") else tests_only
+    only = test if test in ("gapgo", "stacked", "gapstk", "dbstk", "regime", "pfprint", "flags") else tests_only
     return dict(started=lab_exits.start(years=years, only_tests=only), years=years, tests_only=bool(only), test=test or None)
+
+
+@app.get("/api/admin/lab/trigcross")
+def admin_lab_trigcross(u: dict = Admin):
+    import lab_trigcross
+    return lab_trigcross.status()
+
+
+@app.post("/api/admin/lab/trigcross/run")
+def admin_lab_trigcross_run(years: int = 2, u: dict = Admin):
+    import lab_trigcross
+    if years not in (2, 3, 5):
+        raise HTTPException(400, "Pick 2, 3 or 5 years")
+    ok = lab_trigcross.start(years=years)
+    if not ok:
+        raise HTTPException(409, "Another Lab test is running. Wait for it to finish.")
+    return dict(started=True, years=years)
+
+
+@app.post("/api/admin/lab/trigcross/stop")
+def admin_lab_trigcross_stop(u: dict = Admin):
+    import lab_trigcross
+    lab_trigcross.stop()
+    return dict(stopping=True)
 
 
 @app.post("/api/admin/lab/exits/stop")
