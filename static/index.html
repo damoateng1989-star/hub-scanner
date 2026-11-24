@@ -3112,7 +3112,7 @@ html[data-theme="light"] .ns-sugg { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
   <div class="retest" id="retest" hidden></div>
   <div class="lk-strip" id="lkStrip" hidden></div>
   <a class="cine-strip" id="cineStrip" href="#cinema" hidden></a>
-  <div class="fo-card" id="futOrbCard" hidden></div>
+  <div id="futOrbCard" hidden></div>
   <div class="lk-watch" id="lkWatch" hidden></div>
   <a class="dy-mini" id="dyMini" href="#diary" hidden></a>
   <a class="dy-mini" id="chMini" href="#chat" hidden><span style="font-size:20px" aria-hidden="true">💬</span><span><div class="k">Member chat</div><div class="v" style="font-size:15px">Talk setups with other members</div></span><span class="go">Open ›</span></a>
@@ -4270,13 +4270,65 @@ function foTodayHTML(P) {
     <div class="fo-h">${esc(h)}</div>${body}
     <div class="fo-n" style="margin-top:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>NextShelf alerts; you manage the trade.</span><a href="#futures" style="color:var(--muted)">Forward test: ${s.n || 0} trade${s.n === 1 ? "" : "s"}${s.pf ? ` · PF ${s.pf}` : ""} ›</a></div>`;
 }
+
+// Nov 23 (owner's pick): MNQ on Today as a shelf card. The range plays the hub, the 1R target plays the next shelf.
+function foShelfHTML(P) {
+  const t = P.today, now = etNow(), hm = now.getHours() * 60 + now.getMinutes(), wk = now.getDay() > 0 && now.getDay() < 6;
+  const st = t ? t.state : (wk && hm < 630 ? "early" : "none");
+  const n = foNum, last = t && (t.bars || []).length ? t.bars[t.bars.length - 1][4] : null;
+  const chip = (a) => `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">${a.filter(Boolean).map(x => `<span class="vol-chip">${x}</span>`).join("")}</div>`;
+  const card = (c, k, sub, line, body) => `<a class="ck-hero" href="#futures" style="--c:${c}"><div class="ckh-top"><span class="ckh-k">${k}</span><span class="vol-chip">${esc(P.product)} · Futures</span></div>
+    <div class="ckh-sym">${esc(P.product)} <small>${sub}</small></div><div class="ckh-line">${line}</div>${body || ""}</a>`;
+  if (st === "set" || st === "building" && t && t.hi != null) {
+    const f = last != null ? Math.max(4, Math.min(96, (last - t.lo) / (t.hi - t.lo) * 100)) : 50, y = 12 + 22 + 36 * (1 - f / 100);
+    return card("#7f9ec7", "Range set · waiting for a break", "Opening range · either way", `Range ${n(t.lo)}–${n(t.hi)} (${n(t.hi - t.lo)} pts) · a 30-minute close above is a long, below is a short · until 2 PM`,
+      `<div class="hs"><div class="hs-lab t" style="color:var(--up)">close above ${n(t.hi)} → long</div>
+        <svg class="hs-svg" viewBox="0 0 300 80" preserveAspectRatio="none" aria-hidden="true"><rect x="12" y="22" width="276" height="36" fill="#7f9ec7" opacity=".12"/>
+        <line x1="12" y1="22" x2="288" y2="22" stroke="var(--up)" stroke-width="2.5" stroke-linecap="round"/><line x1="12" y1="58" x2="288" y2="58" stroke="#FF6B5E" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="hs-dot live" style="left:50%;top:${y.toFixed(0)}px;--dc:#7f9ec7"></span>
+        <div class="hs-lab b" style="color:#FF6B5E">close below ${n(t.lo)} → short</div></div>
+        <div class="hs-room">${last != null ? `price ${n(last)} · ` : ""}inside the range · the stop goes at the other side, target 1R</div>`);
+  }
+  if (st === "long" || st === "short" || st === "done") {
+    const d = t.target > t.entry ? 1 : -1, cur = st === "done" ? t.exit_price : (last ?? t.entry);
+    const r = (cur - t.entry) * d / Math.abs(t.entry - t.stop), usd = (cur - t.entry) * d * P.point_usd;
+    const x = {edge: t.entry, target: t.target, px: cur, state: d === 1 ? "breakout_up" : "breakdown"};
+    const shelf = heroShelfHTML(x).replace(/next shelf \$[\d,.]+/, `target (1R) ${n(t.target)}`)
+      .replace(/the edge \$[\d,.]+/, `entry ${n(t.entry)} · stop ${n(t.stop)} (range ${d === 1 ? "low" : "high"})`).replace(/room to the next shelf/, "room to the target");
+    const lost = st === "done" && (t.net_usd || 0) < 0, c = lost || (st !== "done" && d === -1) ? "var(--down)" : "var(--up)";
+    if (st === "done") return card(lost ? "var(--down)" : "var(--up)", t.how === "target" ? "Target hit ✓" : t.how === "stop" ? "Stopped out" : "Closed at 4 PM", `Opening range · ${d === 1 ? "long" : "short"}`,
+      `Entry ${n(t.entry)} → exit ${n(t.exit_price)} · ${t.pts >= 0 ? "+" : ""}${n(t.pts)} pts · ${foUsd(t.net_usd)} per contract after costs`, shelf + chip(["Today's one trade", t.taken ? "In your diary" : ""]));
+    return card(c, `In the trade · ${d === 1 ? "long" : "short"}`, `Opening range · ${d === 1 ? "long" : "short"}`,
+      `Broke ${d === 1 ? "above" : "below"} at the ${esc(String(t.entry_at || "").slice(11, 16))} close · entry ${n(t.entry)} · stop ${n(t.stop)} · risk $${Math.round(Math.abs(t.entry - t.stop) * P.point_usd)} / contract`,
+      shelf + chip([`${r >= 0 ? "+" : ""}${r.toFixed(2)}R · ${foUsd(usd)} now`, "Out by 4 PM", t.taken ? `In your diary · ${t.taken.qty} ct` : "Tap to log it"]));
+  }
+  if (st === "nobreak") return card("var(--idle)", "No trade today", "Opening range", `The range held (${n(t.lo)}–${n(t.hi)}): no 30-minute close outside it before 2 PM. That's part of the rule.`);
+  if (st === "nodata") return card("var(--idle)", "No data today", "Opening range", "No futures data came in for today's session.");
+  const nx = new Date(now); if (!(st === "early" || st === "building")) { do { nx.setDate(nx.getDate() + 1); } while (nx.getDay() === 0 || nx.getDay() === 6); }
+  return card("#7f9ec7", st === "early" || st === "building" ? "Range building · 9:30–10:30" : "Market closed", "Opening range",
+    st === "early" || st === "building" ? "The range is set at 10:30. You'll get an alert with it, another on a 30-minute close outside it before 2 PM, and one at the exit." : `Next range: ${nx.toLocaleDateString("en-US", {weekday: "long"})} at 10:30 ET.`);
+}
+// the MNQ row under My shelves: a gauge of price against the range (owner, while the forward test runs)
+function foSideRow() {
+  if (!ME || !ME.is_admin || !FO || !FO.products) return "";
+  return FO.products.map(P => { const t = P.today; if (!t || t.hi == null) return "";
+    const last = (t.bars || []).length ? t.bars[t.bars.length - 1][4] : null, d = t.entry ? (t.target > t.entry ? 1 : -1) : 0;
+    const vals = [t.hi, t.lo, last, t.target, t.stop].filter(v => v != null), lo = Math.min(...vals), hi = Math.max(...vals), pad = (hi - lo) * 0.1 || 1;
+    const x = (v) => Math.max(2, Math.min(98, (v - lo + pad) / (hi - lo + 2 * pad) * 100));
+    const word = {set: "range set · waiting", long: "long · in the trade", short: "short · in the trade", done: t.how === "target" ? "target hit" : t.how === "stop" ? "stopped out" : "closed at 4 PM", nobreak: "no trade today", building: "range building"}[t.state] || t.state;
+    const col = t.state === "done" ? ((t.net_usd || 0) >= 0 ? "var(--up)" : "#FF6B5E") : d === 1 ? "var(--up)" : d === -1 ? "#FF6B5E" : "#7f9ec7";
+    return `<div class="sb-shelf-row"><button class="sb-shelf" title="${esc(P.name)}" onclick="location.hash='#futures'">${esc(P.product)}<span class="sb-gauge" title="Price vs. the opening range"><b style="left:${x(t.lo)}%;width:${x(t.hi) - x(t.lo)}%"></b>${last != null ? `<i style="left:${x(last)}%;--c:${col}"></i>` : ""}</span>
+      <small>Futures · ${esc(word)}</small></button><span class="sb-rm" style="visibility:hidden" aria-hidden="true">×</span></div>`; }).join("");
+}
 async function renderFutOrb(hostId) {
   const page = !!hostId, el = $(hostId || "futOrbCard"); if (!el) return;
   if (!ME || !ME.is_admin) { el.hidden = true; return; }
   try { FO = await api("/api/admin/futures-orb"); } catch (e) { if (page) el.innerHTML = `<p class="fo-n" style="color:#F00060">${esc(friendly(e))}</p>`; else el.hidden = true; return; }
   if (!FO.configured || !FO.products.length) { if (page) el.innerHTML = `<p class="fo-n">Add <code>MASSIVE_API_KEY</code> on Render to turn on the futures alerts.</p>`; else el.hidden = true; return; }
-  el.innerHTML = FO.products.map(P => foTodayHTML(Object.assign({rule: FO.rule}, P))).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">');
-  el.hidden = false;
+  el.innerHTML = page ? FO.products.map(P => foTodayHTML(Object.assign({rule: FO.rule}, P))).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">')
+    : FO.products.map(P => foShelfHTML(P)).join("");
+  el.classList.toggle("fo-card", page); el.hidden = false;
+  if (typeof renderStrip === "function") renderStrip();
 }
 async function foTake(product, btn) {
   btn.disabled = true;
@@ -5956,6 +6008,7 @@ function renderStrip() {
   el.innerHTML = rows.length ? rows.map(t => `<div class="sb-shelf-row"><button class="sb-shelf${t.symbol === BRIEF_SYM ? " on" : ""}" title="${esc(nsName(t.symbol) || t.symbol)}" onclick="openBrief('${esc(t.symbol)}')">${esc(t.symbol)}${gaugeHTML(LIVE[t.symbol] ? {...t.status, last_close: LIVE[t.symbol].price} : t.status)}
       <small>${liveOther(t.status) ? `${esc(liveOther(t.status).name)} · ${liveOther(t.status).state === "breakout_up" ? "broke out" : "broke down"}` : STATE_WORD[t.status.state] || "No setup yet"}</small></button><button class="sb-rm" onclick="removeTicker('${esc(t.symbol)}', this)" aria-label="Remove ${esc(t.symbol)}">×</button></div>`).join("")
     : `<p style="color:#646B78;font-size:13px;margin:4px 8px">Add tickers to see where each one sits against its hub.</p>`;
+  if (typeof foSideRow === "function") el.insertAdjacentHTML("afterbegin", foSideRow());
 }
 function findStatus(sym) {
   const t = TICKERS.find(x => x.symbol === sym);
