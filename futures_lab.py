@@ -236,6 +236,110 @@ def score(rows: list[dict], split_at: pd.Timestamp | None = None) -> dict:
     return dict(live=live, groups=groups, trades=len(rows))
 
 
+
+# ---------------------------------------------------------------- opening range breakout (Nov 23, round 3)
+# The opening range is the first 30 or 60 minutes of the regular session (9:30 ET). One trade a day at most: the first
+# break of the range before 2 PM. Stop at the other side of the range (or its middle); target 1R, 2R, or hold to the
+# close (the last regular-session bar). 30-minute bars can't say which came first when one bar touches both the stop
+# and the target, so that counts as the stop (the worst case). Results are in index points and dollars per contract,
+# after the round-trip cost.
+ORB_RANGES = {30: "30-minute range", 60: "1-hour range"}
+ORB_EXITS = [("1r", "target 1R"), ("2r", "target 2R"), ("eod", "hold to the close")]
+ORB_STOPS = [("far", "stop at the other side"), ("mid", "stop at the middle")]
+ORB_ENTRIES = [("close", "enter on a 30-min close outside"), ("touch", "enter the moment it trades through")]
+
+
+def _orb_day(day: pd.DataFrame, mins: int, entry: str, stop_k: str, exit_k: str) -> dict | None:
+    t = day.index.strftime("%H:%M")
+    rth = day[(t >= "09:30") & (t < "16:00")]
+    if len(rth) < 8 or rth.index[0].strftime("%H:%M") != "09:30":
+        return None
+    nr = mins // 30
+    rng, rest = rth.iloc[:nr], rth.iloc[nr:]
+    hi, lo = float(rng["High"].max()), float(rng["Low"].min())
+    if hi <= lo:
+        return None
+    mid = (hi + lo) / 2
+    for k in range(len(rest)):
+        b = rest.iloc[k]
+        if rest.index[k].strftime("%H:%M") >= "14:00":
+            return None
+        d = 0
+        if entry == "close":
+            if b["Close"] > hi:
+                d, px = 1, float(b["Close"])
+            elif b["Close"] < lo:
+                d, px = -1, float(b["Close"])
+        else:
+            up, dn = b["High"] > hi, b["Low"] < lo
+            if up and dn:                       # both sides in one bar: no way to know which broke first; skip the day
+                return None
+            if up:
+                d, px = 1, max(hi, float(b["Open"]))
+            elif dn:
+                d, px = -1, min(lo, float(b["Open"]))
+        if not d:
+            continue
+        stop = (lo if d == 1 else hi) if stop_k == "far" else mid
+        risk = (px - stop) * d
+        if risk <= 0:
+            return None
+        tgt = None if exit_k == "eod" else px + d * risk * (1 if exit_k == "1r" else 2)
+        start = k + 1 if entry == "close" else k
+        if entry == "touch" and ((b["Low"] <= stop) if d == 1 else (b["High"] >= stop)):
+            return dict(d=d, pts=-risk, t=str(rest.index[k]), how="stop")
+        for j in range(start, len(rest)):
+            bj = rest.iloc[j]
+            if j > k or entry == "close":
+                if (bj["Low"] <= stop) if d == 1 else (bj["High"] >= stop):
+                    fill = min(stop, float(bj["Open"])) if d == 1 else max(stop, float(bj["Open"]))
+                    return dict(d=d, pts=(fill - px) * d, t=str(rest.index[k]), how="stop")
+            if tgt is not None and ((bj["High"] >= tgt) if d == 1 else (bj["Low"] <= tgt)):
+                return dict(d=d, pts=(tgt - px) * d, t=str(rest.index[k]), how="target")
+        return dict(d=d, pts=(float(rest["Close"].iloc[-1]) - px) * d, t=str(rest.index[k]), how="close")
+    return None
+
+
+def _orb_stats(trades: list[dict], pv: float, cost: float) -> dict | None:
+    if not trades:
+        return None
+    net = [(x["pts"] - cost) * pv for x in trades]
+    wins = [v for v in net if v > 0]
+    loss = [v for v in net if v <= 0]
+    pf = sum(wins) / abs(sum(loss)) if loss and sum(loss) else None
+    eq, peak, dd = 0.0, 0.0, 0.0
+    for v in net:
+        eq += v
+        peak = max(peak, eq)
+        dd = min(dd, eq - peak)
+    return dict(n=len(net), win=round(100 * len(wins) / len(net), 1), avg=round(sum(net) / len(net), 2),
+                total=round(sum(net), 0), pf=round(pf, 2) if pf else None, dd=round(dd, 0),
+                gross=round(sum(x["pts"] for x in trades) * pv / len(trades), 2))
+
+
+def orb(df30: pd.DataFrame, product: str, split_at: pd.Timestamp) -> list[dict]:
+    if df30.empty:
+        return []
+    et = df30.copy()
+    et.index = et.index.tz_convert("America/New_York")
+    days = [g for _, g in et.groupby(et.index.date)]
+    pv, cost = POINT_USD.get(product, 5.0), cost_points(product)
+    out = []
+    for mins, rlabel in ORB_RANGES.items():
+        for ek, elabel in ORB_ENTRIES:
+            for sk, slabel in ORB_STOPS:
+                for xk, xlabel in ORB_EXITS:
+                    tr = [x for x in (_orb_day(g, mins, ek, sk, xk) for g in days) if x]
+                    for side, dd in (("both", 0), ("longs", 1), ("shorts", -1)):
+                        sub = [x for x in tr if not dd or x["d"] == dd]
+                        out.append(dict(key=f"{mins}-{ek}-{sk}-{xk}-{side}", range=mins, side=side,
+                                        label=f"{rlabel} · {elabel} · {slabel} · {xlabel} · {side}",
+                                        net=_orb_stats(sub, pv, cost),
+                                        y1=_orb_stats([x for x in sub if pd.Timestamp(x["t"]) < split_at], pv, cost),
+                                        y2=_orb_stats([x for x in sub if pd.Timestamp(x["t"]) >= split_at], pv, cost)))
+    return out
+
+
 def status() -> dict:
     try:
         return json.loads(db.get_setting("futures_lab") or "{}")
@@ -273,6 +377,8 @@ def run(products=("MES", "MNQ"), years: int = 2, fetch=bars) -> dict:
                     rows = lab_exits.trades_for(p, c, s, None)
                     _cost_rows(rows, c, p)
                     out[name] = score(rows, split)
+                _save(progress=f"{p}: opening range test")
+                out["orb"] = orb(df30, p, split)
             else:
                 out["error"] = "Not enough candles for a test."
             res[p] = out
