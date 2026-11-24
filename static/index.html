@@ -7,6 +7,31 @@
 html.embed-ios body { --sbw: 0px !important; padding-bottom: calc(16px + env(safe-area-inset-bottom)) !important; }/* Nov 22 (owner, option 2): teal base with stronger signals; dark text on the light tiles */
 .hm-edge span { color: #062033 !important; text-shadow: none !important; } .hm-up span, .hm-down span, .hm-edgedn span { color: #fff !important; } .hm-rest span { color: #B9CCE0 !important; }
 html[data-theme="light"] .hm-rest { background: rgba(40,90,150,.08) !important; box-shadow: inset 0 0 0 1px rgba(40,90,150,.18) !important; } html[data-theme="light"] .hm-rest span { color: #3A4F66 !important; }
+
+/* Nov 23: futures opening range (owner-only forward test) */
+.fo-card { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin: 12px 0; }
+.fo-card .fo-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.fo-card .fo-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+.fo-card .fo-tag { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); margin-left: 8px; }
+.fo-card .fo-state { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 11.5px; padding: 4px 10px; border-radius: 99px; background: var(--sunk); color: var(--muted); }
+.fo-card .fo-state.on { background: color-mix(in srgb, #00C898 14%, transparent); color: #00C898; }
+.fo-card .fo-state.on i { width: 7px; height: 7px; border-radius: 50%; background: #00C898; box-shadow: 0 0 0 4px color-mix(in srgb, #00C898 25%, transparent); }
+.fo-card .fo-h { font-size: 18px; font-weight: 600; margin-top: 8px; }
+.fo-card .fo-n { font-size: 12.5px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+.fo-card .fo-steps { display: flex; gap: 6px; margin: 12px 0 4px; }
+.fo-card .fo-steps div { flex: 1; font-size: 11px; color: var(--faint); border-top: 3px solid var(--line); padding-top: 5px; }
+.fo-card .fo-steps div.on { color: var(--ink); border-color: #00C898; }
+.fo-card .fo-steps div.done { color: var(--muted); border-color: color-mix(in srgb, #00C898 45%, var(--line)); }
+.fo-card .fo-plan { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.fo-card .fo-plan > div { background: var(--sunk); border-radius: 10px; padding: 8px 10px; }
+.fo-card .fo-plan .l { font-size: 11.5px; color: var(--muted); }
+.fo-card .fo-plan .v { font-family: var(--mono); font-size: 14.5px; margin-top: 2px; }
+.fo-card .u { color: #00C898; } .fo-card .d { color: #F00060; }
+.fo-card .fo-bar { position: relative; height: 8px; border-radius: 99px; background: var(--sunk); margin: 14px 0 5px; overflow: hidden; }
+.fo-card .fo-bar i { position: absolute; top: 0; bottom: 0; }
+.fo-card .fo-take { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+.fo-card .fo-take input { width: 70px; }
+@media (max-width: 600px) { .fo-card .fo-plan { grid-template-columns: repeat(2, 1fr); } }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -3087,6 +3112,7 @@ html[data-theme="light"] .ns-sugg { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
   <div class="retest" id="retest" hidden></div>
   <div class="lk-strip" id="lkStrip" hidden></div>
   <a class="cine-strip" id="cineStrip" href="#cinema" hidden></a>
+  <div class="fo-card" id="futOrbCard" hidden></div>
   <div class="lk-watch" id="lkWatch" hidden></div>
   <a class="dy-mini" id="dyMini" href="#diary" hidden></a>
   <a class="dy-mini" id="chMini" href="#chat" hidden><span style="font-size:20px" aria-hidden="true">💬</span><span><div class="k">Member chat</div><div class="v" style="font-size:15px">Talk setups with other members</div></span><span class="go">Open ›</span></a>
@@ -4158,8 +4184,8 @@ async function loadAdmin() {
         <p>${esc(x.message)}</p>
         <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
         : `<p class="note">No messages yet.</p>`}</div>`;
-    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="futLabBox"><h3>Futures Lab</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="setupsBox"><h3>Setups this month</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="backupBox"><h3>Backups</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
-  loadInvites(); loadBackups(); loadSetupsMonth(); loadFutLab();
+    $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="futOrbBox"><h3>Futures · forward test</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="futLabBox"><h3>Futures Lab</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="setupsBox"><h3>Setups this month</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="backupBox"><h3>Backups</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
+  loadInvites(); loadBackups(); loadSetupsMonth(); loadFutLab(); loadFutOrbRecord();
   api("/api/admin/subscribers").then(d => {
     $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
       <div class="row" style="margin-bottom:10px"><a class="btnx sm" href="/api/admin/subscribers.csv" download>Download CSV</a></div>
@@ -4183,6 +4209,85 @@ async function memberBroker(uid, on) {
   catch (e) { toast(friendly(e)); }
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
+
+// ---------------------------------------------------------------- Nov 23: futures opening range (owner-only forward test)
+let FO = null;
+function foNum(x) { return x == null ? "–" : Number(x).toLocaleString("en-US", {minimumFractionDigits: x % 1 ? 2 : 0, maximumFractionDigits: 2}); }
+function foUsd(v) { return v == null ? "–" : (v < 0 ? "−$" : "+$") + Math.abs(v).toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2}); }
+function foChart(t) {
+  const b = t.bars || []; if (!b.length || t.hi == null) return "";
+  const vals = b.flatMap(x => [x[2], x[3]]).concat([t.hi, t.lo]); if (t.target != null) vals.push(t.target, t.stop);
+  const mx = Math.max(...vals), mn = Math.min(...vals), pad = (mx - mn) * 0.08 || 1, H = 150, W = 560, L = 10, R = 120;
+  const y = (v) => 10 + (H - 20) * (1 - (v - mn + pad) / (mx - mn + 2 * pad));
+  const n = 13, step = (W - L - R) / n, x = (i) => L + step * (i + 0.5);
+  const line = (v, col, dash, lab) => v == null ? "" : `<line x1="${L}" x2="${W - R + 4}" y1="${y(v)}" y2="${y(v)}" stroke="${col}" ${dash ? `stroke-dasharray="${dash}"` : ""}/><text x="${W - R + 8}" y="${y(v) + 3.5}" fill="${col}" font-family="var(--mono)" font-size="10">${lab} ${foNum(v)}</text>`;
+  const c = b.map((k, i) => { const up = k[4] >= k[1], col = up ? "#00C898" : "#F00060", top = y(Math.max(k[1], k[4])), bot = y(Math.min(k[1], k[4]));
+    return `<line x1="${x(i)}" x2="${x(i)}" y1="${y(k[2])}" y2="${y(k[3])}" stroke="var(--muted)"/><rect x="${x(i) - step * 0.3}" y="${top}" width="${step * 0.6}" height="${Math.max(1.5, bot - top)}" fill="${col}"/>`; }).join("");
+  const tr = t.target != null;
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;margin-top:10px">
+    <rect x="${L}" y="${y(t.hi)}" width="${W - R - L}" height="${y(t.lo) - y(t.hi)}" fill="#7f9ec7" opacity=".10"/>
+    <line x1="${x(1.5)}" x2="${x(1.5)}" y1="4" y2="${H - 4}" stroke="var(--line)"/>
+    ${tr ? line(t.target, "#00C898", "5 4", "target") : ""}${line(t.hi, "#7f9ec7", "3 4", tr && t.stop === t.hi ? "stop · high" : "high")}${line(t.lo, "#7f9ec7", "3 4", tr && t.stop === t.lo ? "stop · low" : "low")}
+    ${c}</svg>`;
+}
+function foTodayHTML(P) {
+  const t = P.today, now = etNow(), hm = now.getHours() * 60 + now.getMinutes(), wk = now.getDay() > 0 && now.getDay() < 6;
+  const st = t ? t.state : (wk && hm < 630 ? "early" : "none");
+  const steps = (k) => { const names = ["9:30 Range building", "10:30 Range set", t && t.entry ? `${String(t.entry_at || "").slice(11, 16)} Broke ${t.target > t.entry ? "above" : "below"}` : "Break", "Target or stop"];
+    return `<div class="fo-steps">${names.map((n, i) => `<div class="${i < k ? "done" : i === k ? "on" : ""}">${esc(n)}</div>`).join("")}</div>`; };
+  const pill = {building: "Range building", set: "Waiting for a break", long: "In the trade · long", short: "In the trade · short", done: "Done for today", nobreak: "No trade today", nodata: "No data today", early: "Opens 9:30", none: "Closed today"}[st] || st;
+  let h = "", body = "";
+  const d = t && t.entry ? (t.target > t.entry ? 1 : -1) : 0;
+  if (st === "early" || st === "building") { h = `${P.product} range builds 9:30–10:30 ET`; body = `<div class="fo-n">The first alert comes at 10:30 with the range. ${esc(P.rule || "")}.</div>${steps(0)}`; }
+  else if (st === "set") { h = `${P.product} range set: ${foNum(t.lo)}–${foNum(t.hi)}`; body = `<div class="fo-n">${foNum(t.hi - t.lo)} points wide. Watching for a 30-minute close outside it until 2 PM.</div>${steps(1)}${foChart(t)}`; }
+  else if (st === "long" || st === "short" || st === "done") {
+    h = st === "done" ? `${P.product} ${t.how === "target" ? "hit the target ✓" : t.how === "stop" ? "hit the stop" : "closed at 4 PM"}` : `${P.product} broke ${d === 1 ? "above" : "below"} the range`;
+    const last = (t.bars || []).length ? t.bars[t.bars.length - 1][4] : t.entry, cur = st === "done" ? t.exit_price : last;
+    const r = (cur - t.entry) * d / Math.abs(t.entry - t.stop), pct = Math.max(0, Math.min(100, 50 + r * 50));
+    const usd = (cur - t.entry) * d * P.point_usd;
+    body = `<div class="fo-n">${st === "done" ? `${foNum(t.pts)} pts · ${foUsd(t.net_usd)} per contract after costs. That was today's one trade.` : `The bar ending ${esc(String(t.entry_at || "").slice(11, 16))} closed at ${foNum(t.entry)}, ${d === 1 ? "above the range high" : "below the range low"}. One trade a day; this is it.`}</div>
+      ${steps(st === "done" ? 4 : 2)}${foChart(t)}
+      <div class="fo-plan"><div><div class="l">Entry</div><div class="v">${foNum(t.entry)}</div></div><div><div class="l">Stop</div><div class="v d">${foNum(t.stop)}</div></div><div><div class="l">Target (1R)</div><div class="v u">${foNum(t.target)}</div></div><div><div class="l">Risk / contract</div><div class="v">$${Math.round(Math.abs(t.entry - t.stop) * P.point_usd).toLocaleString()}</div></div></div>
+      <div class="fo-bar"><i style="left:0;width:50%;background:color-mix(in srgb,#F00060 28%,transparent)"></i><i style="left:${Math.min(50, pct)}%;width:${Math.abs(pct - 50)}%;background:${pct >= 50 ? "#00C898" : "#F00060"}"></i></div>
+      <div class="fo-n" style="display:flex;justify-content:space-between"><span>stop</span><span>${st === "done" ? "exit" : "last close"} ${foNum(cur)} · ${r >= 0 ? "+" : ""}${r.toFixed(2)}R · ${foUsd(usd)}</span><span>target</span></div>
+      ${t.taken ? `<div class="fo-n" style="margin-top:10px">✓ In your Trade Diary · ${t.taken.qty} contract${t.taken.qty === 1 ? "" : "s"} @ ${foNum(t.taken.entry_price)}${st === "done" ? " · closed at the exit" : " · closes itself at the stop, target or 4 PM"}</div>`
+        : `<div class="fo-take"><span class="fo-n">Took it?</span><input id="foQty" type="number" min="1" step="1" value="1" aria-label="Contracts"><span class="fo-n">contracts @</span><input id="foEntry" type="number" step="0.25" value="${t.entry}" style="width:100px" aria-label="Entry price"><button class="btnx sm" onclick="foTake('${esc(P.product)}', this)">Log it in my diary</button></div>`}`;
+  }
+  else if (st === "nobreak") { h = `${P.product}: no break before 2 PM`; body = `<div class="fo-n">The range held (${foNum(t.lo)}–${foNum(t.hi)}). No trade today; that's part of the rule.</div>${foChart(t)}`; }
+  else { h = `${P.product}: nothing today`; body = `<div class="fo-n">${st === "nodata" ? "No futures data came in for today's session." : "The opening range runs on market days, 9:30 ET."}</div>`; }
+  const s = P.stats || {};
+  return `<div class="fo-top"><div><span class="fo-k">Today · Futures</span><span class="fo-tag">OWNER ONLY · TESTING</span></div><span class="fo-state ${st === "long" || st === "short" ? "on" : ""}">${st === "long" || st === "short" ? "<i></i>" : ""}${esc(pill)}</span></div>
+    <div class="fo-h">${esc(h)}</div>${body}
+    <div class="fo-n" style="margin-top:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><span>NextShelf alerts; you manage the trade.</span><a href="#admin" style="color:var(--muted)">Forward test: ${s.n || 0} trade${s.n === 1 ? "" : "s"}${s.pf ? ` · PF ${s.pf}` : ""} ›</a></div>`;
+}
+async function renderFutOrb() {
+  const el = $("futOrbCard"); if (!el) return;
+  if (!ME || !ME.is_admin) { el.hidden = true; return; }
+  try { FO = await api("/api/admin/futures-orb"); } catch (e) { el.hidden = true; return; }
+  if (!FO.configured || !FO.products.length) { el.hidden = true; return; }
+  el.innerHTML = FO.products.map(P => foTodayHTML(Object.assign({rule: FO.rule}, P))).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">');
+  el.hidden = false;
+}
+async function foTake(product, btn) {
+  btn.disabled = true;
+  try { await api("/api/admin/futures-orb/take", {method: "POST", body: JSON.stringify({product, qty: +$("foQty").value, entry: +$("foEntry").value || null})}); renderFutOrb(); }
+  catch (e) { btn.disabled = false; btn.insertAdjacentHTML("afterend", `<span class="fo-n" style="color:#F00060">${esc(friendly(e))}</span>`); }
+}
+async function loadFutOrbRecord(check) {
+  const box = $("futOrbBox"); if (!box) return;
+  let d;
+  try { if (check) await api("/api/admin/futures-orb/check", {method: "POST"}); d = await api("/api/admin/futures-orb"); }
+  catch (e) { box.innerHTML = `<h3>Futures · forward test</h3><p style="color:#F00060">${esc(friendly(e))}</p>`; return; }
+  const m = (l, v, sub, cls) => `<div class="dy-m"><div class="l">${l}</div><div class="v ${cls || ""}">${v}</div>${sub ? `<div class="note" style="margin-top:2px">${sub}</div>` : ""}</div>`;
+  const body = d.products.map(P => { const s = P.stats || {}, b = P.backtest || {};
+    const rows = P.history.map(h => `<tr><td>${esc(new Date(h.day + "T12:00:00").toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric"}))}</td><td>${h.hi != null ? `${foNum(h.lo)}–${foNum(h.hi)}` : "–"}</td><td>${h.entry != null ? `${h.target > h.entry ? "↑" : "↓"} ${esc(String(h.entry_at || "").slice(11, 16))}` : "–"}</td><td>${foNum(h.entry)}</td><td class="${h.how === "target" ? "u" : h.how === "stop" ? "d" : ""}">${h.how ? {target: "Target", stop: "Stop", close: "4 PM close"}[h.how] : h.state === "nobreak" ? "No break before 2 PM" : h.state === "nodata" ? "No data" : esc(h.state)}</td><td class="${(h.net_usd || 0) > 0 ? "u" : (h.net_usd || 0) < 0 ? "d" : ""}">${h.net_usd != null ? foUsd(h.net_usd) : "–"}</td></tr>`).join("");
+    return `<p style="margin:10px 0 4px"><b>${esc(P.product)}</b> · ${esc(P.name)}${P.since ? ` · since ${esc(P.since)}` : ""}</p>
+      <div class="dy-grid" style="margin:8px 0">${m("Trades", s.n || 0, b.n ? `backtest: ${b.n} in 2 years` : "")}${m("Win rate", s.win != null ? s.win + "%" : "–", b.win != null ? `backtest: ${b.win}%` : "")}${m("Avg / trade, after costs", s.avg != null ? foUsd(s.avg) : "–", b.avg != null ? `backtest: ${foUsd(b.avg)}` : "")}${m("Profit factor", s.pf ?? "–", b.pf ? `backtest: ${b.pf} · judge it after 40+ trades` : "judge it after 40+ trades")}</div>
+      ${rows ? `<div style="overflow-x:auto"><table class="fl-t"><tr><th>Day</th><th>Range</th><th>Break</th><th>Entry</th><th>Result</th><th>$ / contract</th></tr>${rows}</table></div>` : `<p class="note">No finished days yet. The first one is scored at the end of the next market day.</p>`}`; }).join("");
+  box.innerHTML = `<h3>Futures · forward test</h3><p>${esc(d.rule)}. Scored automatically every market day, per contract after costs; nothing is traded. You get the alerts at 10:30, on the break and at the exit.</p>
+    ${!d.configured ? `<p class="note">Needs <code>MASSIVE_API_KEY</code>.</p>` : ""}${body}
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btnx sm" onclick="this.disabled=true;loadFutOrbRecord(true)">Check now</button></div>`;
+}
 // Nov 23: the Futures Lab: the stock engine replayed on MES / MNQ (research only)
 async function loadFutLab(start) {
   const box = $("futLabBox"); if (!box) return;
@@ -4706,7 +4811,7 @@ function dyPickDay(k) { DYS.day = DYS.day === k ? null : k; DYS.tab = "cal"; pai
 function dyRowHTML(t) {
   const what = t.instrument === "option" ? (t.contract || t.ticker + " option") : `${t.side === -1 ? "Short" : "Long"} ${t.ticker}`;
   const when = dyDate(dyKey(t.closed_at || t.opened_at));
-  const meta = t.closed ? `${when} · ${t.qty}${t.instrument === "option" ? " ct" : " sh"}${t.r != null ? " · " + dyR(t.r) : ""}` : `Open since ${dyDate(dyKey(t.opened_at))} · ${t.qty}${t.instrument === "option" ? " ct" : " sh"} @ ${money(t.entry_price)}`;
+  const meta = t.closed ? `${when} · ${t.qty}${t.instrument !== "stock" ? " ct" : " sh"}${t.r != null ? " · " + dyR(t.r) : ""}` : `Open since ${dyDate(dyKey(t.opened_at))} · ${t.qty}${t.instrument !== "stock" ? " ct" : " sh"} @ ${money(t.entry_price)}`;
   return `<button type="button" class="dy-row" onclick="dyEdit(${t.id})"><span><div class="a"><b>${esc(t.ticker)}</b> · ${esc(t.instrument === "option" ? what.replace(t.ticker + " ", "") : t.side === -1 ? "Short" : "Long")}${t.setup ? " · " + esc(t.setup) : ""}${t.grade ? `<span class="dy-pill ${"AB".includes(t.grade) ? "g" : "b"}">${esc(t.grade)}</span>` : ""}${t.source !== "manual" ? `<span class="dy-pill">${t.source === "broker" ? "Auto" : "Lookout"}</span>` : ""}</div>
     <div class="s${t.needs_note ? " need" : ""}">${t.needs_note ? "Add why you took it · " : ""}${esc(meta)}</div></span><span class="p ${dyCls(t.pnl)}">${t.closed ? dyMoney(t.pnl) : "Open"}</span></button>`;
 }
@@ -4725,10 +4830,10 @@ function dyEdit(id) {
     <p class="sub">${auto ? "From your brokerage. The fills are filled in for you; add the why and the lesson." : t && t.source === "lookout" ? "Started by Lookout. Add your exit when you're out." : "Only you can see your diary."}</p>
     <div class="dy-f">
       <div><label>Ticker</label><input id="dyTk" value="${v("ticker")}" placeholder="NVDA" autocapitalize="characters" ${ro}></div>
-      <div><label>Type</label>${seg("instrument", [["stock", "Shares"], ["option", "Option"]], t ? t.instrument : "stock")}</div>
+      <div><label>Type</label>${seg("instrument", [["stock", "Shares"], ["option", "Option"], ["future", "Future"]], t ? t.instrument : "stock")}</div>
       <div class="full" id="dyCtW" ${t && t.instrument === "option" ? "" : "hidden"}><label>Contract</label><input id="dyCt" value="${v("contract")}" placeholder="NVDA Dec 4 $180 Call" ${ro}></div>
       <div><label>Side</label>${seg("side", [[1, "Long"], [-1, "Short"]], t ? t.side : 1)}</div>
-      <div><label id="dyQL">${t && t.instrument === "option" ? "Contracts" : "Shares"}</label><input id="dyQ" type="number" min="0" step="any" value="${v("qty")}" ${ro}></div>
+      <div><label id="dyQL">${t && t.instrument !== "stock" ? "Contracts" : "Shares"}</label><input id="dyQ" type="number" min="0" step="any" value="${v("qty")}" ${ro}></div>
       <div><label>Entry price</label><input id="dyE" type="number" min="0" step="any" value="${v("entry_price")}" ${ro}></div>
       <div><label>Exit price <i style="font-style:normal;color:var(--faint)">blank if still open</i></label><input id="dyX" type="number" min="0" step="any" value="${v("exit_price")}" ${ro}></div>
       <div><label>Opened</label><input id="dyOd" type="date" value="${t ? dt(t.opened_at) : dyTodayKey()}" ${ro}></div>
@@ -4749,12 +4854,12 @@ function dyEdit(id) {
     const b = e.target.closest("button"); if (!b || b.disabled) return;
     const was = b.classList.contains("on"); g.querySelectorAll("button").forEach(x => x.classList.remove("on"));
     if (!(was && g.dataset.seg === "grade")) b.classList.add("on");
-    if (g.dataset.seg === "instrument") { q("#dyCtW").hidden = segv("instrument") !== "option"; q("#dyQL").textContent = segv("instrument") === "option" ? "Contracts" : "Shares"; }
+    if (g.dataset.seg === "instrument") { q("#dyCtW").hidden = segv("instrument") !== "option"; q("#dyQL").textContent = segv("instrument") !== "stock" ? "Contracts" : "Shares"; }
     calc();
   }));
   const calc = () => {
     const qn = +q("#dyQ").value, e = +q("#dyE").value, x = q("#dyX").value === "" ? null : +q("#dyX").value, f = +q("#dyF").value || 0;
-    const mult = segv("instrument") === "option" ? 100 : 1, side = +segv("side") || 1;
+    const mult = segv("instrument") === "option" ? 100 : segv("instrument") === "future" ? ({MNQ: 2, MES: 5, NQ: 20, ES: 50}[q("#dyTk").value.trim().toUpperCase()] || 1) : 1, side = +segv("side") || 1;
     if (!(qn > 0 && e > 0)) { q("#dyCalc").innerHTML = "Enter the size and entry to see the P&amp;L."; return; }
     if (x == null) { q("#dyCalc").innerHTML = `Position <b>${money(qn * e * mult)}</b> · still open`; return; }
     const p = (x - e) * qn * mult * side - f, rk = +q("#dyRk").value || (mult === 100 && side === 1 ? e * qn * 100 : 0);
@@ -8370,7 +8475,7 @@ function renderToday() {
   $("hello").classList.add("p212");
   $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, ${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.<small class="hello-sub">${name ? `${greet}${name}. ` : ""}${nsMarketLine()}</small>`;
   $("mkt").innerHTML = ""; $("mkt").hidden = true;
-  renderVerdictPill(); renderCineStrip();
+  renderVerdictPill(); renderCineStrip(); renderFutOrb();
   renderPremarket();
   renderWeek();
   if (typeof renderTodayVideos === "function") renderTodayVideos();   // defined in a later script block; on the very first render it may not exist yet

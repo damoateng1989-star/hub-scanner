@@ -211,6 +211,12 @@ async def lifespan(_app: FastAPI):
             pass
     sched.add_job(paper_opt.sync_opt, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*/5", timezone="America/New_York"),
                   coalesce=True, max_instances=1, id="paper_opt_sync", replace_existing=True)
+    try:   # Nov 23: the futures opening range forward test (owner-only alerts; needs MASSIVE_API_KEY)
+        import futures_orb
+        sched.add_job(futures_orb.tick, CronTrigger(day_of_week="mon-fri", hour="10-16", minute="2,12,32,42", timezone="America/New_York"),
+                      coalesce=True, max_instances=1, id="futures_orb", replace_existing=True)
+    except Exception as e:
+        log.warning("futures orb job not scheduled: %s", e)
     for t in ENTRY_TIMES:
         h, m = t.split(":")
         sched.add_job(paper_opt.run_check_opt, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m), timezone="America/New_York"),
@@ -2039,6 +2045,35 @@ def futures_lab_start(u: dict = Admin):
     if not futures_lab.start_background():
         raise HTTPException(409, "The futures test is already running.")
     return dict(ok=True)
+
+
+# ---------------------------------------------------------------- Futures opening range (Nov 23): owner-only forward test
+@app.get("/api/admin/futures-orb")
+def futures_orb_view(u: dict = Admin):
+    import futures_orb
+    return futures_orb.view(u)
+
+
+class OrbTake(BaseModel):
+    product: str = "MNQ"
+    qty: float = 1
+    entry: float | None = None
+
+
+@app.post("/api/admin/futures-orb/take")
+def futures_orb_take(body: OrbTake, u: dict = Admin):
+    import futures_orb
+    import pandas as pd
+    try:
+        return futures_orb.take(u, pd.Timestamp.now(tz="America/New_York").date().isoformat(), body.product.upper(), body.qty, body.entry)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/admin/futures-orb/check")
+def futures_orb_check(u: dict = Admin):
+    import futures_orb
+    return dict(alerts=futures_orb.tick())
 
 
 @app.get("/api/admin/setups-month")

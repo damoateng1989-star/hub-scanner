@@ -93,7 +93,12 @@ def _ts(v) -> str | None:
     return d.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _mult(r: dict) -> int:
+FUT_MULT = {"MNQ": 2, "MES": 5, "NQ": 20, "ES": 50}
+
+
+def _mult(r: dict) -> float:
+    if r.get("instrument") == "future":         # dollars per index point for the contract (Nov 23)
+        return FUT_MULT.get(str(r.get("ticker") or "").upper(), 1)
     return 100 if r.get("instrument") == "option" else 1
 
 
@@ -111,8 +116,8 @@ def _derive(r: dict) -> dict:
     if not risk and e and q:
         if d.get("instrument") == "option" and (d.get("side") or 1) == 1:
             risk = e * q * 100                                  # a bought option can lose its whole premium
-        elif d["plan"] and d["plan"].get("kill") and d.get("instrument") == "stock":
-            risk = abs(e - float(d["plan"]["kill"])) * q
+        elif d["plan"] and d["plan"].get("kill") and d.get("instrument") in ("stock", "future"):
+            risk = abs(e - float(d["plan"]["kill"])) * q * (_mult(d) if d.get("instrument") == "future" else 1)
     d["risk_used"] = round(risk, 2) if risk else None
     d["r"] = round(d["pnl"] / risk, 2) if d["pnl"] is not None and risk else None
     d["needs_note"] = not (d.get("why") or "").strip()
@@ -133,7 +138,7 @@ def _clean(body: dict, partial: bool = False) -> dict:
             raise ValueError("Enter a ticker")
         out["ticker"] = t
     if not partial or "instrument" in body:
-        out["instrument"] = "option" if body.get("instrument") == "option" else "stock"
+        out["instrument"] = body.get("instrument") if body.get("instrument") in ("option", "future") else "stock"
     if "contract" in body:
         out["contract"] = str(body.get("contract") or "")[:60] or None
     if not partial or "side" in body:
