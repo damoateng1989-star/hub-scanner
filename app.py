@@ -270,6 +270,13 @@ async def lifespan(_app: FastAPI):
     _chart_warm = threading.Timer(30, board.warm_charts)
     _chart_warm.daemon = True
     _chart_warm.start()
+    try:      # Nov 24: the setup grades Today and the board read live in memory; refill them after a restart too
+        import sika_find
+        _grade_warm = threading.Timer(60, sika_find.warm_board_grades)
+        _grade_warm.daemon = True
+        _grade_warm.start()
+    except Exception as e:
+        log.warning("grade warm-up not scheduled: %s", e)
     log.info("Scheduler on: scans %s, pre-close %s ET (provider: %s)",
              ", ".join(SCAN_TIMES), ", ".join(PRECLOSE_TIMES) or "off", data.provider())
     telegram_bot.start_polling(handle_command)

@@ -8992,7 +8992,7 @@ function renderRetest() {
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null;
     const conf = !!(x.hub && x.tape_flow && x.tape_flow.line);
     return `<a class="ck-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
-      <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span>${g ? `<span class="sg-in ${GRADE_CLS[g]} ckh-g">${g}</span>` : ""}</div>
+      <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span><span class="sg-in ${GRADE_CLS[g] || "gq"} ckh-g" data-hg="${esc(x.sym)}">${g || "…"}</span></div>
       <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
       <div class="ckh-line">${kind === "gap" ? `Closed back above the gap-day high ${money(x.edge)} · out on a daily close below ${money(x.stop)} · target ${money(x.target)} (2× the risk) · day ${x.day} of 10` : kind === "now" ? `At the edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)} · the next 4H close decides it` : `Pullback not at the edge yet · edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}`}${kind === "gap" ? "" : ` · retest window closes ${retestBy(x.left)}`}</div>
       ${kind === "gap" ? "" : heroShelfHTML(x)}
@@ -9025,6 +9025,23 @@ function renderRetest() {
     wel.hidden = !wait.length;
   }
   if (heroRow && heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
+  if (heroRow) ckHeroGrade(heroRow.sym, heroRow.kind || "hub");
+}
+// Nov 24 (owner): the hero always wears a grade — the same letter the stock's card shows (the A-retest grade, or the
+// measured A record across the universe when the stock's own history is thin). Fetched once per stock.
+async function ckHeroGrade(sym, kind) {
+  const el = document.querySelector(`.ckh-g[data-hg="${CSS.escape(sym)}"]`); if (!el) return;
+  const k = kind === "double_top" || kind === "double_bottom" || kind === "gapfade" ? kind : "hub", key = sym + "|" + k;
+  if (!ME || ME.guest) { if (el.textContent === "…") el.remove(); return; }
+  try { if (!GRADE[key] || GRADE[key] === "loading" || GRADE[key] === "failed") GRADE[key] = await api(`/api/grade/${encodeURIComponent(sym)}?kind=${k}`); }
+  catch (e) { if (el.textContent === "…") el.remove(); return; }
+  const G = GRADE[key]; let letter = null;
+  if (k === "gapfade") { const g = G.up; letter = g && g.grade !== "?" ? g.grade : G.universe && G.universe.grade; }
+  else if (k === "double_top") letter = null;                     // watch only: no plan to grade
+  else { const R = G.retest; letter = R && R.grade !== "?" ? R.grade : G.universe_a ? G.universe_a.grade : null; }
+  const now = document.querySelector(`.ckh-g[data-hg="${CSS.escape(sym)}"]`); if (!now) return;
+  if (!letter) { if (now.textContent === "…") now.remove(); return; }
+  now.textContent = letter; now.className = `sg-in ${GRADE_CLS[letter] || "gq"} ckh-g`;
 }
 // the hero's record line: the measured Flow Lab record, read from the swing card payload that already carries it
 async function ckHeroRecord(sym) {
