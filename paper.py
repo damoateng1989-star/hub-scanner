@@ -388,8 +388,8 @@ def _record(window: str, traded: bool, reason: str):
         m = _json.loads(db.get_setting("paper_check_morning") or "{}")
         morning = m.get("reason") if m.get("at") == _today_ny() and not m.get("traded") else None
         notify.admins("🧪 No paper trade today.\n"
-                      + (f"9:35 AM: {morning}\n" if morning else "")
-                      + f"3:50 PM: {reason}")
+                      + (f"10:30 AM: {morning}\n" if morning else "")
+                      + f"2:00 PM: {reason}")
     except Exception as e:
         log.warning("no-trade note failed: %s", e)
 

@@ -222,7 +222,8 @@ async def lifespan(_app: FastAPI):
         sched.add_job(paper_opt.run_check_opt, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m), timezone="America/New_York"),
                       misfire_grace_time=60, coalesce=True, max_instances=1, id=f"paper_opt_check_{t}", replace_existing=True)
     # paper trading: one confirmed breakout a day from the whole board
-    sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=9, minute=35, timezone="America/New_York"),
+    # Nov 24 (owner): the morning entry moves from 9:35 to 10:30 AM (same candle: yesterday's 4:00 PM close)
+    sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=10, minute=30, timezone="America/New_York"),
                   args=["morning"], misfire_grace_time=600, coalesce=True, max_instances=1, id="paper_morning", replace_existing=True)
     sched.add_job(paper.enter_daily, CronTrigger(day_of_week="mon-fri", hour=13, minute=58, timezone="America/New_York"),
                   args=["midday"], misfire_grace_time=900, coalesce=True, max_instances=1, id="paper_midday", replace_existing=True)
