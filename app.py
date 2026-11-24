@@ -2021,6 +2021,26 @@ class InviteBody(BaseModel):
     code: str = ""
 
 
+# ---------------------------------------------------------------- Futures Lab (Nov 23): research only
+@app.get("/api/admin/futures-lab")
+def futures_lab_status(u: dict = Admin):
+    import futures_lab
+    st = futures_lab.status()
+    st["configured"] = futures_lab.configured()
+    st["running"] = bool(futures_lab._RUN.get("thread") and futures_lab._RUN["thread"].is_alive())
+    return st
+
+
+@app.post("/api/admin/futures-lab")
+def futures_lab_start(u: dict = Admin):
+    import futures_lab
+    if not futures_lab.configured():
+        raise HTTPException(400, "Add MASSIVE_API_KEY on Render first.")
+    if not futures_lab.start_background():
+        raise HTTPException(409, "The futures test is already running.")
+    return dict(ok=True)
+
+
 @app.get("/api/admin/setups-month")
 def admin_setups_month(u: dict = Admin):
     return db.setups_month(30)
