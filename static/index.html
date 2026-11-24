@@ -9888,6 +9888,9 @@ function briefCard() {
     <div id="candlePick">${candlePickHTML()}</div></div>
   <div class="acct"><h3>Every A setup</h3><p>Get an alert whenever an A setup confirms on <b>any</b> of the stocks NextShelf scans, not just your watchlist: about 8 a week across hub and double-bottom retests and gap fades. One message per scan (after the 1:30 PM and 4:00 PM closes) with each stock's entry, stop and target. Stocks on your watchlist still alert on their own, so they're left out.</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.a_all ? "checked" : ""} onchange="setEveryA(this.checked)"> Alert me on every A setup</label></div></div>
+  <div class="acct"><h3>Board retests</h3><p>Get an alert when <b>any</b> stock NextShelf scans pulls back to its edge after a breakout (Today's <b>Retesting now</b>), not just your watchlist. A+ retests come with the record and the plan, like your watchlist alerts. Checked after the 1:30 PM and 4:00 PM closes; one message per scan, each stock once per breakout. Stocks on your watchlist still alert on their own, so they're left out.</p>
+    <div class="row" style="gap:16px;flex-wrap:wrap">${[["off", "Off"], ["aplus", "A+ retests only"]].concat(ME.is_admin ? [["all", "Every retest (the rest marked WATCH ONLY)"]] : []).map(([v, l]) =>
+      `<label class="brief-sw"><input type="radio" name="boardRt" value="${v}" ${(ME.board_rt || "off") === v ? "checked" : ""} onchange="setBoardRt(this.value)"> ${l}</label>`).join("")}</div></div>
   <div class="acct"><h3>Evening recap</h3><p>Every weekday at ${esc(fmtET(ME.recap_time || "16:45"))} ET, after the close: what broke out today with its target and exit level, what's at the edge going into tomorrow, and your watchlist. Built for when you couldn't check during work.${where ? ` Sent by ${where}.` : ""}</p>
     <div class="row"><label class="brief-sw"><input type="checkbox" ${ME.recap !== false ? "checked" : ""} onchange="setRecapOn(this.checked)"> Send me the evening recap</label>
       <button class="btnx sm" onclick="testRecap(this)">Send one now</button></div></div>
@@ -10016,6 +10019,11 @@ function setCandle(ch) {
   if ($("candlePick")) $("candlePick").innerHTML = candlePickHTML();
   if ($("chartStylePop")) $("chartStylePop").innerHTML = chartStyleHTML();
   if (BRIEF_SYM) paintMap();
+}
+async function setBoardRt(mode) {
+  try { const r = await api("/api/me/board_rt", {method: "POST", body: JSON.stringify({mode})}); ME.board_rt = r.board_rt;
+    toast(r.board_rt === "off" ? "Board retest alerts are off" : r.board_rt === "aplus" ? "You'll get A+ retests from the whole board" : "You'll get every retest on the board"); }
+  catch (e) { toast(friendly(e)); }
 }
 async function setEveryA(on) {
   try { await api("/api/me/every_a", {method: "POST", body: JSON.stringify({on})}); ME.a_all = on; toast(on ? "You'll get every A setup" : "Every-A-setup alerts are off"); }

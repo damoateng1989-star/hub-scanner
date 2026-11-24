@@ -218,6 +218,11 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    try:   # added later (Nov 24): board retest alerts — 'off' | 'aplus' | 'all' (all is admin-only)
+        _conn.execute("ALTER TABLE users ADD COLUMN board_rt TEXT DEFAULT 'off'")
+        _conn.commit()
+    except sqlite3.OperationalError:
+        pass
     try:   # added later: which setups a member wants alerts for ("hub,triangle,channel,sr"); NULL = hubs only
         _conn.execute("ALTER TABLE users ADD COLUMN styles TEXT")
         _conn.commit()
@@ -453,7 +458,7 @@ def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
 
 
 # --- users
-USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes", "a_all",
+USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes", "a_all", "board_rt",
                "stripe_customer", "stripe_sub", "sub_status", "sub_period_end", "sub_cancel_at_end", "trial_used")
 
 

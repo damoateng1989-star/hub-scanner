@@ -176,6 +176,104 @@ def every_a_alert(items: list[dict]):
     return sent
 
 
+def board_retest_alert(items: list[dict]):
+    """Nov 24: board retest alerts — any stock on the board back at its edge after a breakout (Today's Retesting now),
+    for members who opted in (Account → Board retests). Members: A+ only, in the conviction format (Patch 213).
+    Admins can pick every retest; the rest come marked WATCH ONLY. Watchlist stocks are left out (they alert on their own).
+    One message per member per sweep; each stock once per breakout."""
+    import alert_format as af
+    fresh = []
+    for x in items:
+        try:
+            if db.add_alert(f"board_rt|{x['symbol']}|{x['breakout']}", x["symbol"], "board_rt", x["candle"].isoformat(),
+                            f"{x['symbol']} back at the edge {x['edge']:.2f}"):
+                fresh.append(x)
+        except Exception:
+            fresh.append(x)
+    if not fresh:
+        return 0
+    money = lambda v: f"${v:,.2f}"
+    for x in fresh:
+        x["window"] = af.window_after_candle(x["candle"], x["left"])
+        x["earnings"] = af.earnings_label(x["symbol"])
+        tape = None
+        try:
+            tape = af.tape_text(db.flow_signal_for(x["symbol"], 1, pd_date(x["breakout"])), 1)
+        except Exception:
+            tape = None
+        x["conv"] = af.compose(
+            sym=x["symbol"], grade="A+", setup="retest", rec_key="hub_a_plus", trigger=x["edge"],
+            trigger_what="4H close above the edge", entry=x["edge"], entry_state="the retest — at the edge now",
+            exit_px=x["target"], exit_name="the next shelf" if x["shelf"] else "1 ATR past the hub",
+            stop_rule=f"4H close back under {money(x['stop'])}", stop_short=f"4H close under {money(x['stop'])}",
+            tape_line=tape, window=x["window"], earnings=x["earnings"]) if x["clear"] else None
+    rec = af.record("hub_a_plus")
+    sent = 0
+    for u in db.all_users():
+        mode = u.get("board_rt") or "off"
+        if mode == "off":
+            continue
+        if mode == "all" and not u["is_admin"]:
+            mode = "aplus"
+        if (u.get("closes") or "both") == "midday" and all(late_close(x["candle"]) for x in fresh):
+            continue
+        mine = set(db.user_symbols(u["id"]))
+        aplus = [x for x in fresh if x["conv"] and x["symbol"] not in mine]
+        rest = [x for x in fresh if not x["conv"] and x["symbol"] not in mine] if mode == "all" else []
+        if not aplus and not rest:
+            continue
+        tape_ok = False
+        try:
+            import swing_card
+            tape_ok = swing_card.flow_allowed(u)
+        except Exception:
+            pass
+        foot = "From the board · not on your watchlist"
+        if len(aplus) == 1 and not rest:
+            c = aplus[0]["conv"]
+            tg = (c["tg_rich"] if tape_ok and c["tg_rich"] else c["tg_plain"]) + f"\n\n{foot}"
+            plain = c["tg_plain"] + f"\n\n{foot}"
+            title, body = c["title"] + " · at the edge", (c["push_rich"] if tape_ok and c["push_rich"] else c["push_plain"])
+        else:
+            lines = []
+            if aplus:
+                n = len(aplus)
+                lines += [f"👀 {n} board stock{'s are' if n != 1 else ' is'} back at the edge · A+ RETESTS", ""]
+                if rec:
+                    lines += [af.record_line(rec), ""]
+                for x in aplus[:10]:
+                    lines.append(f"{x['symbol']}  entry {money(x['edge'])} · exit {money(x['target'])} · stop: 4H close under "
+                                 f"{money(x['stop'])}" + (f" · window {x['window']}" if x["window"] else "")
+                                 + (f" · 📅 earnings {x['earnings']}" if x["earnings"] else ""))
+                if n > 10:
+                    lines.append(f"…and {n - 10} more on Today's Retesting now.")
+                lines += ["", "Each one: a 4H close that holds above its edge is the entry."]
+            if rest:
+                if lines:
+                    lines.append("")
+                lines.append(f"{'Also back at the edge' if aplus else f'👀 {len(rest)} board stock' + ('s' if len(rest) != 1 else '') + ' back at the edge'} · WATCH ONLY (not the tested setup):")
+                for x in rest[:12]:
+                    lines.append(f"{x['symbol']} {'↑' if x['d'] == 1 else '↓'} edge {money(x['edge'])} · target {money(x['target'])}")
+            lines += ["", foot]
+            tg = plain = "\n".join(lines)
+            syms = [x["symbol"] for x in aplus] or [x["symbol"] for x in rest]
+            title = f"{len(aplus) or len(rest)} board stock{'s' if (len(aplus) or len(rest)) != 1 else ''} back at the edge" + (" · A+" if aplus else " · watch only")
+            body = ", ".join(syms[:8]) + (f" +{len(syms) - 8}" if len(syms) > 8 else "") + ". Each plan is in the app."
+        quiet = quiet_now(u)
+        if u["telegram_chat"]:
+            telegram_bot.send(tg, u["telegram_chat"], silent=quiet)
+        _push(u["id"], tg, "/app#today", "board-rt", quiet, title=title, body=body)
+        if _pro(u) and u["phone"] and not quiet:
+            phone.safe_text(plain, to=u["phone"])
+        sent += 1
+    return sent
+
+
+def pd_date(iso: str) -> str:
+    import pandas as _pd
+    return _pd.Timestamp(iso).tz_convert("America/New_York").date().isoformat()
+
+
 def user_alert(u: dict, text: str, url: str, tag: str | None = None):
     """One message to one member (their own price alerts): Telegram, push, and a text for Pro members with a number."""
     quiet = quiet_now(u)

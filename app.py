@@ -796,7 +796,7 @@ def me(u: dict | None = Maybe):
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
                 phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
-                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, a_all=bool(u.get("a_all")), quiet=u.get("quiet") or "", closes=u.get("closes") or "both",
+                google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, a_all=bool(u.get("a_all")), board_rt=(u.get("board_rt") or "off") if (u.get("board_rt") != "all" or u.get("is_admin")) else "aplus", quiet=u.get("quiet") or "", closes=u.get("closes") or "both",
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
                 style_options=[dict(key=k, name=v[0], about=v[1]) for k, v in patterns.STYLES.items() if k in patterns.LIVE_STYLES])
@@ -855,6 +855,20 @@ def list_price_alerts(symbol: str | None = None, u: dict = User):
 def remove_price_alert(aid: int, u: dict = User):
     db.delete_price_alert(u["id"], aid)
     return {"ok": True}
+
+
+class BoardRtBody(BaseModel):
+    mode: str = "off"
+
+
+@app.post("/api/me/board_rt")
+def set_board_rt(body: BoardRtBody, u: dict = User):
+    """Board retest alerts (Nov 24): off, A+ only, or every retest (admin only — the rest aren't tested setups)."""
+    mode = body.mode if body.mode in ("off", "aplus", "all") else "off"
+    if mode == "all" and not u.get("is_admin"):
+        mode = "aplus"
+    db.update_user(u["id"], board_rt=mode)
+    return {"board_rt": mode}
 
 
 @app.post("/api/me/every_a")

@@ -1049,6 +1049,36 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
     return status, sent
 
 
+def retest_now(c4: pd.DataFrame, res: dict) -> dict | None:
+    """The board's 'Retesting now' moment for a stock (Nov 24, board retest alerts): its latest hub breakout is still in
+    the retest window, the latest candle pulled back to the edge, and that close isn't the entry yet. The same test as
+    scan_symbol's 'back at the edge' alert. A+ = an A grade at the edge, a long, and a clear path (Patch 198)."""
+    if not res.get("hubs"):
+        return None
+    pend = next((t for t in res["trades"] if t["outcome"] == "pending" and t["hub"] is res["hubs"][-1]), None)
+    if pend is None:
+        return None
+    i0, d = pend["i0"], pend["direction"]
+    k = len(c4) - 1 - i0
+    if not 1 <= k <= engine.RETEST_MAX:
+        return None
+    edge, j = pend["edge"], len(c4) - 1
+    if engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float), c4["High"].to_numpy(float),
+                           res["atr"].to_numpy(float), i0, d, edge, j) is not None:
+        return None
+    A0 = float(res["atr"].iloc[i0])
+    touched = (float(c4["Low"].iloc[j]) <= edge + engine.RETEST_TOUCH * A0) if d == 1 else \
+              (float(c4["High"].iloc[j]) >= edge - engine.RETEST_TOUCH * A0)
+    left = engine.RETEST_MAX - k
+    if not touched or left <= 0:
+        return None
+    Aj = float(res["atr"].iloc[j])
+    g = engine.retest_grade(pend, edge, Aj)
+    clear = bool(g["is_a"]) and d == 1 and _clear_path_at(c4, res, pend, j, edge, Aj)
+    return dict(d=d, edge=float(edge), target=float(pend["target"]), shelf=bool(pend.get("shelf")), k=k, left=left,
+                is_a=bool(g["is_a"]), clear=clear, stop=float(g["stop"]), breakout=c4.index[i0].isoformat(), candle=c4.index[j])
+
+
 def strength_line(c4: pd.DataFrame, res: dict, i: int, d: int, edge: float, close: float) -> str:
     """'Strength: 💪 Strong breakout (volume 1.6× normal, closed 0.35 ATR past the edge)'"""
     g = engine.break_strength(c4, res["atr"], i, d, edge, close)

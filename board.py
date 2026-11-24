@@ -51,6 +51,7 @@ def rules_start() -> str:
     return v
 
 
+FRESH_RT: list[dict] = []    # Nov 24: stocks back at the edge (Retesting now) during this sweep, for board retest alerts
 FRESH_A: list[dict] = []     # A setups confirmed on the latest candle during this sweep (for the "every A setup" alert)
 
 
@@ -344,6 +345,7 @@ def _scan_board() -> int:
     if True:
         watch = {r["symbol"] for r in db.list_tickers()}
         FRESH_A.clear()
+        FRESH_RT.clear()
         syms = sorted(set(universe.board_universe()) | watch)
         start = pd.Timestamp(record_start())
         rules_start_ts = pd.Timestamp(rules_start())
@@ -393,6 +395,12 @@ def _scan_board() -> int:
                     if rg:
                         rg.update(index=REGIME_INDEX, days=REGIME_DAYS, as_of=pd.Timestamp.now(tz=engine.NY).isoformat())
                         db.set_setting("regime", json.dumps(rg))
+                try:      # Nov 24: the board's Retesting-now moment, for board retest alerts
+                    rn_ = scanner.retest_now(c4, res)
+                    if rn_:
+                        FRESH_RT.append(dict(symbol=sym, **rn_))
+                except Exception as e:
+                    log.warning("board retest check failed for %s: %s", sym, e)
                 bs = _board_status(c4, res)
                 if dv20 is not None:
                     bs["dv20"] = round(dv20)
@@ -457,6 +465,9 @@ def _scan_board() -> int:
             threading.Thread(target=sika_find.warm_board_grades, daemon=True).start()
         except Exception as ex:
             log.warning("sika grade warm-up failed: %s", ex)
+        if FRESH_RT:
+            import notify
+            threading.Thread(target=notify.board_retest_alert, args=(list(FRESH_RT),), daemon=True).start()
         if FRESH_A:
             import notify
             threading.Thread(target=notify.every_a_alert, args=(list(FRESH_A),), daemon=True).start()
