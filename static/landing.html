@@ -1632,7 +1632,7 @@ window.nsStamp = (s) => { if (!s) return ""; const d = new Date(String(s).replac
 // Nav glow: active landing section (Patch 101).
 (function () {
   const links = Array.from(document.querySelectorAll(".navlinks a[href^='#']"))
-     .filter(a => ["#how", "#setups", "#record", "#discipline", "#faq"].includes(a.getAttribute("href")));
+     .filter(a => ["#how", "#setups", "#record", "#discipline", "#cinema", "#faq"].includes(a.getAttribute("href")));
   if (!links.length) return;
   const set = id => links.forEach(a => a.classList.toggle("on", a.getAttribute("href") === id));
   links.forEach(a => a.addEventListener("click", () => set(a.getAttribute("href"))));
