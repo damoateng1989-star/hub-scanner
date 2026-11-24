@@ -97,7 +97,7 @@ html[data-theme="light"] .dw-tb { background: rgba(255,255,255,.95); border-colo
 .mp-mom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 2px; font-size: 13px; color: #8a90a0; }
 .mp-mom:empty { display: none; }
 .mp-mom .c { font: 500 12.5px var(--mono); border: 1px solid var(--line, #292A2D); border-radius: 10px; padding: 5px 10px; color: #9AA0AC; } .mp-mom .c b { color: #E9EBEF; font-weight: 600; margin-left: 4px; }
-.mp-lvchip { position: absolute; left: 12px; bottom: 30%; z-index: 5; border: 1px solid #3a3d45; background: rgba(21,23,28,.9); color: #C9CED8; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 8px; cursor: pointer; }
+.mp-lvchip { position: absolute; left: 50%; transform: translateX(-50%); bottom: 26%; z-index: 5; border: 1px solid #3a3d45; background: rgba(21,23,28,.9); color: #C9CED8; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 8px; cursor: pointer; }
 .mp-ticks { position: absolute; inset: 0; pointer-events: none; z-index: 3; } .mp-ticks i { position: absolute; width: 8px; height: 2px; background: #8a90a0; pointer-events: auto; }
 html[data-theme="light"] .mp-more { background: #fff; border-color: #DCE1E8; } html[data-theme="light"] .mp-more button { color: #1b2230; }
 @media (max-width: 560px) { .mp-ctop.mp-ctop1 { gap: 4px; overflow-x: auto; scrollbar-width: none; } .mp-ctop1 .mp-ctsp { display: none; }
@@ -7278,24 +7278,24 @@ function mapVolProfile(chart, series, D, light) {
         if (!bins[k]) continue;
         const w = bins[k] / max * maxW;
         g.fillStyle = k === poc ? "rgba(168,156,214,.95)" : tone;
-        g.fillRect(W - w, top, w, h);
+        g.fillRect(0, top, w, h);
       }
       g.fillStyle = light ? "rgba(13,17,23,.5)" : "rgba(200,206,216,.8)";          // VAH / VAL: ticks just left of the profile
-      for (const k of [hi2, lo2]) if (rowY[k]) g.fillRect(W - maxW - 12, rowY[k][0] + rowY[k][1] / 2 - .75, 8, 1.5);
+      for (const k of [hi2, lo2]) if (rowY[k]) g.fillRect(maxW + 4, rowY[k][0] + rowY[k][1] / 2 - .75, 8, 1.5);
       const yp = series.priceToCoordinate(pocPx); if (yp == null) return;
-      const pw = bins[poc] / max * maxW, edge = W - pw - 4;
+      const pw = bins[poc] / max * maxW, edge = pw + 4;      // Nov 24 (owner): the profile on the LEFT edge
       g.font = '700 10px "JetBrains Mono", ui-monospace, monospace';
       if (inHub) {                                         // the notch: part of the hub's story, so no line
-        const x = edge - 6; g.fillStyle = LAV; g.beginPath(); g.moveTo(x, yp - 5); g.lineTo(x + 5, yp); g.lineTo(x, yp + 5); g.lineTo(x - 5, yp); g.closePath(); g.fill();
+        const x = edge + 6; g.fillStyle = LAV; g.beginPath(); g.moveTo(x, yp - 5); g.lineTo(x + 5, yp); g.lineTo(x, yp + 5); g.lineTo(x - 5, yp); g.closePath(); g.fill();
         const t = "POC " + money(pocPx), tw = g.measureText(t).width + 8;
-        g.fillStyle = LAVBG; g.fillRect(x - 10 - tw, yp - 8, tw, 16); g.fillStyle = LAV; g.fillText(t, x - 6 - tw, yp + 3.5);
+        g.fillStyle = LAVBG; g.fillRect(x + 10, yp - 8, tw, 16); g.fillStyle = LAV; g.fillText(t, x + 14, yp + 3.5);
         return;
       }
       g.save(); g.strokeStyle = "rgba(168,156,214,.7)"; g.lineWidth = 1; g.setLineDash([5, 4]);   // the magnet line across the candles
-      g.beginPath(); g.moveTo(0, Math.round(yp) + .5); g.lineTo(edge, Math.round(yp) + .5); g.stroke(); g.restore();
+      g.beginPath(); g.moveTo(edge, Math.round(yp) + .5); g.lineTo(W, Math.round(yp) + .5); g.stroke(); g.restore();
       const l1 = "POC " + money(pocPx), l2 = `${name}${dist != null ? ` · ${dist >= 0 ? "+" : "−"}${Math.abs(dist).toFixed(1)}%` : ""}`;
       const w1 = g.measureText(l1).width; g.font = '500 8px "JetBrains Mono", ui-monospace, monospace'; const w2 = g.measureText(l2).width;
-      const bw = Math.max(w1, w2) + 12, bh = 26, bx = Math.max(4, edge - bw - 6), by = Math.max(2, Math.min(H - bh - 2, yp - bh / 2));
+      const bw = Math.max(w1, w2) + 12, bh = 26, bx = W - bw - 4, by = Math.max(2, Math.min(H - bh - 2, yp - bh / 2));
       g.fillStyle = LAVBG; if (g.roundRect) { g.beginPath(); g.roundRect(bx, by, bw, bh, 5); g.fill(); } else g.fillRect(bx, by, bw, bh);
       g.fillStyle = LAV; g.font = '700 10px "JetBrains Mono", ui-monospace, monospace'; g.fillText(l1, bx + 6, by + 11);
       g.fillStyle = "rgba(168,156,214,.75)"; g.font = '500 8px "JetBrains Mono", ui-monospace, monospace'; g.fillText(l2, bx + 6, by + 21);
