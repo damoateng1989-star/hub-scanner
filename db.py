@@ -712,3 +712,24 @@ def setups_month(days: int = 30) -> dict:
         items.append(dict(symbol=sym, at=created, grade="A+" if plus else g or "watch", long=long_, known=bool(lg)))
     return dict(days=days, breakouts=brk, retests=len(rows), a_long=a, a_plus=sum(1 for x in items if x["grade"] == "A+"),
                 tracking_since=first_log, recent=[x for x in items if x["grade"] in ("A+", "A")][:12])
+
+
+# --- chart drawings (Nov 24, Pro): a member's own lines, boxes and notes on a stock's chart, saved on the account
+def _drawings_table():
+    _run("CREATE TABLE IF NOT EXISTS chart_drawings (user_id INTEGER NOT NULL, symbol TEXT NOT NULL, data TEXT NOT NULL, "
+         "updated_at TEXT, PRIMARY KEY (user_id, symbol))")
+
+
+def get_drawings(uid: int, symbol: str) -> str:
+    _drawings_table()
+    r = _run("SELECT data FROM chart_drawings WHERE user_id=? AND symbol=?", (uid, symbol)).fetchone()
+    return r["data"] if r else "[]"
+
+
+def set_drawings(uid: int, symbol: str, data: str):
+    _drawings_table()
+    if data == "[]":
+        _run("DELETE FROM chart_drawings WHERE user_id=? AND symbol=?", (uid, symbol))
+    else:
+        _run("INSERT INTO chart_drawings (user_id, symbol, data, updated_at) VALUES (?,?,?,datetime('now')) "
+             "ON CONFLICT(user_id, symbol) DO UPDATE SET data=excluded.data, updated_at=excluded.updated_at", (uid, symbol, data))

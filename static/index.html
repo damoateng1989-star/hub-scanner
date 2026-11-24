@@ -66,6 +66,19 @@ html[data-theme="light"] .hm-rest { background: rgba(40,90,150,.08) !important; 
 .foc-rp .cap { margin-top: 8px; font-size: 13.5px; line-height: 1.5; min-height: 40px; }
 .foc-rp .cap b { font-family: var(--mono); }
 .foc-rp .log { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* Nov 24: chart drawings (Pro) */
+.dw-svg { position: absolute; left: 0; top: 0; z-index: 4; overflow: visible; pointer-events: none; }
+.dw-svg.act { pointer-events: auto; cursor: crosshair; }
+.dw-svg.erase .dw-s { pointer-events: stroke; cursor: not-allowed; } .dw-svg.erase .dw-f { pointer-events: all; cursor: not-allowed; }
+.dw-svg.erase .dw-s:hover, .dw-svg.erase .dw-f:hover { opacity: .45; }
+.dw-tb { position: absolute; left: 8px; top: 64px; z-index: 6; display: flex; flex-direction: column; gap: 5px; background: rgba(21,23,28,.92); border: 1px solid #2c2f36; border-radius: 12px; padding: 5px; }
+.dw-tb button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid transparent; background: transparent; color: #C9CED8; font: 600 15px var(--sans, Inter), sans-serif; cursor: pointer; }
+.dw-tb button.on { border-color: #7C93FF; background: rgba(124,147,255,.22); color: #9DB0FF; }
+.dw-tb .sw { width: 34px; height: 18px; display: flex; gap: 3px; justify-content: center; align-items: center; }
+.dw-tb .sw i { width: 9px; height: 9px; border-radius: 50%; cursor: pointer; outline-offset: 1px; } .dw-tb .sw i.on { outline: 2px solid #E9EBEF; }
+.dw-hint { position: absolute; left: 56px; top: 64px; z-index: 6; background: rgba(124,147,255,.18); border: 1px solid #7C93FF; color: #C9D3FF; font: 500 12.5px var(--sans, Inter), sans-serif; padding: 5px 10px; border-radius: 8px; pointer-events: none; white-space: nowrap; }
+html[data-theme="light"] .dw-tb { background: rgba(255,255,255,.95); border-color: #DCE1E8; } html[data-theme="light"] .dw-tb button { color: #3a4250; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -6892,6 +6905,111 @@ function mapCloudCalc(full) {
 }
 // the candle series' data: the candles, plus 26 empty future slots when the cloud is on (room for the projection)
 
+
+// ---------------------------------------------------------------- Nov 24: drawing on the chart (Pro, saved on the account)
+// A drawing keeps its price and its moment in time, so it stays put through zooms, timeframes and Extended on/off.
+const DRAW = {open: false, tool: null, color: "#F5A623", cache: {}, pend: null, saveT: null, ctx: null};
+const DRAW_COLORS = ["#F5A623", "#E5466F", "#7C93FF", "#E9EBEF"];
+const DRAW_TOOLS = [["h", "─", "Horizontal line", "Tap a price to place a line"], ["line", "╱", "Trend line", "Drag from one point to another (or tap twice)"],
+  ["box", "▭", "Box", "Drag across the zone (or tap two corners)"], ["text", "T", "Text note", "Tap where the note goes"], ["erase", "⌫", "Eraser", "Tap a drawing to remove it"]];
+function drawToggle() { DRAW.open = !DRAW.open; DRAW.tool = null; DRAW.pend = null; paintMap(); }
+async function drawLoad(sym) {
+  if (DRAW.cache[sym]) return DRAW.cache[sym];
+  try { DRAW.cache[sym] = (await api("/api/drawings/" + encodeURIComponent(sym))).drawings || []; } catch (e) { DRAW.cache[sym] = []; }
+  return DRAW.cache[sym];
+}
+function drawSave(sym) {
+  clearTimeout(DRAW.saveT);
+  DRAW.saveT = setTimeout(() => api("/api/drawings/" + encodeURIComponent(sym), {method: "PUT", body: JSON.stringify({drawings: DRAW.cache[sym] || []})})
+    .catch(e => toast(friendly(e))), 500);
+}
+function drawAttach(chart, series, D, host) {
+  if (!(isPro() || (ME && ME.is_admin)) || !D || !D.P) return;
+  const sym = D.P.sym, el = chart.chartElement(); el.style.position = "relative";
+  host.querySelectorAll(".dw-tb, .dw-hint").forEach(x => x.remove());
+  if (chart.__dw && chart.__dw.sym === sym) { drawToolbar(chart.__dw); chart.__dw.draw(); return; }   // same chart moved into a new panel
+  host.querySelectorAll(".dw-svg").forEach(x => x.remove());
+  const T = D.cs.filter(x => Number.isFinite(+x.time)).map(x => +x.time);
+  const ts = chart.timeScale();
+  const NS = "http://www.w3.org/2000/svg", svg = document.createElementNS(NS, "svg"); svg.setAttribute("class", "dw-svg"); el.appendChild(svg);
+  const ctx = DRAW.ctx = chart.__dw = {chart, series, sym, svg, T, lines: [], host};
+  // time <-> x through the bar index (works for any time, on any timeframe)
+  const logicalOf = (t) => { if (!T.length) return null; if (t <= T[0]) return (t - T[0]) / Math.max(1, T[1] - T[0]);
+    let lo = 0, hi = T.length - 1; if (t >= T[hi]) return hi + (t - T[hi]) / Math.max(1, T[hi] - T[hi - 1]);
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (T[m] <= t) lo = m; else hi = m; } return lo + (t - T[lo]) / Math.max(1, T[hi] - T[lo]); };
+  const xOf = (t) => { const l = logicalOf(t); if (l == null) return null;       // the library only maps whole bar numbers: interpolate
+    const i = Math.floor(l), f = l - i, x0 = ts.logicalToCoordinate(i), x1 = ts.logicalToCoordinate(i + 1);
+    return x0 == null ? null : x1 == null ? x0 : x0 + f * (x1 - x0); };
+  const yOf = (p) => series.priceToCoordinate(p);
+  const ptAt = (ev) => { const r = svg.getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top, l = ts.coordinateToLogical(x);
+    if (l == null) return null; const i = Math.max(0, Math.min(T.length - 1, Math.floor(l))), f = l - i, nxt = T[i + 1] ?? (T[i] + (T[i] - (T[i - 1] ?? T[i] - 3600)));
+    return {time: Math.round(T[i] + f * (nxt - T[i])), price: +(+series.coordinateToPrice(y)).toFixed(2)}; };
+  const list = () => DRAW.cache[sym] || [];
+  const esc2 = (t) => String(t).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+  const draw = () => { if (!el.isConnected || chart.__dw !== ctx) return; try { drawNow(); } catch (e) {} };
+  const drawNow = () => {
+    const pane = chart.panes()[0], H = pane ? pane.getHeight() : el.clientHeight, W = ts.width();
+    svg.setAttribute("width", W); svg.setAttribute("height", H);
+    ctx.lines.forEach(pl => { try { series.removePriceLine(pl); } catch (e) {} }); ctx.lines = [];
+    let out = "";
+    list().forEach((d, k) => { const c = d.c || "#F5A623";
+      if (d.t === "h") { ctx.lines.push(series.createPriceLine({price: d.p, color: c, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: d.text || "MY LEVEL"}));
+        const y = yOf(d.p); if (y != null) out += `<line class="dw-s" data-k="${k}" x1="0" x2="${W}" y1="${y}" y2="${y}" stroke="transparent" stroke-width="12"/>`; return; }
+      if (d.t === "text") { const x = xOf(d.a.time), y = yOf(d.a.price); if (x == null || y == null) return; const w = 14 + String(d.text).length * 7;
+        out += `<g class="dw-f" data-k="${k}"><rect x="${x}" y="${y - 13}" width="${w}" height="22" rx="5" fill="rgba(21,23,28,.9)" stroke="${c}"/><text x="${x + 7}" y="${y + 2}" fill="#E9EBEF" font-size="12" font-family="Inter,sans-serif">${esc2(d.text)}</text></g>`; return; }
+      const x1 = xOf(d.a.time), y1 = yOf(d.a.price), x2 = xOf(d.b.time), y2 = yOf(d.b.price); if ([x1, y1, x2, y2].some(v => v == null)) return;
+      if (d.t === "line") out += `<line class="dw-s" data-k="${k}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${c}" stroke-width="2" style="stroke-width:2"/><circle cx="${x1}" cy="${y1}" r="3.5" fill="${c}"/><circle cx="${x2}" cy="${y2}" r="3.5" fill="${c}"/>`;
+      else out += `<rect class="dw-f" data-k="${k}" x="${Math.min(x1, x2)}" y="${Math.min(y1, y2)}" width="${Math.abs(x2 - x1)}" height="${Math.abs(y2 - y1)}" fill="${c}22" stroke="${c}" stroke-width="1.5" rx="3"/>`; });
+    if (DRAW.pend && DRAW.pend.b) { const p = DRAW.pend, x1 = xOf(p.a.time), y1 = yOf(p.a.price), x2 = xOf(p.b.time), y2 = yOf(p.b.price);
+      if (![x1, y1, x2, y2].some(v => v == null)) out += p.t === "line" ? `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${DRAW.color}" stroke-width="2" stroke-dasharray="5 4"/>`
+        : `<rect x="${Math.min(x1, x2)}" y="${Math.min(y1, y2)}" width="${Math.abs(x2 - x1)}" height="${Math.abs(y2 - y1)}" fill="${DRAW.color}18" stroke="${DRAW.color}" stroke-dasharray="5 4" rx="3"/>`; }
+    svg.innerHTML = out;
+    svg.setAttribute("class", "dw-svg" + (DRAW.open && DRAW.tool && DRAW.tool !== "erase" ? " act" : "") + (DRAW.open && DRAW.tool === "erase" ? " erase" : ""));
+  };
+  ctx.draw = draw;
+  ts.subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
+  new ResizeObserver(() => requestAnimationFrame(draw)).observe(el);
+  const commit = (d) => { (DRAW.cache[sym] = list()).push(d); drawSave(sym); draw(); };
+  svg.addEventListener("pointerdown", (ev) => {
+    if (!DRAW.open || !DRAW.tool) return;
+    if (DRAW.tool === "erase") { const k = ev.target.closest("[data-k]"); if (k) { list().splice(+k.dataset.k, 1); drawSave(sym); draw(); } return; }
+    const p = ptAt(ev); if (!p) return; ev.preventDefault();
+    if (DRAW.tool === "h") { commit({t: "h", p: p.price, c: DRAW.color}); return; }
+    if (DRAW.tool === "text") { const txt = (prompt("Note text", "") || "").trim().slice(0, 40); if (txt) commit({t: "text", a: p, text: txt, c: DRAW.color}); return; }
+    if (DRAW.pend && DRAW.pend.tap) { DRAW.pend.b = p; const d = DRAW.pend; DRAW.pend = null; commit({t: d.t, a: d.a, b: d.b, c: DRAW.color}); return; }
+    DRAW.pend = {t: DRAW.tool, a: p, b: null, x0: ev.clientX, y0: ev.clientY}; svg.setPointerCapture(ev.pointerId);
+  });
+  svg.addEventListener("pointermove", (ev) => { if (!DRAW.pend) return; const p = ptAt(ev); if (p) { DRAW.pend.b = p; draw(); } });
+  svg.addEventListener("pointerup", (ev) => { const P = DRAW.pend; if (!P || P.tap) return;
+    if (Math.hypot(ev.clientX - P.x0, ev.clientY - P.y0) < 8) { P.tap = true; P.b = null; draw(); return; }      // a tap: wait for the second point
+    const p = ptAt(ev) || P.b; DRAW.pend = null; if (p) commit({t: P.t, a: P.a, b: p, c: DRAW.color}); });
+  ctx.list = list; drawToolbar(ctx);
+  try { ts.subscribeSizeChange(() => requestAnimationFrame(draw)); } catch (e) {}
+  const later = () => { requestAnimationFrame(() => requestAnimationFrame(draw)); setTimeout(draw, 350); setTimeout(draw, 1200); };   // after the chart settles its size and range
+  if (DRAW.cache[sym]) later(); else drawLoad(sym).then(() => { if (chart.__dw === ctx) later(); });
+}
+function drawToolbar(ctx) {
+  const {host, sym, draw, list} = ctx; host.querySelectorAll(".dw-tb, .dw-hint").forEach(x => x.remove());
+  ctx.host = host; DRAW.ctx = ctx;
+  if (DRAW.open) {
+    const tb = document.createElement("div"); tb.className = "dw-tb";
+    tb.innerHTML = DRAW_TOOLS.map(([k, g, t]) => `<button type="button" class="${DRAW.tool === k ? "on" : ""}" title="${t}" aria-label="${t}" data-tool="${k}">${g}</button>`).join("")
+      + `<button type="button" title="Clear all" aria-label="Clear all drawings" data-clear="1">🗑</button>`
+      + `<div class="sw">${DRAW_COLORS.slice(0, 2).map(c => `<i class="${DRAW.color === c ? "on" : ""}" style="background:${c}" data-c="${c}"></i>`).join("")}</div>`
+      + `<div class="sw">${DRAW_COLORS.slice(2).map(c => `<i class="${DRAW.color === c ? "on" : ""}" style="background:${c}" data-c="${c}"></i>`).join("")}</div>`;
+    tb.addEventListener("click", (ev) => { const b = ev.target.closest("[data-tool],[data-clear],[data-c]"); if (!b) return;
+      if (b.dataset.tool) { DRAW.tool = DRAW.tool === b.dataset.tool ? null : b.dataset.tool; DRAW.pend = null; }
+      else if (b.dataset.clear) { if (list().length && confirm(`Remove all ${list().length} drawings on ${sym}?`)) { DRAW.cache[sym] = []; drawSave(sym); } }
+      else if (b.dataset.c) DRAW.color = b.dataset.c;
+      tb.querySelectorAll("[data-tool]").forEach(x => x.classList.toggle("on", x.dataset.tool === DRAW.tool));
+      tb.querySelectorAll("[data-c]").forEach(x => x.classList.toggle("on", x.dataset.c === DRAW.color));
+      hint(); draw(); });
+    host.appendChild(tb);
+    const hn = document.createElement("div"); hn.className = "dw-hint"; host.appendChild(hn);
+    const hint = () => { const t = DRAW_TOOLS.find(x => x[0] === DRAW.tool); hn.textContent = t ? t[3] : "Pick a tool"; hn.hidden = false; };
+    hint();
+  }
+}
 // ---------------------------------------------------------------- Nov 24: VWAP, RSI and MACD on the chart (display only)
 const indPref = () => { try { return Object.assign({vwap: true, rsi: true, macd: true}, JSON.parse(localStorage.getItem("ns-ind") || "{}")); } catch (e) { return {vwap: true, rsi: true, macd: true}; } };
 function setInd(k, on) { const p = indPref(); p[k] = !!on; try { localStorage.setItem("ns-ind", JSON.stringify(p)); } catch (e) {} if (typeof paintMap === "function") paintMap(); }
@@ -7075,6 +7193,7 @@ function initLightweightMapChart() {
       if (MAP_LWC_FOOT) host.after(MAP_LWC_FOOT);
       if (window.MAP_LWC_LEG && host.parentElement) host.parentElement.appendChild(window.MAP_LWC_LEG);   // the corner legend moves with the chart
       MAP_LWC_HOSTEL = host;
+      if (MAP_LWC_CHART.__dw) { MAP_LWC_CHART.__dw.host = host; try { drawToolbar(MAP_LWC_CHART.__dw); MAP_LWC_CHART.__dw.draw(); } catch (e) {} }
       MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390});
       MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => { MAP_VP_DRAW && MAP_VP_DRAW(); MAP_CLOUD_DRAW && MAP_CLOUD_DRAW(); }); } });
       MAP_LWC_RO.observe(host);
@@ -7143,6 +7262,7 @@ function initLightweightMapChart() {
     vol.priceScale().applyOptions({scaleMargins:{top:.12,bottom:0},visible:false});
     vol.setData(D.cs.filter(x=>Number.isFinite(+x.time)).map(x=>({time:+x.time,value:Math.max(0,+x.volume||0),color:(+x.close >= +x.open ? up : down)+"99"})));
     try { mapIndicators(chart, candles, D, IND, up, down); } catch (e) { console.warn("indicators", e); }
+    try { drawAttach(chart, candles, D, host); } catch (e) { console.warn("drawings", e); }
     const mapPriceLines = [];
     // Levels to watch: a line that sits on a stack of 2+ kinds of level gets an "N×" tag on its label
     const LVd = LEVELS[D.P.sym] && LEVELS[D.P.sym].d, LVs = LVd ? [...LVd.above, ...LVd.below].filter(x => x.kinds >= 2) : [], LVtol = LVd ? LVd.tolerance : 0, LVused = new Set();
@@ -7592,7 +7712,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<button class="mp-planbtn mp-stylebtn" onclick="chartStyleOpen(this, event)" aria-haspopup="dialog">🎨 Style</button><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div>${["1h", "2h", "3h"].includes(MAP_TF) && !rp ? `<div class="mp-rng mp-ext" role="group" aria-label="Trading hours"><button class="${MAP_EXT ? "" : "on"}" onclick="mapExtSet(false)" title="Market hours, 9:30 AM to 4:00 PM ET">Regular</button><button class="${MAP_EXT ? "on" : ""}" onclick="mapExtSet(true)" title="Adds pre-market (4:00 to 9:30 AM) and after hours (4:00 to 8:00 PM). Display only.">Extended</button></div>` : ""}${cloudTf && !rp ? (cloudOk ? `<button class="mp-planbtn mp-cloudbtn ${cloudOn ? "on" : ""}" onclick="mapCloudToggle()" aria-pressed="${cloudOn}">☁ Cloud</button>` : `<button class="mp-planbtn mp-cloudbtn" disabled title="Not enough history for the cloud">☁ Cloud</button>`) : ""}<div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:rgba(160,166,178,.45)"></i>Shaded: pre-market 4:00–9:30 AM and after hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : "MARKET CLOSED"}</span></div><div class="mp-ctop">${rp ? "" : `<button class="mp-planbtn" onclick="mapReplayStart()" ${chart ? "" : "disabled"}>▶ Replay</button>`}${canPlan && !rp ? `<button class="mp-planbtn ${wi ? "on" : ""}" onclick="mapPlanToggle()">${wi ? "✓ Done" : "✎ Plan my trade"}</button>` : ""}${canPlan && !rp ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade this</button>` : ""}<button class="mp-planbtn mp-stylebtn" onclick="chartStyleOpen(this, event)" aria-haspopup="dialog">🎨 Style</button>${!rp && (isPro() || (ME && ME.is_admin)) ? `<button class="mp-planbtn ${DRAW.open ? "on" : ""}" onclick="drawToggle()" aria-pressed="${DRAW.open}">✏ Draw</button>` : ""}<div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div>${["1h", "2h", "3h"].includes(MAP_TF) && !rp ? `<div class="mp-rng mp-ext" role="group" aria-label="Trading hours"><button class="${MAP_EXT ? "" : "on"}" onclick="mapExtSet(false)" title="Market hours, 9:30 AM to 4:00 PM ET">Regular</button><button class="${MAP_EXT ? "on" : ""}" onclick="mapExtSet(true)" title="Adds pre-market (4:00 to 9:30 AM) and after hours (4:00 to 8:00 PM). Display only.">Extended</button></div>` : ""}${cloudTf && !rp ? (cloudOk ? `<button class="mp-planbtn mp-cloudbtn ${cloudOn ? "on" : ""}" onclick="mapCloudToggle()" aria-pressed="${cloudOn}">☁ Cloud</button>` : `<button class="mp-planbtn mp-cloudbtn" disabled title="Not enough history for the cloud">☁ Cloud</button>`) : ""}<div class="mp-rng">${mapRanges().map(([l, k]) => `<button class="${MAP_N === k ? "on" : ""}" onclick="mapRange(${k})">${l}</button>`).join("")}</div></div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:rgba(160,166,178,.45)"></i>Shaded: pre-market 4:00–9:30 AM and after hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}<div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>

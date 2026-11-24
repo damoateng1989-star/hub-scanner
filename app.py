@@ -1416,6 +1416,40 @@ async def public_hero_chart():
     )
 
 
+# ---------------------------------------------------------------- chart drawings (Nov 24): Pro, saved on the account
+def _draw_sym(symbol: str) -> str:
+    s = (symbol or "").upper().strip()
+    if not s or len(s) > 12 or not all(c.isalnum() or c in ".-" for c in s):
+        raise HTTPException(400, "bad symbol")
+    return s
+
+
+@app.get("/api/drawings/{symbol}")
+def drawings_get(symbol: str, u: dict = User):
+    if not u or not auth.is_pro(u):
+        raise HTTPException(403, "Drawing on the chart is a Pro feature")
+    return {"drawings": json.loads(db.get_drawings(u["id"], _draw_sym(symbol)))}
+
+
+class DrawBody(BaseModel):
+    drawings: list = []
+
+
+@app.put("/api/drawings/{symbol}")
+def drawings_put(symbol: str, body: DrawBody, u: dict = User):
+    if not u or not auth.is_pro(u):
+        raise HTTPException(403, "Drawing on the chart is a Pro feature")
+    ok = []
+    for d in body.drawings[:60]:                         # keep it small: up to 60 drawings a stock, known shapes only
+        if isinstance(d, dict) and d.get("t") in ("h", "line", "box", "text"):
+            ok.append({k: d[k] for k in ("t", "p", "a", "b", "text", "c") if k in d})
+    data = json.dumps(ok)
+    if len(data) > 40000:
+        raise HTTPException(400, "Too many drawings on this chart")
+    db.set_drawings(u["id"], _draw_sym(symbol), data)
+    return {"ok": True, "n": len(ok)}
+
+
 @app.get("/api/record")
 def record_data(pattern: str = "hub", u: dict = User):
     if pattern != board.RULES and pattern not in patterns.KINDS:
