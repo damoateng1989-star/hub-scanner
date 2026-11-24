@@ -2070,6 +2070,15 @@ def futures_orb_take(body: OrbTake, u: dict = Admin):
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/admin/futures-orb/chart")
+def futures_orb_chart(product: str = "MNQ", days: int = 10, u: dict = Admin):
+    import futures_orb
+    try:
+        return futures_orb.chart(product, days)
+    except Exception as e:
+        raise HTTPException(502, f"Couldn't load the futures chart: {str(e)[:160]}")
+
+
 @app.post("/api/admin/futures-orb/check")
 def futures_orb_check(u: dict = Admin):
     import futures_orb

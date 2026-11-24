@@ -32,6 +32,31 @@ html[data-theme="light"] .hm-rest { background: rgba(40,90,150,.08) !important; 
 .fo-card .fo-take { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
 .fo-card .fo-take input { width: 70px; }
 @media (max-width: 600px) { .fo-card .fo-plan { grid-template-columns: repeat(2, 1fr); } }
+
+/* Nov 23: the MNQ chart page (like a stock's chart panel) */
+.foc { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin: 12px 0; }
+.foc-top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.foc-top .sym { font: 700 26px/1.1 var(--sans); } .foc-top .px { font: 600 20px var(--mono); }
+.foc-top .ct { font: 500 12px var(--mono); color: var(--muted); }
+.foc-top .mk { margin-left: auto; font: 500 11.5px var(--mono); color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 10px; }
+.foc-bar { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 8px; }
+.foc-seg { display: inline-flex; background: var(--sunk); border-radius: 10px; padding: 3px; gap: 2px; }
+.foc-seg button { border: 0; background: transparent; color: var(--muted); font: 600 12.5px var(--mono); padding: 5px 10px; border-radius: 8px; cursor: pointer; }
+.foc-seg button.on { background: color-mix(in srgb, #7C93FF 22%, transparent); color: #9DB0FF; }
+.foc-host { height: 400px; border-radius: 10px; overflow: hidden; }
+.foc-strip { display: grid; grid-template-columns: 1.4fr repeat(4, 1fr); gap: 0; margin-top: 12px; border: 1px solid var(--line); border-radius: 12px; }
+.foc-strip > div { padding: 10px 12px; border-left: 1px solid var(--line); min-width: 0; } .foc-strip > div:first-child { border-left: 0; }
+.foc-strip .k { font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.foc-strip .v { font: 600 17px var(--mono); margin-top: 3px; } .foc-strip .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.foc-strip .st b { display: block; font: 600 15px var(--sans); } .foc-strip .st { border-left: 3px solid var(--stall); }
+.foc-j { display: flex; justify-content: space-between; margin: 16px 6px 2px; position: relative; }
+.foc-j::before { content: ""; position: absolute; left: 6%; right: 6%; top: 15px; height: 2px; background: var(--line); }
+.foc-j div { position: relative; text-align: center; flex: 1; font-size: 12px; color: var(--faint); }
+.foc-j i { display: grid; place-items: center; width: 30px; height: 30px; margin: 0 auto 6px; border-radius: 50%; background: var(--sunk); border: 2px solid var(--line); font-style: normal; font-size: 13px; }
+.foc-j div.done { color: var(--muted); } .foc-j div.done i { border-color: color-mix(in srgb, #00C898 55%, var(--line)); color: #00C898; }
+.foc-j div.on { color: var(--ink); } .foc-j div.on i { border-color: #00C898; box-shadow: 0 0 0 4px color-mix(in srgb, #00C898 20%, transparent); color: #00C898; }
+.foc .u { color: #00C898; } .foc .d { color: #F00060; } .foc .fo-k { font-family: var(--mono); font-size: 10.5px; letter-spacing: .12em; color: var(--muted); text-transform: uppercase; }
+@media (max-width: 700px) { .foc-strip { grid-template-columns: 1fr 1fr; } .foc-strip > div { border-left: 0; border-top: 1px solid var(--line); } .foc-strip > div:first-child { grid-column: 1 / -1; border-top: 0; } .foc-host { height: 320px; } }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -3261,6 +3286,7 @@ html[data-theme="light"] .ns-sugg { box-shadow: 0 10px 28px rgba(0,0,0,.12); }
 </section>
 <section data-view="futures" hidden>
   <div class="vh"><h1>Futures <em>opening range.</em></h1><p>MNQ, live forward test. Only you can see this page; nothing is traded.</p></div>
+  <div class="foc" id="foChartBox"></div>
   <div class="fo-card" id="futOrbPage"><div class="loading"><span class="spin"></span>Loading…</div></div>
   <div class="acct" id="futOrbBox2"></div>
 </section>
@@ -4218,6 +4244,85 @@ async function memberBroker(uid, on) {
 }
 // ---------------------------------------------------------------- early access: invite codes (admin)
 
+
+// ---------------------------------------------------------------- Nov 23: the MNQ chart page
+const FOC = {tf: 30, days: 5, data: null, chart: null, key: null};
+const foEtOff = (() => { const cache = {}; return (sec) => { const k = Math.floor(sec / 86400); if (cache[k] == null) { const d = new Date(sec * 1000);
+  cache[k] = (new Date(d.toLocaleString("en-US", {timeZone: "America/New_York"})) - new Date(d.toLocaleString("en-US", {timeZone: "UTC"}))) / 1000; } return cache[k]; }; })();
+function foAgg(bars, tf) {      // bars: [utcSec, o, h, l, c, v] at 30 minutes -> 30m / 1H / 4H (4H from the 6 PM ET open), in ET clock seconds
+  const out = [], idx = new Map();
+  for (const b of bars) { const et = b[0] + foEtOff(b[0]); let k;
+    if (tf === 30) k = et; else if (tf === 60) k = et - (et % 3600); else { const s18 = et - 18 * 3600; k = s18 - (((s18 % 14400) + 14400) % 14400) + 18 * 3600; }
+    let c = idx.get(k); if (!c) { c = {time: k, open: b[1], high: b[2], low: b[3], close: b[4], v: 0}; idx.set(k, c); out.push(c); }
+    c.high = Math.max(c.high, b[2]); c.low = Math.min(c.low, b[3]); c.close = b[4]; c.v += b[5]; }
+  return out;
+}
+function foLevels() { const P = FO && FO.products && FO.products[0]; return P ? (P.today || null) : null; }
+async function foChartLoad(force) {
+  const box = $("foChartBox"); if (!box) return;
+  if (!box.innerHTML) box.innerHTML = `<div class="loading" style="padding:20px"><span class="spin"></span>Loading the MNQ chart…</div>`;
+  try { if (force || !FOC.data || FOC.key !== FOC.days) { FOC.data = await api(`/api/admin/futures-orb/chart?product=MNQ&days=${FOC.days + 2}`, {timeout: 60000}); FOC.key = FOC.days; } }
+  catch (e) { box.innerHTML = `<p class="fo-n" style="color:#F00060">${esc(friendly(e))}</p>`; return; }
+  foChartPaint();
+}
+function foChartPaint() {
+  const box = $("foChartBox"), D = FOC.data; if (!box || !D) return;
+  const t = foLevels(), bars = D.bars || [], last = bars.length ? bars[bars.length - 1][4] : null;
+  const st = t ? t.state : "none", d = t && t.entry ? (t.target > t.entry ? 1 : -1) : 0;
+  const now = etNow(), wk = now.getDay() > 0 && now.getDay() < 6, mins = now.getHours() * 60 + now.getMinutes();
+  const glob = wk && !(now.getDay() === 5 && mins >= 17 * 60) && !(mins >= 17 * 60 && mins < 18 * 60) || now.getDay() === 0 && mins >= 18 * 60;
+  const n = foNum, seg = (k, vals, cur) => `<span class="foc-seg">${vals.map(([v, l]) => `<button type="button" class="${v === cur ? "on" : ""}" onclick="FOC.${k}=${v};${k === "days" ? "foChartLoad()" : "foChartPaint()"}">${l}</button>`).join("")}</span>`;
+  const status = {set: ["Waiting for a break", "Price is inside the opening range."], long: ["In the trade · long", "Broke above the range on a 30-minute close."], short: ["In the trade · short", "Broke below the range on a 30-minute close."],
+    done: [t && t.how === "target" ? "Target hit ✓" : t && t.how === "stop" ? "Stopped out" : "Closed at 4 PM", "That was today's one trade."], nobreak: ["No trade today", "No 30-minute close outside the range before 2 PM."],
+    building: ["Range building", "9:30–10:30 ET sets the range."], nodata: ["No data today", "No futures data for today's session."]}[st] || ["Market closed", "Next range: 10:30 ET on the next market day."];
+  const trig = d ? [n(t.entry), `entered on the ${esc(String(t.entry_at || "").slice(11, 16))} close`] : t && t.hi != null ? [`${n(t.hi)} / ${n(t.lo)}`, "30-min close above / below"] : ["–", "set at 10:30 ET"];
+  const stop = d ? [n(t.stop), `range ${d === 1 ? "low" : "high"}`] : t && t.hi != null ? ["other side", "of the range"] : ["–", ""];
+  const tgt = d ? [n(t.target), `1R · ${foUsd(Math.abs(t.target - t.entry) * D.point_usd)} / contract`] : t && t.hi != null ? [`${n(t.hi + (t.hi - t.lo))} / ${n(t.lo - (t.hi - t.lo))}`, "about 1R from a break"] : ["–", ""];
+  const step = !t ? -1 : st === "building" ? 0 : st === "set" || st === "nobreak" ? 1 : st === "long" || st === "short" ? 2 : st === "done" ? 3 : -1;
+  const J = [["9:30", "Range building"], ["10:30", "Range set"], ["⚡", d === -1 ? "Broke below" : "Broke above"], ["⚑", "Target or stop"]];
+  box.innerHTML = `<div class="foc-top"><span class="sym">MNQ</span><span class="px">${last != null ? n(last) : "–"}</span><span class="ct">${esc(D.contract)} · Micro Nasdaq-100 · $${D.point_usd}/pt</span><span class="mk">● ${glob ? "Globex open" : "Market closed"}</span></div>
+    <div class="foc-bar">${seg("tf", [[30, "30m"], [60, "1H"], [240, "4H"]], FOC.tf)}${seg("days", [[2, "2D"], [5, "1W"], [10, "2W"]], FOC.days)}</div>
+    <div class="foc-host" id="focHost"></div>
+    ${D.trimmed ? `<div class="fo-n" style="margin-top:6px">${D.trimmed} bad print${D.trimmed > 1 ? "s" : ""} in the data trimmed (wicks far past the rest of their day).</div>` : ""}
+    <div class="foc-strip"><div class="st"><b>${esc(status[0])}</b><div class="s">${esc(status[1])}</div></div>
+      <div><div class="k">Last close</div><div class="v" style="color:#9DB0FF">${last != null ? n(last) : "–"}</div><div class="s">30-minute bar</div></div>
+      <div><div class="k">Trigger</div><div class="v" style="color:var(--stall)">${trig[0]}</div><div class="s">${trig[1]}</div></div>
+      <div><div class="k">Stop</div><div class="v d">${stop[0]}</div><div class="s">${stop[1]}</div></div>
+      <div><div class="k">Target</div><div class="v u">${tgt[0]}</div><div class="s">${tgt[1]}</div></div></div>
+    <div class="fo-k" style="margin-top:14px">Setup journey · opening range</div>
+    <div class="foc-j">${J.map((j, i) => `<div class="${i < step ? "done" : i === step ? "on" : ""}"><i>${j[0].length > 2 ? "◷" : j[0]}</i>${esc(j[0].length > 2 ? j[0] + " " + j[1] : j[1])}</div>`).join("")}</div>`;
+  const host = $("focHost"), L = window.LightweightCharts; if (!host || !L) return;
+  if (FOC.chart) { try { FOC.chart.remove(); } catch (e) {} FOC.chart = null; }
+  const cutoff = (bars.length ? bars[bars.length - 1][0] : 0) - FOC.days * 86400;
+  const data = foAgg(bars.filter(b => b[0] >= cutoff), FOC.tf);
+  const light = document.documentElement.dataset.theme === "light", TH = chartTheme();
+  const bg = TH ? TH.bg : light ? "#F8F9FD" : "#121418", grid = TH ? TH.grid : light ? "rgba(13,17,23,.07)" : "rgba(255,255,255,.07)";
+  const [up, down] = (candleColors() || []).length ? candleColors() : ["#22C55E", "#EF4444"];
+  const ch = L.createChart(host, {width: Math.max(280, host.clientWidth || 600), height: host.clientHeight || 400,
+    layout: {background: {type: "solid", color: bg}, textColor: TH ? TH.text : light ? "#5b6472" : "#9AA0AC", fontFamily: '"JetBrains Mono",ui-monospace,monospace', fontSize: 11},
+    grid: {vertLines: {color: grid}, horzLines: {color: grid}}, rightPriceScale: {borderColor: grid, scaleMargins: {top: .08, bottom: .22}},
+    timeScale: {borderColor: grid, timeVisible: true, secondsVisible: false, rightOffset: 4},
+    crosshair: {mode: L.CrosshairMode.Normal}, handleScroll: {vertTouchDrag: false}});
+  FOC.chart = ch;
+  // keep today's levels in view (when they're near price), like the stock chart keeps the trigger and shelf on screen
+  const lv = t && t.hi != null ? [t.hi, t.lo, t.entry, t.stop, t.target].filter(v => v != null && last && Math.abs(v / last - 1) < 0.05) : [];
+  const cs = ch.addSeries(L.CandlestickSeries, {upColor: up, downColor: down, borderVisible: false, wickUpColor: up, wickDownColor: down, priceLineVisible: false,
+    autoscaleInfoProvider: (orig) => { const r = orig(); if (!r || !lv.length) return r; return {...r, priceRange: {minValue: Math.min(r.priceRange.minValue, ...lv), maxValue: Math.max(r.priceRange.maxValue, ...lv)}}; }});
+  cs.setData(data.map(({v, ...c}) => c));
+  const vol = ch.addSeries(L.HistogramSeries, {priceFormat: {type: "volume"}, priceScaleId: "vol", lastValueVisible: false, priceLineVisible: false});
+  vol.priceScale().applyOptions({scaleMargins: {top: .82, bottom: 0}});
+  vol.setData(data.map(c => ({time: c.time, value: c.v, color: (x => /^#[0-9a-f]{6}$/i.test(x) ? x + "88" : x)(c.close >= c.open ? up : down)})));
+  const line = (price, title, color, style) => price == null ? null : cs.createPriceLine({price: +price, title, color, lineWidth: 1, lineStyle: style ?? L.LineStyle.Solid, axisLabelVisible: true});
+  if (t && t.hi != null) {
+    if (d) { line(t.target, "TARGET 1R", "#00C898"); line(t.entry, "ENTRY", "#F2C14E"); line(t.stop, "STOP", "#F00060"); line(d === 1 ? t.hi : t.lo, d === 1 ? "RANGE HIGH" : "RANGE LOW", "#7f9ec7", L.LineStyle.Dashed); }
+    else { line(t.hi, "RANGE HIGH", "#7f9ec7"); line(t.lo, "RANGE LOW", "#7f9ec7"); }
+    if (d && t.entry_at && L.createSeriesMarkers) { const es = Math.floor(new Date(t.entry_at).getTime() / 1000) - 1800, et = es + foEtOff(es);
+      const near = data.reduce((a, c) => c.time <= et ? c : a, data[0]);
+      if (near) L.createSeriesMarkers(cs, [{time: near.time, position: d === 1 ? "belowBar" : "aboveBar", color: d === 1 ? "#00C898" : "#F00060", shape: d === 1 ? "arrowUp" : "arrowDown", text: "BREAK"}]); }
+  }
+  ch.timeScale().fitContent();
+  new ResizeObserver(() => { try { ch.applyOptions({width: host.clientWidth}); } catch (e) {} }).observe(host);
+}
 // ---------------------------------------------------------------- Nov 23: futures opening range (owner-only forward test)
 let FO = null;
 function foNum(x) { return x == null ? "–" : Number(x).toLocaleString("en-US", {minimumFractionDigits: x % 1 ? 2 : 0, maximumFractionDigits: 2}); }
@@ -4488,7 +4593,7 @@ function showTab() {
   if (CUR === "account") loadAccount();
   if (CUR === "guide") renderGloss();
   if (CUR === "lab") loadLab();
-  if (CUR === "futures") { renderFutOrb("futOrbPage"); loadFutOrbRecord(false, "futOrbBox2"); }
+  if (CUR === "futures") { renderFutOrb("futOrbPage").then(() => foChartLoad()); loadFutOrbRecord(false, "futOrbBox2"); }
   if (CUR === "diary") loadDiary();
   if (CUR === "chat") loadChat(); else clearTimeout(CH.timer);
   document.body.classList.toggle("on-chat", CUR === "chat");      // the Sika button would sit on top of the messages

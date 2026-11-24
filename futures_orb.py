@@ -284,6 +284,50 @@ def close_diary(day: str, p: str) -> None:
         log.warning("diary close skipped: %s", e)
 
 
+# ---------------------------------------------------------------- the MNQ chart page (Nov 23)
+_CHART: dict = {}
+
+
+def chart(p: str, days: int = 10) -> dict:
+    """The front contract's 30-minute bars for the last `days` days (all sessions), cached 2 minutes. Bad-print wicks
+    are trimmed the same way as the live test, so the chart and the range agree."""
+    p = p.upper() if p.upper() in fl.POINT_USD else "MNQ"
+    days = max(2, min(30, int(days)))
+    key = (p, days)
+    hit = _CHART.get(key)
+    if hit and datetime.now(timezone.utc).timestamp() - hit[0] < 120:
+        return hit[1]
+    today = pd.Timestamp.now(tz=NY).date()
+    tk = front_contract(p, today)
+    url, params, rows = f"{fl.BASE}/futures/v1/aggs/{tk}", {
+        "resolution": "30min", "window_start.gte": (today - timedelta(days=days)).isoformat(),
+        "window_start.lte": (today + timedelta(days=1)).isoformat(), "limit": 5000, "sort": "window_start.asc", "apiKey": fl._key()}, []
+    for _ in range(8):
+        r = requests.get(url, params=params, timeout=30)
+        if r.status_code in (401, 403):
+            raise RuntimeError(f"Massive refused the key ({r.status_code})")
+        r.raise_for_status()
+        j = r.json()
+        rows += [(fl._ts(b.get("window_start") or b.get("timestamp") or b.get("t")), float(b["open"]), float(b["high"]),
+                  float(b["low"]), float(b["close"]), float(b.get("volume") or 0)) for b in (j.get("results") or [])]
+        if not j.get("next_url"):
+            break
+        url, params = j["next_url"], {"apiKey": fl._key()}
+    df = pd.DataFrame(rows, columns=["t", "Open", "High", "Low", "Close", "Volume"]).drop_duplicates("t").set_index("t").sort_index()
+    trimmed = 0
+    if not df.empty:
+        parts = []
+        for _, g in df.groupby(df.index.tz_convert(NY).date):    # trim per day, like the live test
+            g2, n = clean(g)
+            parts.append(g2)
+            trimmed += n
+        df = pd.concat(parts).sort_index()
+    out = dict(product=p, contract=tk, name=fl.PRODUCTS.get(p, p), point_usd=fl.POINT_USD[p], trimmed=trimmed,
+               bars=[[int(i.timestamp()), round(r.Open, 2), round(r.High, 2), round(r.Low, 2), round(r.Close, 2), int(r.Volume)] for i, r in df.iterrows()])
+    _CHART[key] = (datetime.now(timezone.utc).timestamp(), out)
+    return out
+
+
 # ---------------------------------------------------------------- what the app shows
 def _stats(rows: list[dict]) -> dict:
     tr = [r for r in rows if r.get("net_usd") is not None]
