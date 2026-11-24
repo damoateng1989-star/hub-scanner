@@ -2073,7 +2073,7 @@ def futures_orb_take(body: OrbTake, u: dict = Admin):
 @app.post("/api/admin/futures-orb/check")
 def futures_orb_check(u: dict = Admin):
     import futures_orb
-    return dict(alerts=futures_orb.tick())
+    return dict(alerts=futures_orb.tick(force=True))
 
 
 @app.get("/api/admin/setups-month")

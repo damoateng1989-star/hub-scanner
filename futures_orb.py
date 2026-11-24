@@ -42,6 +42,10 @@ def init() -> None:
           alerted TEXT NOT NULL DEFAULT '', bars TEXT, updated_at TEXT,
           PRIMARY KEY (day, product));
         """)
+        try:
+            db._conn.execute("ALTER TABLE fut_orb ADD COLUMN trimmed INTEGER NOT NULL DEFAULT 0")
+        except Exception:
+            pass
         db._conn.commit()
 
 
@@ -80,6 +84,23 @@ def today_bars(ticker: str, day: date) -> pd.DataFrame:
         df.index = df.index.tz_convert(NY)
         df = df[df.index.date == day]
     return df
+
+
+def clean(bars: pd.DataFrame) -> tuple[pd.DataFrame, int]:
+    """Bad prints (Nov 23): Massive's 9:30 MNQ bar on Nov 23 had wicks ~350 points past the whole day's high and low.
+    A wick more than 3x the day's median bar range beyond the candle's body is treated as a bad print and trimmed to
+    one median range past the body. Returns (bars, how many wicks were trimmed)."""
+    if bars is None or len(bars) < 6:
+        return bars, 0
+    b = bars.copy()
+    med = float((b["High"] - b["Low"]).median())
+    if not med > 0:
+        return b, 0
+    top, bot = b[["Open", "Close"]].max(axis=1), b[["Open", "Close"]].min(axis=1)
+    hi_bad, lo_bad = (b["High"] - top) > 3 * med, (bot - b["Low"]) > 3 * med
+    b.loc[hi_bad, "High"] = top[hi_bad] + med
+    b.loc[lo_bad, "Low"] = bot[lo_bad] - med
+    return b, int(hi_bad.sum() + lo_bad.sum())
 
 
 def _row(day: str, p: str) -> dict | None:
@@ -182,7 +203,7 @@ def step(p: str, bars: pd.DataFrame, row: dict, now: pd.Timestamp) -> tuple[dict
     return ch, msgs
 
 
-def tick(now: pd.Timestamp | None = None, fetch=today_bars) -> list[str]:
+def tick(now: pd.Timestamp | None = None, fetch=today_bars, force: bool = False) -> list[str]:
     if not fl.configured():
         return []
     init()
@@ -193,6 +214,11 @@ def tick(now: pd.Timestamp | None = None, fetch=today_bars) -> list[str]:
     out = []
     for p in products():
         row = _row(day.isoformat(), p) or {}
+        if force and row:            # "Check now": score today again from scratch (alerts already sent stay sent)
+            row = dict(alerted=row.get("alerted") or "", contract=row.get("contract"))
+            db._run("UPDATE fut_orb SET state='building', hi=NULL, lo=NULL, entry=NULL, stop=NULL, target=NULL, entry_at=NULL, "
+                    "exit_price=NULL, exit_at=NULL, how=NULL, pts=NULL, net_usd=NULL WHERE day=? AND product=?", (day.isoformat(), p))
+            db._conn.commit()
         if row.get("state") in ("done", "nobreak", "nodata"):
             continue
         try:
@@ -201,7 +227,9 @@ def tick(now: pd.Timestamp | None = None, fetch=today_bars) -> list[str]:
         except Exception as e:
             log.warning("futures orb fetch %s failed: %s", p, e)
             continue
+        bars, trimmed = clean(bars)
         ch, msgs = step(p, bars, row, now)
+        ch["trimmed"] = trimmed
         keep = bars[(bars.index.strftime("%H:%M") >= "09:30") & (bars.index.strftime("%H:%M") < "16:00")]
         ch["bars"] = json.dumps([[str(i)[11:16], round(float(r.Open), 2), round(float(r.High), 2), round(float(r.Low), 2), round(float(r.Close), 2)]
                                  for i, r in keep.iterrows()])

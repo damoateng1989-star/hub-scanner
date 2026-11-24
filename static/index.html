@@ -4262,6 +4262,7 @@ function foTodayHTML(P) {
         : `<div class="fo-take"><span class="fo-n">Took it?</span><input id="foQty" type="number" min="1" step="1" value="1" aria-label="Contracts"><span class="fo-n">contracts @</span><input id="foEntry" type="number" step="0.25" value="${t.entry}" style="width:100px" aria-label="Entry price"><button class="btnx sm" onclick="foTake('${esc(P.product)}', this)">Log it in my diary</button></div>`}`;
   }
   else if (st === "nobreak") { h = `${P.product}: no break before 2 PM`; body = `<div class="fo-n">The range held (${foNum(t.lo)}–${foNum(t.hi)}). No trade today; that's part of the rule.</div>${foChart(t)}`; }
+  if (t && t.trimmed) body += `<div class="fo-n" style="margin-top:6px">${t.trimmed} bad print${t.trimmed > 1 ? "s" : ""} in the data (a wick far past the rest of the day) ${t.trimmed > 1 ? "were" : "was"} ignored.</div>`;
   else if (st === "nodata") { h = `${P.product}: no data today`; body = `<div class="fo-n">No futures data came in for today's session. If this repeats on market days, the Massive plan may not include live futures bars.</div>`; }
   else { const nx = new Date(now); do { nx.setDate(nx.getDate() + 1); } while (nx.getDay() === 0 || nx.getDay() === 6);
     h = `Next range: ${nx.toLocaleDateString("en-US", {weekday: "long"})} at 10:30 ET`; body = `<div class="fo-n">The range builds 9:30–10:30. You'll get an alert with it, another if a 30-minute bar closes outside it before 2 PM, and one at the exit.</div>${steps(-1)}`; }
