@@ -843,7 +843,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         entry=e["close"], entry_state="this close", exit_px=e["target"], exit_name="+2R",
                         stop_rule=f"daily close under {_money(e['stop'])}" if e.get("stop") else None,
                         stop_short=f"daily close under {_money(e['stop'])}" if e.get("stop") else None,
-                        window=alert_format.window_trading_days(e["time"], 10))
+                        window=alert_format.window_trading_days(e["time"], 10),
+                        earnings=alert_format.earnings_label(sym))
                 elif e["type"] == "breakdown" or e["kind"] not in ("double_bottom", "gapfade"):
                     msg = alert_format.watch_only(msg)
                 if conv:
@@ -904,7 +905,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                     exit_px=pend["target"], exit_name="the next shelf" if pend.get("shelf") else "1 ATR past the hub",
                                     stop_rule=f"4H close back under {_money(g_['stop'])}", stop_short=f"4H close under {_money(g_['stop'])}",
                                     tape_line=alert_format.tape_text(tape_row_, d),
-                                    window=alert_format.window_after_candle(c4.index[j], left_))
+                                    window=alert_format.window_after_candle(c4.index[j], left_),
+                                    earnings=alert_format.earnings_label(sym))
                             elif d == -1 or not g_["is_a"]:
                                 conv_ = "watch"
                         except Exception as ex_:
@@ -964,7 +966,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                             exit_px=pend["target"], exit_name="the next shelf" if pend.get("shelf") else "1 ATR past the hub",
                             stop_rule=f"4H close back under {_money(grade['stop'])}", stop_short=f"4H close under {_money(grade['stop'])}",
                             tape_line=alert_format.tape_text(tape_row_, d),
-                            window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None)
+                            window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None,
+                            earnings=alert_format.earnings_label(sym))
                     elif not grade["is_a"] or d == -1:
                         msg = alert_format.watch_only(msg)
                     if conv:
@@ -1028,7 +1031,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                             entry=close2, entry_state="the retest, held",
                             exit_px=dbl["target"], exit_name="the next shelf" if dbl.get("shelf") else "the measured move",
                             stop_rule=f"4H close back under {_money(grade['stop'])}", stop_short=f"4H close under {_money(grade['stop'])}",
-                            window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None)
+                            window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None,
+                            earnings=alert_format.earnings_label(sym))
                     elif not grade["is_a"]:
                         msg = alert_format.watch_only(msg)
                     if conv:

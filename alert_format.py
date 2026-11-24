@@ -111,7 +111,7 @@ def _label(t: pd.Timestamp | None, ref: pd.Timestamp) -> str | None:
 
 def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, trigger_what: str, entry: float,
             entry_state: str, exit_px: float, exit_name: str, stop_rule: str, stop_short: str,
-            tape_line: str | None = None, window: str | None = None) -> dict | None:
+            tape_line: str | None = None, window: str | None = None, earnings: str | None = None) -> dict | None:
     """The conviction alert, in the four forms the notifier needs (Telegram/push × with/without the tape segment).
     Returns None when any slot is missing — the caller then sends its plain text (§1: never a partial plan)."""
     rec = record(rec_key)
@@ -128,14 +128,17 @@ def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, t
         if tape:
             lines.append(tape_line)
         lines.append(f"Window closes {window}")
+        if earnings:      # owner, Nov 24: the earnings warning stays on conviction alerts (a gap can skip the stop)
+            lines.append(f"📅 Earnings {earnings}: a gap can jump past the stop. Holding through it is a separate bet.")
         return "\n".join(lines)
 
     def push(tape: bool) -> str:
         head = f"{sym} · {grade} {setup.lower()}" + (", tape confirmed" if tape else "")
         plan = f"Trig {_money(trigger)} · Entry {_money(entry)} · Exit {_money(exit_px)} · Stop: {stop_short}."
-        line = f"{head}. {plan} Record: {_push_record(rec)}"
-        if len(line) > PUSH_MAX:                  # shorten the record first — never cut the STOP
-            line = f"{head}. {plan} Record: {_push_record(rec, short=True)}"
+        ern = f" Earnings {earnings}." if earnings else ""
+        line = f"{head}. {plan} Record: {_push_record(rec)}.{ern}"
+        if len(line) > PUSH_MAX:                  # shorten the record first — never cut the STOP or the earnings
+            line = f"{head}. {plan} Record: {_push_record(rec, short=True)}.{ern}"
         return line
 
     has_tape = bool(tape_line)
@@ -147,11 +150,22 @@ def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, t
     return out
 
 
+def earnings_label(sym: str, within: int = 7) -> str | None:
+    """'Thu Dec 3' when earnings are within a week (the same lookup and window as the plain alerts' earnings line)."""
+    try:
+        import earnings
+        e = earnings.lookup(sym)
+        return e["label"] if e and e["days"] <= within else None
+    except Exception:
+        return None
+
+
 def watch_only(text: str) -> str:
     """§5: '· WATCH ONLY' on the headline (first line) of a watch-only or ungraded alert."""
     head, sep, rest = (text or "").partition("\n")
     if "WATCH ONLY" in head:
         return text
+    head = head.replace(" — watch only", "").replace(" (watch only)", "").rstrip()     # say it once, in caps
     return f"{head} · WATCH ONLY{sep}{rest}"
 
 
