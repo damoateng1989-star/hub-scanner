@@ -7208,11 +7208,42 @@ function paintHeaderClocks() {
 setInterval(() => { if (document.body.classList.contains("brief-open")) paintHeaderClocks(); }, 1000);
 addEventListener("DOMContentLoaded", () => { const m = $("bfMap"); if (m && "MutationObserver" in window) new MutationObserver(() => { paintHeaderClocks(); try { paintTapeBlock(); } catch (e) {} }).observe(m, {childList: true}); });
 function mapVolProfile(chart, series, D, light) {
+  // Patch 214: the profile is computed ONCE over a fixed, named window (the current hub's base through the latest bar;
+  // no hub: the trailing 120 sessions), never the visible range, so the POC doesn't move when you pan or zoom.
   const el = chart.chartElement(); if (!el) return;
   el.style.position = "relative";
   let cv = el.querySelector("canvas.mp-vp");
   if (!cv) { cv = document.createElement("canvas"); cv.className = "mp-vp"; cv.style.cssText = "position:absolute;left:0;top:0;pointer-events:none;z-index:2"; el.appendChild(cv); }
-  const cs = D.cs.filter(c => Number.isFinite(+c.high) && Number.isFinite(+c.low) && +c.volume > 0);
+  const ok = c => c && Number.isFinite(+c.time) && Number.isFinite(+c.high) && Number.isFinite(+c.low) && +c.volume > 0;
+  const base = (D.chart && Array.isArray(D.chart.candles) ? D.chart.candles : []).filter(ok);
+  const lastT = base.length ? +base[base.length - 1].time : -Infinity;
+  const all = base.concat(D.cs.filter(c => ok(c) && +c.time > lastT));        // the loaded series, plus the forming candle
+  if (all.length < 3) return;
+  const etSec = (iso) => { const m = String(iso || "").match(/^(\d+)-(\d+)-(\d+)(?:T(\d+):(\d+))?/); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) / 1000 : null; };
+  let from = D.P && D.P.hub ? etSec(D.P.hub.start) : null, name = "hub window";
+  if (from != null && D.daily) from -= from % 86400;
+  let win = from != null ? all.filter(c => +c.time >= from) : [];
+  if (win.length < 3) {                                   // no hub (or too short): the trailing 120 sessions
+    const days = [...new Set(all.map(c => Math.floor(+c.time / 86400)))]; const first = days[Math.max(0, days.length - 120)];
+    win = all.filter(c => Math.floor(+c.time / 86400) >= first); name = `${Math.min(120, days.length)}-session window`;
+  }
+  const lo = Math.min(...win.map(c => +c.low)), hi = Math.max(...win.map(c => +c.high)); if (!(hi > lo)) return;
+  const N = 32, step = (hi - lo) / N, bins = new Array(N).fill(0);
+  for (const c of win) {
+    const a = Math.max(0, Math.floor((+c.low - lo) / step)), b = Math.min(N - 1, Math.floor((+c.high - lo) / step)), share = +c.volume / (b - a + 1);
+    for (let k = a; k <= b; k++) bins[k] += share;
+  }
+  const max = Math.max(...bins), poc = bins.indexOf(max), total = bins.reduce((x, y) => x + y, 0);
+  let acc = max, lo2 = poc, hi2 = poc;                    // value area: 70% of volume around the POC
+  while (acc < total * .7 && (lo2 > 0 || hi2 < N - 1)) {
+    const dn = lo2 > 0 ? bins[lo2 - 1] : -1, up = hi2 < N - 1 ? bins[hi2 + 1] : -1;
+    if (up >= dn) { hi2++; acc += bins[hi2]; } else { lo2--; acc += bins[lo2]; }
+  }
+  const pocPx = lo + (poc + .5) * step, lastClose = +D.cs[D.cs.length - 1].close;
+  const dist = lastClose ? (pocPx / lastClose - 1) * 100 : null;
+  const inHub = D.P && D.P.hub && pocPx >= +D.P.hub.low && pocPx <= +D.P.hub.high;
+  const LAV = "#A89CD6", LAVBG = "#201C34";
+  MAP_POC = {price: pocPx, name, inHub};
   const draw = () => {
     try {
       const pane = chart.panes ? chart.panes()[0] : null;
@@ -7220,49 +7251,42 @@ function mapVolProfile(chart, series, D, light) {
       const dpr = window.devicePixelRatio || 1;
       cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + "px"; cv.style.height = H + "px";
       const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, W, H);
-      const r = chart.timeScale().getVisibleLogicalRange(); if (!r) return;
-      const vis = cs.filter((c, i) => true).slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1);
-      const view = D.cs.slice(Math.max(0, Math.floor(r.from)), Math.ceil(r.to) + 1).filter(c => +c.volume > 0);
-      if (view.length < 3) return;
-      const lo = Math.min(...view.map(c => +c.low)), hi = Math.max(...view.map(c => +c.high)); if (!(hi > lo)) return;
-      const N = Math.max(16, Math.min(40, Math.round(H / 9))), step = (hi - lo) / N, bins = new Array(N).fill(0);
-      for (const c of view) {
-        const a = Math.max(0, Math.floor((+c.low - lo) / step)), b = Math.min(N - 1, Math.floor((+c.high - lo) / step)), share = +c.volume / (b - a + 1);
-        for (let k = a; k <= b; k++) bins[k] += share;
-      }
-      const max = Math.max(...bins), poc = bins.indexOf(max), total = bins.reduce((x, y) => x + y, 0);
-      const va = new Set([poc]); let acc = max, lo2 = poc, hi2 = poc;            // value area: 70% of volume around the POC
-      while (acc < total * .7 && (lo2 > 0 || hi2 < N - 1)) {
-        const dn = lo2 > 0 ? bins[lo2 - 1] : -1, up = hi2 < N - 1 ? bins[hi2 + 1] : -1;
-        if (up >= dn) { hi2++; va.add(hi2); acc += bins[hi2]; } else { lo2--; va.add(lo2); acc += bins[lo2]; }
-      }
-      const maxW = W * .28, base = light ? "13,17,23" : "226,232,242";
+      const maxW = W * .13, tone = light ? "rgba(13,17,23,.22)" : "rgba(226,232,242,.26)";
+      let rowY = {};
       for (let k = 0; k < N; k++) {
-        if (!bins[k]) continue;
         const y1 = series.priceToCoordinate(lo + (k + 1) * step), y2 = series.priceToCoordinate(lo + k * step);
         if (y1 == null || y2 == null) continue;
-        const top = Math.min(y1, y2) + .5, h = Math.max(1, Math.abs(y2 - y1) - 1), w = bins[k] / max * maxW;
-        g.fillStyle = k === poc ? "rgba(47,128,255,.75)" : `rgba(${base},${va.has(k) ? (light ? .42 : .55) : (light ? .22 : .28)})`;
-        g.fillRect(0, top, w, h);
-        g.fillStyle = light ? "rgba(13,17,23,.55)" : "rgba(226,232,242,.85)"; g.fillRect(w - 1.5, top, 1.5, h);   // a crisp end cap so each bar reads on top of the zones
+        const top = Math.min(y1, y2) + .5, h = Math.max(1, Math.abs(y2 - y1) - 1); rowY[k] = [top, h];
+        if (!bins[k]) continue;
+        g.fillStyle = k === poc ? "rgba(168,156,214,.9)" : tone;
+        g.fillRect(0, top, bins[k] / max * maxW, h);
       }
-      const pocPx = lo + (poc + .5) * step, yp = series.priceToCoordinate(pocPx);
-      if (yp != null) {            // the POC as a solid line across the whole chart, with a solid tag on the left
-        const col = "#2F80FF";
-        g.save(); g.strokeStyle = col; g.lineWidth = 1.5;
-        g.beginPath(); g.moveTo(0, Math.round(yp) + .5); g.lineTo(W, Math.round(yp) + .5); g.stroke(); g.restore();
-        const txt = "POC " + money(pocPx); g.font = '700 10px "JetBrains Mono", ui-monospace, monospace';
-        const tw = g.measureText(txt).width + 10, ty = Math.max(2, Math.min(H - 17, yp - 8));
-        g.fillStyle = col; g.fillRect(2, ty, tw, 16);
-        g.fillStyle = "#fff"; g.fillText(txt, 7, ty + 12);
+      g.fillStyle = light ? "rgba(13,17,23,.45)" : "rgba(154,160,172,.75)";        // VAH / VAL: ticks at the profile's right edge
+      for (const k of [hi2, lo2]) if (rowY[k]) g.fillRect(maxW + 2, rowY[k][0] + rowY[k][1] / 2 - .5, 8, 1.5);
+      const yp = series.priceToCoordinate(pocPx); if (yp == null) return;
+      const pw = bins[poc] / max * maxW;
+      g.font = '700 10px "JetBrains Mono", ui-monospace, monospace';
+      if (inHub) {                                         // the notch: part of the hub's story, so no pill and no line
+        const x = W - 8; g.fillStyle = LAV; g.beginPath(); g.moveTo(x, yp - 5); g.lineTo(x + 5, yp); g.lineTo(x, yp + 5); g.lineTo(x - 5, yp); g.closePath(); g.fill();
+        const t = "POC " + money(pocPx), tw = g.measureText(t).width + 8;
+        g.fillStyle = LAVBG; g.fillRect(x - 12 - tw, yp - 8, tw, 16); g.fillStyle = LAV; g.fillText(t, x - 8 - tw, yp + 3.5);
+        return;
       }
+      g.save(); g.strokeStyle = "rgba(168,156,214,.6)"; g.lineWidth = 1; g.setLineDash([5, 4]);   // the magnet line, from the bars to the edge
+      g.beginPath(); g.moveTo(pw + 2, Math.round(yp) + .5); g.lineTo(W, Math.round(yp) + .5); g.stroke(); g.restore();
+      const l1 = "POC " + money(pocPx), l2 = `${name}${dist != null ? ` · ${dist >= 0 ? "+" : "−"}${Math.abs(dist).toFixed(1)}%` : ""}`;
+      const w1 = g.measureText(l1).width; g.font = '500 8px "JetBrains Mono", ui-monospace, monospace'; const w2 = g.measureText(l2).width;
+      const bw = Math.max(w1, w2) + 12, bh = 26, bx = W - bw - 4, by = Math.max(2, Math.min(H - bh - 2, yp - bh / 2));
+      g.fillStyle = LAVBG; if (g.roundRect) { g.beginPath(); g.roundRect(bx, by, bw, bh, 5); g.fill(); } else g.fillRect(bx, by, bw, bh);
+      g.fillStyle = LAV; g.font = '700 10px "JetBrains Mono", ui-monospace, monospace'; g.fillText(l1, bx + 6, by + 11);
+      g.fillStyle = "rgba(168,156,214,.7)"; g.font = '500 8px "JetBrains Mono", ui-monospace, monospace'; g.fillText(l2, bx + 6, by + 21);
     } catch (e) {}
   };
   MAP_VP_DRAW = draw;
-  mapCandleTimer(chart, series, D);
-  chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));       // repositions only; the values are fixed
   requestAnimationFrame(() => requestAnimationFrame(draw));
 }
+let MAP_POC = null;
 function initLightweightMapChart() {
   const host = $("mpLwc"), D = MAP_LWC_DATA, L = window.LightweightCharts;
   try { mapMomentum(D); } catch (e) {}
@@ -7505,6 +7529,7 @@ function initLightweightMapChart() {
       if(xh){xh.style.left=param.point.x+"px";xh.style.top="0";xh.style.height=(MAP_LWC_HOSTEL||host).clientHeight+"px";xh.classList.add("on");}
     });
     MAP_LWC_CHART=chart; MAP_LWC_CANDLE=candles; MAP_LWC_VOLUME=vol; MAP_LWC_HOSTEL=host;
+    mapCandleTimer(chart, candles, D);
     if (LY.profile) mapVolProfile(chart, candles, D, light); else MAP_VP_DRAW = null;
     mapCloud(chart, candles, D, light);
     chart.__lv = {series: candles, hidden, LY};
@@ -10646,7 +10671,7 @@ function sikaWrongHTML(sym) {
 function sikaLinesHTML() {
   const L = [["#F2C14E", "Trigger", "the price that confirms the setup"], ["#FF6B5E", "Stop (red dashed)", "where the idea is wrong"],
     ["#3DD68C", "Next shelf / Target", "the next level price tends to reach, the aim"], ["#B48CFF", "Resistance / Old high", "a level where the move may stall"],
-    ["#5AC8FA", "Hub high / Hub low", "the tight range the stock just left (or is still in)"], ["#4F8CFF", "POC", "the price that traded the most volume in view"],
+    ["#5AC8FA", "Hub high / Hub low", "the tight range the stock just left (or is still in)"], ["#A89CD6", "POC", "the price that traded the most volume in the hub window"],
     ["#9AA4B2", "2× levels", "where two or more kinds of level stack up, stronger than one alone"], ["#9AA4B2", "Grey bars on the left", "the volume profile: how much traded at each price"]];
   return `<p>What each line on the chart means:</p><div class="ask-legend">${L.map(([c, n, w]) => `<div><i style="background:${c}"></i><span><b>${n}</b> · ${w}</span></div>`).join("")}</div>${mapExtOn() ? `<p>The <b>amber</b> and <b>blue</b> bands are pre-market and after hours. They're shown for context; setups only use market hours.</p>` : ""}`;
 }
@@ -11811,18 +11836,18 @@ html[data-theme="light"] .mp-ext b.u { color: #0F7A4F; } html[data-theme="light"
 .mp-flow small { display: block; font-size: 12.5px; color: var(--mp-mut, #9AA0AC); margin-top: 3px; }
 .mp-ct { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; } .mp-ct b { font-size: 16px; } .mp-ct span { font-size: 12.5px; color: var(--mp-mut); }
 .mp-chartcard { padding: 14px 10px 8px 14px; }
-.mp-protitle { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px 10px 0; border-bottom:1px solid var(--mp-line); margin-bottom:10px; }
+.mp-protitle { position:relative; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 4px 10px 0; border-bottom:1px solid var(--mp-line); margin-bottom:10px; }
 .mp-protitle > div { display:grid; gap:2px; } .mp-protitle b { font-size:15px; } .mp-protitle small { font-size:11.5px; color:var(--mp-mut); font-family:var(--mono, ui-monospace, monospace); }
 .mp-cloudkey { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin: 8px 2px 0; font-size: 12px; color: var(--t-muted, #9AA3AF); }
 .mp-cloudkey span { display: inline-flex; align-items: center; gap: 6px; }
 .mp-cloudkey i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
 .mp-cloudkey em { margin-left: auto; font-style: normal; font: 500 11px var(--mono, ui-monospace, monospace); letter-spacing: .04em; opacity: .8; }
-.mp-prostatus { font:700 10px var(--mono, ui-monospace, monospace); letter-spacing:.08em; color:var(--mp-shelf); }
+.mp-prostatus { position:absolute; left:50%; top:calc(50% - 5px); transform:translate(-50%,-50%); white-space:nowrap; font:700 10px var(--mono, ui-monospace, monospace); letter-spacing:.08em; color:var(--mp-shelf); }
 .mp-svg .mp-vol-sep { stroke:var(--mp-line); stroke-width:1; }
 .mp-svg .mp-vol { opacity:.58; } .mp-svg .mp-vol.up { fill:#3DD68C; } .mp-svg .mp-vol.dn { fill:#FF6B5E; }
 .mp-svg .mp-vol-lab { fill:var(--mp-mut); font:700 9px var(--sans, system-ui); letter-spacing:.08em; }
 html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="light"] .mp-svg .mp-vol.dn { fill:#dc2626; }
-@media (max-width:559px) { .mp-protitle small { font-size:10.5px; } }
+@media (max-width:559px) { .mp-protitle small { font-size:10.5px; } .mp-prostatus { top:2px; transform:translate(-50%,0); } }   /* level with "Chart", clear of the symbol line */
 .mp-cw { width: 100%; overflow: hidden; position: relative; touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
 .mp-lwc { width:100%; height:430px; min-height:330px; position:relative; touch-action:pan-x pan-y; }
 @media(max-width:559px){.mp-lwc{height:390px;min-height:350px;}}
