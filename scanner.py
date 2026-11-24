@@ -39,7 +39,7 @@ def clean_symbol(s: str) -> str:
 
 _BARS: dict[tuple, tuple[float, pd.DataFrame]] = {}
 _BARS_LOCKS: dict[tuple, threading.Lock] = {}
-BARS_TTL = 90      # seconds: the chart, the Shelf card and the options plan share one download per stock
+BARS_TTL = 600     # Patch 215 (was 90). seconds: the chart, the Shelf card and the options plan share one download per stock
 
 
 def prime_bars(symbols: list[str]) -> None:

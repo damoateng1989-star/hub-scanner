@@ -7321,7 +7321,7 @@ function initLightweightMapChart() {
   if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
   document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove()); MAP_LWC_FOOT = null;
   if (!host || !D || !L || !D.cs || !D.cs.length) {
-    if (host) host.innerHTML = `<div class="mp-lwc-empty">${MAP_DERR && MAP_DERR === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadErrHTML() : "Chart data is loading…"}</div>`;
+    if (host) host.innerHTML = `<div class="mp-lwc-empty">${MAP_DERR && MAP_DERR === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadErrHTML() : MAP_DSLOW === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadSlowHTML() : "Chart data is loading…"}</div>`;
     return;
   }
   try {
@@ -8281,6 +8281,10 @@ async function mapLoadDaily(sym, force) {
   }
   if (mapLoadDaily.busy === key) return; mapLoadDaily.busy = key;
   if (MAP_DERR === key) { MAP_DERR = null; }
+  // Patch 215: a middle state between "loading" and "failed" — after 6 s with nothing painted, say why, and offer the 4H view
+  clearTimeout(mapLoadDaily.slowT); MAP_DSLOW = null;
+  mapLoadDaily.slowT = setTimeout(() => { if (mapLoadDaily.busy !== key || BRIEF_SYM !== sym || MAP_TF !== tf) return;
+    MAP_DSLOW = key; const h = document.querySelector("#bfMap .mp-lwc-empty"); if (h) h.innerHTML = mapLoadSlowHTML(); }, 6000);
   const url = `/api/chart/${encodeURIComponent(sym)}?tf=${tf}${ext ? "&ext=1" : ""}`;
   try {
     let c;
@@ -8290,7 +8294,13 @@ async function mapLoadDaily(sym, force) {
     if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DCH = c; paintMap(); }
   } catch (e) {
     if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DERR = key; const h = document.querySelector("#bfMap .mp-lwc-empty"); if (h) h.innerHTML = mapLoadErrHTML(); }
-  } finally { if (mapLoadDaily.busy === key) mapLoadDaily.busy = null; }
+  } finally { if (mapLoadDaily.busy === key) mapLoadDaily.busy = null; clearTimeout(mapLoadDaily.slowT); if (MAP_DSLOW === key) MAP_DSLOW = null; }
+}
+let MAP_DSLOW = null;
+function mapLoadSlowHTML() {
+  const can4h = MAP_TF !== "4h" && typeof BRIEF_CHART !== "undefined" && BRIEF_CHART && BRIEF_CHART.symbol === BRIEF_SYM;
+  return `Chart data is loading…<small style="display:block;margin-top:6px;opacity:.75">First load pulls two years of bars. Later opens of this view are instant.</small>`
+    + (can4h ? `<button type="button" class="mp-planbtn" style="margin-top:10px" onclick="mapTf('4h')">View the 4H chart instead</button>` : "");
 }
 function mapLoadErrHTML() { return `The chart didn't load. <button type="button" class="mp-planbtn" onclick="MAP_DERR=null;this.parentElement.textContent='Chart data is loading…';mapLoadDaily(BRIEF_SYM,true)">Try again</button>`; }
 function mapTf(tf) {

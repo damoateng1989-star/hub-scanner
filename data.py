@@ -89,24 +89,51 @@ def _disk_write(symbol: str, days: int, df: pd.DataFrame) -> None:
 def _alpaca_latest_starts(symbols: list[str], end: pd.Timestamp, feed: str,
                           headers: dict[str, str]) -> dict[str, pd.Timestamp | None]:
     """Get each symbol's latest 30-minute bar start. Isolated failures return None."""
+    # Patch 215: checked in parallel (≤10 at once) with a 5 s budget each. A stall at Alpaca can no longer hold a
+    # chart: a failed or timed-out check returns None and the disk copy is served (the next load retries).
+    from concurrent.futures import ThreadPoolExecutor
     latest: dict[str, pd.Timestamp | None] = {}
     fmt = "%Y-%m-%dT%H:%M:%SZ"
     start = end - pd.Timedelta(days=14)
-    for symbol in symbols:
+
+    def one(symbol):
         try:
             r = requests.get(f"https://data.alpaca.markets/v2/stocks/{symbol}/bars",
-                             headers=headers, timeout=15,
+                             headers=headers, timeout=5,
                              params={"timeframe": "30Min", "start": start.strftime(fmt),
                                      "end": end.strftime(fmt), "limit": 1, "sort": "desc",
                                      "adjustment": "all", "feed": feed})
             if r.status_code != 200:
                 raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
             bars = (r.json().get("bars") or [])
-            latest[symbol] = pd.to_datetime(bars[0]["t"], utc=True) if bars else None
+            return symbol, pd.to_datetime(bars[0]["t"], utc=True) if bars else None
         except Exception as exc:
             _LOG.warning("Alpaca bars freshness check failed for %s: %s", symbol, exc)
-            latest[symbol] = None
+            return symbol, None
+
+    if symbols:
+        with ThreadPoolExecutor(max_workers=min(10, len(symbols))) as pool:
+            for sym, ts in pool.map(one, symbols):
+                latest[sym] = ts
     return latest
+
+
+def _last_session_close_bar(now: pd.Timestamp) -> pd.Timestamp:
+    """Start of the last regular-session 30-minute bar of the most recent completed session (15:30 ET; 12:30 on an
+    early-close day), as UTC. Patch 215: with the market closed, a disk copy that reaches this bar is final."""
+    try:
+        import flow_signal
+        hol, early = flow_signal.NYSE_HOLIDAYS, flow_signal.NYSE_EARLY_CLOSES
+    except Exception:
+        hol, early = set(), set()
+    et = now.tz_convert("America/New_York")
+    d = et.normalize()
+    if et.hour * 60 + et.minute < 16 * 60:          # today's session isn't done yet: look at the previous day
+        d -= pd.Timedelta(days=1)
+    while d.weekday() >= 5 or d.date().isoformat() in hol:
+        d -= pd.Timedelta(days=1)
+    hm = (12, 30) if d.date().isoformat() in early else (15, 30)
+    return (d + pd.Timedelta(hours=hm[0], minutes=hm[1])).tz_convert("UTC")
 
 
 
@@ -392,10 +419,20 @@ def _alpaca_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
 
     # Disk is below scanner.py's in-memory cache. Only Alpaca data reaches this path.
     cached = {sym: df for sym in symbols if (df := _disk_read(sym, days)) is not None}
-    latest = _alpaca_latest_starts(list(cached), end, feed, headers) if cached else {}
     out: dict[str, pd.DataFrame] = {}
+    # Patch 215: market closed → a disk copy that already holds the last session's close is final. Serve it with no
+    # Alpaca call at all (closed bars can't change). A copy missing that session still goes through the check.
+    if cached and not market_open():
+        final = _last_session_close_bar(pd.Timestamp.now(tz="UTC"))
+        for sym in list(cached):
+            df = cached[sym]
+            if len(df) and df.index[-1] >= final:
+                out[sym] = cached.pop(sym)
+    latest = _alpaca_latest_starts(list(cached), end, feed, headers) if cached else {}
     fetch_symbols = []
     for sym in symbols:
+        if sym in out:
+            continue
         df = cached.get(sym)
         if df is None:
             fetch_symbols.append(sym)

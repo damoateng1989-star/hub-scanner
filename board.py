@@ -734,7 +734,8 @@ def _forming(sym: str):
 
 
 def warm_charts(symbols: list[str] | None = None):
-    """After a scan or startup: build 4H watchlist charts so the panel opens instantly."""
+    """After a scan or startup: build every view of the watchlist charts, then the 4H view of the board's stocks, so
+    the panel opens instantly (Patch 215; was 4H watchlist only)."""
     syms = symbols if symbols is not None else [r["symbol"] for r in db.list_tickers()]
     try:
         scanner.prime_bars(syms[:150])
@@ -742,14 +743,37 @@ def warm_charts(symbols: list[str] | None = None):
         log.warning("chart-bar prime failed; using per-symbol loads: %s", e)
     n = 0
     for s in syms[:150]:
+        for tf in ("4h", "1h", "2h", "3h", "1d"):  # watchlist views always win the cache
+            try:
+                chart(s, tf, False, fresh=True)
+                n += 1
+            except Exception:
+                pass
+            time.sleep(0.05)                        # leave room for live requests
+    if symbols is None:                             # the bonus layer: board stocks' 4H views, setups first
+        mine = set(syms)
         try:
-            _CHART_CACHE.pop((s, "4h", False), None)
-            chart(s, "4h", False)
-            n += 1
-        except Exception:
-            pass
-        time.sleep(0.05)                            # leave room for live requests
-    log.info("warmed %d charts", n)
+            rows = []
+            for r in db.board_rows():
+                if r["symbol"] in mine:
+                    continue
+                try:
+                    st = (json.loads(r["status"] or "{}") or {}).get("state")
+                except Exception:
+                    st = None
+                rows.append((0 if st in ("breakout_up", "breakdown") else 1 if st == "forming" else 2, r["symbol"]))
+            for _, s in sorted(rows):
+                if len(_CHART_CACHE) >= 350:        # keep ~50 entries of headroom for live builds
+                    break
+                try:
+                    chart(s, "4h", False)
+                    n += 1
+                except Exception:
+                    pass
+                time.sleep(0.05)
+        except Exception as e:
+            log.warning("board chart warm failed: %s", e)
+    log.info("warmed %d chart views", n)
 
 
 def _build_chart(sym: str, tf: str, lab_mode: bool, ext: bool = False) -> dict:
