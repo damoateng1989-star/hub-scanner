@@ -6804,8 +6804,10 @@ class MapLabelsPaneView {
   renderer() {
     const s = this._s, d = this._d, chart = this._chart;
     return { draw(target) {
-      target.useBitmapCoordinateSpace(({ context: ctx, bitmapSize, horizontalPixelRatio }) => {
-        const W = bitmapSize.width / horizontalPixelRatio, H = bitmapSize.height / horizontalPixelRatio;
+      // Nov 24: media coordinates (the library pre-scales the context), so the labels land on their prices at any
+      // pixel ratio — in bitmap space without a scale they drew at 1/DPR size in the top-left corner on 3x phones
+      target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
+        const W = mediaSize.width, H = mediaSize.height;
         const yOf = p => { const v = s.priceToCoordinate(p); return v == null ? null : v; };
         ctx.save();
         if (d.hub) {
@@ -6847,7 +6849,9 @@ class MapLabelsPaneView {
             ctx.font = "700 11px 'JetBrains Mono',ui-monospace,monospace";
             ctx.textBaseline = "middle";
             const tagW = ctx.measureText(text).width + 20;
-            const tagX = Math.max(4, (W - 178) - 12 - tagW);
+            // Nov 24 (owner): the tag sits where the retest is happening — just left of the latest candle, on the edge
+            const xL = d.lastTime != null && chart ? chart.timeScale().timeToCoordinate(d.lastTime) : null;
+            const tagX = xL != null && xL > tagW + 24 ? Math.min(W - tagW - 4, xL - tagW - 16) : Math.max(4, (W - 178) - 12 - tagW);
             const tagY = yEdge - 12;
             MAP_RETEST_BOX = { x: tagX, y: tagY, w: tagW, h: 24 };
             ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, 24, 12);
