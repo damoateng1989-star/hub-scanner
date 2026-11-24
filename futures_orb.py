@@ -58,15 +58,23 @@ def front_contract(product: str, day: date) -> str:
 
 
 def today_bars(ticker: str, day: date) -> pd.DataFrame:
-    """Today's 30-minute bars (ET index, bar START times), straight from Massive (no cache)."""
-    r = requests.get(f"{fl.BASE}/futures/v1/aggs/{ticker}", timeout=30, params={
-        "resolution": "30min", "window_start.gte": day.isoformat(), "window_start.lte": (day + timedelta(days=1)).isoformat(),
-        "limit": 5000, "sort": "window_start.asc", "apiKey": fl._key()})
-    if r.status_code in (401, 403):
-        raise RuntimeError(f"Massive refused the key ({r.status_code})")
-    r.raise_for_status()
-    rows = [(fl._ts(b.get("window_start") or b.get("timestamp") or b.get("t")), float(b["open"]), float(b["high"]),
-             float(b["low"]), float(b["close"])) for b in (r.json().get("results") or [])]
+    """Today's 30-minute bars (ET index, bar START times), straight from Massive (no cache). Follows next_url, since a
+    page can stop short of the whole day (a Monday-night check came back ending at 2 PM)."""
+    url, params, rows = f"{fl.BASE}/futures/v1/aggs/{ticker}", {
+        "resolution": "30min", "window_start.gte": (day - timedelta(days=1)).isoformat(), "window_start.lte": (day + timedelta(days=1)).isoformat(),
+        "limit": 5000, "sort": "window_start.asc", "apiKey": fl._key()}, []
+    for _ in range(6):
+        r = requests.get(url, params=params, timeout=30)
+        if r.status_code in (401, 403):
+            raise RuntimeError(f"Massive refused the key ({r.status_code})")
+        r.raise_for_status()
+        j = r.json()
+        rows += [(fl._ts(b.get("window_start") or b.get("timestamp") or b.get("t")), float(b["open"]), float(b["high"]),
+                  float(b["low"]), float(b["close"])) for b in (j.get("results") or [])]
+        nxt = j.get("next_url")
+        if not nxt:
+            break
+        url, params = nxt, {"apiKey": fl._key()}
     df = pd.DataFrame(rows, columns=["t", "Open", "High", "Low", "Close"]).drop_duplicates("t").set_index("t").sort_index()
     if not df.empty:
         df.index = df.index.tz_convert(NY)
@@ -198,8 +206,10 @@ def tick(now: pd.Timestamp | None = None, fetch=today_bars) -> list[str]:
         ch["bars"] = json.dumps([[str(i)[11:16], round(float(r.Open), 2), round(float(r.High), 2), round(float(r.Low), 2), round(float(r.Close), 2)]
                                  for i, r in keep.iterrows()])
         _save(day.isoformat(), p, contract=tk, **ch)
+        late = now.strftime("%H:%M") > "16:45"          # a check long after the close scores the day quietly
         for m in msgs:
-            _alert(m)
+            if not late:
+                _alert(m)
         out += msgs
         if ch.get("state") == "done":
             close_diary(day.isoformat(), p)
