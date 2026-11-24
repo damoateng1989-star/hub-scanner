@@ -2022,6 +2022,7 @@ class SubscribeBody(BaseModel):
     email: str
     source: str = "landing"
     website: str = ""          # honeypot: real people leave it empty
+    course: bool = True        # Nov 24: the pop-up's "send me the 5-day course" box; unticked = list only, no Beehiiv
 
 
 def _forward_to_beehiiv(email: str, source: str):
@@ -2072,7 +2073,8 @@ def subscribe(body: SubscribeBody, request: Request):
     token = secrets.token_urlsafe(18)
     status = db.add_subscriber(email, body.source[:40] or "landing", token)
     if status in ("new", "again"):
-        _forward_to_beehiiv(email, body.source[:40] or "landing")
+        if body.course:
+            _forward_to_beehiiv(email, body.source[:40] or "landing")
         unsub = f"{auth.base_url(request)}/unsubscribe?t={db.subscriber_token(email)}"
         try:
             auth.send_email(email, "You're on the NextShelf list", _welcome_html(unsub))
