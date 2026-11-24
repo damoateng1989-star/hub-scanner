@@ -11951,12 +11951,10 @@ async function renderTodayVideos() {
   const se = $("stackEntry"); if (se) { se.hidden = true; se.innerHTML = ""; }
   if (host._io) host._io.disconnect();
   if (host.dataset.mode === "stack") { host.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} }); host.dataset.mode = ""; host.dataset.day = ""; }
-  if (matchMedia("(max-width: 899px)").matches) { if (host._wrIo) host._wrIo.disconnect(); host.hidden = true; host.innerHTML = ""; return; }
-  // Nov 23 (owner): Today's video tile is the Screening Room (today's feature, Market History, the classics)
+    // Nov 23 (owner, later): no Screening Room on Today; films live in Cinema and beside the stock
   if (host._wrIo) host._wrIo.disconnect();
   host.querySelectorAll("video").forEach(v => { try { v.pause(); } catch (e) {} });
-  host.classList.add("sr-card"); host.innerHTML = "";
-  await renderScreening(host);
+  host.classList.remove("sr-card"); host.hidden = true; host.innerHTML = "";
 }
 async function renderStackEntry() {
   const el = document.getElementById("stackEntry"); if (!el) return;
