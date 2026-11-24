@@ -7328,15 +7328,17 @@ function mapVolProfile(chart, series, D, light) {
   const all = base.concat(D.cs.filter(c => ok(c) && +c.time > lastT));        // the loaded series, plus the forming candle
   if (all.length < 3) return;
   const etSec = (iso) => { const m = String(iso || "").match(/^(\d+)-(\d+)-(\d+)(?:T(\d+):(\d+))?/); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0)) / 1000 : null; };
-  let from = D.P && D.P.hub ? etSec(D.P.hub.start) : null, name = "hub window";
+  // Nov 24 (owner): a hub-only window made the profile a thin sliver over the hub. The window is now the trailing
+  // 60 sessions, reaching back further when the hub started earlier — still fixed, so the POC doesn't move on pan/zoom.
+  let from = D.P && D.P.hub ? etSec(D.P.hub.start) : null;
   if (from != null && D.daily) from -= from % 86400;
-  let win = from != null ? all.filter(c => +c.time >= from) : [];
-  if (win.length < 3) {                                   // no hub (or too short): the trailing 120 sessions
-    const days = [...new Set(all.map(c => Math.floor(+c.time / 86400)))]; const first = days[Math.max(0, days.length - 120)];
-    win = all.filter(c => Math.floor(+c.time / 86400) >= first); name = `${Math.min(120, days.length)}-session window`;
-  }
+  const days = [...new Set(all.map(c => Math.floor(+c.time / 86400)))], NS = Math.min(60, days.length);
+  const first = days[Math.max(0, days.length - NS)] * 86400;
+  const start = from != null ? Math.min(from, first) : first;
+  let win = all.filter(c => +c.time >= start), name = `${NS}-session window`;
+  if (win.length < 3) { win = all; name = "loaded window"; }
   const lo = Math.min(...win.map(c => +c.low)), hi = Math.max(...win.map(c => +c.high)); if (!(hi > lo)) return;
-  const N = 32, step = (hi - lo) / N, bins = new Array(N).fill(0);
+  const N = 48, step = (hi - lo) / N, bins = new Array(N).fill(0);
   for (const c of win) {
     const a = Math.max(0, Math.floor((+c.low - lo) / step)), b = Math.min(N - 1, Math.floor((+c.high - lo) / step)), share = +c.volume / (b - a + 1);
     for (let k = a; k <= b; k++) bins[k] += share;
@@ -7362,7 +7364,7 @@ function mapVolProfile(chart, series, D, light) {
       cv2.width = cv.width; cv2.height = cv.height; cv2.style.width = W + "px"; cv2.style.height = H + "px";
       const g2 = cv2.getContext("2d"); g2.setTransform(dpr, 0, 0, dpr, 0, 0); g2.clearRect(0, 0, W, H);
       // Nov 24 (owner): the profile sits on the RIGHT edge in solid blue, easy to see (broker style); the POC row lavender
-      const maxW = W * .24, tone = light ? "rgba(46,86,150,.32)" : "rgba(39,74,128,.82)";
+      const maxW = W * .3, tone = light ? "rgba(46,86,150,.32)" : "rgba(39,74,128,.82)";
       const rowY = {};
       for (let k = 0; k < N; k++) {
         const y1 = series.priceToCoordinate(lo + (k + 1) * step), y2 = series.priceToCoordinate(lo + k * step);
@@ -10814,7 +10816,7 @@ function sikaWrongHTML(sym) {
 function sikaLinesHTML() {
   const L = [["#F2C14E", "Trigger", "the price that confirms the setup"], ["#FF6B5E", "Stop (red dashed)", "where the idea is wrong"],
     ["#3DD68C", "Next shelf / Target", "the next level price tends to reach, the aim"], ["#B48CFF", "Resistance / Old high", "a level where the move may stall"],
-    ["#5AC8FA", "Hub high / Hub low", "the tight range the stock just left (or is still in)"], ["#A89CD6", "POC", "the price that traded the most volume in the hub window"],
+    ["#5AC8FA", "Hub high / Hub low", "the tight range the stock just left (or is still in)"], ["#A89CD6", "POC", "the price that traded the most volume over the last 60 sessions (or since the hub began, if earlier)"],
     ["#9AA4B2", "2× levels", "where two or more kinds of level stack up, stronger than one alone"], ["#9AA4B2", "Grey bars on the left", "the volume profile: how much traded at each price"]];
   return `<p>What each line on the chart means:</p><div class="ask-legend">${L.map(([c, n, w]) => `<div><i style="background:${c}"></i><span><b>${n}</b> · ${w}</span></div>`).join("")}</div>${mapExtOn() ? `<p>The <b>amber</b> and <b>blue</b> bands are pre-market and after hours. They're shown for context; setups only use market hours.</p>` : ""}`;
 }
