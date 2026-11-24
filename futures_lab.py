@@ -241,7 +241,8 @@ def score(rows: list[dict], split_at: pd.Timestamp | None = None) -> dict:
 # The opening range is the first 30 or 60 minutes of the regular session (9:30 ET). One trade a day at most: the first
 # break of the range before 2 PM. Stop at the other side of the range (or its middle); target 1R, 2R, or hold to the
 # close (the last regular-session bar). 30-minute bars can't say which came first when one bar touches both the stop
-# and the target, so that counts as the stop (the worst case). Results are in index points and dollars per contract,
+# and the target, so that counts as the stop (the worst case). A bar that breaks BOTH sides of the range counts as a
+# full stop-out too. Results are in index points and dollars per contract,
 # after the round-trip cost.
 ORB_RANGES = {30: "30-minute range", 60: "1-hour range"}
 ORB_EXITS = [("1r", "target 1R"), ("2r", "target 2R"), ("eod", "hold to the close")]
@@ -272,8 +273,12 @@ def _orb_day(day: pd.DataFrame, mins: int, entry: str, stop_k: str, exit_k: str)
                 d, px = -1, float(b["Close"])
         else:
             up, dn = b["High"] > hi, b["Low"] < lo
-            if up and dn:                       # both sides in one bar: no way to know which broke first; skip the day
-                return None
+            if up and dn:                       # both sides in one bar: can't tell which broke first. Worst case (Nov 23):
+                # count it as a full stop-out on the side nearer the open (a live trader would have been in, then out)
+                d = 1 if (hi - float(b["Open"])) <= (float(b["Open"]) - lo) else -1
+                px = hi if d == 1 else lo
+                stop = (lo if d == 1 else hi) if stop_k == "far" else mid
+                return dict(d=d, pts=-abs(px - stop), t=str(rest.index[k]), how="both")
             if up:
                 d, px = 1, max(hi, float(b["Open"]))
             elif dn:
