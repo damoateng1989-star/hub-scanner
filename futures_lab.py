@@ -9,8 +9,8 @@ Research only, owner-only, nothing live. It:
 4. replays them through the SAME trade replay as the stock Lab (lab_exits.trades_for), unchanged rules;
 5. scores the live rules (hub A retests longs/shorts, ...) and the breakout/retest groups, per contract.
 
-The stock engine's horizon is 10 candles. Futures print ~6 four-hour candles a day (stocks ~2), so the run also
-scores a "same calendar time" variant with a 30-candle horizon. Results are saved to the "futures_lab" setting.
+Round 2 (Nov 23): scores 4-hour AND 1-hour candles, subtracts a real round-trip cost (fees + a tick of slippage
+each side), and splits each rule's result into year 1 and year 2. Results are saved to the "futures_lab" setting.
 """
 from __future__ import annotations
 
@@ -31,6 +31,22 @@ BASE = "https://api.massive.com"
 PRODUCTS = {"MES": "Micro E-mini S&P 500 ($5/pt)", "MNQ": "Micro E-mini Nasdaq-100 ($2/pt)"}
 MONTHS = {3: "H", 6: "M", 9: "U", 12: "Z"}
 ROLL_DAYS = 8
+# What a round trip really costs, per contract: commission + exchange fees, plus one tick of slippage on each side.
+POINT_USD = {"MES": 5.0, "MNQ": 2.0}
+TICK = 0.25
+
+
+def _fee_usd() -> float:
+    try:
+        return float(os.getenv("FUTURES_FEE_RT", "1.50"))
+    except ValueError:
+        return 1.50
+
+
+def cost_points(product: str) -> float:
+    """Round-trip cost in index points: fees / $ per point + 2 ticks of slippage."""
+    pv = POINT_USD.get(product, 5.0)
+    return _fee_usd() / pv + 2 * TICK
 DIR = db.DATA_DIR / "futures"
 _RUN = {"thread": None}
 
@@ -167,9 +183,21 @@ def four_hour(df30: pd.DataFrame) -> pd.DataFrame:
     return c4[c4["Volume"] > 0]
 
 
+def one_hour(df30: pd.DataFrame) -> pd.DataFrame:
+    """1-hour candles (on the hour, ET); for the day-trading version of the test."""
+    if df30.empty:
+        return df30
+    et = df30.index.tz_convert("America/New_York")
+    g = df30.groupby(et.floor("1h"))
+    c1 = pd.DataFrame({"Open": g["Open"].first(), "High": g["High"].max(), "Low": g["Low"].min(),
+                       "Close": g["Close"].last(), "Volume": g["Volume"].sum()})
+    c1.index = pd.DatetimeIndex(c1.index).tz_convert("America/New_York")
+    return c1[c1["Volume"] > 0]
+
+
 # ---------------------------------------------------------------- the test
-def _stats(rows: list[dict], key: str) -> dict | None:
-    rs = [r["ex"][key][0] for r in rows if key in r.get("ex", {})]
+def _stats(rows: list[dict], key: str, net: bool = False) -> dict | None:
+    rs = [r["ex"][key][0] - (r.get("cost", 0.0) if net else 0.0) for r in rows if key in r.get("ex", {})]
     if not rs:
         return None
     wins = [x for x in rs if x > 0]
@@ -179,19 +207,32 @@ def _stats(rows: list[dict], key: str) -> dict | None:
                 pf=round(pf, 2) if pf else None, total=round(sum(rs), 2))
 
 
-def score(rows: list[dict]) -> dict:
+def _cost_rows(rows: list[dict], candles: pd.DataFrame, product: str) -> None:
+    """Each trade's round-trip cost as a % of its entry price (so it subtracts straight from the % return)."""
+    px = {str(i): float(c) for i, c in candles["Close"].items()}
+    cp = cost_points(product)
+    for r in rows:
+        p = px.get(r.get("t"))
+        r["cost"] = (cp / p * 100) if p else 0.0
+
+
+def score(rows: list[dict], split_at: pd.Timestamp | None = None) -> dict:
+    """Each live rule: before costs, after costs, and after costs in each year on its own."""
     import lab_exits
+    def yr(r):
+        return 1 if split_at is None or pd.Timestamp(r["t"]) < split_at else 2
     live = []
     for key, label, test, ex in lab_exits.LIVE_RULES:
         sub = [r for r in rows if test(r)]
-        live.append(dict(key=key, label=label, exit=ex, stats=_stats(sub, ex)))
+        live.append(dict(key=key, label=label, exit=ex, stats=_stats(sub, ex), net=_stats(sub, ex, True),
+                         y1=_stats([r for r in sub if yr(r) == 1], ex, True), y2=_stats([r for r in sub if yr(r) == 2], ex, True)))
     groups = []
     for gk, glabel, _ in lab_exits.GROUPS:
         for entry in ("breakout", "retest"):
             for d, side in ((1, "longs"), (-1, "shorts")):
                 sub = [r for r in rows if r["grp"] == gk and r.get("entry", "breakout") == entry and r["d"] == d]
                 if sub:
-                    groups.append(dict(group=glabel, entry=entry, side=side, edge=_stats(sub, "edge"), atr10=_stats(sub, "atr10")))
+                    groups.append(dict(group=glabel, entry=entry, side=side, edge=_stats(sub, "edge", True), atr10=_stats(sub, "atr10", True)))
     return dict(live=live, groups=groups, trades=len(rows))
 
 
@@ -209,7 +250,6 @@ def _save(**kw) -> None:
 
 
 def run(products=("MES", "MNQ"), years: int = 2, fetch=bars) -> dict:
-    import dataclasses
     import engine
     import lab_exits
     import scanner
@@ -220,20 +260,25 @@ def run(products=("MES", "MNQ"), years: int = 2, fetch=bars) -> dict:
     try:
         for p in products:
             df30 = continuous(p, start, end, fetch=fetch, progress=lambda m: _save(progress=m))
-            c4 = four_hour(df30)
-            out = dict(name=PRODUCTS.get(p, p), bars_30m=len(df30), candles_4h=len(c4),
+            c4, c1 = four_hour(df30), one_hour(df30)
+            out = dict(name=PRODUCTS.get(p, p), bars_30m=len(df30), candles_4h=len(c4), candles_1h=len(c1),
+                       cost_pts=round(cost_points(p), 2), cost_usd=round(cost_points(p) * POINT_USD.get(p, 5.0), 2),
                        first=str(c4.index[0]) if len(c4) else None, last=str(c4.index[-1]) if len(c4) else None)
             if len(c4) >= 120:
+                split = c4.index[0] + pd.Timedelta(days=365)
+                out["split"] = str(split)[:10]
                 s = scanner.SETTINGS
-                out["standard"] = score(lab_exits.trades_for(p, c4, s, None))
-                s30 = dataclasses.replace(s, horizon=max(s.horizon, 30))
-                out["calendar"] = score(lab_exits.trades_for(p, c4, s30, None))
+                for name, c in (("h4", c4), ("h1", c1)):
+                    _save(progress=f"{p}: scoring {'4-hour' if name == 'h4' else '1-hour'} candles")
+                    rows = lab_exits.trades_for(p, c, s, None)
+                    _cost_rows(rows, c, p)
+                    out[name] = score(rows, split)
             else:
                 out["error"] = "Not enough candles for a test."
             res[p] = out
             _save(progress=f"{p} done", results=res)
         _save(state="done", finished=datetime.now(timezone.utc).isoformat(), progress="done", results=res,
-              window=f"{start} to {end}", horizon=dict(standard=scanner.SETTINGS.horizon, calendar=max(scanner.SETTINGS.horizon, 30)))
+              window=f"{start} to {end}", horizon=scanner.SETTINGS.horizon, fee_rt=_fee_usd())
     except Exception as e:
         log.exception("futures lab failed")
         _save(state="error", error=str(e)[:300])

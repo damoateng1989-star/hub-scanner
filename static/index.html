@@ -3025,7 +3025,7 @@ html[data-theme="light"] .vp-l small, html[data-theme="light"] .vp-r small { col
 <style>
 /* Nov 23: the ticker suggestions under "Add a ticker", in the dark theme */
 .cmd { position: relative; }
-.fl-t { width: 100%; border-collapse: collapse; font-size: 12px; } .fl-t td:first-child { white-space: normal; min-width: 120px; } .fl-t th, .fl-t td { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); } .fl-t th { color: var(--muted); font-weight: 500; } .fl-t td.u { color: #00C898; } .fl-t td.d { color: #F00060; }
+.fl-t { width: 100%; border-collapse: collapse; font-size: 12px; } .fl-t td:first-child { white-space: normal; min-width: 120px; } .fl-t small { opacity: .6; } .fl-t tr.fl-ok td { background: color-mix(in srgb, var(--up) 10%, transparent); } .fl-t th, .fl-t td { text-align: left; padding: 5px 6px; border-top: 1px solid var(--line); } .fl-t th { color: var(--muted); font-weight: 500; } .fl-t td.u { color: #00C898; } .fl-t td.d { color: #F00060; }
 .ns-sugg { position: absolute; left: 34px; top: calc(100% + 6px); z-index: 30; min-width: 260px; max-width: min(420px, calc(100% - 40px)); background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; padding: 4px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
 .ns-sugg[hidden] { display: none; }
 .ns-sugg button { display: flex; align-items: baseline; gap: 10px; width: 100%; text-align: left; background: transparent; border: 0; border-radius: 8px; padding: 8px 10px; color: var(--ink); font: inherit; cursor: pointer; }
@@ -4190,16 +4190,20 @@ async function loadFutLab(start) {
   try { if (start) await api("/api/admin/futures-lab", {method: "POST"}); d = await api("/api/admin/futures-lab"); }
   catch (e) { box.innerHTML = `<h3>Futures Lab</h3><p style="color:#F00060">${esc(friendly(e))}</p>`; return; }
   const pct = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v.toFixed(2) + "%";
-  const tbl = (sc) => !sc ? "" : `<div style="overflow-x:auto"><table class="fl-t"><tr><th>Rule</th><th>Trades</th><th>Win</th><th>Avg</th><th>PF</th></tr>${sc.live.filter(x => x.stats).map(x =>
-    `<tr><td>${esc(x.label)}</td><td>${x.stats.n}</td><td>${x.stats.win}%</td><td class="${x.stats.avg > 0 ? "u" : "d"}">${pct(x.stats.avg)}</td><td>${x.stats.pf ?? "–"}</td></tr>`).join("") || `<tr><td colspan="5">No live-rule trades.</td></tr>`}</table></div>`;
+  const pfc = (st) => !st ? `<td>–</td>` : `<td class="${st.pf != null && st.pf >= 1 ? "u" : "d"}">${st.pf ?? "–"}<small> · ${st.n}</small></td>`;
+  // a rule passes when it makes money after costs in BOTH years, with 20+ trades
+  const ok = (x) => x.net && x.net.n >= 20 && x.y1 && x.y2 && (x.y1.pf || 0) >= 1 && (x.y2.pf || 0) >= 1 && x.net.avg > 0;
+  const tbl = (sc) => !sc ? "" : `<div style="overflow-x:auto"><table class="fl-t"><tr><th>Rule</th><th>Trades</th><th>Win</th><th>Avg</th><th>After costs</th><th>PF after</th><th>Year 1</th><th>Year 2</th></tr>${sc.live.filter(x => x.stats).map(x =>
+    `<tr${ok(x) ? ` class="fl-ok"` : ""}><td>${ok(x) ? "✓ " : ""}${esc(x.label)}</td><td>${x.stats.n}</td><td>${x.net.win}%</td><td>${pct(x.stats.avg)}</td><td class="${x.net.avg > 0 ? "u" : "d"}">${pct(x.net.avg)}</td><td>${x.net.pf ?? "–"}</td>${pfc(x.y1)}${pfc(x.y2)}</tr>`).join("") || `<tr><td colspan="8">No live-rule trades.</td></tr>`}</table></div>`;
   const res = d.results || {};
-  const body = Object.entries(res).map(([k, r]) => `<div style="margin-top:12px"><b>${esc(k)}</b> · ${esc(r.name || "")}<p class="note" style="margin:2px 0 6px">${r.candles_4h || 0} four-hour candles${r.first ? `, ${esc(String(r.first).slice(0, 10))} to ${esc(String(r.last).slice(0, 10))}` : ""}${r.error ? ` · ${esc(r.error)}` : ""}</p>
-    ${r.standard ? `<p class="note" style="margin:6px 0 2px">Same rules as stocks (${d.horizon ? d.horizon.standard : 10}-candle clock)</p>${tbl(r.standard)}<p class="note" style="margin:10px 0 2px">Same calendar time (${d.horizon ? d.horizon.calendar : 30}-candle clock)</p>${tbl(r.calendar)}` : ""}</div>`).join("");
-  box.innerHTML = `<h3>Futures Lab</h3><p>Replays the stock engine, unchanged, on two years of MES and MNQ (roll-adjusted, 4-hour candles from the 6 PM ET open). Research only: nothing here is live.</p>
+  const body = Object.entries(res).map(([k, r]) => `<div style="margin-top:12px"><b>${esc(k)}</b> · ${esc(r.name || "")}<p class="note" style="margin:2px 0 6px">${r.first ? `${esc(String(r.first).slice(0, 10))} to ${esc(String(r.last).slice(0, 10))}` : ""}${r.cost_usd != null ? ` · costs $${r.cost_usd.toFixed(2)} a round trip (${r.cost_pts} pts)` : ""}${r.split ? ` · year 2 starts ${esc(r.split)}` : ""}${r.error ? ` · ${esc(r.error)}` : ""}</p>
+    ${r.h4 ? `<p class="note" style="margin:6px 0 2px">4-hour candles (swing) · ${r.candles_4h} candles</p>${tbl(r.h4)}` : ""}${r.h1 ? `<p class="note" style="margin:10px 0 2px">1-hour candles (day trading) · ${r.candles_1h} candles</p>${tbl(r.h1)}` : ""}
+    ${r.standard && !r.h4 ? `<p class="note">These are round-1 results. Run again for the 1-hour, after-costs and year-by-year version.</p>` : ""}</div>`).join("");
+  box.innerHTML = `<h3>Futures Lab</h3><p>Replays the stock engine, unchanged, on two years of MES and MNQ (roll-adjusted), on 4-hour and 1-hour candles, after real costs. Research only: nothing here is live.</p>
     ${!d.configured ? `<p class="note">Add <code>MASSIVE_API_KEY</code> on Render to run it. On Massive's free plan the download takes about 5 minutes.</p>` : ""}
     <p>Status: <b>${esc(d.running ? "running" : d.state || "not run yet")}</b>${d.running && d.progress ? ` · ${esc(d.progress)}` : ""}${d.error ? ` · <span style="color:#F00060">${esc(d.error)}</span>` : ""}${d.finished ? ` · finished ${new Date(d.finished).toLocaleString("en-US", {month: "short", day: "numeric", hour: "numeric", minute: "2-digit"})}` : ""}</p>
     <div class="row" style="gap:8px">${d.configured ? `<button class="btnx sm" ${d.running ? "disabled" : ""} onclick="this.disabled=true;loadFutLab(true)">${d.state === "done" ? "Run again" : "Run the futures test"}</button>` : ""}<button class="btnx sm" onclick="loadFutLab()">Refresh</button></div>
-    ${body}<p class="note" style="margin-top:10px">Avg = average return per trade · PF = profit factor (wins ÷ losses). The A+ clear-path check isn't in the replay yet; these are the A rules.</p>`;
+    ${body}<p class="note" style="margin-top:10px">Avg = average return per trade · PF = profit factor (wins ÷ losses; above 1 makes money) · Year 1 / Year 2 = PF after costs · trades. ✓ = makes money after costs in both years, with 20+ trades. The A+ clear-path check isn't in the replay yet.</p>`;
   if (d.running) setTimeout(() => { if (CUR === "admin") loadFutLab(); }, 15000);
 }
 // Nov 23: how many hub breakouts, retests, A and A+ setups the scans alerted on in the last 30 days
