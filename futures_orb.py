@@ -31,7 +31,12 @@ def products() -> list[str]:
     return [p for p in os.getenv("FUTURES_ORB", "MNQ").upper().replace(" ", "").split(",") if p in fl.POINT_USD]
 
 
+_INIT = {"done": False}
+
+
 def init() -> None:
+    if _INIT["done"]:
+        return
     with db._lock:
         db._conn.executescript("""
         CREATE TABLE IF NOT EXISTS fut_orb (
@@ -47,6 +52,7 @@ def init() -> None:
         except Exception:
             pass
         db._conn.commit()
+    _INIT["done"] = True
 
 
 def _now() -> str:

@@ -4321,19 +4321,28 @@ function foSideRow() {
     return `<div class="sb-shelf-row"><button class="sb-shelf" title="${esc(P.name)}" onclick="location.hash='#futures'">${esc(P.product)}<span class="sb-gauge" title="Price vs. the opening range"><b style="left:${x(t.lo)}%;width:${x(t.hi) - x(t.lo)}%"></b>${last != null ? `<i style="left:${x(last)}%;--c:${col}"></i>` : ""}</span>
       <small>Futures · ${esc(word)}</small></button><span class="sb-rm" style="visibility:hidden" aria-hidden="true">×</span></div>`; }).join("");
 }
-async function renderFutOrb(hostId) {
+let FO_AT = 0, FO_P = null;
+async function foFetch(force) {      // one request at a time, reused for 30 s (Today re-renders many times a minute)
+  if (!force && FO && Date.now() - FO_AT < 30000) return FO;
+  if (!FO_P) FO_P = api("/api/admin/futures-orb").then(d => { FO = d; FO_AT = Date.now(); return d; }).finally(() => { FO_P = null; });
+  return FO_P;
+}
+async function renderFutOrb(hostId, force) {
   const page = !!hostId, el = $(hostId || "futOrbCard"); if (!el) return;
-  if (!ME || !ME.is_admin) { el.hidden = true; return; }
-  try { FO = await api("/api/admin/futures-orb"); } catch (e) { if (page) el.innerHTML = `<p class="fo-n" style="color:#F00060">${esc(friendly(e))}</p>`; else el.hidden = true; return; }
-  if (!FO.configured || !FO.products.length) { if (page) el.innerHTML = `<p class="fo-n">Add <code>MASSIVE_API_KEY</code> on Render to turn on the futures alerts.</p>`; else el.hidden = true; return; }
-  el.innerHTML = page ? FO.products.map(P => foTodayHTML(Object.assign({rule: FO.rule}, P))).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">')
-    : FO.products.map(P => foShelfHTML(P)).join("");
+  if (!ME) return;                                    // not loaded yet: leave the card as it is (no flash)
+  if (!ME.is_admin) { el.hidden = true; return; }
+  let d;
+  try { d = await foFetch(force || page); }
+  catch (e) { if (page) el.innerHTML = `<p class="fo-n" style="color:#F00060">${esc(friendly(e))}</p>`; else if (!FO) el.hidden = true; d = FO; if (!d) return; }
+  if (!d.configured || !d.products.length) { if (page) el.innerHTML = `<p class="fo-n">Add <code>MASSIVE_API_KEY</code> on Render to turn on the futures alerts.</p>`; else el.hidden = true; return; }
+  el.innerHTML = page ? d.products.map(P => foTodayHTML(Object.assign({rule: d.rule}, P))).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">')
+    : d.products.map(P => foShelfHTML(P)).join("");
   el.classList.toggle("fo-card", page); el.hidden = false;
   if (typeof renderStrip === "function") renderStrip();
 }
 async function foTake(product, btn) {
   btn.disabled = true;
-  try { await api("/api/admin/futures-orb/take", {method: "POST", body: JSON.stringify({product, qty: +$("foQty").value, entry: +$("foEntry").value || null})}); renderFutOrb(CUR === "futures" ? "futOrbPage" : null); }
+  try { await api("/api/admin/futures-orb/take", {method: "POST", body: JSON.stringify({product, qty: +$("foQty").value, entry: +$("foEntry").value || null})}); renderFutOrb(CUR === "futures" ? "futOrbPage" : null, true); }
   catch (e) { btn.disabled = false; btn.insertAdjacentHTML("afterend", `<span class="fo-n" style="color:#F00060">${esc(friendly(e))}</span>`); }
 }
 async function loadFutOrbRecord(check, boxId) {
@@ -4349,7 +4358,7 @@ async function loadFutOrbRecord(check, boxId) {
       ${rows ? `<div style="overflow-x:auto"><table class="fl-t"><tr><th>Day</th><th>Range</th><th>Break</th><th>Entry</th><th>Result</th><th>$ / contract</th></tr>${rows}</table></div>` : `<p class="note">No finished days yet. The first one is scored at the end of the next market day.</p>`}`; }).join("");
   box.innerHTML = `<h3>Futures · forward test</h3><p>${esc(d.rule)}. Scored automatically every market day, per contract after costs; nothing is traded. You get the alerts at 10:30, on the break and at the exit.</p>
     ${!d.configured ? `<p class="note">Needs <code>MASSIVE_API_KEY</code>.</p>` : ""}${body}
-    <div class="row" style="gap:8px;margin-top:8px"><button class="btnx sm" onclick="this.disabled=true;loadFutOrbRecord(true, '${boxId || "futOrbBox"}').then(() => renderFutOrb(CUR === 'futures' ? 'futOrbPage' : null))">Check now</button></div>`;
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btnx sm" onclick="this.disabled=true;loadFutOrbRecord(true, '${boxId || "futOrbBox"}').then(() => renderFutOrb(CUR === 'futures' ? 'futOrbPage' : null, true))">Check now</button></div>`;
 }
 // Nov 23: the Futures Lab: the stock engine replayed on MES / MNQ (research only)
 async function loadFutLab(start) {
