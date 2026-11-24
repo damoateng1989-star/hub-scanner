@@ -97,7 +97,7 @@ html[data-theme="light"] .dw-tb { background: rgba(255,255,255,.95); border-colo
 .mp-mom { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0 2px; font-size: 13px; color: #8a90a0; }
 .mp-mom:empty { display: none; }
 .mp-mom .c { font: 500 12.5px var(--mono); border: 1px solid var(--line, #292A2D); border-radius: 10px; padding: 5px 10px; color: #9AA0AC; } .mp-mom .c b { color: #E9EBEF; font-weight: 600; margin-left: 4px; }
-.mp-lvchip { position: absolute; right: 70px; bottom: 34%; z-index: 5; border: 1px solid #3a3d45; background: rgba(21,23,28,.9); color: #C9CED8; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 8px; cursor: pointer; }
+.mp-lvchip { position: absolute; left: 12px; bottom: 30%; z-index: 5; border: 1px solid #3a3d45; background: rgba(21,23,28,.9); color: #C9CED8; font: 500 12px var(--mono); padding: 4px 10px; border-radius: 8px; cursor: pointer; }
 .mp-ticks { position: absolute; inset: 0; pointer-events: none; z-index: 3; } .mp-ticks i { position: absolute; width: 8px; height: 2px; background: #8a90a0; pointer-events: auto; }
 html[data-theme="light"] .mp-more { background: #fff; border-color: #DCE1E8; } html[data-theme="light"] .mp-more button { color: #1b2230; }
 @media (max-width: 560px) { .mp-ctop.mp-ctop1 { gap: 4px; overflow-x: auto; scrollbar-width: none; } .mp-ctop1 .mp-ctsp { display: none; }
@@ -6799,13 +6799,13 @@ class MapLabelsPaneView {
         if (d.hub) {
           const yHi = yOf(d.hub.high), yLo = yOf(d.hub.low);
           if (yHi != null && yLo != null && yLo > yHi) {
-            ctx.globalAlpha = .32; ctx.fillStyle = d.hubColor;
-            if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(0, yHi, W, yLo - yHi, 6); ctx.fill(); }
-            else ctx.fillRect(0, yHi, W, yLo - yHi);
+            // Nov 24 (owner): no blue fill over the candles — the hub is its two edges as thin lines, and its label
+            ctx.globalAlpha = .9; ctx.strokeStyle = d.hubColor; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(0, Math.round(yHi) + .5); ctx.lineTo(W, Math.round(yHi) + .5); ctx.moveTo(0, Math.round(yLo) + .5); ctx.lineTo(W, Math.round(yLo) + .5); ctx.stroke();
             ctx.globalAlpha = 1;
             if (W >= MAP_LABEL_MIN_W) {
               ctx.font = "600 11px 'JetBrains Mono',ui-monospace,monospace"; ctx.textBaseline = "middle";
-              ctx.fillStyle = d.bandText;
+              ctx.fillStyle = d.hubColor;
               ctx.fillText("HUB $" + (+d.hub.low).toFixed(2) + "–$" + (+d.hub.high).toFixed(2), 14, (yHi + yLo) / 2);
             }
           }
