@@ -1229,8 +1229,8 @@ def board_data(u: dict | None = Maybe):
                     live_count=len(b["live"]), near_count=len(b["near"]), forming_count=len(b["forming"]),
                     live=[], near=[], forming=[], recent=[], setups=[], setups_locked=0)
     mine = set(db.user_symbols(u["id"]))
-    for group in ("live", "near", "forming", "recent"):
-        for r in b[group]:
+    for group in ("live", "near", "forming", "recent", "setups"):     # Patch 216: setups too (gap fades), per member
+        for r in b.get(group) or []:
             r["watching"] = r["symbol"] in mine
     try:      # Patch 165: the board's live-first order needs each live row's setup grade. This is a
         import time as _time   # cache-only read of Sika's grade cache (Patch 159): the deadline is

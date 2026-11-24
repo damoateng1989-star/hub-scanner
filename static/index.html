@@ -104,6 +104,18 @@ html[data-theme="light"] .mp-more { background: #fff; border-color: #DCE1E8; } h
   .mp-ctop1 .mp-tf { flex: none; } .mp-ctop1 .mp-tf button { padding: 6px 5px; font-size: 12.5px; min-width: 0; }
   .mp-ctop1 .mp-planbtn { padding: 7px 9px; font-size: 13px; white-space: nowrap; flex: none; } .mp-ctop1 .mp-morebtn { min-width: 32px; padding: 7px 6px; } .mp-ctop1 .mp-laybtn { margin-left: auto; }
   .mp-laybtn b { display: none; } .mp-ctop1 .mp-tradebtn .w2 { display: none; } }
+
+/* Patch 216: compact waiting rows */
+.arow.cmp { grid-template-columns: 1fr auto; }
+.arow.cmp .t { display: grid; gap: 4px; min-width: 0; }
+.arow.cmp .c1 { display: flex; align-items: center; gap: 8px; min-width: 0; } .arow.cmp .c1 .cmp-d { margin-left: auto; font: 700 13px var(--mono); white-space: nowrap; }
+.arow.cmp .c2 { display: flex; align-items: center; gap: 10px; } .arow.cmp .c2 small { font: 500 12px var(--mono); color: var(--muted); flex: 1; min-width: 0; }
+.cmp-bar { width: 68px; height: 4px; border-radius: 99px; background: rgba(154,160,172,.22); flex: none; overflow: hidden; } .arow.cmp .cmp-bar i { display: block; position: static; height: 100%; min-height: 0; margin: 0; background: #3CC488; border-radius: 99px; box-shadow: none; }
+.arow.cmp .c1 b { white-space: nowrap; } .arow.cmp .c1 .rt-watch { font-size: 12px; }
+.cmp-mine { font: 700 9.5px var(--mono); letter-spacing: .08em; color: #C9A548; background: rgba(201,165,72,.12); padding: 2px 6px; border-radius: 5px; }
+.cmp-tape { font: 600 10px var(--mono); color: #7C93FF; }
+.arow.cmp.mine { background: var(--surface, #15171C); border: 1px solid var(--line); border-radius: 12px; margin: 4px 8px; }
+.retest-rule { display: block; font-weight: 400; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 3px; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -8835,14 +8847,14 @@ function renderRetest() {
                  target: r.target, left: r.retest.candles_left, near: !!r.retest.near,
                  path: r.path || null,             // Patch 198 §6: the live clear-path fact (hub rows only)
                  tape_flow: r.tape_flow || null,   // Patch 184: the stored tape fact (hub rows only; never the proxy's "flow")
-                 grade: r.grade || null, hub: true, shelf: r.target_kind !== "atr", kind: "hub"});
+                 grade: r.grade || null, hub: true, shelf: r.target_kind !== "atr", kind: "hub", mine: !!r.watching});
   }
   // Patch 185: one symbol, one row — the live hub row wins; a setups row only when the symbol has no row yet
   const seen = new Set(rows.map(x => x.sym));
   for (const r of (BOARD.setups || [])) {
     if (r.retest && r.retest.candles_left > 0 && !seen.has(r.symbol) && seen.add(r.symbol))
       rows.push({sym: r.symbol, label: r.name || r.kind, state: r.state, edge: r.retest.edge, px: (LIVE_OPEN && LIVE[r.symbol] && LIVE[r.symbol].price) || r.last_close,
-                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null, kind: r.kind});
+                 target: r.target, left: r.retest.candles_left, near: !!r.retest.near, grade: r.grade || null, kind: r.kind, mine: !!r.watching});
   }
   // Gap fade & rip: entry is a DAILY close back above the gap-day high (no 4-hour retest window), so it gets its own
   // group — triggered at the latest close (tradeable now) and a close away from triggering (to pick ahead)
@@ -8851,7 +8863,7 @@ function renderRetest() {
     if (r.kind !== "gapfade" || seen.has(r.symbol)) continue;
     const px = Number(r.last_close);
     if (r.state === "breakout_up" && Number(r.candles) <= 1) { seen.add(r.symbol); gaps.push({sym: r.symbol, label: "Gap fade & rip", state: "breakout_up", kind: "gapfade", gap: true, live: true, edge: r.edge, stop: r.stop, target: r.target, day: Number(r.candles) + 1, grade: r.grade || null}); }
-    else if (r.state !== "breakout_up" && r.upper > 0 && px > 0 && px < r.upper && (r.upper / px - 1) * 100 <= 3) { seen.add(r.symbol); gaps.push({sym: r.symbol, label: "Gap fade & rip", state: "forming", kind: "gapfade", gap: true, live: false, edge: r.upper, stop: r.lower, dist: (r.upper / px - 1) * 100, daysLeft: r.days_left, grade: null}); }
+    else if (r.state !== "breakout_up" && r.upper > 0 && px > 0 && px < r.upper && (r.upper / px - 1) * 100 <= 3) { seen.add(r.symbol); gaps.push({sym: r.symbol, label: "Gap fade & rip", state: "forming", kind: "gapfade", gap: true, live: false, edge: r.upper, stop: r.lower, dist: (r.upper / px - 1) * 100, daysLeft: r.days_left, grade: null, mine: !!r.watching}); }
   }
   gaps.sort((a, b) => (b.live - a.live) || ((b.grade === "A") - (a.grade === "A")) || ((a.dist || 0) - (b.dist || 0)));
   // Patch 184: tape-confirmed first inside each group, then fewest candles left (no tape_flow → today's order)
@@ -8901,15 +8913,24 @@ function renderRetest() {
       <span class="t"><span class="tk">${esc(x.sym)}</span><span>${x.live
         ? `Gap fade & rip${x.grade && x.grade !== "?" ? ` · <b class="sg-in ${GRADE_CLS[x.grade]}">${x.grade}</b>` : ""} · triggered: closed back above ${money(x.edge)} · out below ${money(x.stop)} · target ${money(x.target)} · day ${x.day} of 10`
         : `Gap fade & rip · ${x.dist.toFixed(1)}% under the trigger · a daily close above ${money(x.edge)} triggers it${x.daysLeft != null ? ` · ${x.daysLeft} day${x.daysLeft === 1 ? "" : "s"} left` : ""}`}</span></span><span class="go">›</span></a>`;
+  // Patch 216: what a group shares is said once in its header; a compact row carries only its own data
+  const cmpRow = (x, d, line2, bar, extra) => `<a class="arow cmp${x.mine ? " mine" : ""}" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')">
+      <span class="t"><span class="c1"><span class="tk">${esc(x.sym)}</span>${x.mine ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}${extra || ""}<b class="cmp-d">${d.toFixed(1)}% away</b></span>
+      <span class="c2"><small>${line2}</small><span class="cmp-bar"><i style="width:${Math.round(Math.max(0, Math.min(1, bar)) * 100)}%"></i></span></span></span><span class="go">›</span></a>`;
   const gapList = gaps.filter(x => x !== heroRow);
-  const gapGroup = gapList.length ? `<div class="retest-group"><div class="retest-sub">Gap fade &amp; rip · ${gapList.length}</div>${gapList.map(gapRow).join("")}</div>` : "";   // (a waiting hero still appears in the full waiting list below)
+  const gForm = gapList.filter(x => !x.live), dl = [...new Set(gForm.map(x => x.daysLeft))], uni = gForm.length && dl.length === 1 && dl[0] != null ? dl[0] : null;
+  const gapCmp = (x) => x.live ? gapRow(x) : cmpRow(x, x.dist, `close above ${money(x.edge)}${uni == null && x.daysLeft != null ? ` · ${x.daysLeft} day${x.daysLeft === 1 ? "" : "s"} left` : ""}`, 1 - x.dist / 3);
+  const gapGroup = gapList.length ? `<div class="retest-group"><div class="retest-sub">Gap fade &amp; rip · ${gapList.length}${gForm.length ? `<small class="retest-rule">A daily close above the gap-day high triggers it.${uni != null ? ` All windows: ${uni} day${uni === 1 ? "" : "s"} left.` : ""}</small>` : ""}</div>${gapList.map(gapCmp).join("")}</div>` : "";
+  const waitCmp = (x) => { const up = x.state !== "breakdown", px = +x.px, d = px > 0 ? Math.abs(up ? (x.edge / px - 1) : (px / x.edge - 1)) * 100 : 0;
+    return cmpRow(x, d, `edge ${money(x.edge)} · window closes ${retestBy(x.left)}`, 1 - Math.min(d, 5) / 5,
+      (x.watch ? ' <b class="rt-watch">watch only</b>' : "") + (x.tape_flow && x.tape_flow.line ? ' <b class="cmp-tape">tape confirmed</b>' : "")); };   // (a waiting hero still appears in the full waiting list below)
   const sub = (title, list, kind) => list.length ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${list.map(x => row(x, kind)).join("")}</div>` : "";
   const footer = (ME && !ME.a_all)
     ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>` : "";
   el.innerHTML = head + (heroRow ? hero(heroRow, heroKind) : "") + sub("At the edge", restNow, "now") + gapGroup + footer;
   el.hidden = false;
   if (wel) {   // the waiting list, all rows as today, inside "Everything else the scanner sees"
-    wel.innerHTML = wait.length ? `<div class="week-head"><div class="week-k">WAITING FOR THE RETEST · ${wait.length}</div></div>${wait.map(x => row(x, "wait")).join("")}` : "";
+    wel.innerHTML = wait.length ? `<div class="week-head"><div class="week-k">WAITING FOR THE RETEST · ${wait.length}</div></div>${wait.map(waitCmp).join("")}` : "";
     wel.hidden = !wait.length;
   }
   if (heroRow && heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
