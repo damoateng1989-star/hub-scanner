@@ -69,9 +69,12 @@ def late_close(candle_start) -> bool:
 
 
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
-                 pro_extra=None, candle_start=None, members: bool = True, flow_extra: str | None = None):
+                 pro_extra=None, candle_start=None, members: bool = True, flow_extra: str | None = None,
+                 conv: dict | None = None):
     """Telegram to every watcher (Pro-only types to Pro users); texts to Pro users with a number; phone calls to Pro users with a number (preclose + breakouts only).
-    pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea."""
+    pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea.
+    conv: Patch 213's conviction format (alert_format.compose) — when given, it replaces `text` exactly as composed:
+    the tape segment only for recipients the flow gate allows, push gets its one-line form, texts never carry the tape."""
     extra_cache = {}
     for u in db.watchers(symbol):
         if not member_wants(u, alert_type, style):
@@ -102,11 +105,27 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
                     rich = f"{msg}\n{flow_extra}"
             except Exception:
                 pass                     # never delays or blocks the alert
-        if u["telegram_chat"]:
-            telegram_bot.send(rich, u["telegram_chat"], silent=quiet)
-        _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
-        if _pro(u) and u["phone"] and not quiet:
-            phone.safe_text(msg, to=u["phone"])     # texts and calls never carry the tape line
+        if conv:                         # Patch 213: the record + the plan, exactly as composed
+            tape_ok = False
+            if conv.get("tg_rich"):
+                try:
+                    import swing_card
+                    tape_ok = swing_card.flow_allowed(u)
+                except Exception:
+                    tape_ok = False
+            tg_txt = conv["tg_rich"] if tape_ok else conv["tg_plain"]
+            if u["telegram_chat"]:
+                telegram_bot.send(tg_txt, u["telegram_chat"], silent=quiet)
+            _push(u["id"], tg_txt, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet,
+                  title=conv["title"], body=conv["push_rich"] if tape_ok else conv["push_plain"])
+            if _pro(u) and u["phone"] and not quiet:
+                phone.safe_text(conv["tg_plain"], to=u["phone"])      # texts and calls never carry the tape line
+        else:
+            if u["telegram_chat"]:
+                telegram_bot.send(rich, u["telegram_chat"], silent=quiet)
+            _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
+            if _pro(u) and u["phone"] and not quiet:
+                phone.safe_text(msg, to=u["phone"])     # texts and calls never carry the tape line
         if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
             phone.safe_call(speech, to=u["phone"])
 
@@ -167,9 +186,12 @@ def user_alert(u: dict, text: str, url: str, tag: str | None = None):
         phone.safe_text(text, to=u["phone"])
 
 
-def _push(user_id: int, text: str, url: str, tag: str | None = None, silent: bool = False):
-    """iPhone / browser notification, off the alert loop's thread so a slow push service never delays Telegram."""
-    title, body = push.split(text)
+def _push(user_id: int, text: str, url: str, tag: str | None = None, silent: bool = False,
+          title: str | None = None, body: str | None = None):
+    """iPhone / browser notification, off the alert loop's thread so a slow push service never delays Telegram.
+    title/body: given explicitly by Patch 213's one-line push (the whole line rides in the body, never cut)."""
+    if title is None or body is None:
+        title, body = push.split(text)
     threading.Thread(target=push.send, args=(user_id, title, body, url, tag, silent), daemon=True).start()
 
 

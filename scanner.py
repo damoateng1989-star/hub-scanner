@@ -19,6 +19,7 @@ import news
 import options
 import patterns
 import notify
+import alert_format
 import phone
 
 log = logging.getLogger("scanner")
@@ -811,6 +812,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                         msg = "✅ Confirmed with the full market data\n" + msg
                         speech = None
                     # Nov 20: members get heads-ups only for setups that can lead to a member alert — hub longs
+                    if e["type"] == "breakdown":
+                        msg = alert_format.watch_only(msg)       # Patch 213: breakdowns are watch only
                     notify.symbol_alert(sym, e["type"], msg, speech, pro_extra=extra, candle_start=e["time"],
                                         members=e["type"] != "breakdown")
                     sent.append(msg)
@@ -832,9 +835,22 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     msg += news.alert_line(sym, e["time"])
                 if e["kind"] == "gapfade" and e["type"] in ("breakout", "breakdown"):
                     msg += "\nBeta: tested positive over 2 years, but not in the last 6 months."
+                conv = None      # Patch 213: the gap fade gets the conviction format; ungraded / watch-only setups get the suffix
+                if e["kind"] == "gapfade" and e["type"] == "breakout":
+                    conv = alert_format.compose(
+                        sym=sym, grade="A", setup="Gap fade & rip", rec_key="gapfade",
+                        trigger=e["edge"], trigger_what="daily close back above the gap-day high",
+                        entry=e["close"], entry_state="this close", exit_px=e["target"], exit_name="+2R",
+                        stop_rule=f"daily close under {_money(e['stop'])}" if e.get("stop") else None,
+                        stop_short=f"daily close under {_money(e['stop'])}" if e.get("stop") else None,
+                        window=alert_format.window_trading_days(e["time"], 10))
+                elif e["type"] == "breakdown" or e["kind"] not in ("double_bottom", "gapfade"):
+                    msg = alert_format.watch_only(msg)
+                if conv:
+                    msg = conv["tg_plain"]
                 if db.add_alert(f"{sym}|{e['kind']}|{e['type']}|{e['time'].isoformat()}", sym, e["type"], e["time"].isoformat(), msg):
                     notify.symbol_alert(sym, e["type"], msg, None, style=patterns.STYLE_OF[e["kind"]], candle_start=e["time"],
-                                        members=e["kind"] != "double_top")     # Nov 20: double tops failed the Lab
+                                        members=e["kind"] != "double_top", conv=conv)     # Nov 20: double tops failed the Lab
                     sent.append(msg)
     except Exception as ex:
         log.warning("pattern scan failed for %s: %s", sym, ex)
@@ -858,10 +874,12 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                 edge = pend["edge"]
                 j = len(c4) - 1
                 tape_ = None     # Patch 182: the stored tape classification of THIS breakout (confirmed only)
+                tape_row_ = None
                 try:             # — the breakout alert never has it: its tape isn't couriered until that night
                     import swing_card
                     bd_ = c4.index[i0].tz_convert("America/New_York").date().isoformat()
-                    tape_ = swing_card.tape_short_line(db.flow_signal_for(sym, d, bd_), d)
+                    tape_row_ = db.flow_signal_for(sym, d, bd_)
+                    tape_ = swing_card.tape_short_line(tape_row_, d)
                 except Exception:
                     tape_ = None
                 rc = engine.retest_check(res["close"].to_numpy(float), c4["Low"].to_numpy(float),
@@ -873,15 +891,37 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     touched_ = (float(c4["Low"].iloc[j]) <= edge + engine.RETEST_TOUCH * A0_) if d == 1 else \
                                (float(c4["High"].iloc[j]) >= edge - engine.RETEST_TOUCH * A0_)
                     left_ = engine.RETEST_MAX - k
+                    conv_ = None
+                    if touched_ and left_ > 0:      # Patch 213: an A+ setup at the edge gets the conviction format
+                        try:
+                            Aj_ = float(res["atr"].iloc[j])
+                            g_ = engine.retest_grade(pend, edge, Aj_)
+                            if g_["is_a"] and d == 1 and _clear_path_at(c4, res, pend, j, edge, Aj_):
+                                conv_ = alert_format.compose(
+                                    sym=sym, grade="A+", setup="retest", rec_key="hub_a_plus",
+                                    trigger=edge, trigger_what="4H close above the edge",
+                                    entry=edge, entry_state="the retest — at the edge now",
+                                    exit_px=pend["target"], exit_name="the next shelf" if pend.get("shelf") else "1 ATR past the hub",
+                                    stop_rule=f"4H close back under {_money(g_['stop'])}", stop_short=f"4H close under {_money(g_['stop'])}",
+                                    tape_line=alert_format.tape_text(tape_row_, d),
+                                    window=alert_format.window_after_candle(c4.index[j], left_))
+                            elif d == -1 or not g_["is_a"]:
+                                conv_ = "watch"
+                        except Exception as ex_:
+                            log.warning("conviction format (retesting now) for %s failed: %s", sym, ex_)
                     if touched_ and left_ > 0:      # the window's last candle leaves no close to decide it
                         msg_ = (f"👀 {sym}: back at the edge {_money(edge)}\n"
                                 f"Retesting now: it {'broke out' if d == 1 else 'broke down'} {k} candle{'s' if k != 1 else ''} ago and pulled back to the hub. "
                                 f"A 4-hour close that holds just {'above' if d == 1 else 'below'} {_money(edge)} is the entry"
                                 f" ({left_} candle{'s' if left_ != 1 else ''} left in the window). Target {_money(pend['target'])}.")
+                        if conv_ == "watch":
+                            msg_, conv_ = alert_format.watch_only(msg_), None
+                        elif conv_:
+                            msg_ = conv_["tg_plain"]
                         if db.add_alert(f"{sym}|retesting_now|{c4.index[i0].isoformat()}", sym, "retesting_now",
                                         c4.index[j].isoformat(), msg_):
                             notify.symbol_alert(sym, "retesting_now", msg_, None, candle_start=c4.index[j], members=d == 1,
-                                                flow_extra=tape_)
+                                                flow_extra=tape_, conv=conv_)
                             sent.append(msg_)
                 if rc == "retest":
                     close2 = float(res["close"].iloc[j])
@@ -910,16 +950,34 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     if grade["is_a"] and not reached2:
                         speech = speak_retest(sym, d, edge, close2, pend["target"], grade["stop"])
                         extra = (lambda s_=sym, d_=d, c_=close2, ed_=edge, t_=pend["target"]: options.alert_line(s_, d_, c_, ed_, t_))
+                    try:   # A+ = an A hub long with a clear path (Patch 198)
+                        clear = bool(grade["is_a"]) and d == 1 and _clear_path_at(c4, res, pend, j, close2, A2)
+                    except Exception:
+                        clear = False
+                    conv = None      # Patch 213: A+ gets the record + the plan; watch only / ungraded / shorts get the suffix
+                    if clear and not reached2:
+                        left = SETTINGS.horizon - (j - i0)
+                        conv = alert_format.compose(
+                            sym=sym, grade="A+", setup="retest", rec_key="hub_a_plus",
+                            trigger=edge, trigger_what="4H close above the edge",
+                            entry=close2, entry_state="the retest, held",
+                            exit_px=pend["target"], exit_name="the next shelf" if pend.get("shelf") else "1 ATR past the hub",
+                            stop_rule=f"4H close back under {_money(grade['stop'])}", stop_short=f"4H close under {_money(grade['stop'])}",
+                            tape_line=alert_format.tape_text(tape_row_, d),
+                            window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None)
+                    elif not grade["is_a"] or d == -1:
+                        msg = alert_format.watch_only(msg)
+                    if conv:
+                        msg = conv["tg_plain"]
                     if db.add_alert(f"{sym}|retest|{c4.index[i0].isoformat()}", sym, "retest",
                                     c4.index[j].isoformat(), msg):
                         try:   # Nov 23: the A+ log behind Admin's "setups this month" (A+ = an A hub long with a clear path)
-                            clear = bool(grade["is_a"]) and d == 1 and _clear_path_at(c4, res, pend, j, close2, A2)
                             db.log_retest(sym, d, c4.index[j].isoformat(), grade.get("grade"), clear)
                         except Exception as ex_:
                             log.warning("retest log for %s failed: %s", sym, ex_)
                         # Nov 20: members get the one hub retest that passed the Lab — A grade, longs
                         notify.symbol_alert(sym, "retest", msg, speech, pro_extra=extra, candle_start=c4.index[j],
-                                            members=bool(grade["is_a"]) and d == 1, flow_extra=tape_)
+                                            members=bool(grade["is_a"]) and d == 1, flow_extra=tape_, conv=conv)
                         sent.append(msg)
     except Exception as ex:
         log.warning("retest check failed for %s: %s", sym, ex)
@@ -961,11 +1019,25 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     if grade["is_a"] and not reached2:
                         speech = speak_double_retest(sym, d, edge, close2, dbl["target"], grade["stop"])
                         extra = (lambda s_=sym, d_=d, c_=close2, ed_=edge, t_=dbl["target"]: options.alert_line(s_, d_, c_, ed_, t_))
+                    conv = None      # Patch 213: double-bottom A gets the record + the plan; the rest watch only
+                    if grade["is_a"] and dbl["kind"] == "double_bottom" and not reached2:
+                        left = SETTINGS.horizon - (j - i0)
+                        conv = alert_format.compose(
+                            sym=sym, grade="A", setup="double-bottom retest", rec_key="double_a",
+                            trigger=edge, trigger_what="4H close above the neckline",
+                            entry=close2, entry_state="the retest, held",
+                            exit_px=dbl["target"], exit_name="the next shelf" if dbl.get("shelf") else "the measured move",
+                            stop_rule=f"4H close back under {_money(grade['stop'])}", stop_short=f"4H close under {_money(grade['stop'])}",
+                            window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None)
+                    elif not grade["is_a"]:
+                        msg = alert_format.watch_only(msg)
+                    if conv:
+                        msg = conv["tg_plain"]
                     if db.add_alert(f"{sym}|retest-double|{c4.index[i0].isoformat()}", sym, "retest_double",
                                     c4.index[j].isoformat(), msg):
                         notify.symbol_alert(sym, "retest_double", msg, speech, pro_extra=extra, style="double",
                                             candle_start=c4.index[j],
-                                            members=bool(grade["is_a"]) and dbl["kind"] == "double_bottom")
+                                            members=bool(grade["is_a"]) and dbl["kind"] == "double_bottom", conv=conv)
                         sent.append(msg)
     except Exception as ex:
         log.warning("double retest check failed for %s: %s", sym, ex)
