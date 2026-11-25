@@ -74,7 +74,7 @@ def to_4h(bars: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
 
 
 
-def to_hours(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None) -> pd.DataFrame:
+def to_hours(bars: pd.DataFrame, hours: float, now: pd.Timestamp | None = None) -> pd.DataFrame:
     """Regular-hours intraday bars -> N-hour candles anchored at the 9:30 open (the last one of the day is short:
     it ends at the 4:00 close). Display only — every setup is still worked out on 4-hour closes."""
     if bars.empty:
@@ -85,10 +85,11 @@ def to_hours(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None) ->
     if df.empty:
         return df
     mins = df.index.hour * 60 + df.index.minute
-    k = (mins - OPEN_MIN) // (hours * 60)
+    step = int(round(hours * 60))      # Nov 25: hours may be 0.5 (the 30-minute view)
+    k = (mins - OPEN_MIN) // step
     day = df.index.normalize()
-    start = day + pd.to_timedelta(OPEN_MIN + k * hours * 60, unit="m")
-    end = day + pd.to_timedelta(np.minimum(OPEN_MIN + (k + 1) * hours * 60, CLOSE_MIN), unit="m")
+    start = day + pd.to_timedelta(OPEN_MIN + k * step, unit="m")
+    end = day + pd.to_timedelta(np.minimum(OPEN_MIN + (k + 1) * step, CLOSE_MIN), unit="m")
     df = df.assign(_start=start, _end=end)
     out = df.groupby("_start").agg(
         Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),
@@ -104,7 +105,7 @@ PRE_MIN = 4 * 60           # 4:00 pre-market open
 POST_END = 20 * 60         # 20:00 after-hours close
 
 
-def to_hours_ext(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None) -> pd.DataFrame:
+def to_hours_ext(bars: pd.DataFrame, hours: float, now: pd.Timestamp | None = None) -> pd.DataFrame:
     """Intraday bars incl. pre-market (4:00-9:30) and after-hours (16:00-20:00) -> N-hour candles with a `session`
     column ("pre" / "reg" / "post"). Each session is grouped on its own (pre anchored at 4:00 and cut at 9:30, regular
     anchored at 9:30 exactly like to_hours, after-hours anchored at 16:00), so the regular candles are identical to the
@@ -120,10 +121,11 @@ def to_hours_ext(bars: pd.DataFrame, hours: int, now: pd.Timestamp | None = None
     sess = np.where(mins < OPEN_MIN, "pre", np.where(mins < CLOSE_MIN, "reg", "post"))
     lo = np.where(sess == "pre", PRE_MIN, np.where(sess == "reg", OPEN_MIN, CLOSE_MIN))
     hi = np.where(sess == "pre", OPEN_MIN, np.where(sess == "reg", CLOSE_MIN, POST_END))
-    k = (mins - lo) // (hours * 60)
+    step = int(round(hours * 60))
+    k = (mins - lo) // step
     day = df.index.normalize()
-    start = day + pd.to_timedelta(lo + k * hours * 60, unit="m")
-    end = day + pd.to_timedelta(np.minimum(lo + (k + 1) * hours * 60, hi), unit="m")
+    start = day + pd.to_timedelta(lo + k * step, unit="m")
+    end = day + pd.to_timedelta(np.minimum(lo + (k + 1) * step, hi), unit="m")
     df = df.assign(_start=start, _end=end, session=sess)
     out = df.groupby("_start").agg(
         Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),

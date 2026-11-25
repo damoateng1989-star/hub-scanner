@@ -691,10 +691,10 @@ def _chart_expiry(now: pd.Timestamp) -> pd.Timestamp:
 def chart(sym: str, tf: str = "4h", lab_mode: bool = False, fresh: bool = False, ext: bool = False) -> dict:
     """The stock panel's chart, served from a cache until the next close; only the forming candle is refreshed per call."""
     sym = scanner.clean_symbol(sym)
-    if tf not in ("1h", "2h", "3h", "4h", "1d"):
+    if tf not in ("30m", "1h", "2h", "3h", "4h", "1d"):
         tf = "4h"
     t0, now = time.time(), pd.Timestamp.now(tz="UTC")
-    ext = bool(ext) and tf in ("1h", "2h", "3h")      # extended hours: finer intraday views only
+    ext = bool(ext) and tf in ("30m", "1h", "2h", "3h")      # extended hours: finer intraday views only
     key = (sym, tf, bool(lab_mode), ext)
     hit = _CHART_CACHE.get(key)
     if hit and hit[0] > now and not fresh:
@@ -781,6 +781,9 @@ def warm_charts(symbols: list[str] | None = None):
     log.info("warmed %d chart views", n)
 
 
+_TF_HOURS = {"30m": 0.5, "1h": 1, "2h": 2, "3h": 3}     # Nov 25 (owner): + 30-minute candles (display only)
+
+
 def _build_chart(sym: str, tf: str, lab_mode: bool, ext: bool = False) -> dict:
     tm = {}
     t0 = time.time()
@@ -790,10 +793,10 @@ def _build_chart(sym: str, tf: str, lab_mode: bool, ext: bool = False) -> dict:
         raise ValueError("no price data")
     if tf == "1d":
         frame = engine.to_daily(c4)                     # the view's candles; all analysis stays on c4
-    elif tf in ("1h", "2h", "3h") and ext:              # + pre-market and after-hours candles (display only)
-        frame = engine.to_hours_ext(scanner.load_raw(sym, scanner.SCAN_DAYS), int(tf[0]), now=pd.Timestamp.now(tz="UTC")).iloc[-900:]
-    elif tf in ("1h", "2h", "3h"):                      # finer views regroup the same 30-minute bars (display only)
-        frame = engine.to_hours(scanner.load_raw(sym, scanner.SCAN_DAYS), int(tf[0]), now=pd.Timestamp.now(tz="UTC")).iloc[-700:]
+    elif tf in ("30m", "1h", "2h", "3h") and ext:              # + pre-market and after-hours candles (display only)
+        frame = engine.to_hours_ext(scanner.load_raw(sym, scanner.SCAN_DAYS), _TF_HOURS[tf], now=pd.Timestamp.now(tz="UTC")).iloc[-900:]
+    elif tf in ("30m", "1h", "2h", "3h"):                # finer views regroup the same 30-minute bars (display only)
+        frame = engine.to_hours(scanner.load_raw(sym, scanner.SCAN_DAYS), _TF_HOURS[tf], now=pd.Timestamp.now(tz="UTC")).iloc[-700:]
     else:
         frame = c4
     t1 = time.time()

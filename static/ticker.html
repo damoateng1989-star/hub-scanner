@@ -684,7 +684,7 @@ function render(d) {
       <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="badge" style="--c:var(${color})">${label}</span>
         <span class="seg" role="tablist" aria-label="Chart timeframe">
-          ${[["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "Daily"]].map(([k, l]) => `<button type="button" data-tf="${k}" class="${TF === k ? "on" : ""}" role="tab" aria-selected="${TF === k}">${l}</button>`).join("")}
+          ${[["30m", "30M"], ["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "Daily"]].map(([k, l]) => `<button type="button" data-tf="${k}" class="${TF === k ? "on" : ""}" role="tab" aria-selected="${TF === k}">${l}</button>`).join("")}
         </span></span>
     </header>
     <p class="sum">${summary(st)}</p>

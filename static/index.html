@@ -7036,23 +7036,23 @@ document.body.classList.toggle("map-v2", MAP_ON());
 let MAP_Q = null;   // which Sika question is open
 // how much history the map shows (4H candles: 2 a session). Pinch / ctrl-scroll zooms between 8 and 3 months.
 // timeframe of the map's candles: "4h" (default) or "1d". The setup itself is always worked out on 4-hour closes.
-const MAP_TFS = [["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "1D"]];
+const MAP_TFS = [["30m", "30M"], ["1h", "1H"], ["2h", "2H"], ["3h", "3H"], ["4h", "4H"], ["1d", "1D"]];
 let MAP_TF = (() => { try { const v = localStorage.getItem("ns-map-tf"); return MAP_TFS.some(([k]) => k === v) ? v : "4h"; } catch (e) { return "4h"; } })();
 let MAP_DCH = null;      // the daily chart for the open stock (fetched when 1D is picked)
 // Nov 22: Regular / Extended hours on the 1H-3H views (pre-market 4:00-9:30 and after hours 4:00-8:00 shaded; display only)
 let MAP_EXT = (() => { try { return localStorage.getItem("ns-map-ext") === "1"; } catch (e) { return false; } })();
-const mapExtOn = () => MAP_EXT && (MAP_TF === "1h" || MAP_TF === "2h" || MAP_TF === "3h");
-const MAP_EXT_K = {"1h": 17 / 7, "2h": 9 / 4, "3h": 7 / 3};   // candles per day with / without extended hours: same time span either way
+const mapExtOn = () => MAP_EXT && (MAP_TF === "30m" || MAP_TF === "1h" || MAP_TF === "2h" || MAP_TF === "3h");
+const MAP_EXT_K = {"30m": 32 / 13, "1h": 17 / 7, "2h": 9 / 4, "3h": 7 / 3};   // candles per day with / without extended hours: same time span either way
 function mapExtSet(on) {
   on = !!on; if (on === MAP_EXT) return;
   MAP_EXT = on; MAP_HOVER = null; MAP_DCH = null; if (typeof MAP_RP !== "undefined" && MAP_RP) mapReplayStop(true);
   try { localStorage.setItem("ns-map-ext", on ? "1" : "0"); } catch (e) {}
   paintMap();
 }
-const MAP_RANGE_SETS = {"1h": [["2D", 14], ["1W", 35], ["2W", 70], ["1M", 147]], "2h": [["1W", 20], ["2W", 40], ["1M", 84], ["2M", 168]],
+const MAP_RANGE_SETS = {"30m": [["1D", 13], ["2D", 26], ["1W", 65], ["2W", 130]], "1h": [["2D", 14], ["1W", 35], ["2W", 70], ["1M", 147]], "2h": [["1W", 20], ["2W", 40], ["1M", 84], ["2M", 168]],
                         "3h": [["1W", 15], ["2W", 30], ["1M", 63], ["3M", 189]],
                         "4h": [["1W", 10], ["2W", 20], ["1M", 42], ["3M", 126]], "1d": [["1M", 21], ["3M", 63], ["6M", 126]]};
-const MAP_RANGE_DEF = {"1h": 35, "2h": 40, "3h": 30, "4h": 42, "1d": 63};
+const MAP_RANGE_DEF = {"30m": 39, "1h": 35, "2h": 40, "3h": 30, "4h": 42, "1d": 63};
 const mapRanges = () => MAP_RANGE_SETS[MAP_TF];
 const mapNKey = () => MAP_TF === "4h" ? "ns-map-n" : "ns-map-n-" + MAP_TF;
 let MAP_N = (() => { try { return +localStorage.getItem(mapNKey()) || MAP_RANGE_DEF[MAP_TF]; } catch (e) { return MAP_RANGE_DEF[MAP_TF]; } })();
@@ -7352,7 +7352,7 @@ function mapCandleClose(tf, now) {
   let end;
   if (tf === "1d") end = close;
   else if (tf === "4h") end = Math.min(close, m < 810 ? 810 : 960);
-  else { const h = +tf[0] * 60; end = Math.min(close, 570 + (Math.floor((m - 570) / h) + 1) * h); }
+  else { const h = {"30m": 30, "1h": 60, "2h": 120, "3h": 180}[tf] || 60; end = Math.min(close, 570 + (Math.floor((m - 570) / h) + 1) * h); }
   return Math.max(0, Math.round((end - m) * 60));
 }
 function mapCandleTimer(chart, series, D) {
@@ -7433,7 +7433,7 @@ function mapLayersHTML() {
 function mapMoreOpen(btn, ev) {
   if (ev) ev.stopPropagation();
   let pop = $("mapMorePop"); if (pop) { pop.remove(); return; }
-  const M = MAP_MORE, ext = ["1h", "2h", "3h"].includes(MAP_TF), pro = isPro() || (ME && ME.is_admin);
+  const M = MAP_MORE, ext = ["30m", "1h", "2h", "3h"].includes(MAP_TF), pro = isPro() || (ME && ME.is_admin);
   const item = (on, label, act, disabled) => `<button type="button" role="menuitem" ${disabled ? "disabled" : ""} onclick="document.getElementById('mapMorePop')?.remove();${act}">${on ? "✓ " : ""}${label}</button>`;
   pop = document.createElement("div"); pop.id = "mapMorePop"; pop.className = "mp-more"; pop.setAttribute("role", "menu");
   pop.innerHTML = item(false, "▶ Replay", "mapReplayStart()", !M.chart)
@@ -7958,7 +7958,7 @@ function initLightweightMapChart() {
     // time still fits content. Native candle autoscaling otherwise.
     // Nov 22 (owner, like Webull): ticker + timeframe + the candle's O/H/L/C in the chart's top-left corner;
     // shows the last candle, follows the crosshair while hovering.
-    const TFW = {"1h": "1 hour", "2h": "2 hours", "3h": "3 hours", "4h": "4 hours", "1d": "1 day"}[MAP_TF] || MAP_TF.toUpperCase();
+    const TFW = {"30m": "30 minutes", "1h": "1 hour", "2h": "2 hours", "3h": "3 hours", "4h": "4 hours", "1d": "1 day"}[MAP_TF] || MAP_TF.toUpperCase();
     let LEG = host.parentElement.querySelector(".mp-legend");
     if (!LEG) { LEG = document.createElement("div"); LEG.className = "mp-legend"; host.parentElement.appendChild(LEG); }
     window.MAP_LWC_LEG = LEG;
@@ -11052,7 +11052,7 @@ function liveBucket(tf, now) {
   const m = (+p.hour % 24) * 60 + +p.minute; if (m < 570 || m >= 960) return null;
   const day = Date.UTC(+p.year, +p.month - 1, +p.day) / 1000;
   if (tf === "1d") return day;
-  const h = {"1h": 60, "2h": 120, "3h": 180, "4h": 240}[tf]; if (!h) return null;
+  const h = {"30m": 30, "1h": 60, "2h": 120, "3h": 180, "4h": 240}[tf]; if (!h) return null;
   return day + (570 + Math.floor((m - 570) / h) * h) * 60;
 }
 
@@ -11258,7 +11258,7 @@ function sikaPlan(sym) {
 function sikaExplainHTML(sym) {
   const {st, P} = sikaPlan(sym);
   if (!P) return `<p class="sp-hint">I can't read ${esc(sym)}'s chart yet. Give it a second to load, then ask again.</p>`;
-  const TFW = {"1h": "1-hour", "2h": "2-hour", "3h": "3-hour", "4h": "4-hour", "1d": "daily"}[MAP_TF] || "4-hour";
+  const TFW = {"30m": "30-minute", "1h": "1-hour", "2h": "2-hour", "3h": "3-hour", "4h": "4-hour", "1d": "daily"}[MAP_TF] || "4-hour";
   const up = P.dir !== -1, pct = (v) => v != null && P.px ? ` (${pctFrom(v, P.px)} from here)` : "";
   const out = [];
   const none = P.status === "No setup in play" || P.trig == null;
