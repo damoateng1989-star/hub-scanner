@@ -60,7 +60,7 @@ log = logging.getLogger("app")
 
 # Scan a few minutes after each 4H close (13:30 and 16:00 ET). The delay covers the
 # free Alpaca plan's 15-minute delay on full-market (SIP) data.
-SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:32,16:02" if data.SIP_REALTIME else "13:47,16:17").split(",") if t.strip()]   # real-time plan: no 15-min wait
+SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:32,16:02" if data.sip_live() else "13:47,16:17").split(",") if t.strip()]   # real-time plan: no 15-min wait
 # Premarket gap-onto-a-shelf alert, weekdays before the open. Empty = off.
 PREMARKET_TIME = os.getenv("PREMARKET_TIME", "09:00").strip()
 # Pre-close warning ~15 minutes before each 4H close (uses Alpaca's free real-time IEX price). Empty = off.
@@ -1282,7 +1282,7 @@ async def admin_data_check(u: dict = Admin):
     import requests as _rq
     def run():
         h = {"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""), "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")}
-        out = dict(plan_switch=data.SIP_REALTIME, scan_times=SCAN_TIMES)
+        out = dict(plan_switch=data.SIP_REALTIME, sip_live=data.sip_live(), scan_times=SCAN_TIMES)
         try:
             r = _rq.get("https://data.alpaca.markets/v2/stocks/snapshots", headers=h, timeout=10,
                         params={"symbols": "SPY", "feed": "sip"})

@@ -177,7 +177,7 @@ def close_at(symbol: str, end: pd.Timestamp) -> float | None:
                          headers={"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""),
                                   "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")},
                          params={"timeframe": "1Min", "start": (e - pd.Timedelta(minutes=10)).strftime(fmt),
-                                 "end": e.strftime(fmt), "feed": "sip" if SIP_REALTIME else "iex", "limit": 20}, timeout=15)
+                                 "end": e.strftime(fmt), "feed": "sip" if sip_live() else "iex", "limit": 20}, timeout=15)
         if r.status_code != 200:
             raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
         bars = [b for b in (r.json().get("bars") or []) if pd.Timestamp(b["t"]) < e]
@@ -189,6 +189,27 @@ def close_at(symbol: str, end: pd.Timestamp) -> float | None:
 # Nov 25 (owner): ALPACA_DATA_PLAN=plus once the Algo Trader Plus market-data plan is active. Then the full-market (SIP)
 # feed is real time: bars stop waiting 16 minutes, live prices come from every exchange (not IEX alone), options from OPRA.
 SIP_REALTIME = os.getenv("ALPACA_DATA_PLAN", "basic").strip().lower() in ("plus", "algo_trader_plus", "atp", "sip")
+_SIP_CHECK = {"at": 0.0, "ok": False}
+
+
+def sip_live() -> bool:
+    """The switch is on AND Alpaca actually serves real-time SIP to these keys (checked with one SPY snapshot, re-checked
+    every 10 minutes). Fail-safe (Nov 25): with the switch on but the keys refused, everything stays on the free feeds."""
+    if not SIP_REALTIME or provider() != "alpaca":
+        return False
+    if time.time() - _SIP_CHECK["at"] < 600:
+        return _SIP_CHECK["ok"]
+    ok = False
+    try:
+        r = requests.get("https://data.alpaca.markets/v2/stocks/snapshots", timeout=8,
+                         headers={"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""),
+                                  "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")},
+                         params={"symbols": "SPY", "feed": "sip"})
+        ok = r.status_code == 200
+    except Exception:
+        ok = _SIP_CHECK["ok"]          # a network blip keeps the last answer
+    _SIP_CHECK.update(at=time.time(), ok=ok)
+    return ok
 _LIVE: dict[str, tuple[float, dict]] = {}
 LIVE_TTL = 15          # seconds: everyone shares one fetch, so Alpaca's free rate limit is never a problem
 _PREMARKET: dict | None = None
@@ -220,7 +241,7 @@ def latest_prices(symbols: list[str]) -> dict[str, dict]:
 def _alpaca_snapshots(symbols: list[str], feed: str | None = None) -> dict[str, dict]:
     headers = {"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""), "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")}
     out = {}
-    snapshot_feed = feed or os.getenv("ALPACA_LIVE_FEED", "sip" if SIP_REALTIME else "iex")
+    snapshot_feed = feed or os.getenv("ALPACA_LIVE_FEED", "sip" if sip_live() else "iex")
     for i in range(0, len(symbols), 100):
         r = requests.get("https://data.alpaca.markets/v2/stocks/snapshots", headers=headers, timeout=15,
                          params={"symbols": ",".join(symbols[i:i + 100]), "feed": snapshot_feed})
@@ -417,7 +438,7 @@ def _alpaca_many(symbols: list[str], days: int) -> dict[str, pd.DataFrame]:
         return {}
     feed = os.getenv("ALPACA_FEED", "sip").lower()
     end = pd.Timestamp.now(tz="UTC")
-    if feed == "sip" and not SIP_REALTIME:   # free plan: SIP data is available after a 15-minute delay
+    if feed == "sip" and not sip_live():   # free plan: SIP data is available after a 15-minute delay
         end -= pd.Timedelta(minutes=16)
     start = end - pd.Timedelta(days=days)
     fmt = "%Y-%m-%dT%H:%M:%SZ"

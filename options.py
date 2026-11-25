@@ -82,7 +82,7 @@ def _alpaca_chain(sym: str, spot: float, side: str | None = None, min_days: int 
     if not key or not secret:
         raise RuntimeError("ALPACA_API_KEY and ALPACA_SECRET_KEY are not set")
     today = date.today()
-    params = dict(feed=os.getenv("ALPACA_OPTIONS_FEED", "opra" if data.SIP_REALTIME else "indicative"), limit=1000,
+    params = dict(feed=os.getenv("ALPACA_OPTIONS_FEED", "opra" if data.sip_live() else "indicative"), limit=1000,
                   expiration_date_gte=(today + timedelta(days=min_days)).isoformat(),
                   expiration_date_lte=(today + timedelta(days=MAX_DTE)).isoformat(),
                   strike_price_gte=round(spot * (1 - STRIKE_BAND), 2), strike_price_lte=round(spot * (1 + STRIKE_BAND), 2))
