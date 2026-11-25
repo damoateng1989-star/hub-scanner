@@ -226,6 +226,16 @@ html[data-theme="light"] .tk-tile.ok { background: #E9ECF1; opacity: 1; } .tk-ti
 .t2-card .t2-tk { display: flex; align-items: center; gap: 8px; }
 #latest .t2-row { grid-template-columns: 84px 1fr; }
 #latest .t2-mid { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Nov 25 (owner): the logo tile must never push the price off the panel header on a phone */
+@media (max-width: 640px) {
+  .mp-head { gap: 8px; }
+  .mp-head .tk-tile { --s: 26px !important; }
+  .mp-head h3 { font-size: 22px; }
+  .mp-head .mp-px { font-size: 17px; flex: 0 1 auto; display: flex; flex-direction: column; line-height: 1.1; overflow: visible !important; text-overflow: clip !important; }
+  .mp-head .mp-px em { margin: 2px 0 0 !important; font-size: 12px !important; }
+  .mp-head .mp-upd { white-space: nowrap; flex: none; font-size: 12px; } .mp-head .mp-upd .mp-mk { display: none; }
+}
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -8082,7 +8092,7 @@ function paintMap() {
   MAP_MORE = {chart: !!chart, canPlan: !!canPlan, rp: !!rp};
   el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
       ${tkTile(sym, 34)}<h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
-      ${EXN ? EXN.pill : `<span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : "Market closed"}</span>`}
+      ${EXN ? EXN.pill : `<span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : '<span class="mp-mk">Market </span>closed'}</span>`}
       <button class="mp-widebtn" onclick="mapWide()" aria-pressed="${mapIsWide()}" title="${mapIsWide() ? "Bring Sika and the side cards back" : "Give the chart the whole width (Sika folds away)"}">${mapIsWide() ? "‹ Show Sika" : "Wider chart ⇥"}</button>
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
