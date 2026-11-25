@@ -150,6 +150,63 @@ section[data-view="today"] .week-head { display: flex; align-items: center; gap:
 .rule1.line b { color: var(--text, inherit); }
 .week-copy .wk1 { display: block; font-size: 13.5px; line-height: 1.45; } .week-copy .wk1 em { font-style: normal; color: #F2C14E; font-weight: 600; }
 .vp-vix { color: inherit; font-weight: 700; }
+
+/* Patch 220 — the owner's Today design (Nov 25 mockup) */
+section[data-view="today"] .hello.t2-date, #hello.t2-date { font: 400 17px var(--sans); color: var(--muted); margin: 2px 0 12px; letter-spacing: 0; }
+#hello.t2-date + * {}
+.vpill.t2-ctx { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 14px; margin: 0 0 18px; border-radius: 12px;
+  border: 1px solid rgba(242,193,78,.28); background: rgba(242,193,78,.06); font: 700 13px var(--mono); color: #F2C14E; letter-spacing: .02em; }
+.vpill.t2-ctx b { font-weight: 700; } .t2-ctx .t2-vix { color: var(--muted); white-space: nowrap; }
+.t2-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+.t2-h > span { font: 700 12px var(--mono); letter-spacing: .1em; color: var(--muted); }
+.t2-h > em, .t2-h > a { font: 500 14px var(--sans); font-style: normal; color: #7C9CFF; text-decoration: none; }
+section[data-view="today"] .retest#retest, section[data-view="today"] .retest#queue, section[data-view="today"] .retest#crossed { background: none; border: 0; box-shadow: none; padding: 0; margin: 0 0 22px; }
+.t2-sec { margin: 0 0 22px; }
+.t2-hero.ck-hero { padding: 14px 16px; margin: 0 0 10px; }
+.t2-hero .ckh-sym { margin: 6px 0 4px; }
+.t2-hl { font-size: 15px; color: var(--text, #E9EBEF); }
+.t2-hw { font: 500 12.5px var(--mono); color: var(--muted); margin-top: 4px; }
+.t2-cards { display: grid; gap: 8px; }
+.t2-card { position: relative; display: block; padding: 9px 16px; border: 1px solid rgba(124,156,255,.28); border-radius: 12px; text-decoration: none; color: inherit; }
+.t2-card .t2-tk { display: block; font-size: 18px; } .t2-card small { display: block; color: var(--muted); font-size: 13px; margin-top: 1px; }
+.t2-tape { position: absolute; right: 16px; top: 10px; font: 700 11.5px var(--mono); color: #7C9CFF; }
+.t2-tk { font-weight: 700; font-size: 16px; color: var(--text, #E9EBEF); }
+.t2-row { display: grid; grid-template-columns: 74px 1fr auto; align-items: baseline; gap: 10px; padding: 6px 16px; text-decoration: none; color: inherit; }
+.t2-row:hover { background: rgba(255,255,255,.03); }
+.t2-mid { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.t2-lv { font: 700 13px var(--mono); color: var(--text, #E9EBEF); white-space: nowrap; }
+.t2-lv.u-up { color: var(--up); } .t2-lv.u-down { color: var(--down); }
+.t2-grp { margin: 0 0 12px; } .t2-gh { font-weight: 700; font-size: 15px; padding: 2px 16px 4px; }
+.t2-grp .t2-row { padding-top: 3px; padding-bottom: 3px; }
+.t2-away { font: 700 13px var(--mono); color: var(--up); white-space: nowrap; }
+.t2-mine { font: 700 10.5px var(--mono); letter-spacing: .06em; color: #F2C14E; } .t2-mute { color: var(--muted); }
+section[data-view="today"] .cap-all { border: 0; padding: 4px 16px; font: 500 14px var(--sans); color: #7C9CFF; }
+.t2-wk { display: grid; grid-template-columns: 64px 1fr; gap: 10px; padding: 4px 16px; font-size: 14px; }
+.t2-wk b { font: 700 13px var(--mono); color: var(--up); } .t2-wk span { color: var(--text, #E9EBEF); }
+.t2-box { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 14px; border: 1px solid rgba(124,156,255,.28);
+  border-radius: 12px; background: rgba(124,156,255,.04); font: 500 14px var(--sans); color: var(--text, #E9EBEF); text-decoration: none; cursor: pointer; text-align: left; }
+.t2-box em { font-style: normal; color: #7C9CFF; white-space: nowrap; }
+.t2-brief { margin: 0 0 22px; } .t2-brief .mbrief { margin-top: 8px; }
+.t2-more { margin: 0 0 8px; color: var(--muted); } .t2-more em { color: var(--muted); }
+section[data-view="today"] .setup-line > summary { border: 1px solid rgba(242,193,78,.35); border-style: solid; background: rgba(242,193,78,.05); color: #F2C14E; padding: 11px 14px; font-size: 14px; }
+.rule1.t2-rule { text-align: left; border-top: 1px solid var(--line); margin-top: 18px; padding: 14px 0 4px; font-size: 14px; }
+.rule1.t2-rule b { font-weight: 400; color: var(--muted); }
+html[data-theme="light"] .t2-hl, html[data-theme="light"] .t2-tk, html[data-theme="light"] .t2-wk span, html[data-theme="light"] .t2-lv:not(.u-up):not(.u-down) { color: #0B0D12; }
+
+/* Patch 220 fixes */
+section[data-view="today"] .hello h1#hello.t2-date { font: 400 17px var(--sans) !important; color: var(--muted) !important; letter-spacing: 0 !important; margin: 0 0 12px !important; }
+.t2-brief:not(.open) .mbrief { display: none !important; }
+.t2-box > span { flex: 1; min-width: 0; }
+section[data-view="today"] #retest, section[data-view="today"] #queue, section[data-view="today"] #crossed { background: none !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; }
+section[data-view="today"] .rule1.t2-rule { display: block; border: 0 !important; border-top: 1px solid var(--line) !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; padding: 14px 0 4px !important; }
+.vpill.t2-ctx { font-size: 12.5px; }
+.vpill.t2-ctx > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+section[data-view="today"] .t2-h { padding: 0; }
+
+.vpill.t2-ctx { font-size: 11.5px; letter-spacing: 0; padding: 11px 12px; }
+.t2-box > span { white-space: normal; }
+.t2-row { grid-template-columns: 64px 1fr auto; }
+.t2-mid { white-space: normal; overflow: visible; line-height: 1.3; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -3240,41 +3297,41 @@ twq('config','rk6e6');
   <div class="retest" id="retest" hidden></div>
   <div class="retest xr" id="crossed" hidden></div>
   <div class="lk-strip" id="lkStrip" hidden></div>
-  <div class="panel t220" id="latestPanel">
-    <div class="ph"><h2>Latest alerts</h2><a href="#alerts" class="more-link">All alerts →</a></div>
+  <div class="t2-sec" id="latestPanel">
+    <div class="t2-h"><span>LATEST ALERTS</span><a href="#alerts">All alerts →</a></div>
     <div id="latest"></div>
   </div>
-  <div class="panel t220" id="attnPanel">
-    <div class="ph"><h2>Your watchlist</h2><a href="#list" class="more-link">Watchlist →</a></div>
+  <div class="t2-sec" id="attnPanel">
+    <div class="t2-h"><span>YOUR WATCHLIST</span><a href="#list">Watchlist →</a></div>
     <div id="attn"><div class="loading"><span class="spin"></span>Loading…</div></div>
   </div>
   <div class="retest" id="queue" hidden></div>
   <div class="week" id="week" hidden></div>
-  <details class="mb-strip" id="mbStrip" hidden><summary id="mbSum"></summary><div class="mbrief" id="mbrief" hidden></div></details>
+  <div class="t2-brief" id="mbStrip" hidden><button type="button" class="t2-box" id="mbSum" onclick="$('mbStrip').classList.toggle('open')"></button><div class="mbrief" id="mbrief" hidden></div></div>
   <div id="premarket" hidden></div>
   <div class="install-banner" id="installBanner" hidden>
     <div><b>Get the NextShelf app</b><small>Full screen, one tap from your home screen.</small></div>
     <button class="primary" onclick="installApp()">Install</button><button class="ib-x" onclick="hideInstall()" aria-label="Not now">✕</button></div>
   <div id="phoneNudge"></div>
-  <details class="ck-more" id="ckMore">
-    <summary>More</summary>
+  <div class="t2-sec" id="moreSec">
+    <div class="t2-h"><span>MORE</span></div>
+    <div id="moreRows"></div>
+    <div class="lk-watch" id="lkWatch" hidden></div>
+  <div class="panel" id="stkPanel" hidden>
+    <div class="ph"><h2>Stacked</h2><span class="more-link" id="stkSub"></span></div>
+    <div class="sk-pills" id="stkPills"></div>
+    <div id="stacked"><div class="loading"><span class="spin"></span>Checking the levels…</div></div>
+  </div>
+  </div>
+  <div id="moreHold" hidden>
     <div id="futOrbCard" hidden></div>
     <a class="cine-strip" id="cineStrip" href="#cinema" hidden></a>
     <div class="today-stories ck-tiles" id="today-stories"><div class="wr-card" id="waitingRoom" hidden></div><div class="stack-entry" id="stackEntry" hidden></div></div>
   <a class="dy-mini" id="chMini" href="#chat" hidden><span style="font-size:20px" aria-hidden="true">💬</span><span><div class="k">Member chat</div><div class="v" style="font-size:15px">Talk setups with other members</div></span><span class="go">Open ›</span></a>
     <div class="pulse" id="pulse" hidden></div>
-    <div class="lk-watch" id="lkWatch" hidden></div>
     <a class="dy-mini" id="dyMini" href="#diary" hidden></a>
-  <div class="panel" id="stkPanel">
-    <div class="ph"><h2>Stacked</h2><span class="more-link" id="stkSub"></span></div>
-    <div class="sk-pills" id="stkPills"></div>
-    <div id="stacked"><div class="loading"><span class="spin"></span>Checking the levels…</div></div>
+    <div id="worth"></div>
   </div>
-  <div class="panel">
-    <div class="ph"><h2>Worth a look</h2><a href="#discover" class="more-link">Browse setups →</a></div>
-    <div id="worth"><div class="loading"><span class="spin"></span>Loading…</div></div>
-  </div>
-  </details>
   <div id="setup"></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
   <div class="lesson" id="lesson" hidden style="display:none">
@@ -3292,7 +3349,7 @@ twq('config','rk6e6');
       <div class="lctl"><button id="lsPlay" aria-label="Pause">❚❚</button><button id="lsReplay" aria-label="Replay">↻</button></div>
     </div>
   </div>
-  <div class="rule1 line" id="rule1"></div>
+  <div class="rule1 line t2-rule" id="rule1"></div>
 </section>
 
 <!-- MY LIST -->
@@ -3810,14 +3867,17 @@ function wlState(st, s) {
   if (s === "forming" && p > 0 && u && d) {
     const top = (u - p) / p * 100, bot = (p - d) / p * 100;
     if (Math.min(top, bot) <= WL_EDGE_PCT) return top <= bot ? "at the top of its hub" : "at the bottom of its hub";
-    return "resting in a hub";
+    return "resting in hub";
   }
   return "resting";
 }
-function wlLevels(st, s) {
-  if ((s === "breakout_up" || s === "breakdown") && st && st.target) return `<span class="wl-lv"><b class="${s === "breakdown" ? "u-down" : "u-up"}">target ${money(st.target)}</b></span>`;
+function wlLevels(st, s) {      // the owner's design: plain numbers, ↑/↓; only the side it's pressing, in colour
+  const n = (v) => Number(v).toFixed(2), w = wlState(st, s);
+  if ((s === "breakout_up" || s === "breakdown") && st && st.target) return `<b class="t2-lv ${s === "breakdown" ? "u-down" : "u-up"}">${s === "breakdown" ? "↓" : "↑"} ${n(st.target)}</b>`;
   const u = tUp(st), d = tDn(st);
-  return u && d ? `<span class="wl-lv"><b class="u-up">↑ ${money(u)}</b> · <b class="u-down">↓ ${money(d)}</b></span>` : "";
+  if (w === "at the top of its hub" && u) return `<b class="t2-lv u-up">↑ ${n(u)}</b>`;
+  if (w === "at the bottom of its hub" && d) return `<b class="t2-lv u-down">↓ ${n(d)}</b>`;
+  return u && d ? `<b class="t2-lv">↑ ${n(u)} · ↓ ${n(d)}</b>` : "";
 }
 function tUp(st){const h=st&&st.hub,t=Number(st&&st.trigger_up);return Number.isFinite(t)&&t>0?t:(h?h.high:null);}
 function tDn(st){const h=st&&st.hub,t=Number(st&&st.trigger_down);return Number.isFinite(t)&&t>0?t:(h?h.low:null);}
@@ -3852,6 +3912,18 @@ async function loadTickers() {
 }
 
 let ALERTS = [], ALERTS_ERR = null;
+// Patch 220: an alert in one row — ticker, what happened in a few words, when
+const ALERT_WORD = {hub_formed: "new hub", breakout: "broke out", breakdown: "broke down", retest: "retest setup", retest_double: "retest setup",
+  retesting_now: "retesting now", board_rt: "retesting now", preclose: "near a close outside", trigger: "crossed the trigger", cross: "crossed",
+  every_a: "A setup", unconfirmed: "break unconfirmed", premarket_gap: "premarket gap", "follow-through": "reached the target",
+  "snap-back": "snapped back", stalled: "stalled"};
+function alertMini(x) {
+  const first = String(x.message || "").split("\n")[0].replace(/^[^\p{L}\p{N}$]+/u, "");
+  const sym = String(x.symbol || ""), what = ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40);
+  let t = ""; try { const raw = String(x.created_at || ""), d = new Date(raw.replace(" ", "T") + (/Z$|[+-]\d\d:?\d\d$/.test(raw) ? "" : "Z"));
+    if (!isNaN(d)) t = d.toLocaleString("en-US", {weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) {}
+  return `<a class="t2-row" href="#alerts" title="${esc(first)}"><span class="t2-tk">${esc(sym)}</span><span class="t2-mid">${esc(what)}${t ? ` · ${esc(t)}` : ""}</span></a>`;
+}
 function alertRow(x, compact) {
   const lines = String(x.message).split("\n");
   const title = lines[0].replace(/^[^\p{L}\p{N}$]+/u, "");
@@ -4651,7 +4723,7 @@ async function renderFutOrb(hostId, force) {
   if (!d.configured || !d.products.length) { if (page) el.innerHTML = `<p class="fo-n">Add <code>MASSIVE_API_KEY</code> on Render to turn on the futures alerts.</p>`; else el.hidden = true; return; }
   el.innerHTML = page ? d.products.map(P => foTodayHTML(Object.assign({rule: d.rule}, P))).join('<hr style="border:0;border-top:1px solid var(--line);margin:14px 0">')
     : d.products.map(P => foShelfHTML(P)).join("");
-  el.classList.toggle("fo-card", page); el.hidden = false;
+  el.classList.toggle("fo-card", page); el.hidden = false; if (!page) renderMoreRows();
   if (typeof renderStrip === "function") renderStrip();
 }
 async function foTake(product, btn) {
@@ -5446,9 +5518,9 @@ function nsNextCheck(now = new Date()) {
 function renderVerdictPill() {
   const el = $("vPill"); if (!el) return;
   const c = nsNextCheck(); if (!c) { el.hidden = true; return; }
-  const v = INFO && INFO.vix;      // Patch 220: the VIX joins the strip (context only, as Patch 190)
-  el.innerHTML = `<div class="vp-l"><i class="vp-dot" aria-hidden="true"></i><small>${c.label}</small><b>${esc(c.when)}</b></div>
-    <div class="vp-r"><small>warns ${esc(c.warns)}${v && v.level != null ? ` · VIX <b class="vp-vix">${Number(v.level).toFixed(2)}</b> ${esc(v.band || "")}` : ""}</small><span class="vp-bar"><i style="width:${(c.frac * 100).toFixed(1)}%"></i></span></div>`;
+  const v = INFO && INFO.vix;      // Patch 220: verdict, warns and the VIX on one line (context only, as Patch 190)
+  el.classList.add("t2-ctx");
+  el.innerHTML = `<span>${c.label} <b>${esc(String(c.when).replace(/ close$/, ""))}</b> · warns ${esc(c.warns)}</span>${v && v.level != null ? `<span class="t2-vix" title="${esc(v.band || "")}">VIX ${Number(v.level).toFixed(2)}</span>` : ""}`;
   el.hidden = false;
 }
 function nsMarketLine() {
@@ -5511,7 +5583,7 @@ async function renderCineStrip() {
   const perf = Array.from({length: 5}, () => "<i></i>").join("");
   el.innerHTML = `<span class="cs-perf" aria-hidden="true"><span>${perf}</span><span>${perf}</span></span>
     <span class="cs-t"><small>WHILE YOU WAIT</small><b>${esc(f.title)} is playing in the Screening Room</b></span><span class="go">›</span>`;
-  el.hidden = false;
+  el.hidden = false; renderMoreRows();
 }
 
 // ---------------------------------------------------------------- Patch 218: CROSSED — a hub's first trigger cross, a measured setup
@@ -5633,7 +5705,7 @@ async function loadWatching(force) {
   const el = $("lkWatch"); if (!el) return;
   if (!ME || ME.guest) { el.hidden = true; renderLkStrip(); return; }
   if (!LK || force) { try { LK = await api("/api/lookout"); } catch (e) { el.hidden = true; return; } }
-  renderLkStrip();       // Patch 212: the summary strip under the retest cards
+  renderLkStrip(); renderMoreRows();       // Patch 212: the summary strip under the retest cards
   const live = LK.live || [], closed = LK.closed || [];
   if (!live.length && !closed.length) { el.hidden = true; return; }
   const word = {watching: ["Watching", "w"], target_hit: ["Target touched", "t"], dead: ["Plan is dead", "d"], window_closed: ["Window closed", "c"]};
@@ -5643,7 +5715,7 @@ async function loadWatching(force) {
   const log = (r) => `<div class="lk-log"><b>${esc(r.ticker)}</b> ${esc(r.contract || "Shares")} <span>${esc({member: "you closed it", auto_dead: "closed after the plan died", auto_window_closed: "closed after the window", position_closed: "left your account"}[r.close_reason] || r.close_reason || "")}${r.exit_price ? ` · out at ${money(r.exit_price)}` : ""} · ${r.closed_at ? new Date(r.closed_at).toLocaleDateString("en-US", {month: "short", day: "numeric"}) : ""}</span></div>`;
   el.innerHTML = (live.length ? `<div class="lk-h"><b>${lkEyes(24, live.some(r => r.state === "watching" || r.state === "target_hit"))}Watching</b><span>Lookout taps you when something changes. It never trades.</span></div>${live.map(row).join("")}` : "")
     + (closed.length ? `<details class="lk-closed"><summary>Your closed watches · ${closed.length}</summary>${closed.map(log).join("")}<p class="lk-priv">Private to you. Never part of the track record.</p></details>` : "");
-  el.hidden = false;
+  // Patch 220: opened from the Lookout row in More
 }
 async function lookoutOut(id, sym) {
   const xp = await new Promise(resolve => {
@@ -8968,6 +9040,10 @@ function weekDateKey(date) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).formatToParts(date).map(x => [x.type, x.value]));
   return p.year + "-" + p.month + "-" + p.day;
 }
+// Patch 220: the calendar's long names, short ("Core PCE Price Index m/m" → "Core PCE", "Prelim GDP q/q" → "GDP")
+function econShort(t) {
+  return String(t).replace(/\s+(m\/m|q\/q|y\/y)$/i, "").replace(/\s+Price Index$/i, "").replace(/^(Prelim|Final|Advance|Revised|Flash)\s+/i, "").trim();
+}
 function renderWeek() {
   const el = $("week"); if (!el) return;
   if (!Array.isArray(WEEK) || !WEEK.length) { el.hidden = true; el.innerHTML = ""; return; }
@@ -8987,13 +9063,13 @@ function renderWeek() {
       let g = groups.find(x => !x.note && x.time === time); if (!g) groups.push(g = {time, titles: [], high: false});
       g.titles.push(it.title); if (/High impact/.test(it.sub || "")) g.high = true;
     }
-    const lines = groups.map(g => g.note ? '<b>' + esc(g.it.title) + '</b>' + (g.it.sub ? '<small>' + esc(g.it.sub) + '</small>' : '')
-      : '<span class="wk1"><b>' + g.titles.map(esc).join(" + ") + '</b>' + (g.time ? ' · ' + esc(g.time) : '') + (g.high ? ' · <em>High</em>' : '') + '</span>').join("");
-    return '<div class="week-row"><div class="week-date">' + day + '<br>' + date + '</div><div class="week-copy">' + lines + '</div></div>';
+    const lines = groups.map(g => g.note ? esc(g.it.title)
+      : g.titles.map(econShort).map(esc).join(" + ") + (g.time ? ' · ' + esc(g.time) : '') + (g.high ? ' · High impact' : '')).join("<br>");
+    return '<div class="t2-wk"><b>' + day + ' ' + d.getUTCDate() + '</b><span>' + lines + '</span></div>';
   };
-  const open = !!CAP_OPEN.week, shown = open ? days : days.slice(0, 4);
-  el.innerHTML = '<div class="week-head"><div class="week-k">THIS WEEK</div></div>' + shown.map(dayRow).join("")
-    + (days.length > 4 && !open ? '<button type="button" class="cap-all" onclick="CAP_OPEN.week=1;renderWeek()">Full week →</button>' : "");
+  const open = !!CAP_OPEN.week, shown = open ? days : days.slice(0, 3);
+  el.className = "t2-sec";
+  el.innerHTML = '<div class="t2-h"><span>THIS WEEK</span>' + (days.length > 3 && !open ? '<a href="#today" onclick="event.preventDefault();CAP_OPEN.week=1;renderWeek()">Full week →</a>' : '') + '</div>' + shown.map(dayRow).join("");
   el.hidden = false;
 }
 function renderRetest() {
@@ -9036,7 +9112,7 @@ function renderRetest() {
   const now = rows.filter(x => x.near).sort(byTape);
   const wait = rows.filter(x => !x.near).sort(byTape);
   renderCkChips(now.length, wait.length);
-  const head = `<div class="week-head"><div class="week-k">RETESTING NOW</div><span class="t220-n">${now.length} at the edge · ${wait.length} waiting</span></div>`;
+  const head = `<div class="t2-h"><span>RETESTING NOW</span><em>${now.length} at the edge · ${wait.length} waiting</em></div>`;
   if (!now.length && !wait.length && !gaps.length) {
     el.innerHTML = head + '<p class="mb-quiet" style="margin:8px 0 0">No active retests right now. This section will update when a setup enters its retest window.</p>';
     el.hidden = false; if (wel) { wel.hidden = true; wel.innerHTML = ""; }
@@ -9057,7 +9133,16 @@ function renderRetest() {
   const gapNow = gaps.filter(x => x.live);       // a gap fade that just triggered is tradeable now
   const heroRow = now.find(x => ok(x) && x.grade === "A") || gapNow.find(x => x.grade === "A") || wait.find(x => ok(x) && x.grade === "A") || now.find(ok) || gapNow[0] || wait.find(ok) || null;
   const heroKind = heroRow && heroRow.gap ? "gap" : heroRow && now.includes(heroRow) ? "now" : "wait";
-  const hero = (x, kind) => {
+  const hero = (x, kind) => {       // Patch 220: the owner's compact hero — what, where, room, when
+    const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null, room = shelfRoom(x);
+    return `<a class="ck-hero t2-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
+      <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span><span class="sg-in ${GRADE_CLS[g] || "gq"} ckh-g" data-hg="${esc(x.sym)}">${g || "…"}</span></div>
+      <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
+      <div class="t2-hl">${kind === "gap" ? `Above the gap-day high ${money(x.edge)} · target ${money(x.target)} · out below ${money(x.stop)}` : `Edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}${room != null ? ` · room ${room >= 0 ? "+" : "−"}${Math.abs(room).toFixed(1)}%` : ""}`}</div>
+      <div class="t2-hw">${kind === "gap" ? `day ${x.day} of 10` : `window closes ${retestBy(x.left)}`}</div>
+    </a>`;
+  };
+  const heroOld = (x, kind) => {
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null;
     const conf = !!(x.hub && x.tape_flow && x.tape_flow.line);
     return `<a class="ck-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
@@ -9084,17 +9169,23 @@ function renderRetest() {
   const waitCmp = (x) => { const up = x.state !== "breakdown", px = +x.px, d = px > 0 ? Math.abs(up ? (x.edge / px - 1) : (px / x.edge - 1)) * 100 : 0;
     return cmpRow(x, d, `edge ${money(x.edge)} · window closes ${retestBy(x.left)}`, 1 - Math.min(d, 5) / 5,
       (x.watch ? ' <b class="rt-watch">watch only</b>' : "") + (x.tape_flow && x.tape_flow.line ? ' <b class="cmp-tape">tape confirmed</b>' : "")); };   // (a waiting hero still appears in the full waiting list below)
-  const sub = (title, list, kind) => list.length ? `<div class="retest-group"><div class="retest-sub">${title} · ${list.length}</div>${capList(list.map(x => row(x, kind)), "edge")}</div>` : "";
-  const footer = (ME && !ME.a_all)
-    ? `<div class="retest-foot"><button class="btnx sm" type="button" onclick="setEveryA(true)">Get every A setup, not just your watchlist</button></div>` : "";
+  const edgeCard = (x) => { const up = x.state !== "breakdown";
+    const bits = [x.watch ? "watch only" : "", x.label && x.label !== "Hub" ? esc(x.label) : "", up ? "at the edge" : "breakdown", `closes ${retestBy(x.left)}`].filter(Boolean).join(" · ");
+    return `<a class="t2-card" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${esc(x.sym)}</span>${x.tape_flow && x.tape_flow.line ? `<span class="t2-tape" title="${esc(tapeOneLine(x).replace(/<[^>]+>/g, ""))}">Tape ▫</span>` : ""}<small>${bits}</small></a>`; };
+  const sub = (title, list, kind) => list.length ? `<div class="t2-cards">${capList(list.map(edgeCard), "edge")}</div>` : "";
+  const footer = "";      // Patch 220: the every-A switch lives in Account
   el.innerHTML = head + (heroRow ? hero(heroRow, heroKind) : "") + sub("At the edge", restNow, "now") + footer;
   el.hidden = false;
   TODAY_HEAD = new Set([heroRow && heroRow.sym, ...restNow.map(x => x.sym)].filter(Boolean));
   // Patch 220: the queue — gap fades and the waiting list, each capped at 5 with "See all"
-  const gapQ = gapList.length ? `<div class="retest-group"><div class="retest-sub">Gap fade &amp; rip · ${gapList.length}${gForm.length ? `<small class="retest-rule">A daily close above the gap-day high triggers it.${uni != null ? ` All windows: ${uni} day${uni === 1 ? "" : "s"} left.` : ""}</small>` : ""}</div>${capList(gapList.map(gapCmp), "gap")}</div>` : "";
-  const waitQ = wait.length ? `<div class="retest-group"><div class="retest-sub">Waiting for the retest · ${wait.length}</div>${capList(wait.map(waitCmp), "wait")}</div>` : "";
+  const qRow = (x, mid, away) => `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${esc(x.sym)}</span><span class="t2-mid">${mid}</span><b class="t2-away">${away}</b></a>`;
+  const gapQr = (x) => x.live ? qRow(x, `<span class="u-up">triggered</span> · target ${money(x.target)}`, `day ${x.day}`) : qRow(x, "close above trigger", `${x.dist.toFixed(1)}% away`);
+  const waitQr = (x) => { const up = x.state !== "breakdown", px = +x.px, d = px > 0 ? Math.abs(up ? (x.edge / px - 1) : (px / x.edge - 1)) * 100 : 0;
+    return qRow(x, x.mine ? '<b class="t2-mine">ON YOUR LIST</b>' : x.watch ? '<span class="t2-mute">watch only</span>' : "", `${d.toFixed(1)}% away`); };
+  const gapQ = gapList.length ? `<div class="t2-grp"><div class="t2-gh">Gap fade &amp; rip · ${gapList.length}</div>${capList(gapList.map(gapQr), "gap", 3)}</div>` : "";
+  const waitQ = wait.length ? `<div class="t2-grp"><div class="t2-gh">Waiting for the retest</div>${capList(wait.map(waitQr), "wait", 3)}</div>` : "";
   const q = $("queue");
-  if (q) { q.innerHTML = gapQ || waitQ ? `<div class="week-head"><div class="week-k">THE QUEUE</div></div>${gapQ}${waitQ}` : ""; q.hidden = !(gapQ || waitQ); }
+  if (q) { q.innerHTML = gapQ || waitQ ? `<div class="t2-h"><span>THE QUEUE</span></div>${gapQ}${waitQ}` : ""; q.hidden = !(gapQ || waitQ); }
   if (wel) { wel.hidden = true; wel.innerHTML = ""; }
   if (heroRow && heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
   if (heroRow) ckHeroGrade(heroRow.sym, heroRow.kind || "hub");
@@ -9202,6 +9293,7 @@ async function loadStacked(force) {
   if (!ME || ME.guest) { const p = $("stkPanel"); if (p) p.hidden = true; return; }
   if (!force && STACKED && Date.now() - STACKED_AT < 5 * 60 * 1000) return renderStacked();
   try { STACKED = await api("/api/stacked"); STACKED_AT = Date.now(); STACKED_ERR = null; } catch (e) { STACKED_ERR = e; }
+  renderMoreRows();
   if (STACKED && STACKED.computing) { STACKED_AT = 0; clearTimeout(loadStacked._t); loadStacked._t = setTimeout(() => loadStacked(true), 8000); }
   renderStacked();
   if (CUR === "discover") { try { paintHeatmap(); } catch (e) {} }
@@ -9265,7 +9357,7 @@ async function loadToday() {
   loadStacked();
   renderToday();
   const mb = $("mbrief"); if (mb && !mb.innerHTML.trim()) { mb.hidden = false; mb.innerHTML = '<p class="mb-quiet">Loading the board…</p>'; }
-  if ($("mbSum") && !$("mbSum").innerHTML) { $("mbSum").innerHTML = '<span>☀️ Morning brief · loading…</span>'; $("mbStrip").hidden = false; }
+  if ($("mbSum") && !$("mbSum").innerHTML) { $("mbSum").innerHTML = '<span>MORNING BRIEF · loading…</span>'; $("mbStrip").hidden = false; }
   loadWeek();
   loadPremarket();
   try { BOARD = await api("/api/board"); BOARD_ERR = null; } catch (e) { BOARD_ERR = e; }
@@ -9296,7 +9388,8 @@ function renderToday() {
   const now = etNow();
   // Patch 212: a serif date, the greeting with the market's state in words, then the verdict pill
   $("hello").classList.add("p212");
-  $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, ${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}.<small class="hello-sub">${name ? `${greet}${name}. ` : ""}${nsMarketLine()}</small>`;
+  $("hello").classList.add("t2-date");   // Patch 220 (owner's design): the date, nothing else
+  $("hello").innerHTML = `${now.toLocaleDateString("en-US", {weekday: "long"})}, ${now.toLocaleDateString("en-US", {month: "short", day: "numeric"})}`;
   $("mkt").innerHTML = ""; $("mkt").hidden = true;
   renderVerdictPill(); renderCineStrip(); renderFutOrb();
   renderPremarket();
@@ -9308,6 +9401,7 @@ function renderToday() {
   renderRule();
   renderKpis();
   renderPhoneNudge();
+  renderMoreRows();
 
   // welcome checklist: the few things that make NextShelf useful, in order
   const flag = (k) => { try { return !!localStorage.getItem(k); } catch (e) { return false; } };
@@ -9323,7 +9417,8 @@ function renderToday() {
   steps.push([flag("ns_ck_sample"), "See the alert that matters", "Most messages are information. Only an A setup or a gap fade comes with a plan", "", "Show", "welcomeSample(this)"]);
   const done = steps.filter(x => x[0]).length;
   const left = steps.length - done;
-  $("setup").innerHTML = (done === steps.length || flag("ns_welcome_hide")) ? "" : `<details class="setup-line"><summary>Setup ${done} of ${steps.length} — ${left === 1 ? "one step" : left + " steps"} left</summary><div class="setup">
+  const nextStep = steps.find(x => !x[0]), nextName = nextStep ? String(nextStep[1]).replace(/\s*\(.*\)$/, "").replace(/[\u201c\u201d]/g, '"').replace(/^./, c => c.toLowerCase()) : "";
+  $("setup").innerHTML = (done === steps.length || flag("ns_welcome_hide")) ? "" : `<details class="setup-line"><summary>Setup ${done} of ${steps.length} — ${left === 1 ? "one step" : left + " steps"} left: ${esc(nextName)} →</summary><div class="setup">
     <div style="display:flex;justify-content:space-between;align-items:center"><h2>Welcome to NextShelf</h2>
       <button class="ghost" style="padding:4px 8px;font-size:13px" onclick="try{localStorage.setItem('ns_welcome_hide','1')}catch(e){};renderToday()">Hide</button></div>
     <p class="note" style="margin:2px 0 10px">Five minutes to set up, then it works in the background. Most days it says nothing: that's the point.</p>
@@ -9341,8 +9436,7 @@ function renderToday() {
   const wl = urgent.filter(t => !TODAY_HEAD.has(t.symbol));
   $("attn").innerHTML = wl.length ? capList(wl.map(t => {
     const [, c] = STATES[st(t)] || ["", "--idle"];
-    return `<a class="arow wl220" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')" style="--c:var(${c})"><i></i>
-      <span class="t"><span class="tk">${esc(t.symbol)}</span><span class="wl-st">${wlState(t.status || {}, st(t))}</span>${wlLevels(t.status || {}, st(t))}</span><span class="go">›</span></a>`;
+    return `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')"><span class="t2-tk">${esc(t.symbol)}</span><span class="t2-mid">${wlState(t.status || {}, st(t))}</span>${wlLevels(t.status || {}, st(t))}</a>`;
   }), "attn") : urgent.length ? `<div class="empty">Everything moving on your watchlist is already above.</div>` : `<div class="empty">${!TICKERS.length
       ? `Nothing yet. Add a few stocks to your <a href="#list">Watchlist</a> and we'll tell you here when one sets up.`
       : `Nothing changed state on your watchlist. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
@@ -9367,7 +9461,7 @@ function renderToday() {
   }
 
   // latest alerts
-  $("latest").innerHTML = ALERTS_ERR ? failedHTML("alerts", ALERTS_ERR, "loadAlerts()") : ALERTS.length ? `<div>${ALERTS.slice(0, 3).map(x => alertRow(x, true)).join("")}</div>`
+  $("latest").innerHTML = ALERTS_ERR ? failedHTML("alerts", ALERTS_ERR, "loadAlerts()") : ALERTS.length ? `<div>${ALERTS.slice(0, 3).map(alertMini).join("")}</div>`
     : `<div class="empty">No alerts yet.</div>`;
 }
 setInterval(() => { if (CUR === "today") $("mkt").innerHTML = marketChip(); }, 30000);
@@ -10355,6 +10449,7 @@ function pulseGo() { window._pulseGo = true; location.hash = "#discover"; setTim
 function paintPulse() {
   const el = $("pulse"), full = $("pulseFull");
   const P = PULSE, rows = P && Array.isArray(P.rows) ? P.rows : [];
+  renderMoreRows();
   if (!rows.length) { if (el) el.hidden = true; if (full) full.hidden = true; return; }    // fail-open: no strip, never an error
   const open = pulseOpen(), dir = v => v > 0 ? "up" : v < 0 ? "dn" : "";
   const pt = v => `<b class="${dir(v)}">${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(2)}</b>`;
@@ -10391,7 +10486,7 @@ async function loadRecapCard() {
   const deliver = !ME || ME.guest ? `<a href="/login#signup">Sign up free</a> to get this after every close.`
     : ME.recap === false ? `<a href="#account">Turn on the evening recap</a> to get this after the close.`
     : `Arrives at ${fmtET(ME.recap_time || "16:45")} ET on weekdays. Tomorrow's 4-hour closes: 1:30 PM and 4:00 PM.`;
-  mbStrip(`🌙 Evening recap · ${d.universe} swept · <b style="color:#3DD68C">${d.new_count}</b> new breakout${d.new_count === 1 ? "" : "s"} · <b style="color:#F2C14E">${d.near_count}</b> at the edge`);
+  mbStrip(`EVENING RECAP · ${d.universe} swept · ${d.new_count} new · ${d.near_count} at edge`);
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">🌙 Evening recap <span>${esc(d.date)}${d.swept_at ? " · sweep " + esc(d.swept_at) : ""}</span></div>
       <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.new_count}</b> new breakout${d.new_count === 1 ? "" : "s"} · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
     ${stale}<div class="mb-cols"><div class="mb-col">${neu.replace('<p class="mb-quiet">', '<div class="mb-k">Today</div><p class="mb-quiet">')}</div>${watch ? `<div class="mb-col">${watch}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
@@ -10416,15 +10511,33 @@ async function loadBrief() {
   const deliver = !ME || ME.guest ? `<a href="/login#signup">Sign up free</a> to get this every weekday before the open.`
     : !ME.brief ? `<a href="#account">Turn on the morning brief</a> to get this before the open.`
     : ways.length ? `Arrives ${ways.join(" and ")} at ${t12} AM ET on weekdays.` : `<a href="#account">Connect Telegram</a> to get this at ${t12} AM ET every weekday.`;
-  mbStrip(`☀️ Morning brief · ${d.universe} swept · <b style="color:#3DD68C">${d.live_count}</b> in play · <b style="color:#F2C14E">${d.near_count}</b> at the edge`);
+  mbStrip(`MORNING BRIEF · ${d.universe} swept · ${d.live_count} in play · ${d.near_count} at edge`);
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">☀️ Morning brief <span>${esc(d.date)}</span></div>
       ${d.vix_line ? `<div class="mb-s">Market: ${esc(d.vix_line)}</div>` : ""}<div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
     <div class="mb-cols"><div class="mb-col">${main.replace('<p class="mb-quiet">', '<div class="mb-k">Closest to a breakout today</div><p class="mb-quiet">')}</div>${d.pro ? `<div class="mb-col">${play || '<div class="mb-k">Breakouts still in play</div><p class="mb-quiet">None right now. The next 4-hour closes are 1:30 PM and 4:00 PM ET.</p>'}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
   el.hidden = false;
 }
+// Patch 220 (owner's design): More is a list of one-line rows to each place; the full cards live on their pages
+function renderMoreRows() {
+  const el = $("moreRows"); if (!el) return;
+  const row = (txt, href, on) => `<a class="t2-box t2-more" href="${href || "#today"}"${on ? ` onclick="event.preventDefault();${on}"` : ""}><span>${txt}</span><em>›</em></a>`;
+  const rows = [];
+  if (ME && ME.is_admin && FO && FO.products && FO.products.length) {
+    const P = FO.products[0], t = P.today || {};
+    const w = {set: "range set · waiting", long: "long · in the trade", short: "short · in the trade", done: t.how === "target" ? "target hit" : t.how === "stop" ? "stopped out" : "closed at 4 PM", nobreak: "no trade today", nodata: "no data today"}[t.state] || "set at 10:30";
+    rows.push(row(`${esc(P.product)} opening range · ${esc(w)}`, "#futures"));
+  }
+  if (SR && SR.feature) rows.push(row(`Screening Room · ${esc(SR.feature.title)}`, "#cinema"));
+  if (ME && !ME.guest) rows.push(row("Member chat · talk setups", "#chat"));
+  if (PULSE && PULSE.rows && PULSE.rows.length) { const r = PULSE.rows; rows.push(row(`Sector pulse · ${esc(r[0].sector)} leading · ${esc(r[r.length - 1].sector)} lagging`, "#discover", "pulseGo()")); }
+  if (LK && ((LK.live || []).length || (LK.closed || []).length)) rows.push(row(`Lookout · ${(LK.live || []).length} watching · ${(LK.closed || []).length} closed`, "#today", "$('lkWatch').hidden=!$('lkWatch').hidden"));
+  if (STACKED && STACKED.items && STACKED.items.length) rows.push(row(`Stacked · ${STACKED.items.length} stacked setup${STACKED.items.length === 1 ? "" : "s"}`, "#today", "$('stkPanel').hidden=!$('stkPanel').hidden"));
+  el.innerHTML = rows.join("");
+  $("moreSec").hidden = !rows.length;
+}
 function mbStrip(html) {      // Patch 220: the brief is one line on Today; tapping it opens the full card in place
   const w = $("mbStrip"), s = $("mbSum"); if (!w || !s) return;
-  s.innerHTML = `<span>${html}</span><span class="go">›</span>`; w.hidden = false;
+  s.innerHTML = `<span>${html}</span><em>Read →</em>`; w.hidden = false; renderMoreRows();
 }
 function briefCard() {
   if (!ME || ME.guest) return "";

@@ -7,12 +7,12 @@
   "events": [
     {
       "date": "2026-11-26",
-      "title": "Thanksgiving — US markets closed",
+      "title": "Thanksgiving — markets closed",
       "sub": "no 4H closes today"
     },
     {
       "date": "2026-11-27",
-      "title": "Early close — stocks stop at 1:00 PM ET",
+      "title": "Early close — 1:00 PM ET",
       "sub": "one short session"
     }
   ]
