@@ -1275,6 +1275,32 @@ def cross_for(symbol: str, u: dict | None = Maybe):
     return {"cross": cross.for_symbol(scanner.clean_symbol(symbol)) if u else None}
 
 
+@app.get("/api/admin/data-check")
+async def admin_data_check(u: dict = Admin):
+    """Nov 25: is the real-time (Algo Trader Plus) data working? Asks Alpaca for SPY's live full-market (SIP) trade and
+    its last 1-minute bar with no delay. Open it in the browser: ok=true and an age of a few seconds means real time."""
+    import requests as _rq
+    def run():
+        h = {"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""), "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")}
+        out = dict(plan_switch=data.SIP_REALTIME, scan_times=SCAN_TIMES)
+        try:
+            r = _rq.get("https://data.alpaca.markets/v2/stocks/snapshots", headers=h, timeout=10,
+                        params={"symbols": "SPY", "feed": "sip"})
+            if r.status_code != 200:
+                out.update(ok=False, sip=f"Alpaca {r.status_code}: {r.text[:160]}")
+            else:
+                t = ((r.json() or {}).get("SPY") or {}).get("latestTrade") or {}
+                age = (pd.Timestamp.now(tz="UTC") - pd.Timestamp(t["t"])).total_seconds() if t.get("t") else None
+                out.update(ok=True, spy=t.get("p"), trade_age_seconds=round(age, 1) if age is not None else None)
+        except Exception as e:
+            out.update(ok=False, sip=str(e)[:160])
+        out["verdict"] = ("Real-time full-market data is ON." if out.get("ok") and out["plan_switch"] else
+                          "Your Alpaca plan gives real-time SIP, but ALPACA_DATA_PLAN=plus isn't set on Render yet." if out.get("ok") else
+                          "Alpaca refused real-time SIP: these API keys aren't on the upgraded account (or the upgrade hasn't applied).")
+        return out
+    return await run_in_threadpool(run)
+
+
 @app.get("/api/admin/cross-log")
 def cross_log(u: dict = Admin):
     """Patch 218 §7: the forward log, both scorings."""
