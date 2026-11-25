@@ -231,8 +231,8 @@ section[data-view="today"] .t2-h { padding: 0; }
   .mp-head { gap: 8px; }
   .mp-head .tk-tile { --s: 26px !important; }
   .mp-head h3 { font-size: 22px; }
-  .mp-head .mp-px { font-size: 17px; flex: 0 1 auto; display: flex; flex-direction: column; line-height: 1.1; overflow: visible !important; text-overflow: clip !important; }
-  .mp-head .mp-px em { margin: 2px 0 0 !important; font-size: 12px !important; }
+  .mp-head .mp-px { font-size: 16px; flex: 0 1 auto; display: flex; flex-direction: row; align-items: baseline; gap: 5px; line-height: 1.1; overflow: visible !important; text-overflow: clip !important; white-space: nowrap; }
+  .mp-head .mp-px em { margin: 0 !important; font-size: 11.5px !important; white-space: nowrap; }   /* Nov 25 (owner): price, change and "close" on one line */
   .mp-head .mp-upd { white-space: nowrap; flex: none; font-size: 12px; } .mp-head .mp-upd .mp-mk { display: none; }
 }
 
@@ -324,7 +324,12 @@ body .bf-heat.gh-host, body.heat-on .bf-heat.gh-host, body.heat-on.map-v2 .bf-he
 .bf-heat table.gh-minit .gh-lv { width: 44px; position: static; text-align: right; }
 .bf-heat table.gh-minit .gh-tag { font-size: 10px; padding: 1px 4px; }
 .bf-heat .gh-minifoot { display: flex; flex-wrap: wrap; gap: 4px 12px; font: 600 11.5px var(--mono); color: var(--bh-mute); margin: 10px 0; }
-.bf-heat .gh-miniopen { text-align: center; padding: 10px; border-radius: 10px; background: #1F7A62; color: #fff; font: 700 13.5px var(--sans); }
+.bf-heat .gh-miniopen { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px auto 0; width: fit-content; padding: 8px 16px;
+  border-radius: 999px; border: 1px solid rgba(78,154,132,.55); background: rgba(78,154,132,.14); color: #CFEFE3; font: 700 12.5px var(--sans); letter-spacing: .01em;
+  -webkit-text-size-adjust: 100%; text-size-adjust: 100%; transition: background .15s, border-color .15s; }
+.bf-heat .gh-miniopen svg { width: 14px; height: 14px; flex: none; }
+.bf-heat .gh-minicard:hover .gh-miniopen, .bf-heat .gh-minicard:active .gh-miniopen { background: rgba(78,154,132,.26); border-color: #4E9A84; }
+html[data-theme="light"] .bf-heat .gh-miniopen { color: #0F5A47; background: rgba(78,154,132,.12); }
 @media (max-width: 899px) { .gh-mini-host { margin: 0 12px 12px !important; } }
 .gh-mob { display: flex; align-items: center; gap: 8px; width: calc(100% - 40px); margin: 0 20px 14px; padding: 12px 14px; border-radius: 12px;
   border: 1px solid var(--line, #2B2C2F); background: linear-gradient(90deg, rgba(78,154,132,.18), rgba(244,232,90,.08)); color: var(--ink, #fff);
@@ -2930,7 +2935,7 @@ html[data-theme="light"] #brief .bf-foot #bfChart:hover { background: #000 !impo
 html[data-theme="light"] #brief .bf-foot #bfWatch { border-color: #D4D4CF; color: #141412; }
 html[data-theme="light"] #brief .bf-foot #bfWatch:hover:not(:disabled) { border-color: #141412; }
 html[data-theme="light"] #brief .bf-foot #bfWatch.added { color: #fff !important; border-color: #2F6BFF !important; background: #2F6BFF !important; }
-@media (max-width: 480px) { #brief .bf-foot #bfWatch, #brief .bf-foot #bfChart { flex: 1 1 0 !important; padding: 11px 10px !important; text-align: center; font-size: 13.5px !important; } }
+@media (max-width: 480px) { #brief .bf-foot #bfWatch, #brief .bf-foot #bfChart { flex: 1 1 0 !important; padding: 10px 10px !important; text-align: center; font-size: 12.5px !important; font-weight: 700 !important; letter-spacing: .01em; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; } }
 
 /* Setup grade */
 .sg { display: flex; gap: 12px; align-items: center; margin-top: 16px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--c); background: color-mix(in srgb, var(--c) 8%, transparent); }
@@ -8354,7 +8359,7 @@ function paintMap() {
   MAP_MORE = {chart: !!chart, canPlan: !!canPlan, rp: !!rp};
   el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
       ${tkTile(sym, 34)}<h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
-      ${EXN ? EXN.pill : `<span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : '<span class="mp-mk">Market </span>closed'}</span>`}
+      ${EXN ? '<span class="mp-brk"></span>' + EXN.pill : `<span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : '<span class="mp-mk">Market </span>closed'}</span>`}
       <button class="mp-widebtn" onclick="mapWide()" aria-pressed="${mapIsWide()}" title="${mapIsWide() ? "Bring Sika and the side cards back" : "Give the chart the whole width (Sika folds away)"}">${mapIsWide() ? "‹ Show Sika" : "Wider chart ⇥"}</button>
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
@@ -9069,7 +9074,7 @@ function ghMiniHTML(j) {
     <div class="gh-minisub">Nearest strikes · next ${nE} expiries${j.chain_as_of ? " · read " + esc(new Date(j.chain_as_of).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "America/New_York"})) : ""}</div>
     <table class="gh-t gh-minit"><thead><tr><th>STK</th>${g.expiries.slice(0, nE).map(e => `<th>${md(e)}</th>`).join("")}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table>
     <div class="gh-minifoot">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}${w.call_wall ? `<span>Call wall $${Number(w.call_wall).toFixed(0)}</span>` : ""}${w.put_wall ? `<span>Put wall $${Number(w.put_wall).toFixed(0)}</span>` : ""}</div>
-    <div class="gh-miniopen">Open full board ⤢</div></div>`;
+    <div class="gh-miniopen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Open full board<span aria-hidden="true">→</span></div></div>`;
 }
 function bfHeatHTML(j, full) {
   // Nov 25 (owner, from a reference board): the wide GEX / VEX board. Every strike in the band × every expiry out to
@@ -12557,7 +12562,12 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 .mp-ext b { font: 700 12.5px var(--mono, ui-monospace, monospace); color: var(--mp-ink, inherit); } .mp-ext b.u { color: #3DD68C; } .mp-ext b.d { color: #FF6B5E; }
 .mp-upd i.ext { background: #F2C14E; box-shadow: 0 0 8px rgba(242,193,78,.7); }
 .mp-extnote { margin: 4px 2px 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(242,193,78,.35); background: rgba(242,193,78,.07); font-size: 13px; line-height: 1.45; color: var(--mp-ink, inherit); display: flex; gap: 8px; align-items: baseline; }
-@media (max-width: 640px) { .mp-head { flex-wrap: nowrap !important; } .mp-head .mp-ext { font-size: 11.5px; padding: 4px 8px; gap: 4px; min-width: 0; white-space: nowrap; } .mp-head .mp-ext b { font-size: 11.5px; } .mp-head .mp-ext .xw { display: none; } .mp-head .mp-px { flex: none !important; } .mp-head .mp-ext { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; } .mp-head h3 { flex: none; } .mp-head .mp-px { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .mp-head { flex-wrap: nowrap !important; } .mp-head .mp-ext { font-size: 11.5px; padding: 4px 8px; gap: 4px; min-width: 0; white-space: nowrap; } .mp-head .mp-ext b { font-size: 11.5px; } .mp-head .mp-ext .xw { display: none; }
+  /* Nov 25 (owner): close price + change on one line; the After hours pill gets its own line under it */
+  .mp-head:has(.mp-brk) { flex-wrap: wrap !important; row-gap: 6px; }
+  .mp-head .mp-brk { order: 8; flex-basis: 100%; height: 0; }
+  .mp-head .mp-brk ~ .mp-ext { order: 9; margin-left: 46px; flex: 0 1 auto; } .mp-head .mp-brk ~ .mp-ext .xw { display: inline; }
+  .mp-head .mp-brk ~ .bf-x, .mp-head .mp-brk ~ .mp-widebtn { order: 7; margin-left: auto; } .mp-head .mp-px { flex: none !important; } .mp-head .mp-ext { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; } .mp-head h3 { flex: none; } .mp-head .mp-px { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mp-extnote { display: block; } .mp-extnote i { display: inline-block; margin-right: 6px; } .mp-extnote span { display: block; margin-top: 3px; } }
 .mp-extnote i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #F2C14E; transform: translateY(-1px); } .mp-extnote span { opacity: .65; font-size: 12px; }
 html[data-theme="light"] .mp-ext b.u { color: #0F7A4F; } html[data-theme="light"] .mp-ext b.d { color: #B42318; }
