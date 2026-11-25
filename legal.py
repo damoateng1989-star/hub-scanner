@@ -10,7 +10,7 @@ import html
 import os
 from pathlib import Path
 
-UPDATED = "November 24, 2026"
+UPDATED = "November 25, 2026"
 STATIC = Path(__file__).parent / "static"
 
 
@@ -133,10 +133,18 @@ We don't send X your email address, watchlist, trades or alert settings.</p>
 <p>You can limit this: in X's settings under "Privacy and safety → Ads preferences" and "Off-X activity," by blocking third-party
 cookies or trackers in your browser, or with your browser's "Do Not Track" or Global Privacy Control signal where X honors it.</p>
 
+<h2>Company logos</h2>
+<p>To show company logos next to tickers, your browser loads the logo images directly from Financial Modeling Prep
+(financialmodelingprep.com). Like any website your browser requests something from, it receives your IP address and
+basic browser details with each request. We don't send it your email, account, watchlist or anything else about you,
+and no cookie from it is needed for the logos. If a logo can't load, NextShelf shows the ticker's letters instead.</p>
+
+
 <h2>Who we share it with</h2>
 <p>Only the service providers needed to run NextShelf, and only for that purpose: website hosting, email delivery, Telegram
 (to deliver your alerts), our phone-call provider (if you turn on calls), Google (if you use Google sign-in), and our payment processor.
 X receives the browsing information its pixel collects, as described above.
+Financial Modeling Prep receives the requests your browser makes for company logos, as described above.
 We may also share information if the law requires it.</p>
 
 <h2>How long we keep it</h2>
