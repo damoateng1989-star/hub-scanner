@@ -351,6 +351,7 @@ html[data-theme="light"] .bf-heat .gh-miniopen { color: #0F5A47; background: rgb
 .bf-heat .gh-legend { display: flex; align-items: center; gap: 8px; margin: 10px 2px 0; font: 600 10.5px var(--mono); color: var(--bh-mute); }
 .bf-heat .gh-levels { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; padding: 9px 11px; border: 1px solid var(--bh-line); border-radius: 12px; font: 700 12px var(--mono); }
 .bf-heat .gh-levels span { display: inline-flex; align-items: center; gap: 6px; } .bf-heat .gh-levels i { display: inline-block; width: 16px; }
+.bf-heat .gh-read { color: var(--bh-mute); font-weight: 500; }
 .bf-heat .gh-foot { font-size: 11.5px; color: var(--bh-mute); margin: 8px 0 0; line-height: 1.5; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
@@ -9102,11 +9103,10 @@ function bfHeatHTML(j, full) {
   const seg = `<span class="gh-seg"><button type="button" class="${mode === "gex" ? "on" : ""}" onclick="ghMode('gex')">GEX</button><button type="button" class="${mode === "vex" ? "on" : ""}" ${hasVex ? "" : "disabled title=\"Vanna needs implied volatility from the chain\""} onclick="ghMode('vex')">VEX</button></span>`;
   return `<div class="bh-card gh${full ? " gh-full" : ""}"><button type="button" class="bh-back" onclick="${full ? "ghFull(false)" : "heatChoose(false)"}">‹ ${full ? "Back" : "Back to movies"}</button>
     <div class="bh-head"><span class="t">${mode === "vex" ? "VEX" : "GEX"} HEAT MAP ${seg}</span><span class="s">${esc(j.symbol || "")}${spot ? " · $" + spot.toFixed(2) : ""} <button type="button" class="gh-exp" onclick="ghFull(${!full})">${full ? "Close ✕" : "Expand ⤢"}</button></span></div>
-    ${asOf ? `<div class="gh-note"><b>Delayed:</b> chain read ${esc(asOf)} ET · shown until the next update</div>` : ""}
     <div class="gh-wrap"><div class="bh-scroll gh-scroll" ><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter(this)">⌖</button></div>
     <div class="gh-legend">${fmt(Math.min(0, ...all))}<span class="gh-bar"></span>${fmt(Math.max(0, ...all))}</div>
-    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span></div>
+    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
     <p class="gh-foot">${mode === "vex" ? "Each cell: net dealer vanna at that strike for that expiry, in dollars per 1 point of implied volatility (how much dealer hedging shifts when IV moves). Positive (green to yellow): a drop in IV tends to support price; negative (blue to indigo): falling IV adds selling." : "Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to indigo is negative (moves can speed up)."} The ringed cells are the biggest concentrations. Context only: never part of a grade or an alert.</p></div>`;
 }
 function ghCenter(btn) {        // scroll each board (side panel, full screen) so the price row sits mid-view
