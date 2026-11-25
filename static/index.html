@@ -235,6 +235,10 @@ section[data-view="today"] .t2-h { padding: 0; }
   .mp-head .mp-px em { margin: 2px 0 0 !important; font-size: 12px !important; }
   .mp-head .mp-upd { white-space: nowrap; flex: none; font-size: 12px; } .mp-head .mp-upd .mp-mk { display: none; }
 }
+
+/* Nov 25 (owner): a non-A hero — neutral frame, no glow, the kicker says it */
+.ck-hero.t2-nota { border-color: var(--line, #2A2E35) !important; box-shadow: none !important; background: var(--surface, #15171C) !important; }
+.ck-hero.t2-nota .ckh-k { color: var(--muted) !important; } .t2-nota-k { color: var(--muted); }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -9170,8 +9174,9 @@ function renderRetest() {
   const heroKind = heroRow && heroRow.gap ? "gap" : heroRow && now.includes(heroRow) ? "now" : "wait";
   const hero = (x, kind) => {       // Patch 220: the owner's compact hero — what, where, room, when
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null, room = shelfRoom(x);
-    return `<a class="ck-hero t2-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
-      <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span><span class="sg-in ${GRADE_CLS[g] || "gq"} ckh-g" data-hg="${esc(x.sym)}">${g || "…"}</span></div>
+    const notA = !!g && !(g === "A" || g === "A+");      // Nov 25 (owner): a hero that isn't an A setup says so, and looks quieter
+    return `<a class="ck-hero t2-hero${notA ? " t2-nota" : ""}" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
+      <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}${notA ? '<span class="t2-nota-k"> · not an A setup</span>' : ""}</span><span class="sg-in ${GRADE_CLS[g] || "gq"} ckh-g" data-hg="${esc(x.sym)}">${g || "…"}</span></div>
       <div class="ckh-sym t2-sym">${tkTile(x.sym, 34)}${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
       <div class="t2-hl">${kind === "gap" ? `Above the gap-day high ${money(x.edge)} · target ${money(x.target)} · out below ${money(x.stop)}` : `Edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}${room != null ? ` · room ${room >= 0 ? "+" : "−"}${Math.abs(room).toFixed(1)}%` : ""}`}</div>
       <div class="t2-hw">${kind === "gap" ? `day ${x.day} of 10` : `window closes ${retestBy(x.left)}`}</div>
@@ -9241,6 +9246,10 @@ async function ckHeroGrade(sym, kind) {
   const now = document.querySelector(`.ckh-g[data-hg="${CSS.escape(sym)}"]`); if (!now) return;
   if (!letter) { if (now.textContent === "…") now.remove(); return; }
   now.textContent = letter; now.className = `sg-in ${GRADE_CLS[letter] || "gq"} ckh-g`;
+  const card = now.closest(".t2-hero");      // a looked-up grade that isn't A marks the hero the same way
+  if (card && letter !== "A" && letter !== "A+" && !card.classList.contains("t2-nota")) {
+    card.classList.add("t2-nota"); const k = card.querySelector(".ckh-k"); if (k) k.insertAdjacentHTML("beforeend", '<span class="t2-nota-k"> · not an A setup</span>');
+  }
 }
 // the hero's record line: the measured Flow Lab record, read from the swing card payload that already carries it
 async function ckHeroRecord(sym) {
