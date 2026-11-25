@@ -312,6 +312,16 @@ html .bf-heat table.gh-t td.gh-c { color: #F4F7F6 !important; } html .bf-heat ta
 body .bf-heat.gh-host, body.heat-on .bf-heat.gh-host, body.heat-on.map-v2 .bf-heat.gh-host { position: fixed !important; inset: 0 !important; z-index: 9000; margin: 0 !important; padding: 12px !important; background: rgba(0,0,0,.55) !important; display: block !important; overflow: hidden !important; }
 .bf-heat .bh-card.gh-full { width: 100% !important; max-width: none !important; margin: 0 !important; height: 100%; box-sizing: border-box; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
 .bf-heat .bh-card.gh-full .gh-scroll { max-height: calc(100vh - 230px); }
+.gh-mob { display: flex; align-items: center; gap: 8px; width: calc(100% - 40px); margin: 0 20px 14px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--line, #2B2C2F); background: linear-gradient(90deg, rgba(78,154,132,.18), rgba(244,232,90,.08)); color: var(--ink, #fff);
+  font: 700 14px var(--sans); cursor: pointer; text-align: left; }
+.gh-mob span { color: #8FD07A; font-size: 16px; } .gh-mob i { margin-left: auto; font-style: normal; opacity: .6; }
+.gh-mob[hidden] { display: none; }
+@media (max-width: 899px) { .gh-mob { width: calc(100% - 24px); margin: 0 12px 12px; }
+  body .bf-heat.gh-host { padding: 0 !important; padding-top: env(safe-area-inset-top) !important; }
+  .bf-heat.gh-host .bh-card.gh-full { border-radius: 0; border: 0; padding: 10px; }
+  .bf-heat .bh-card.gh-full .gh-scroll { max-height: calc(100vh - 250px); max-height: calc(100dvh - 250px); }
+  .bf-heat .bh-card.gh-full .gh-foot { display: none; } }
 .bf-heat .bh-card.gh-full table.gh-t td.gh-c { font-size: 12px; padding: 5px 9px; }
 .bf-heat .gh { position: relative; }
 .bf-heat .gh-wrap { position: relative; } .bf-heat .gh-center { position: absolute; right: 10px; bottom: 10px; z-index: 5; width: 36px; height: 36px; border-radius: 10px; background: #1A1D22; border: 1px solid #2A2E35; color: #E9EBEF; font-size: 17px; cursor: pointer; }
@@ -3607,6 +3617,7 @@ twq('config','rk6e6');
   </div>
   </div>
   <div id="bfMap"></div>
+  <button type="button" class="gh-mob" id="bfHeatMob" hidden onclick="ghFull(true)"><span>▦</span> GEX / VEX heat map <i>›</i></button>
   <div class="bf-body" id="bfBody"></div>
   <div class="bf-heat" id="bfHeat" hidden></div>
   <div class="bf-foot"><button id="bfWatch" type="button" onclick="briefAdd(BRIEF_SYM, this)">☆ Add to watchlist</button><span class="bf-foot-actions"><a id="bfChart" href="#">Open full chart →</a></span></div>
@@ -9059,6 +9070,7 @@ function paintHeat(sym) {
   const html = bfHeatHTML(GAMMA_GRID[sym], false);
   if (GH_FULL) ghFull(true);
   const hb = $("bfHeatBtn"); if (hb) hb.hidden = !html;
+  const hm = $("bfHeatMob"); if (hm) hm.hidden = !html || innerWidth >= 1280;   // Nov 25 (owner): phones and narrow screens open it full screen
   if (!html) { hideHeat(); return; }             // fail-open: no gamma, no panel; the card renders as before
   if (!heatWanted()) { hideHeat(); return; }      // Nov 23 (owner): the movies keep this space; the heat map is one tap away
   const cc = candleColors();                       // the chart's candle colours, the member's own if they set them
