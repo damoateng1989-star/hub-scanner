@@ -4015,8 +4015,10 @@ const ALERT_WORD = {hub_formed: "new hub", breakout: "broke out", breakdown: "br
   every_a: "A setup", unconfirmed: "break unconfirmed", premarket_gap: "premarket gap", "follow-through": "reached the target",
   "snap-back": "snapped back", stalled: "stalled"};
 function alertMini(x) {
-  const first = String(x.message || "").split("\n")[0].replace(/^[^\p{L}\p{N}$]+/u, "");
-  const sym = String(x.symbol || ""), what = ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40);
+  let first = String(x.message || "").split("\n")[0].replace(/^[^\p{L}\p{N}$]+/u, "");
+  const sm = first.match(/^(LONG · CALLS|SHORT · PUTS)(?: \(watch only\))? — /), side = sm ? (sm[1][0] === "L" ? "Long" : "Short") : "";   // Nov 25: the side tag
+  if (sm) first = first.slice(sm[0].length);
+  const sym = String(x.symbol || ""), what = (side ? side + " · " : "") + (ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40));
   let t = ""; try { const raw = String(x.created_at || ""), d = new Date(raw.replace(" ", "T") + (/Z$|[+-]\d\d:?\d\d$/.test(raw) ? "" : "Z"));
     if (!isNaN(d)) t = d.toLocaleString("en-US", {weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) {}
   return `<a class="t2-row" href="#alerts" title="${esc(first)}"><span class="t2-tk">${sym ? tkTile(sym, 20) : ""}${esc(sym)}</span><span class="t2-mid">${esc(what)}${t ? ` · ${esc(t)}` : ""}</span></a>`;

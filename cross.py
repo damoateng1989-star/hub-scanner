@@ -269,7 +269,7 @@ def alert_text(r: dict) -> str:
     gap = ""
     if r.get("first_px") and r["first_px"] > r["trigger"] * 1.002:
         gap = f"\nFirst seen at {_money(r['first_px'])}: a stop order fills above the trigger on a gap."
-    return (f"▲ {r['symbol']} — hub cross\n"
+    return (f"▲ LONG · CALLS — {r['symbol']} hub cross\n"
             f"Hub {_money(r['hub_low'])}–{_money(r['hub_high'])} · crossed {_money(r['trigger'])} {when}\n"
             f"{record_line()}\n"
             f"TRIGGER {_money(r['trigger'])} · TARGET {_money(r['target'])} · STOP {_money(r['stop'])}\n"

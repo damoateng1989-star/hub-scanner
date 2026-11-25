@@ -481,13 +481,18 @@ def plan_lines(entry: float, edge: float, target: float, d: int, reached: bool, 
             + shelf_line(target, shelf, d, entry))
 
 
+def side_tag(d: int) -> str:
+    """Nov 25 (owner): every directional alert names its side up front — long/calls or short/puts."""
+    return "LONG · CALLS" if d == 1 else "SHORT · PUTS"
+
+
 def format_preclose(sym: str, sig: dict, minutes_left: int) -> str:
     up = sig["direction"] == 1
     side, word = ("above", "ABOVE") if up else ("below", "BELOW")
     zone = f"{_money(sig['low'])}–{_money(sig['high'])}"
     trig = sig.get("trigger", sig["edge"])
     g = grade_line(sym, sig["direction"])
-    lines = [f"⚠️ {sym}: not a setup yet · ~{minutes_left} min to the 4H close",
+    lines = [f"⚠️ {side_tag(sig['direction'])} — {sym}: not a setup yet · ~{minutes_left} min to the 4H close",
              f"Trading {word} its hub: now {_money(sig['price'])}, hub {zone} ({sig['sessions']} sessions)"]
     if g:
         lines.append(g)
@@ -564,7 +569,7 @@ def format_retest(sym: str, t: dict, c4: pd.DataFrame, res: dict, j: int, grade:
     close = float(res["close"].iloc[j])
     reached = (close - target) * d >= 0
     g = grade.get("grade")
-    head = (f"🔄 {sym}: retesting the edge — {_grade_head(g)}\n"
+    head = (f"🔄 {side_tag(d)} — {sym}: retesting the edge — {_grade_head(g)}\n"
             f"4H close {_money(close)} held {'above' if up else 'below'} the edge {_money(edge)} after pulling back to it.\n")
     room_line = f"Room {grade['rr']:.1f}× to the target.\n" if grade["rr"] is not None else ""
     if g:
@@ -585,7 +590,7 @@ def format_double_retest(sym, t, c4, res, j, grade):
     close = float(res["close"].iloc[j])
     reached = (close - target) * d >= 0
     name = "Double bottom" if up else "Double top"
-    head = (f"🔄 {sym}: {name} retesting the neckline — {_grade_head(grade.get('grade'))}\n"
+    head = (f"🔄 {side_tag(d)} — {sym}: {name} retesting the neckline — {_grade_head(grade.get('grade'))}\n"
             f"4H close {_money(close)} held {'above' if up else 'below'} the neckline {_money(edge)} after pulling back to it.\n")
     if grade.get("grade"):
         return (head + _b_note(grade)
@@ -614,7 +619,7 @@ def format_event(sym: str, e: dict) -> str:
         edge = e["high"] if up else e["low"]
         d = 1 if up else -1
         hist = retest_grade_line(sym, d)
-        return (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
+        return (f"{'🚀' if up else '🔻'} {side_tag(d)} — {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
                 f"4H close {'above' if up else 'below'} the hub\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"
                 f"Hub grade: {e.get('grade', 'ledge').capitalize()} ({e.get('grade_score', '?')}/6)\n"
@@ -1123,7 +1128,7 @@ def volume_line(c4: pd.DataFrame, t) -> str:
 def format_pattern_event(sym: str, e: dict) -> str:
     if e["kind"] == "gapfade":
         risk = e["close"] - (e.get("stop") or e["close"])
-        return (f"🔄 Post-earnings gap fade & rip: {sym} gapped up {e.get('gap_pct', 0) * 100:.1f}% on {e.get('gap_day', 'the gap day')}, "
+        return (f"🔄 LONG · CALLS — Post-earnings gap fade & rip: {sym} gapped up {e.get('gap_pct', 0) * 100:.1f}% on {e.get('gap_day', 'the gap day')}, "
                 f"faded to {_money(e.get('stop'))}, and just closed back above the gap-day high {_money(e['edge'])}.\n"
                 f"Plan (not advice; you manage the trade):\n"
                 f"• Entry ≈ {_money(e['close'])} (this close)\n"
@@ -1136,7 +1141,7 @@ def format_pattern_event(sym: str, e: dict) -> str:
                 f"Day closed: {candle_close(e['time'])}")
     if e["kind"] == "flush":
         reached = e["close"] >= e["target"]
-        return (f"🔁 {sym}: Flush & reclaim. It dropped {abs(e.get('drop_pct') or 0):.1f}% on {e.get('flush_day', 'the flush day')}, "
+        return (f"🔁 LONG · CALLS — {sym}: Flush & reclaim. It dropped {abs(e.get('drop_pct') or 0):.1f}% on {e.get('flush_day', 'the flush day')}, "
                 f"and the daily candle just closed back ABOVE the level it fell from, {_money(e['edge'])}.\n"
                 f"Setup: Flush & reclaim (beta: daily candles, too few results to judge yet)\n"
                 + plan_lines(e["close"], e["edge"], e["target"], 1, reached, e.get("shelf")).replace("4H close", "daily close")
@@ -1272,7 +1277,7 @@ def format_premarket(sym: str, h: dict) -> str:
     gap = (h["pre_last"] / h["yest"] - 1) * 100
     if h["kind"] == "hub_break":
         up = h["direction"] == 1
-        return (f"🌅 {sym} is trading {'ABOVE' if up else 'BELOW'} its hub premarket (watch only)\n"
+        return (f"🌅 {side_tag(h['direction'])} — {sym} is trading {'ABOVE' if up else 'BELOW'} its hub premarket (watch only)\n"
                 f"Last {_money(h['pre_last'])} premarket (gap {gap:+.1f}% vs yesterday's close {_money(h['yest'])}) · "
                 f"premarket range {_money(h['pre_low'])}–{_money(h['pre_high'])}\n"
                 f"Hub {_money(h['hub_low'])}–{_money(h['hub_high'])}" + (f" ({h['sessions']} sessions)" if h.get("sessions") else "") + ".\n"
@@ -1390,19 +1395,19 @@ TRIGGER_ALERTS = os.getenv("TRIGGER_ALERTS", "on").lower() != "off"
 
 def format_trigger(sym: str, kind: str, trig: float, price: float, need: str, target: float | None, stop: float | None) -> str:
     if kind == "hub_down":
-        lines = [f"⚡ {sym} fell below its hub trigger {_money(trig)}: now {_money(price)}",
+        lines = [f"⚡ SHORT · PUTS — {sym} fell below its hub trigger {_money(trig)}: now {_money(price)}",
                  f"Not a trade yet. It counts only on {need} below {_money(trig)}.",
                  "Then NextShelf waits for the retest (a pullback to the edge that holds) for the A entry."]
         if target is not None:
             lines.append(f"Target {_money(target)}" + (f" · stop {_money(stop)}" if stop is not None else ""))
         return "\n".join(lines)
     if kind == "double_top":                       # the short side: a heads-up only
-        return "\n".join([f"⚠️ {sym} broke below its double-top neckline {_money(trig)}: now {_money(price)}",
+        return "\n".join([f"⚠️ SHORT · PUTS (watch only) — {sym} broke below its double-top neckline {_money(trig)}: now {_money(price)}",
                            f"Watch only: double tops lost money in the two-year test, so there's no entry plan. "
                            f"It completes only on {need} below {_money(trig)}."]
                           + ([f"Pattern target {_money(target)}"] if target is not None else []))
     name = {"hub": "its hub trigger", "double_bottom": "its double-bottom neckline", "gapfade": "its gap-day high"}[kind]
-    lines = [f"⚡ {sym} crossed {name} {_money(trig)}: now {_money(price)}",
+    lines = [f"⚡ LONG · CALLS — {sym} crossed {name} {_money(trig)}: now {_money(price)}",
              f"Not a trade yet. It counts only on {need} above {_money(trig)}."]
     if kind != "gapfade":
         lines.append("Then NextShelf waits for the retest (a pullback to the edge that holds) for the A entry.")
