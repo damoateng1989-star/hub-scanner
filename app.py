@@ -267,6 +267,16 @@ async def lifespan(_app: FastAPI):
                   misfire_grace_time=120, coalesce=True, max_instances=1)
     sched.start()
     # Patch 102: rebuild the in-memory chart cache after every restart, off the request path.
+    try:      # Patch 219: the economic calendar — daily at 6:00 AM ET, and on boot when missing or older than 36 hours
+        import econ
+        sched.add_job(econ.refresh, CronTrigger(hour=6, minute=0, timezone="America/New_York"),
+                      id="econ_week", replace_existing=True)
+        if econ.stale(36):
+            _econ_boot = threading.Timer(20, econ.refresh)
+            _econ_boot.daemon = True
+            _econ_boot.start()
+    except Exception as e:
+        log.warning("econ calendar not scheduled: %s", e)
     _chart_warm = threading.Timer(30, board.warm_charts)
     _chart_warm.daemon = True
     _chart_warm.start()
@@ -537,8 +547,20 @@ def landing():
 
 @app.get("/week_events.json")
 def week_events():
-    """Public market calendar data used by the This Week card on Today."""
-    return FileResponse(STATIC / "week_events.json", media_type="application/json")
+    """Public market calendar data used by the This Week card on Today.
+    Patch 219: the hand file (notables, opex, splits, holidays) merged with the stored macro feed (econ.py).
+    Never fetches; with nothing stored it is exactly the hand file."""
+    try:
+        hand = json.loads((STATIC / "week_events.json").read_text())
+    except Exception:
+        hand = {"notable": [], "events": []}
+    try:
+        import econ
+        body = econ.merged(hand)
+    except Exception as e:
+        log.warning("week events merge failed, serving the hand file: %s", e)
+        body = hand
+    return JSONResponse(body, headers={"Cache-Control": "public, max-age=300"})
 
 
 @app.get("/app")

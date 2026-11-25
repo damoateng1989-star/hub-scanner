@@ -6,24 +6,14 @@
   ],
   "events": [
     {
-      "date": "2026-11-17",
-      "title": "Retail Sales — October",
-      "sub": "8:30 AM ET"
+      "date": "2026-11-26",
+      "title": "Thanksgiving — US markets closed",
+      "sub": "no 4H closes today"
     },
     {
-      "date": "2026-11-18",
-      "title": "FOMC Minutes — Oct 27–28 meeting",
-      "sub": "2:00 PM ET"
-    },
-    {
-      "date": "2026-11-20",
-      "title": "Monthly options expiration",
-      "sub": "all day"
-    },
-    {
-      "date": "2026-11-20",
-      "title": "SNDK splits 8-for-1",
-      "sub": "trades split-adjusted, ~$166"
+      "date": "2026-11-27",
+      "title": "Early close — stocks stop at 1:00 PM ET",
+      "sub": "one short session"
     }
   ]
 }

@@ -3213,6 +3213,7 @@ twq('config','rk6e6');
     <div id="mkt" hidden></div>
   </div>
   <div class="vpill" id="vPill" hidden></div>
+  <div class="week" id="week" hidden></div>   <!-- Nov 25 (owner): This Week sits at the top, above Retesting now -->
   <!-- Patch 191, the Cockpit: chips, one hero, quiet cards, one expander -->
   <div class="ck-chips" id="ckChips" hidden></div>
   <div class="retest xr" id="crossed" hidden></div>
@@ -3250,7 +3251,6 @@ twq('config','rk6e6');
   </details>
   <div id="setup"></div>
   <div id="premarket" hidden></div>
-  <div class="week" id="week" hidden></div>
   <div class="rule1" id="rule1"></div>
   <span class="demo" id="demo" hidden>Demo data: prices are made up</span>
   <div class="lesson" id="lesson" hidden style="display:none">
@@ -9112,7 +9112,7 @@ async function loadWeek() {
     config.events.forEach(event => {
       if (event && inWindow(event.date) && event.title) rows.push({date:event.date,title:event.title,sub:event.sub || ""});
     });
-    rows.sort((a,b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title));
+    rows.sort((a,b) => a.date.localeCompare(b.date));   // Patch 219: within a day, the server's time order (stable sort)
     WEEK = rows;
   } catch (_) { WEEK = null; }
   renderWeek();
