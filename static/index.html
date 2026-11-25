@@ -6001,6 +6001,7 @@ function shelfOptPaint() {
       <div><label>Type</label>${seg("call", [[true, "Call", "buy"], [false, "Put", "sell"]])}</div>
       <div><label>Strike</label><select onchange="shelfOptSet('strike', this.value)">${strikes.map(r => `<option value="${r.strike}" ${r.strike === S.strike ? "selected" : ""}>$${r.strike} · ${r.bid > 0 ? money(r.bid) + " / " + money(r.ask) : "no quote"}</option>`).join("")}</select></div>
     </div>
+    ${S.exp && dte(S.exp) <= 3 ? `<p class="shelf-trade-note" style="margin:4px 0 8px;color:var(--amber,#B7791F)">${dte(S.exp) <= 0 ? "Expires today" : `Expires in ${dte(S.exp)} day${dte(S.exp) === 1 ? "" : "s"}`}: time decay is fastest here, and the next 4H close can come after the move. NextShelf's swing plan uses 14–45 days.</p>` : ""}
     ${k ? `<div class="sopt-quote"><b>${esc(S.sym)} ${ed(k.expiry)} $${k.strike} ${k.call ? "Call" : "Put"}</b><span><button type="button" onclick="shelfOptSet('price', ${k.bid})">Bid ${money(k.bid)}</button><button type="button" class="on" onclick="shelfOptSet('price', ${k.mid})">Mid ${money(k.mid)}</button><button type="button" onclick="shelfOptSet('price', ${k.ask})">Ask ${money(k.ask)}</button></span></div>${soptSimHTML(S, k)}` : `<div class="sopt-quote">No contract at that strike.</div>`}
     <div class="shelf-segment-grid">
       <div><label>Side</label>${seg("action", [["BUY_TO_OPEN", "Buy to open", "buy"], ["SELL_TO_CLOSE", "Sell to close", "sell"]])}</div>

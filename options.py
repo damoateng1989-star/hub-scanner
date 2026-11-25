@@ -61,34 +61,36 @@ def _parse(occ: str):
 STRIKE_BAND = 0.08      # the plan only uses at-the-money and one strike in, so ±8% of price is plenty
 
 
-def chain(sym: str, spot: float, iv_guess: float, side: str | None = None) -> list[dict]:
-    """Contracts expiring in ~10..MAX_DTE days with strikes within ±8% of spot; side = 'call', 'put' or None for both."""
-    key = f"{sym}|{round(spot, 1)}|{side or 'both'}"
+def chain(sym: str, spot: float, iv_guess: float, side: str | None = None, min_days: int | None = None) -> list[dict]:
+    """Contracts expiring in min_days (default ~10)..MAX_DTE days with strikes within ±8% of spot; side = 'call', 'put'
+    or None for both. The trade ticket passes min_days=0 (Nov 25, owner: pick 0-3 DTE too); the swing plan keeps ~10."""
+    min_days = MIN_DTE - 4 if min_days is None else max(0, int(min_days))
+    key = f"{sym}|{round(spot, 1)}|{side or 'both'}|{min_days}"
     hit = _CACHE.get(key)
     if hit and time.time() - hit[0] < 60:
         return hit[1]
     if data.provider() == "alpaca":
-        rows = _alpaca_chain(sym, spot, side)
+        rows = _alpaca_chain(sym, spot, side, min_days)
     else:
-        rows = [r for r in _demo_chain(sym, spot, iv_guess) if side is None or r["call"] == (side == "call")]
+        rows = [r for r in _demo_chain(sym, spot, iv_guess, min_days) if side is None or r["call"] == (side == "call")]
     _CACHE[key] = (time.time(), rows)
     return rows
 
 
-def _alpaca_chain(sym: str, spot: float, side: str | None = None) -> list[dict]:
+def _alpaca_chain(sym: str, spot: float, side: str | None = None, min_days: int = MIN_DTE - 4) -> list[dict]:
     key, secret = os.getenv("ALPACA_API_KEY"), os.getenv("ALPACA_SECRET_KEY")
     if not key or not secret:
         raise RuntimeError("ALPACA_API_KEY and ALPACA_SECRET_KEY are not set")
     today = date.today()
     params = dict(feed=os.getenv("ALPACA_OPTIONS_FEED", "indicative"), limit=1000,
-                  expiration_date_gte=(today + timedelta(days=MIN_DTE - 4)).isoformat(),
+                  expiration_date_gte=(today + timedelta(days=min_days)).isoformat(),
                   expiration_date_lte=(today + timedelta(days=MAX_DTE)).isoformat(),
                   strike_price_gte=round(spot * (1 - STRIKE_BAND), 2), strike_price_lte=round(spot * (1 + STRIKE_BAND), 2))
     if side in ("call", "put"):
         params["type"] = side
     headers = {"APCA-API-KEY-ID": key, "APCA-API-SECRET-KEY": secret}
     out, token = [], None
-    for _ in range(5):
+    for _ in range(8):      # more pages now that the ticket's window starts at 0 DTE
         if token:
             params["page_token"] = token
         r = requests.get(f"https://data.alpaca.markets/v1beta1/options/snapshots/{sym.replace('.', '')}",
@@ -114,10 +116,10 @@ def _step(spot: float) -> float:
     return 1 if spot < 50 else 2.5 if spot < 200 else 5 if spot < 600 else 10
 
 
-def _demo_chain(sym: str, spot: float, iv: float) -> list[dict]:
+def _demo_chain(sym: str, spot: float, iv: float, min_days: int = MIN_DTE - 4) -> list[dict]:
     """Made-up but realistic chain for the demo: weekly Friday expiries, Black-Scholes prices, a small spread."""
     today, out, step = date.today(), [], _step(spot)
-    fridays = [today + timedelta(days=d) for d in range(MIN_DTE - 4, MAX_DTE + 1) if (today + timedelta(days=d)).weekday() == 4]
+    fridays = [today + timedelta(days=d) for d in range(min_days, MAX_DTE + 1) if (today + timedelta(days=d)).weekday() == 4]
     k0 = round(spot / step) * step
     for exp in fridays:
         T = (exp - today).days / 365

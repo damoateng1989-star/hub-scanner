@@ -2713,7 +2713,7 @@ async def broker_option_chain(symbol: str, u: dict = Admin):
     def run():
         c4 = _sc.load_4h(sym, _sc.SCAN_DAYS)
         spot = float(c4["Close"].iloc[-1])
-        rows = _opt.chain(sym, spot, 0.35)
+        rows = _opt.chain(sym, spot, 0.35, min_days=0)       # Nov 25 (owner): the ticket lists 0-3 DTE too
         out = [dict(symbol=r["symbol"], expiry=r["expiry"].isoformat(), call=bool(r["call"]), strike=r["strike"],
                     bid=round(r["bid"], 2), ask=round(r["ask"], 2),
                     mid=round((r["bid"] + r["ask"]) / 2, 2) if r["bid"] > 0 and r["ask"] > 0 else round(r.get("last") or 0, 2))
