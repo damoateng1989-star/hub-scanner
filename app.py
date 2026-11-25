@@ -60,7 +60,7 @@ log = logging.getLogger("app")
 
 # Scan a few minutes after each 4H close (13:30 and 16:00 ET). The delay covers the
 # free Alpaca plan's 15-minute delay on full-market (SIP) data.
-SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:47,16:17").split(",") if t.strip()]
+SCAN_TIMES = [t.strip() for t in os.getenv("SCAN_TIMES", "13:32,16:02" if data.SIP_REALTIME else "13:47,16:17").split(",") if t.strip()]   # real-time plan: no 15-min wait
 # Premarket gap-onto-a-shelf alert, weekdays before the open. Empty = off.
 PREMARKET_TIME = os.getenv("PREMARKET_TIME", "09:00").strip()
 # Pre-close warning ~15 minutes before each 4H close (uses Alpaca's free real-time IEX price). Empty = off.
