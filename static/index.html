@@ -285,16 +285,37 @@ section[data-view="today"] .t2-h { padding: 0; }
 .bf-heat table.gh-t thead th { position: sticky; top: 0; z-index: 2; background: var(--bh-bg); color: var(--bh-mute); font: 700 11px var(--mono); padding: 7px 8px; text-align: right; }
 .bf-heat table.gh-t th:first-child { position: sticky; left: 0; z-index: 3; background: var(--bh-bg); text-align: right; padding: 0 10px 0 4px; color: var(--bh-ink); font: 600 12px var(--mono); }
 .bf-heat table.gh-t thead th:first-child { z-index: 4; color: var(--bh-mute); }
-.bf-heat td.gh-c { text-align: right; padding: 6px 8px; color: #E9EBEF; border-bottom: 1px solid rgba(0,0,0,.25); white-space: nowrap; }
-.bf-heat td.gh-c.dk { color: #0B0D12; } .bf-heat td.gh-max { box-shadow: inset 0 0 0 2px #F2C14E; font-weight: 800; }
-.bf-heat tr.gh-spot th, .bf-heat tr.gh-spot td { padding: 0; height: 0; border-top: 2px solid var(--bh-ink); position: relative; }
-/* Nov 25: the spot row's label sits above the next row's sticky strike cell (it was cut in half on desktop) */
-.bf-heat table.gh-t tr.gh-spot th:first-child { z-index: 6; overflow: visible; }
-.bf-heat tr.gh-spot th span { position: absolute; left: 2px; top: -9px; z-index: 4; white-space: nowrap; line-height: 14px; background: var(--bh-ink); color: var(--bh-bg); font: 800 10.5px var(--mono); padding: 1px 5px; border-radius: 4px; }
+.bf-heat td.gh-c { text-align: right; padding: 4px 7px; color: #F4F7F6; border-bottom: 1px solid rgba(0,0,0,.18); white-space: nowrap; font: 600 11px var(--mono); position: relative; }
+html .bf-heat table.gh-t td.gh-c { color: #F4F7F6 !important; } html .bf-heat table.gh-t td.gh-c.dk { color: #10261F !important; }
+.bf-heat table.gh-t .gh-lv { position: sticky; right: 0; z-index: 1; background: transparent; padding: 0 2px; width: 1px; white-space: nowrap; }
+.bf-heat table.gh-t thead th.gh-lv { background: var(--bh-bg); z-index: 4; }
+/* Nov 25: the biggest concentrations, ringed */
+.bf-heat td.gh-rp, .bf-heat i.gh-k.gh-rp { outline: 2px solid #FF8A00; outline-offset: -2px; font-weight: 800; }
+.bf-heat td.gh-rn, .bf-heat i.gh-k.gh-rn { outline: 2px solid #C9A2FF; outline-offset: -2px; font-weight: 800; }
+.bf-heat td.gh-rmax, .bf-heat i.gh-k.gh-rmax { outline: 2px solid #FFFFFF; outline-offset: -2px; box-shadow: inset 0 0 0 4px rgba(0,0,0,.55); font-weight: 900; }
+.bf-heat .gh-levels i.gh-k { width: 12px; height: 12px; border-radius: 3px; background: #4E9A84; }
+.bf-heat table.gh-t th:first-child { font: 600 11px var(--mono) !important; }
+.bf-heat .gh-spottag { display: inline-block; background: #3DD68C; color: #062014; font-weight: 800; padding: 1px 6px; border-radius: 0 4px 4px 0; position: relative; }
+.bf-heat .gh-spottag::before { content: ""; position: absolute; left: -6px; top: 0; border: 8px solid transparent; border-right-color: #3DD68C; border-left: 0; height: 0; transform: translateY(0); }
+/* FLIP / call wall / put wall lines across the board, tagged at the right */
+.bf-heat tr.gh-l-flip td { box-shadow: inset 0 -2px 0 #F2C14E; } .bf-heat tr.gh-l-call td { box-shadow: inset 0 -2px 0 rgba(61,214,140,.9); }
+.bf-heat tr.gh-l-put td { box-shadow: inset 0 -2px 0 #E5484D; }
+.bf-heat .gh-tags { display: flex; gap: 4px; justify-content: flex-end; }
+.bf-heat .gh-tag { font: 800 10.5px var(--mono); padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.bf-heat .gh-tag-flip { background: #F2C14E; color: #1B1400; } .bf-heat .gh-tag-call { background: #1F7A4D; color: #EAFBF2; } .bf-heat .gh-tag-put { background: #B42318; color: #FFF1F0; }
+.bf-heat .gh-seg { display: inline-flex; margin-left: 10px; border: 1px solid var(--bh-line); border-radius: 8px; overflow: hidden; vertical-align: middle; }
+.bf-heat .gh-seg button { font: 800 10.5px var(--mono); letter-spacing: .06em; padding: 3px 9px; background: transparent; color: var(--bh-mute); border: 0; cursor: pointer; }
+.bf-heat .gh-seg button.on { background: #4E9A84; color: #fff; } .bf-heat .gh-seg button:disabled { opacity: .4; cursor: not-allowed; }
+.bf-heat .gh-exp { margin-left: 8px; font: 700 11px var(--sans); padding: 3px 9px; border-radius: 8px; border: 1px solid var(--bh-line); background: transparent; color: var(--bh-ink); cursor: pointer; }
+.bf-heat .gh-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #2A0B4E, #3F5DA6, #4E9A84, #8FD07A, #F4E85A); }
+/* Expand: the board full screen, like a trading terminal */
+body .bf-heat.gh-host, body.heat-on .bf-heat.gh-host, body.heat-on.map-v2 .bf-heat.gh-host { position: fixed !important; inset: 0 !important; z-index: 9000; margin: 0 !important; padding: 12px !important; background: rgba(0,0,0,.55) !important; display: block !important; overflow: hidden !important; }
+.bf-heat .bh-card.gh-full { width: 100% !important; max-width: none !important; margin: 0 !important; height: 100%; box-sizing: border-box; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.bf-heat .bh-card.gh-full .gh-scroll { max-height: calc(100vh - 230px); }
+.bf-heat .bh-card.gh-full table.gh-t td.gh-c { font-size: 12px; padding: 5px 9px; }
 .bf-heat .gh { position: relative; }
 .bf-heat .gh-wrap { position: relative; } .bf-heat .gh-center { position: absolute; right: 10px; bottom: 10px; z-index: 5; width: 36px; height: 36px; border-radius: 10px; background: #1A1D22; border: 1px solid #2A2E35; color: #E9EBEF; font-size: 17px; cursor: pointer; }
 .bf-heat .gh-legend { display: flex; align-items: center; gap: 8px; margin: 10px 2px 0; font: 600 10.5px var(--mono); color: var(--bh-mute); }
-.bf-heat .gh-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #6A2C9A, #3A4FA0, #163B44, #2FA37A, #F2E14E); }
 .bf-heat .gh-levels { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; padding: 9px 11px; border: 1px solid var(--bh-line); border-radius: 12px; font: 700 12px var(--mono); }
 .bf-heat .gh-levels span { display: inline-flex; align-items: center; gap: 6px; } .bf-heat .gh-levels i { display: inline-block; width: 16px; }
 .bf-heat .gh-foot { font-size: 11.5px; color: var(--bh-mute); margin: 8px 0 0; line-height: 1.5; }
@@ -8960,45 +8981,83 @@ function paintGamma(sym) {
 // Only each expiry column's strongest pull (its biggest |net GEX| cell) is highlighted yellow; everything else is dimmed.
 // A SPOT divider row marks where price sits; a legend under the grid names the tiers.
 // NEXT rows = j.next_levels (server-side 25% rule). Fail-open.
-function bfHeatHTML(j) {
-  // Nov 25 (owner): every strike in the band, every cell coloured by size (green→yellow positive, blue→purple negative),
-  // the biggest cell ringed, a line where the price sits, a scale, the levels bar, and when the chain was read.
+let GH_MODE = (() => { try { return localStorage.getItem("ns-gh-mode") === "vex" ? "vex" : "gex"; } catch (e) { return "gex"; } })();
+let GH_FULL = false;
+function ghMode(m) { GH_MODE = m; try { localStorage.setItem("ns-gh-mode", m); } catch (e) {} if (BRIEF_SYM) paintHeat(BRIEF_SYM); }
+function ghFull(on) {             // Expand: the board full screen in its own layer on top of the page
+  GH_FULL = !!on;
+  let host = $("ghFullHost");
+  if (!GH_FULL) { if (host) host.remove(); return; }
+  if (!host) { host = document.createElement("div"); host.id = "ghFullHost"; host.className = "bf-heat gh-host"; document.body.appendChild(host); }
+  const j = BRIEF_SYM && GAMMA_GRID[BRIEF_SYM], html = j ? bfHeatHTML(j, true) : null;
+  if (!html) { host.remove(); GH_FULL = false; return; }
+  const cc = candleColors(); if (cc[0]) host.style.setProperty("--bh-up", cc[0]); if (cc[1]) host.style.setProperty("--bh-down", cc[1]);
+  host.innerHTML = html; setTimeout(() => ghCenter(host.querySelector(".gh-center")), 30);
+}
+function bfHeatHTML(j, full) {
+  // Nov 25 (owner, from a reference board): the wide GEX / VEX board. Every strike in the band × every expiry out to
+  // ~3 months, teal base, green→yellow for positive, blue→indigo for negative; the biggest concentrations ringed
+  // (top 3 positive in yellow, top 3 negative in violet, the single largest in white with a star); FLIP, call wall and
+  // put wall drawn across the board with tags; the strike nearest the price tagged. Context only, never a grade input.
   const g = j && j.grid;
   if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) return null;
-  const spot = Number(g.spot) || 0, all = g.rows.flatMap(r => (r.gex || []).map(Number)), mx = Math.max(1, ...all.map(Math.abs));
-  const mn = Math.min(0, ...all), mxp = Math.max(0, ...all);
-  const fmt = (v) => { const a = Math.abs(v), s = v < 0 ? "−" : ""; return a >= 1e9 ? s + (a / 1e9).toFixed(1) + "B" : a >= 1e6 ? s + Math.round(a / 1e6) + "M" : a >= 1e3 ? s + Math.round(a / 1e3) + "K" : "0"; };
-  const mix = (A, B, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), a = p(A), b = p(B); return "#" + a.map((x, i) => Math.round(x + (b[i] - x) * t).toString(16).padStart(2, "0")).join(""); };
-  const col = (v) => { const t = Math.min(1, Math.pow(Math.abs(v) / mx, 0.55));
-    return v >= 0 ? (t < .6 ? mix("#163B44", "#2FA37A", t / .6) : mix("#2FA37A", "#F2E14E", (t - .6) / .4)) : (t < .6 ? mix("#163B44", "#3A4FA0", t / .6) : mix("#3A4FA0", "#6A2C9A", (t - .6) / .4)); };
+  const hasVex = g.rows.some(r => Array.isArray(r.vex));
+  const mode = GH_MODE === "vex" && hasVex ? "vex" : "gex", key = mode;
+  const spot = Number(g.spot) || 0, vals = (r) => (r[key] || []).map(v => Number(v) || 0);
+  const all = g.rows.flatMap(vals), mx = Math.max(1, ...all.map(Math.abs));
+  const fmt = (v) => { const a = Math.abs(v), s = v < 0 ? "-" : "", t = (x) => String(+x.toFixed(2));
+    return a >= 1e9 ? s + t(a / 1e9) + "B" : a >= 1e6 ? s + t(a / 1e6) + "M" : a >= 1e3 ? s + t(a / 1e3) + "K" : a >= 1 ? s + t(a) : "0"; };
+  const mix = (A, B, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(A), y = p(B); return "#" + x.map((c, i) => Math.round(c + (y[i] - c) * Math.max(0, Math.min(1, t))).toString(16).padStart(2, "0")).join(""); };
+  const BASE = "#4E9A84";
+  const col = (v) => { const t = Math.pow(Math.abs(v) / mx, 0.75);      // most cells stay near the teal base; only real concentrations light up
+    return v >= 0 ? (t < .55 ? mix(BASE, "#8FD07A", t / .55) : mix("#8FD07A", "#F4E85A", (t - .55) / .45))
+                  : (t < .55 ? mix(BASE, "#3F5DA6", t / .55) : mix("#3F5DA6", "#2A0B4E", (t - .55) / .45)); };
+  // the biggest concentrations: top 3 each side get a coloured ring, the largest of all a white ring and a star
+  const cells = []; g.rows.forEach((r, ri) => vals(r).forEach((v, ci) => cells.push({ri, ci, v})));
+  const pos = cells.filter(c => c.v > 0).sort((a, b) => b.v - a.v).slice(0, 3), neg = cells.filter(c => c.v < 0).sort((a, b) => a.v - b.v).slice(0, 3);
+  const top = cells.reduce((m, c) => Math.abs(c.v) > Math.abs(m.v) ? c : m, {v: 0});
+  const ring = {}; pos.forEach(c => ring[c.ri + ":" + c.ci] = "gh-rp"); neg.forEach(c => ring[c.ri + ":" + c.ci] = "gh-rn");
+  if (top.ri != null) ring[top.ri + ":" + top.ci] = "gh-rmax";
+  const w = (GAMMA[j.symbol] && typeof GAMMA[j.symbol] === "object") ? GAMMA[j.symbol] : (j.walls || {});
+  const near = (lvl) => { if (!lvl) return -1; let bi = -1, bd = Infinity; g.rows.forEach((r, i) => { const d = Math.abs(r.strike - lvl); if (d < bd) { bd = d; bi = i; } }); return bi; };
+  const lines = {};
+  const addLine = (lvl, cls, label) => { const i = near(Number(lvl)); if (i >= 0) (lines[i] = lines[i] || []).push({cls, label}); };
+  if (w.flip) addLine(w.flip, "flip", `FLIP ${Number(w.flip).toFixed(2)}`);
+  if (w.call_wall) addLine(w.call_wall, "call", "Call Wall");
+  if (w.put_wall) addLine(w.put_wall, "put", "Put Wall");
+  const spotI = spot > 0 ? near(spot) : -1;
   const md = (e) => { const d = new Date(e + "T12:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
   const head = g.expiries.map(e => `<th>${md(e)}</th>`).join("");
-  let spotDone = false;
-  const rows = g.rows.map((r, i) => {
-    const below = spot > 0 && !spotDone && r.strike < spot;      // rows run high → low: the first strike under the price gets the line
-    if (below) spotDone = true;
-    const cells = (r.gex || []).map(v => { v = Number(v) || 0; const big = Math.abs(v) === mx, light = v > 0 && Math.abs(v) / mx > .75;
-      return `<td class="gh-c${light ? " dk" : ""}${big ? " gh-max" : ""}" style="background:${col(v)}">${fmt(v)}</td>`; }).join("");
-    return `${below ? `<tr class="gh-spot"><th><span>${spot.toFixed(2)}</span></th><td colspan="${g.expiries.length}"></td></tr>` : ""}<tr${below ? ' id="ghSpotRow"' : ""}><th>${Number(r.strike).toFixed(r.strike % 1 ? 1 : 0)}</th>${cells}</tr>`;
+  const rows = g.rows.map((r, ri) => {
+    const ln = lines[ri] || [], lcls = ln.map(l => " gh-l-" + l.cls).join("");
+    const tags = ln.length ? `<span class="gh-tags">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.label)}</b>`).join("")}</span>` : "";
+    const tds = vals(r).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", t = Math.abs(v) / mx, light = v > 0 && Math.pow(t, .75) > .6;
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v))}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
+    const st = Number(r.strike).toFixed(1);
+    return `<tr class="${lcls.trim()}"${ri === spotI ? ' data-spot="1"' : ""}><th>${ri === spotI ? `<span class="gh-spottag" title="Price ${spot.toFixed(2)}">${st}</span>` : st}</th>${tds}</tr>`;
   }).join("");
-  const w = (GAMMA[j.symbol] && typeof GAMMA[j.symbol] === "object") ? GAMMA[j.symbol] : (j.walls || {});
-  const net = g.net_total;
+  const tot = mode === "vex" ? g.vex_total : g.net_total;
   const asOf = j.chain_as_of ? new Date(j.chain_as_of).toLocaleString("en-US", {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}) : null;
-  const lv = (c, dash, txt) => `<span><i style="border-top:2px ${dash ? "dashed" : "solid"} ${c}"></i>${txt}</span>`;
-  return `<div class="bh-card gh"><button type="button" class="bh-back" onclick="heatChoose(false)">‹ Back to movies</button>
-    <div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")}${spot ? " · $" + spot.toFixed(2) : ""}</span></div>
+  const seg = `<span class="gh-seg"><button type="button" class="${mode === "gex" ? "on" : ""}" onclick="ghMode('gex')">GEX</button><button type="button" class="${mode === "vex" ? "on" : ""}" ${hasVex ? "" : "disabled title=\"Vanna needs implied volatility from the chain\""} onclick="ghMode('vex')">VEX</button></span>`;
+  return `<div class="bh-card gh${full ? " gh-full" : ""}"><button type="button" class="bh-back" onclick="${full ? "ghFull(false)" : "heatChoose(false)"}">‹ ${full ? "Back" : "Back to movies"}</button>
+    <div class="bh-head"><span class="t">${mode === "vex" ? "VEX" : "GEX"} HEAT MAP ${seg}</span><span class="s">${esc(j.symbol || "")}${spot ? " · $" + spot.toFixed(2) : ""} <button type="button" class="gh-exp" onclick="ghFull(${!full})">${full ? "Close ✕" : "Expand ⤢"}</button></span></div>
     ${asOf ? `<div class="gh-note"><b>Delayed:</b> chain read ${esc(asOf)} ET · shown until the next update</div>` : ""}
-    <div class="gh-wrap"><div class="bh-scroll gh-scroll" id="ghScroll"><table class="gh-t"><thead><tr><th>STK</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
-    <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter()">⌖</button></div>
-    <div class="gh-legend">${fmt(mn)}<span class="gh-bar"></span>${fmt(mxp)}</div>
-    <div class="gh-levels">${net != null ? `<span>Net GEX <b class="${net < 0 ? "u-down" : "u-up"}">${fmt(net)}</b></span>` : ""}${w.call_wall ? lv("#F2C14E", false, `Call wall ${Number(w.call_wall).toFixed(2)}`) : ""}${w.flip ? lv("#3DD68C", true, `Flip ${Number(w.flip).toFixed(2)}`) : ""}${w.put_wall ? lv("#FF6B5E", true, `Put wall ${Number(w.put_wall).toFixed(2)}`) : ""}</div>
-    <p class="gh-foot">Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to purple is negative (moves can speed up). Brighter is bigger; the ringed cell is the biggest on the grid. Context only: never part of a grade or an alert.</p></div>`;
+    <div class="gh-wrap"><div class="bh-scroll gh-scroll" ><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter(this)">⌖</button></div>
+    <div class="gh-legend">${fmt(Math.min(0, ...all))}<span class="gh-bar"></span>${fmt(Math.max(0, ...all))}</div>
+    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span></div>
+    <p class="gh-foot">${mode === "vex" ? "Each cell: net dealer vanna at that strike for that expiry, in dollars per 1 point of implied volatility (how much dealer hedging shifts when IV moves). Positive (green to yellow): a drop in IV tends to support price; negative (blue to indigo): falling IV adds selling." : "Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to indigo is negative (moves can speed up)."} The ringed cells are the biggest concentrations. Context only: never part of a grade or an alert.</p></div>`;
 }
-function ghCenter() { const r = $("ghSpotRow"), sc = $("ghScroll"); if (r && sc) sc.scrollTop = Math.max(0, r.offsetTop - sc.clientHeight / 2); }
+function ghCenter(btn) {        // scroll each board (side panel, full screen) so the price row sits mid-view
+  const roots = btn ? [btn.closest(".gh")] : [...document.querySelectorAll(".bf-heat .gh")];
+  roots.forEach(root => { const sc = root && root.querySelector(".gh-scroll"), r = sc && sc.querySelector("tr[data-spot]");
+    if (r && sc) sc.scrollTop = Math.max(0, r.offsetTop - sc.clientHeight / 2); });
+}
 function paintHeat(sym) {
   const el = $("bfHeat"); if (!el) return;
   if (BRIEF_SYM !== sym) return;
-  const html = bfHeatHTML(GAMMA_GRID[sym]);
+  const html = bfHeatHTML(GAMMA_GRID[sym], false);
+  if (GH_FULL) ghFull(true);
   const hb = $("bfHeatBtn"); if (hb) hb.hidden = !html;
   if (!html) { hideHeat(); return; }             // fail-open: no gamma, no panel; the card renders as before
   if (!heatWanted()) { hideHeat(); return; }      // Nov 23 (owner): the movies keep this space; the heat map is one tap away

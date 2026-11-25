@@ -24,6 +24,7 @@ import requests
 log = logging.getLogger("gamma")
 
 _CHAIN_CACHE: dict[tuple[str, str], list] = {}    # (symbol, YYYY-MM-DD) -> slim contracts (one fetch/day)
+_IV_CACHE: dict[tuple[str, str], dict] = {}       # Nov 25: (symbol, day) -> {(expiry, is_call, strike): implied vol}, for VEX
 _FETCHED_AT: dict[tuple[str, str], str] = {}      # (symbol, YYYY-MM-DD) -> when that chain was fetched (ISO, NY)
 _FAILED: dict[str, float] = {}                    # symbol -> time of last failed fetch (retry after an hour)
 _LOCK = threading.Lock()
@@ -107,7 +108,7 @@ def _compute(contracts: list, spot: float, today: date) -> dict | None:
 
 
 # ---------------------------------------------------------------- Nov 23: the chain from Alpaca (gamma + open interest)
-_ALPACA_DAYS = 70          # expiries out to ~10 weeks: the monthly >=7 DTE and the 8 nearest expiries summed() uses
+_ALPACA_DAYS = 90          # expiries out to ~10 weeks: the monthly >=7 DTE and the 8 nearest expiries summed() uses
 _TRADING_BASES = ("https://api.alpaca.markets", "https://paper-api.alpaca.markets")
 _TRADING_BASE: list = []
 
@@ -167,7 +168,7 @@ def _alpaca_contracts(sym: str, spot: float | None) -> list:
     if lo and hi:
         params.update(strike_price_gte=f"{lo:.2f}", strike_price_lte=f"{hi:.2f}")
     snaps, token = {}, None
-    for _ in range(12):
+    for _ in range(16):
         if token:
             params["page_token"] = token
         r = requests.get(f"https://data.alpaca.markets/v1beta1/options/snapshots/{sym.replace('.', '')}",
@@ -179,7 +180,7 @@ def _alpaca_contracts(sym: str, spot: float | None) -> list:
         if not token:
             break
     oi = _alpaca_oi(sym.replace(".", ""), lo, hi, exp_lte)
-    out = []
+    out, ivs = [], {}
     for occ, sn in snaps.items():
         p = _occ(occ)
         if not p:
@@ -189,8 +190,17 @@ def _alpaca_contracts(sym: str, spot: float | None) -> list:
             continue
         vol = (sn.get("dailyBar") or {}).get("v") or 0
         out.append((p[0], p[1], p[2], float(g), float(oi.get(occ, 0)), float(vol)))
+        try:
+            if sn.get("impliedVolatility"):
+                ivs[(p[0], p[1], p[2])] = float(sn["impliedVolatility"])
+        except (TypeError, ValueError):
+            pass
     if not out:
         raise RuntimeError("no Alpaca option greeks returned")
+    with _LOCK:
+        for k in [k for k in _IV_CACHE if k[1] != date.today().isoformat()]:
+            del _IV_CACHE[k]
+        _IV_CACHE[(sym.upper(), date.today().isoformat())] = ivs
     return out
 
 
@@ -469,8 +479,22 @@ def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> 
 
 
 _GRID_BAND = 0.10
-_GRID_MAX_ROWS = 25        # the strikes nearest the price, contiguous (Nov 25: every strike in the band, not the top ones)
-_GRID_MAX_EXP = 8
+_GRID_MAX_ROWS = 41        # the strikes nearest the price, contiguous (Nov 25: every strike in the band, not the top ones)
+_GRID_MAX_EXP = 13         # Nov 25 (owner): the wide board, every listed expiry out to ~3 months
+
+
+def _vanna(s: float, k: float, t: float, iv: float, r: float = 0.04) -> float:
+    """Black-Scholes vanna (dDelta/dVol, per 1.00 of vol), same for calls and puts. 0 when the inputs can't price."""
+    import math
+    try:
+        if s <= 0 or k <= 0 or t <= 0 or iv <= 0:
+            return 0.0
+        sq = iv * math.sqrt(t)
+        d1 = (math.log(s / k) + (r + iv * iv / 2) * t) / sq
+        d2 = d1 - sq
+        return -math.exp(-d1 * d1 / 2) / math.sqrt(2 * math.pi) * d2 / iv
+    except (ValueError, ZeroDivisionError):
+        return 0.0
 
 
 def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
@@ -500,6 +524,10 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
             return None
         net: dict[float, list] = {}
         gross: dict[float, list] = {}
+        vex: dict[float, list] = {}
+        with _LOCK:
+            ivs = dict(_IV_CACHE.get((sym, date.today().isoformat()), {}))
+        today = date.today()
         for ei, exp in enumerate(exps):
             for call, k, g, oi, v in by_exp[exp]:
                 ge = g * oi * 100 * float(spot)
@@ -507,8 +535,13 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
                 row[ei] += ge if call else -ge
                 grow = gross.setdefault(k, [0.0] * len(exps))
                 grow[ei] += abs(ge)
+                iv = ivs.get((exp, call, k))
+                if iv and oi:
+                    ve = _vanna(spot, k, max(0.5, (exp - today).days) / 365, iv) * 0.01 * oi * 100 * spot
+                    vex.setdefault(k, [0.0] * len(exps))[ei] += ve if call else -ve
         rows = [{"strike": k, "gex": [round(x, 1) for x in vals],
-                 "gross": [round(x, 1) for x in gross[k]]}
+                 "gross": [round(x, 1) for x in gross[k]],
+                 **({"vex": [round(x, 1) for x in vex[k]]} if k in vex else {})}
                 for k, vals in net.items() if any(vals) or any(gross[k])]
         if not rows:
             return None
@@ -516,7 +549,12 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
         rows = rows[:_GRID_MAX_ROWS]
         rows.sort(key=lambda r: -r["strike"])
         total = round(sum(sum(v) for v in net.values()), 1)           # the whole band, every listed expiry: the regime
-        return {"expiries": [e.isoformat() for e in exps], "spot": spot, "rows": rows, "net_total": total}
+        out = {"expiries": [e.isoformat() for e in exps], "spot": spot, "rows": rows, "net_total": total}
+        if vex:
+            for r in rows:
+                r.setdefault("vex", [0.0] * len(exps))
+            out["vex_total"] = round(sum(sum(v) for v in vex.values()), 1)
+        return out
     except Exception as e:
         log.warning("grid compute failed for %s: %s", symbol, e)
         return None
