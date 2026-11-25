@@ -260,7 +260,23 @@ def _alpaca_snapshots(symbols: list[str], feed: str | None = None) -> dict[str, 
             # 1-minute bar's close is an odd print or a stale one; the bar's close is the steadier price.
             if t.get("p") and mb and abs(float(t["p"]) / float(mb) - 1) > 0.0025:
                 px = mb
-            out[sym] = dict(price=round(float(px), 2), time=t.get("t"),
+            # Nov 25 (owner: AMD showed the after-hours trade with the regular day's % — two numbers mixed): outside the
+            # regular session the price is the last REGULAR close and its day change; the extended trade stays in
+            # latestTrade and in /api/extended (the After hours pill). Triggers only run in market hours, so no rule moves.
+            session_close = False
+            if not market_open():
+                db_ = snap.get("dailyBar") or {}
+                try:
+                    bar_day = pd.Timestamp(db_["t"]).tz_convert("America/New_York").date() if db_.get("t") else None
+                except Exception:
+                    bar_day = None
+                et_now = pd.Timestamp.now(tz="America/New_York")
+                pre_today = bar_day == et_now.date() and et_now.hour * 60 + et_now.minute < 570
+                if db_.get("c") and not pre_today:
+                    px, session_close = float(db_["c"]), True
+                elif pre_today and prev:          # before the open: today's bar is only pre-market prints
+                    px, prev, session_close = float(prev), None, True
+            out[sym] = dict(price=round(float(px), 2), time=t.get("t"), session_close=session_close,
                             minute_close=round(float(mb), 2) if mb else None,     # Nov 25: confirms a trigger cross
                             change_pct=round((float(px) / float(prev) - 1) * 100, 2) if prev else None,
                             latestTrade=t, prevDailyBar=snap.get("prevDailyBar") or {})

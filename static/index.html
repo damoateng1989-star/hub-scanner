@@ -8326,7 +8326,7 @@ function paintMap() {
   const P = wi ? {...P0, stop: wi.stop, shelf: wi.target, planning: true} : P0;
   if (MAP_RP && MAP_RP.sym !== sym) mapReplayStop(true);
   const rp = MAP_RP && chart ? MAP_RP : null;
-  const chg = P.chg != null ? `<em class="${P.chg >= 0 ? "u" : "d"}">${P.chg >= 0 ? "+" : ""}${P.chg}%</em>` : "";
+  const chg = P.chg != null ? `<em class="${P.chg >= 0 ? "u" : "d"}">${P.chg >= 0 ? "+" : ""}${P.chg}%${LIVE_OPEN ? "" : ' <span class="mp-pxl">close</span>'}</em>` : (LIVE_OPEN ? "" : '<em><span class="mp-pxl">close</span></em>');
   const pctTo = (v) => v == null || P.trig == null ? "" : `${(v / P.trig - 1) * 100 >= 0 ? "+" : ""}${((v / P.trig - 1) * 100).toFixed(1)}% from trigger`;
   const cell = (cls, label, v, sub, ic) => `<div class="mp-c ${cls}"><small>${label}</small><b>${ic ? mapIc(ic, 15) : ""}${v}</b>${sub ? `<i>${sub}</i>` : ""}</div>`;
   const cells = [cell("c-now", P.isLive ? "Now" : "Last close", money(P.px), P.chg != null ? `${P.chg >= 0 ? "+" : ""}${P.chg}% today` : "4-hour close")];
@@ -11206,7 +11206,7 @@ function liveTickPaint(sym, prev, px) {
   if (slot && slot.querySelector(".live")) { slot.innerHTML = liveChip(sym); flash(slot.querySelector(".live")); }
   if (sym !== BRIEF_SYM) return;
   const L = LIVE[sym], ch = L.change_pct;
-  const hp = document.querySelector("#bfMap .mp-head .mp-px");
+  const hp = LIVE_OPEN ? document.querySelector("#bfMap .mp-head .mp-px") : null;   // after hours the header keeps the close
   if (hp) { hp.innerHTML = money(px) + (ch == null ? "" : `<em class="${ch >= 0 ? "u" : "d"}">${ch >= 0 ? "+" : ""}${ch}%</em>`); flash(hp); }
   const nw = document.querySelector("#bfMap .mp-c.c-now");
   if (nw && LIVE_OPEN) { const bb = nw.querySelector("b"), ii = nw.querySelector("i"); if (bb) bb.textContent = money(px); if (ii && ch != null) ii.textContent = `${ch >= 0 ? "+" : ""}${ch}% today`; }
@@ -12553,10 +12553,11 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 @keyframes tkUp { from { color: #3DD68C; text-shadow: 0 0 10px rgba(61,214,140,.6); } } @keyframes tkDn { from { color: #FF6B5E; text-shadow: 0 0 10px rgba(255,107,94,.6); } }
 .tk-up { animation: tkUp .6s ease-out; } .tk-dn { animation: tkDn .6s ease-out; }
 .mp-px em.u { color: var(--mp-shelf); } .mp-px em.d { color: var(--mp-obst); }
+.mp-pxl { font: 600 11px var(--sans); color: var(--muted, #9AA0AC); letter-spacing: .02em; }
 .mp-ext b { font: 700 12.5px var(--mono, ui-monospace, monospace); color: var(--mp-ink, inherit); } .mp-ext b.u { color: #3DD68C; } .mp-ext b.d { color: #FF6B5E; }
 .mp-upd i.ext { background: #F2C14E; box-shadow: 0 0 8px rgba(242,193,78,.7); }
 .mp-extnote { margin: 4px 2px 10px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(242,193,78,.35); background: rgba(242,193,78,.07); font-size: 13px; line-height: 1.45; color: var(--mp-ink, inherit); display: flex; gap: 8px; align-items: baseline; }
-@media (max-width: 640px) { .mp-head { flex-wrap: nowrap !important; } .mp-head .mp-ext { font-size: 11.5px; padding: 4px 8px; gap: 4px; min-width: 0; white-space: nowrap; } .mp-head .mp-ext b { font-size: 11.5px; } .mp-head .mp-ext .xw { display: none; } .mp-head h3 { flex: none; } .mp-head .mp-px { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .mp-head { flex-wrap: nowrap !important; } .mp-head .mp-ext { font-size: 11.5px; padding: 4px 8px; gap: 4px; min-width: 0; white-space: nowrap; } .mp-head .mp-ext b { font-size: 11.5px; } .mp-head .mp-ext .xw { display: none; } .mp-head .mp-px { flex: none !important; } .mp-head .mp-ext { flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; } .mp-head h3 { flex: none; } .mp-head .mp-px { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .mp-extnote { display: block; } .mp-extnote i { display: inline-block; margin-right: 6px; } .mp-extnote span { display: block; margin-top: 3px; } }
 .mp-extnote i { flex: none; width: 7px; height: 7px; border-radius: 50%; background: #F2C14E; transform: translateY(-1px); } .mp-extnote span { opacity: .65; font-size: 12px; }
 html[data-theme="light"] .mp-ext b.u { color: #0F7A4F; } html[data-theme="light"] .mp-ext b.d { color: #B42318; }
