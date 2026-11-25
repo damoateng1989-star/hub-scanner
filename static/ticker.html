@@ -336,6 +336,13 @@ details.tk-sec > summary::after { content: "+"; font-size: 20px; opacity: .6; }
 details.tk-sec[open] > summary::after { content: "–"; }
 details.tk-sec > .card { margin: 0 0 14px; }
 details.tk-sec:has(> #gexShelves[hidden]) { display: none; }
+
+/* Patch 221: logo tiles (decoration only; never colour, state or grade) */
+.tk-tile { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--s); height: var(--s); box-sizing: border-box;
+  border-radius: calc(var(--s) * .22); border: 1px solid var(--line, #262A31); background: var(--surface, #15171C); overflow: hidden; vertical-align: middle; }
+.tk-tile i { font: 700 calc(var(--s) * .4)/1 var(--sans, system-ui); font-style: normal; color: var(--muted, #8A93A3); letter-spacing: -.02em; }
+.tk-tile img { position: absolute; left: 12%; top: 12%; width: 76%; height: 76%; object-fit: contain; opacity: 0; }
+.tk-tile.ok { background: #E9ECF1; } .tk-tile.ok img { opacity: 1; } .tk-tile.ok i { visibility: hidden; }
 </style>
 
 <style>
@@ -585,6 +592,13 @@ twq('config','rk6e6');
 <script>
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+// Patch 221: the ticker logo tile — decoration only. One provider URL (swap it here), loaded by the browser.
+// The tile starts as the letter tile; a logo that loads turns it light grey and shows; one that fails is removed.
+const LOGO_BASE = "https://financialmodelingprep.com/image-stock/";
+function tkTile(sym, px) {
+  const s = String(sym || "").toUpperCase(), ab = s.replace(/[^A-Z0-9]/g, "").slice(0, 2);
+  return `<span class="tk-tile" style="--s:${px}px" aria-hidden="true"><i>${String(ab).replace(/[&<>"']/g, '')}</i><img src="${LOGO_BASE}${encodeURIComponent(s)}.png" alt="" width="${px}" height="${px}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="if(this.naturalWidth>1)this.parentNode.classList.add('ok');else this.remove()" onerror="this.remove()"></span>`;
+}
 const IS_ANDROID = /Android/i.test(navigator.userAgent || "");
 // On Android, open the broker's app when it's installed and fall back to the website when it isn't
 // (an intent link with the app's package and a browser fallback). iPhones use the plain link, which
@@ -666,7 +680,7 @@ function render(d) {
   const sign = (v) => v == null ? "–" : (v > 0 ? "+" : "") + v + "%";
   $("main").innerHTML = `
     <header>
-      <h1>${esc(d.symbol)}<small>${money(st.last_close)}</small></h1>
+      <h1 style="display:flex;align-items:center;gap:12px">${tkTile(d.symbol, 34)}${esc(d.symbol)}<small>${money(st.last_close)}</small></h1>
       <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
         <span class="badge" style="--c:var(${color})">${label}</span>
         <span class="seg" role="tablist" aria-label="Chart timeframe">

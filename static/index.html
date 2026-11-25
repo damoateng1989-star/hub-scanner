@@ -207,6 +207,24 @@ section[data-view="today"] .t2-h { padding: 0; }
 .t2-box > span { white-space: normal; }
 .t2-row { grid-template-columns: 64px 1fr auto; }
 .t2-mid { white-space: normal; overflow: visible; line-height: 1.3; }
+
+/* Patch 221: logo tiles (decoration only; never colour, state or grade) */
+.tk-tile { position: relative; display: inline-grid; place-items: center; flex: none; width: var(--s); height: var(--s); box-sizing: border-box;
+  border-radius: calc(var(--s) * .22); border: 1px solid var(--line, #262A31); background: var(--surface, #15171C); overflow: hidden; vertical-align: middle; }
+.tk-tile i { font: 700 calc(var(--s) * .4)/1 var(--sans, system-ui); font-style: normal; color: var(--muted, #8A93A3); letter-spacing: -.02em; }
+.tk-tile img { position: absolute; left: 12%; top: 12%; width: 76%; height: 76%; object-fit: contain; opacity: 0; }
+.tk-tile.ok { background: #E9ECF1; } .tk-tile.ok img { opacity: 1; } .tk-tile.ok i { visibility: hidden; }
+
+.t2-tk { display: inline-flex; align-items: center; gap: 8px; }
+.t2-row { grid-template-columns: 92px 1fr auto; }
+#latest .t2-row { grid-template-columns: 90px 1fr auto; }
+.t2-sym { display: flex; align-items: center; gap: 10px; }
+.brow > .tk-tile { margin-right: 8px; }
+#crossed .c1 .tk-tile { margin-right: 8px; }
+
+.t2-card .t2-tk { display: flex; align-items: center; gap: 8px; }
+#latest .t2-row { grid-template-columns: 84px 1fr; }
+#latest .t2-mid { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -3913,6 +3931,13 @@ async function loadTickers() {
 
 let ALERTS = [], ALERTS_ERR = null;
 // Patch 220: an alert in one row — ticker, what happened in a few words, when
+// Patch 221: the ticker logo tile — decoration only. One provider URL (swap it here), loaded by the browser.
+// The tile starts as the letter tile; a logo that loads turns it light grey and shows; one that fails is removed.
+const LOGO_BASE = "https://financialmodelingprep.com/image-stock/";
+function tkTile(sym, px) {
+  const s = String(sym || "").toUpperCase(), ab = s.replace(/[^A-Z0-9]/g, "").slice(0, 2);
+  return `<span class="tk-tile" style="--s:${px}px" aria-hidden="true"><i>${esc(ab)}</i><img src="${LOGO_BASE}${encodeURIComponent(s)}.png" alt="" width="${px}" height="${px}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="if(this.naturalWidth>1)this.parentNode.classList.add('ok');else this.remove()" onerror="this.remove()"></span>`;
+}
 const ALERT_WORD = {hub_formed: "new hub", breakout: "broke out", breakdown: "broke down", retest: "retest setup", retest_double: "retest setup",
   retesting_now: "retesting now", board_rt: "retesting now", preclose: "near a close outside", trigger: "crossed the trigger", cross: "crossed",
   every_a: "A setup", unconfirmed: "break unconfirmed", premarket_gap: "premarket gap", "follow-through": "reached the target",
@@ -3922,7 +3947,7 @@ function alertMini(x) {
   const sym = String(x.symbol || ""), what = ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40);
   let t = ""; try { const raw = String(x.created_at || ""), d = new Date(raw.replace(" ", "T") + (/Z$|[+-]\d\d:?\d\d$/.test(raw) ? "" : "Z"));
     if (!isNaN(d)) t = d.toLocaleString("en-US", {weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) {}
-  return `<a class="t2-row" href="#alerts" title="${esc(first)}"><span class="t2-tk">${esc(sym)}</span><span class="t2-mid">${esc(what)}${t ? ` · ${esc(t)}` : ""}</span></a>`;
+  return `<a class="t2-row" href="#alerts" title="${esc(first)}"><span class="t2-tk">${sym ? tkTile(sym, 20) : ""}${esc(sym)}</span><span class="t2-mid">${esc(what)}${t ? ` · ${esc(t)}` : ""}</span></a>`;
 }
 function alertRow(x, compact) {
   const lines = String(x.message).split("\n");
@@ -5609,7 +5634,7 @@ function renderCrossed() {
   if (!xs.length) { el.hidden = true; el.innerHTML = ""; return; }
   const live = xs.filter(x => x.state === "live"), done = xs.filter(x => x.state !== "live");
   const row = (x) => `<a class="arow cmp${x.watching ? " mine" : ""}" href="#today" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(--up)">
-      <span class="t"><span class="c1"><span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
+      <span class="t"><span class="c1">${tkTile(x.symbol, 22)}<span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
       <span class="c2"><small>trigger ${money(x.trigger)} · target ${money(x.target)} · stop ${money(x.stop)} · dead on a 4H close under ${money(x.hub_high)}</small></span></span><span class="go">›</span></a>`;
   live.forEach(x => TODAY_HEAD.add(x.symbol));
   el.innerHTML = `<div class="week-head"><div class="week-k">CROSSED TODAY · ${live.length}</div></div>
@@ -8055,7 +8080,7 @@ function paintMap() {
   const cloudTf = MAP_TF === "4h", cloudOn = mapCloudOn(), cloudOk = cloudTf && !!chart && Array.isArray(chart.candles) && chart.candles.length >= 78;   // Patch 180
   MAP_MORE = {chart: !!chart, canPlan: !!canPlan, rp: !!rp};
   el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()" aria-label="Back">←</button>
-      <h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
+      ${tkTile(sym, 34)}<h3>${esc(sym)}</h3><span class="mp-px">${money(P.px)}${chg}</span>
       ${EXN ? EXN.pill : `<span class="mp-upd"><i class="${P.isLive ? "on" : ""}"></i>${P.isLive ? "Live" : "Market closed"}</span>`}
       <button class="mp-widebtn" onclick="mapWide()" aria-pressed="${mapIsWide()}" title="${mapIsWide() ? "Bring Sika and the side cards back" : "Give the chart the whole width (Sika folds away)"}">${mapIsWide() ? "‹ Show Sika" : "Wider chart ⇥"}</button>
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
@@ -9137,7 +9162,7 @@ function renderRetest() {
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null, room = shelfRoom(x);
     return `<a class="ck-hero t2-hero" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')" style="--c:var(${up ? "--up" : "--down"})">
       <div class="ckh-top"><span class="ckh-k">${kind === "gap" ? "Triggered at the close" : kind === "now" ? "At the edge now" : "Retest coming"}</span><span class="sg-in ${GRADE_CLS[g] || "gq"} ckh-g" data-hg="${esc(x.sym)}">${g || "…"}</span></div>
-      <div class="ckh-sym">${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
+      <div class="ckh-sym t2-sym">${tkTile(x.sym, 34)}${esc(x.sym)} <small>${esc(x.label)} · ${up ? "long" : "short"}</small></div>
       <div class="t2-hl">${kind === "gap" ? `Above the gap-day high ${money(x.edge)} · target ${money(x.target)} · out below ${money(x.stop)}` : `Edge ${money(x.edge)} · ${x.shelf ? "next shelf" : "target"} ${money(x.target)}${room != null ? ` · room ${room >= 0 ? "+" : "−"}${Math.abs(room).toFixed(1)}%` : ""}`}</div>
       <div class="t2-hw">${kind === "gap" ? `day ${x.day} of 10` : `window closes ${retestBy(x.left)}`}</div>
     </a>`;
@@ -9171,14 +9196,14 @@ function renderRetest() {
       (x.watch ? ' <b class="rt-watch">watch only</b>' : "") + (x.tape_flow && x.tape_flow.line ? ' <b class="cmp-tape">tape confirmed</b>' : "")); };   // (a waiting hero still appears in the full waiting list below)
   const edgeCard = (x) => { const up = x.state !== "breakdown";
     const bits = [x.watch ? "watch only" : "", x.label && x.label !== "Hub" ? esc(x.label) : "", up ? "at the edge" : "breakdown", `closes ${retestBy(x.left)}`].filter(Boolean).join(" · ");
-    return `<a class="t2-card" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${esc(x.sym)}</span>${x.tape_flow && x.tape_flow.line ? `<span class="t2-tape" title="${esc(tapeOneLine(x).replace(/<[^>]+>/g, ""))}">Tape ▫</span>` : ""}<small>${bits}</small></a>`; };
+    return `<a class="t2-card" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${tkTile(x.sym, 22)}${esc(x.sym)}</span>${x.tape_flow && x.tape_flow.line ? `<span class="t2-tape" title="${esc(tapeOneLine(x).replace(/<[^>]+>/g, ""))}">Tape ▫</span>` : ""}<small>${bits}</small></a>`; };
   const sub = (title, list, kind) => list.length ? `<div class="t2-cards">${capList(list.map(edgeCard), "edge")}</div>` : "";
   const footer = "";      // Patch 220: the every-A switch lives in Account
   el.innerHTML = head + (heroRow ? hero(heroRow, heroKind) : "") + sub("At the edge", restNow, "now") + footer;
   el.hidden = false;
   TODAY_HEAD = new Set([heroRow && heroRow.sym, ...restNow.map(x => x.sym)].filter(Boolean));
   // Patch 220: the queue — gap fades and the waiting list, each capped at 5 with "See all"
-  const qRow = (x, mid, away) => `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${esc(x.sym)}</span><span class="t2-mid">${mid}</span><b class="t2-away">${away}</b></a>`;
+  const qRow = (x, mid, away) => `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${tkTile(x.sym, 22)}${esc(x.sym)}</span><span class="t2-mid">${mid}</span><b class="t2-away">${away}</b></a>`;
   const gapQr = (x) => x.live ? qRow(x, `<span class="u-up">triggered</span> · target ${money(x.target)}`, `day ${x.day}`) : qRow(x, "close above trigger", `${x.dist.toFixed(1)}% away`);
   const waitQr = (x) => { const up = x.state !== "breakdown", px = +x.px, d = px > 0 ? Math.abs(up ? (x.edge / px - 1) : (px / x.edge - 1)) * 100 : 0;
     return qRow(x, x.mine ? '<b class="t2-mine">ON YOUR LIST</b>' : x.watch ? '<span class="t2-mute">watch only</span>' : "", `${d.toFixed(1)}% away`); };
@@ -9436,7 +9461,7 @@ function renderToday() {
   const wl = urgent.filter(t => !TODAY_HEAD.has(t.symbol));
   $("attn").innerHTML = wl.length ? capList(wl.map(t => {
     const [, c] = STATES[st(t)] || ["", "--idle"];
-    return `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')"><span class="t2-tk">${esc(t.symbol)}</span><span class="t2-mid">${wlState(t.status || {}, st(t))}</span>${wlLevels(t.status || {}, st(t))}</a>`;
+    return `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')"><span class="t2-tk">${tkTile(t.symbol, 22)}${esc(t.symbol)}</span><span class="t2-mid">${wlState(t.status || {}, st(t))}</span>${wlLevels(t.status || {}, st(t))}</a>`;
   }), "attn") : urgent.length ? `<div class="empty">Everything moving on your watchlist is already above.</div>` : `<div class="empty">${!TICKERS.length
       ? `Nothing yet. Add a few stocks to your <a href="#list">Watchlist</a> and we'll tell you here when one sets up.`
       : `Nothing changed state on your watchlist. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
@@ -9489,7 +9514,7 @@ function bRow(r, kind) {
   } else {
     d = `${{"follow-through": "Hit shelf", "snap-back": "Failed breakout", stalled: "Timed out"}[r.state]}`;
   }
-  return `<div class="brow">${sym(r.symbol)}<div class="d"><span class="px mono">${money(r.last_close)}</span> · ${d}</div><div class="bact">${brokerLinks(r.symbol, r.exchange)}${watchBtn(r)}</div></div>`;
+  return `<div class="brow">${tkTile(r.symbol, 22)}${sym(r.symbol)}<div class="d"><span class="px mono">${money(r.last_close)}</span> · ${d}</div><div class="bact">${brokerLinks(r.symbol, r.exchange)}${watchBtn(r)}</div></div>`;
 }
 function bGroup(title, rows, kind, empty) {
   const id = "g-" + kind, more = rows.length > 8;
