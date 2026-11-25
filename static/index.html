@@ -239,6 +239,8 @@ section[data-view="today"] .t2-h { padding: 0; }
 /* Nov 25 (owner): a non-A hero — neutral frame, no glow, the kicker says it */
 .ck-hero.t2-nota { border-color: var(--line, #2A2E35) !important; box-shadow: none !important; background: var(--surface, #15171C) !important; }
 .ck-hero.t2-nota .ckh-k { color: var(--muted) !important; } .t2-nota-k { color: var(--muted); }
+
+.t2-noa { margin: 0 0 10px; padding: 11px 14px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); font-size: 14px; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -9170,7 +9172,8 @@ function renderRetest() {
   // the hero is the best A: at the edge first, else an A still waiting; with no A anywhere, the first row as before
   const ok = (x) => !x.watch;
   const gapNow = gaps.filter(x => x.live);       // a gap fade that just triggered is tradeable now
-  const heroRow = now.find(x => ok(x) && x.grade === "A") || gapNow.find(x => x.grade === "A") || wait.find(x => ok(x) && x.grade === "A") || now.find(ok) || gapNow[0] || wait.find(ok) || null;
+  // Nov 25 (owner): the hero is only ever a tradeable setup — an A. With no A anywhere there is no hero, just the rows.
+  const heroRow = now.find(x => ok(x) && x.grade === "A") || gapNow.find(x => x.grade === "A") || wait.find(x => ok(x) && x.grade === "A") || null;
   const heroKind = heroRow && heroRow.gap ? "gap" : heroRow && now.includes(heroRow) ? "now" : "wait";
   const hero = (x, kind) => {       // Patch 220: the owner's compact hero — what, where, room, when
     const up = x.state !== "breakdown", g = x.grade && x.grade !== "?" ? x.grade : null, room = shelfRoom(x);
@@ -9214,7 +9217,7 @@ function renderRetest() {
     return `<a class="t2-card" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${tkTile(x.sym, 22)}${esc(x.sym)}</span>${x.tape_flow && x.tape_flow.line ? `<span class="t2-tape" title="${esc(tapeOneLine(x).replace(/<[^>]+>/g, ""))}">Tape ▫</span>` : ""}<small>${bits}</small></a>`; };
   const sub = (title, list, kind) => list.length ? `<div class="t2-cards">${capList(list.map(edgeCard), "edge")}</div>` : "";
   const footer = "";      // Patch 220: the every-A switch lives in Account
-  el.innerHTML = head + (heroRow ? hero(heroRow, heroKind) : "") + sub("At the edge", restNow, "now") + footer;
+  el.innerHTML = head + (heroRow ? hero(heroRow, heroKind) : `<p class="t2-noa">No A setup right now. Nothing here is a trade yet.</p>`) + sub("At the edge", restNow, "now") + footer;
   el.hidden = false;
   TODAY_HEAD = new Set([heroRow && heroRow.sym, ...restNow.map(x => x.sym)].filter(Boolean));
   // Patch 220: the queue — gap fades and the waiting list, each capped at 5 with "See all"
