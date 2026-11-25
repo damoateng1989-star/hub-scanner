@@ -1426,9 +1426,10 @@ def price_alerts_check(now: pd.Timestamp | None = None) -> int:
         return 0
     prices = data.latest_prices(sorted({a["symbol"] for a in pend}))
     fired = 0
-    for a in pend:
-        px = (prices.get(a["symbol"]) or {}).get("price")
-        if px is None or (px < a["price"] if a["direction"] == 1 else px > a["price"]):
+    for a in pend:      # Nov 25: "reached" = fresh trade AND the 1-minute bar at the level (no single-print alerts)
+        lv = a["price"] - 0.005 if a["direction"] == 1 else a["price"] + 0.005
+        px = price_past(prices.get(a["symbol"]), lv, a["direction"] != 1, now)
+        if px is None:
             continue
         u = db.get_user(a["user_id"])
         db.fire_price_alert(a["id"])

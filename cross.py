@@ -170,8 +170,9 @@ def check(now: pd.Timestamp | None = None) -> list[dict]:
             made.append(row)
             _alert_new(row)
     for r in live:
-        px = (prices.get(r["symbol"]) or {}).get("price")
-        if px is not None and px >= r["target"]:
+        import scanner
+        px = scanner.price_past(prices.get(r["symbol"]), r["target"] - 0.005, False, now)   # Nov 25: confirmed touch
+        if px is not None:
             _set(r["id"], touched=1)
             _follow(r, "touch", f"🎯 {r['symbol']}: touched the cross target {_money(r['target'])} (now {_money(px)}). "
                        f"The record books the target on a 4H close at or above it.")

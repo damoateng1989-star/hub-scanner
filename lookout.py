@@ -243,10 +243,11 @@ def evaluate_touches(now: pd.Timestamp | None = None) -> int:
         return 0
     for r in rows:
         try:
-            px = (prices.get(r["ticker"]) or {}).get("price")
-            if px is None or _fired(r, "target"):
+            if _fired(r, "target"):
                 continue
-            if (px >= r["target"]) if r["direction"] == 1 else (px <= r["target"]):
+            import scanner      # Nov 25: a touch needs a fresh trade AND the 1-minute bar at the target
+            lv = r["target"] - 0.005 if r["direction"] == 1 else r["target"] + 0.005
+            if scanner.price_past(prices.get(r["ticker"]), lv, r["direction"] != 1, now) is not None:
                 _set(r["id"], state="target_hit", state_at=_now(), alerted=_mark(r, "target"))
                 _alert(r, "target", f"🎯 {r['ticker']} touched the target, {_money(r['target'])}. First touch — your plan's shelf is here.")
                 n += 1

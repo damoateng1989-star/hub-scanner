@@ -155,14 +155,11 @@ def get_bars(symbol: str, days: int) -> pd.DataFrame:
 def latest_price(symbol: str) -> float | None:
     """Live price for the pre-close check (Alpaca uses the free real-time IEX feed)."""
     p = provider()
-    if p == "alpaca":
-        r = requests.get(f"https://data.alpaca.markets/v2/stocks/{symbol}/trades/latest",
-                         headers={"APCA-API-KEY-ID": os.getenv("ALPACA_API_KEY", ""),
-                                  "APCA-API-SECRET-KEY": os.getenv("ALPACA_SECRET_KEY", "")},
-                         params={"feed": "iex"}, timeout=15)
-        if r.status_code != 200:
-            raise RuntimeError(f"Alpaca error {r.status_code}: {r.text[:200]}")
-        return float(r.json()["trade"]["p"])
+    if p == "alpaca":      # Nov 25: the snapshot's steady price (a lone odd print gives way to the 1-minute bar)
+        v = _alpaca_snapshots([symbol]).get(symbol)
+        if not v:
+            raise RuntimeError(f"no live price for {symbol}")
+        return v["price"]
     if p == "yfinance":
         import yfinance as yf
         return float(yf.Ticker(symbol).fast_info["last_price"])
@@ -235,6 +232,10 @@ def _alpaca_snapshots(symbols: list[str], feed: str | None = None) -> dict[str, 
             if not px:
                 continue
             mb = (snap.get("minuteBar") or {}).get("c")
+            # Nov 25 (QQQ printed $626.81 on IEX while it traded ~$629): a last trade more than 0.25% away from the last
+            # 1-minute bar's close is an odd print or a stale one; the bar's close is the steadier price.
+            if t.get("p") and mb and abs(float(t["p"]) / float(mb) - 1) > 0.0025:
+                px = mb
             out[sym] = dict(price=round(float(px), 2), time=t.get("t"),
                             minute_close=round(float(mb), 2) if mb else None,     # Nov 25: confirms a trigger cross
                             change_pct=round((float(px) / float(prev) - 1) * 100, 2) if prev else None,
