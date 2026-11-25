@@ -10,7 +10,7 @@ import html
 import os
 from pathlib import Path
 
-UPDATED = "November 2, 2026"
+UPDATED = "November 24, 2026"
 STATIC = Path(__file__).parent / "static"
 
 
@@ -111,6 +111,8 @@ If you sign in with Google, we receive your Google account ID, name and email.</
 <li><b>Messages you send us</b> through the contact form.</li>
 <li><b>Technical data:</b> a sign-in cookie that keeps you logged in, and IP addresses kept briefly to block abuse (such as repeated failed logins).
 Small preferences like a collapsed sidebar are saved in your own browser.</li>
+<li><b>Advertising measurement:</b> our pages load X's (formerly Twitter's) conversion pixel, which tells us whether our ads on X
+lead to visits and sign-ups. See "Advertising measurement" below.</li>
 <li><b>Payments:</b> when paid plans launch, payments are handled by our payment processor. We don't store your full card number.</li>
 </ul>
 
@@ -120,11 +122,21 @@ Small preferences like a collapsed sidebar are saved in your own browser.</li>
 <li>To send service emails (like password resets) and, if you joined the list, product news. Every marketing email has an unsubscribe link.</li>
 <li>To keep NextShelf secure and to fix problems.</li>
 </ul>
-<p>We don't sell or rent your personal information, and we don't use third-party advertising trackers.</p>
+<p>We don't sell or rent your personal information.</p>
+
+<h2>Advertising measurement</h2>
+<p>We advertise on X, and to see whether those ads work, every NextShelf page loads X's conversion tracking pixel. When you visit,
+your browser sends X information such as the page you viewed, your IP address, browser and device details, and cookies or
+identifiers X has set. If you're logged in to X, X may connect the visit to your X account. X uses this to measure our ads
+and may use it to show you ads, under X's own privacy policy (<a href="https://x.com/en/privacy" rel="noopener">x.com/privacy</a>).
+We don't send X your email address, watchlist, trades or alert settings.</p>
+<p>You can limit this: in X's settings under "Privacy and safety → Ads preferences" and "Off-X activity," by blocking third-party
+cookies or trackers in your browser, or with your browser's "Do Not Track" or Global Privacy Control signal where X honors it.</p>
 
 <h2>Who we share it with</h2>
 <p>Only the service providers needed to run NextShelf, and only for that purpose: website hosting, email delivery, Telegram
 (to deliver your alerts), our phone-call provider (if you turn on calls), Google (if you use Google sign-in), and our payment processor.
+X receives the browsing information its pixel collects, as described above.
 We may also share information if the law requires it.</p>
 
 <h2>How long we keep it</h2>
