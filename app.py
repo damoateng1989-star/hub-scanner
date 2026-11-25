@@ -371,6 +371,17 @@ class ToggleBody(BaseModel):
 
 
 STATIC = Path(__file__).parent / "static"
+# X conversion tracking base code (pixel rk6e6). The static pages carry the same snippet in their <head>;
+# this copy is for the one page app.py writes inline (the unsubscribe confirmation).
+X_PIXEL = """<!-- X conversion tracking base code -->
+<script>
+!function(e,t,n,s,u,a){e.twq||(s=e.twq=function(){s.exe?s.exe.apply(s,arguments):s.queue.push(arguments);
+},s.version='1.1',s.queue=[],u=t.createElement(n),u.async=!0,u.src='https://static.ads-twitter.com/uwt.js',
+a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,'script');
+twq('config','rk6e6');
+</script>
+<!-- End X conversion tracking base code -->
+"""
 
 
 # ---------------------------------------------------------------- public files
@@ -2116,7 +2127,7 @@ def unsubscribe_page(t: str = ""):
     msg = (f"<b>{email}</b> has been removed from the NextShelf email list." if email
            else "That unsubscribe link isn't valid. It may have been used already.")
     return HTMLResponse(f"""<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Unsubscribed · NextShelf</title><link rel="icon" href="/favicon.svg"></head>
+<title>Unsubscribed · NextShelf</title><link rel="icon" href="/favicon.svg">{X_PIXEL}</head>
 <body style="font-family:Inter,-apple-system,sans-serif;background:#0B0B0D;color:#F4F4F6;display:grid;place-items:center;min-height:100vh;margin:0">
 <div style="max-width:440px;padding:24px;text-align:center"><h1 style="font-size:26px">You're unsubscribed</h1>
 <p style="color:#A1A1AA">{msg}</p><p><a href="/" style="color:#7AA2FF">Back to NextShelf</a></p></div></body></html>""")
