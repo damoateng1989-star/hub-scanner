@@ -286,6 +286,10 @@ section[data-view="today"] .t2-h { padding: 0; }
 .bf-heat table.gh-t th:first-child { position: sticky; left: 0; z-index: 3; background: var(--bh-bg); text-align: right; padding: 0 10px 0 4px; color: var(--bh-ink); font: 600 12px var(--mono); }
 .bf-heat table.gh-t thead th:first-child { z-index: 4; color: var(--bh-mute); }
 .bf-heat td.gh-c { text-align: right; padding: 4px 7px; color: #F4F7F6; border-bottom: 1px solid rgba(0,0,0,.18); white-space: nowrap; font: 600 11px var(--mono); position: relative; }
+/* Nov 25 (owner): the global "tr:hover td" wash (!important) blacked out the hovered row; keep each cell's colour, brighten it a touch */
+html .bf-heat table.gh-t tr td.gh-c, html .bf-heat table.gh-t tr:hover td.gh-c { background: var(--c) !important; }
+html .bf-heat table.gh-t tr:hover td.gh-c { filter: brightness(1.08); } html .bf-heat table.gh-t td.gh-c:hover { filter: brightness(1.2); }
+html .bf-heat table.gh-t tr:hover td.gh-lv, html .bf-heat table.gh-t tr:hover th { background: transparent !important; }
 html .bf-heat table.gh-t td.gh-c { color: #F4F7F6 !important; } html .bf-heat table.gh-t td.gh-c.dk { color: #10261F !important; }
 .bf-heat table.gh-t .gh-lv { position: sticky; right: 0; z-index: 1; background: transparent; padding: 0 2px; width: 1px; white-space: nowrap; }
 .bf-heat table.gh-t thead th.gh-lv { background: var(--bh-bg); z-index: 4; }
@@ -9064,7 +9068,7 @@ function ghMiniHTML(j) {
   const md = (e) => { const d = new Date(e + "T12:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
   const rows = idx.map(ri => { const r = g.rows[ri], ln = lines[ri] || [];
     const tds = vals(r).slice(0, nE).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", light = v > 0 && Math.pow(Math.abs(v) / mx, .75) > .6;
-      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="background:${col(v)}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("");
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="--c:${col(v)};background:${col(v)}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("");
     const st = Number(r.strike).toFixed(1);
     return `<tr class="${ln.map(l => "gh-l-" + l.cls).join(" ")}"><th>${ri === spotI ? `<span class="gh-spottag">${st}</span>` : st}</th>${tds}<td class="gh-lv">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.cls === "flip" ? "FLIP" : l.cls === "call" ? "CALL" : "PUT")}</b>`).join("")}</td></tr>`; }).join("");
   const tot = mode === "vex" ? g.vex_total : g.net_total, w = M.w || {};
@@ -9089,7 +9093,7 @@ function bfHeatHTML(j, full) {
     const ln = lines[ri] || [], lcls = ln.map(l => " gh-l-" + l.cls).join("");
     const tags = ln.length ? `<span class="gh-tags">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.label)}</b>`).join("")}</span>` : "";
     const tds = vals(r).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", t = Math.abs(v) / mx, light = v > 0 && Math.pow(t, .75) > .6;
-      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v))}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="--c:${col(v)};background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v))}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
     const st = Number(r.strike).toFixed(1);
     return `<tr class="${lcls.trim()}"${ri === spotI ? ' data-spot="1"' : ""}><th>${ri === spotI ? `<span class="gh-spottag" title="Price ${spot.toFixed(2)}">${st}</span>` : st}</th>${tds}</tr>`;
   }).join("");
