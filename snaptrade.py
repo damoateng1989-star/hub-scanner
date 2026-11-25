@@ -449,7 +449,7 @@ def _option_form(payload: dict) -> dict:
             raise ValueError("Enter both a take-profit and a stop-loss price")
         if not (0 < sl < tp < 100000):
             raise ValueError("The stop-loss must be below the take-profit, both above zero")
-        out.update(take_profit=tp, stop_loss=sl)
+        out.update(take_profit=tp, stop_loss=sl, bracket_mode="ask" if payload.get("bracket_mode") == "ask" else "auto")
     return out
 
 
@@ -497,7 +497,8 @@ def place_checked_option(user: dict, preview_id: str) -> Any:
     if f.get("take_profit") is not None:      # Nov 25: the exit pair goes in once this entry fills (brackets.py)
         import brackets
         oid = body.get("brokerage_order_id") if isinstance(body, dict) else None
-        b = brackets.create(user, pending["account_id"], f["occ"], f["units"], f["take_profit"], f["stop_loss"], entry_order_id=oid)
+        b = brackets.create(user, pending["account_id"], f["occ"], f["units"], f["take_profit"], f["stop_loss"], entry_order_id=oid,
+                            mode=f.get("bracket_mode") or "auto")
         body = dict(body) if isinstance(body, dict) else {"result": body}
         body["bracket"] = b
     return body

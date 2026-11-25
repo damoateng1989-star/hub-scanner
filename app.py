@@ -2628,6 +2628,7 @@ class BrokerOptionImpactBody(BaseModel):
     time_in_force: str = "Day"
     take_profit: float | None = None       # Nov 25: exits attached (placed by brackets.py once the buy fills)
     stop_loss: float | None = None
+    bracket_mode: str = "auto"             # 'auto' places the exits on the fill; 'ask' waits for the member's tap
 
 
 class BracketExitsBody(BaseModel):
@@ -2637,6 +2638,7 @@ class BracketExitsBody(BaseModel):
     take_profit: float
     stop_loss: float
     confirm: bool = False
+    bracket_mode: str = "auto"
 
 
 _BROKER_PLAIN = [   # Nov 23 (owner): plain words for the brokerage's common refusals
@@ -2750,7 +2752,7 @@ async def broker_option_exits(body: BracketExitsBody, u: dict = Admin):
     if not 1 <= body.units <= 100:
         raise HTTPException(400, "Contracts must be a whole number from 1 to 100")
     try:
-        return await run_in_threadpool(brackets.exits_now, u, body.account_id, body.contract, body.units, body.take_profit, body.stop_loss)
+        return await run_in_threadpool(brackets.exits_now, u, body.account_id, body.contract, body.units, body.take_profit, body.stop_loss, body.bracket_mode)
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
@@ -2761,6 +2763,20 @@ async def broker_option_exits(body: BracketExitsBody, u: dict = Admin):
 def broker_brackets(u: dict = Admin):
     import brackets
     return {"brackets": brackets.list_for(u)}
+
+
+@app.post("/api/broker/brackets/{bid}/arm")
+async def broker_bracket_arm(bid: int, u: dict = Admin):
+    """'Ask me first' mode: the member's tap places the exit pair."""
+    import brackets
+    try:
+        return await run_in_threadpool(brackets.arm_now, u, bid)
+    except LookupError:
+        raise HTTPException(404, "Not found")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        _broker_error(e, _snap_reason(e))
 
 
 @app.post("/api/broker/brackets/{bid}/stop")

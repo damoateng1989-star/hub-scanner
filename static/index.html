@@ -255,6 +255,11 @@ section[data-view="today"] .t2-h { padding: 0; }
 .sopt-brs { margin: 10px 0; padding: 10px; border: 1px solid var(--line); border-radius: 10px; font-size: 12.5px; }
 .sopt-br { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
 .sopt-br em { font-style: normal; color: #8FB0FF; } .sopt-br.failed em { color: #FF6B5E; } .sopt-br button { margin-left: auto; }
+
+.sopt-mode { margin: 8px 0; } .sopt-mode label { display: block; font: 700 11px var(--mono); letter-spacing: .08em; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+.sopt-mode small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.sopt-br small { flex-basis: 100%; color: #FF6B5E; } .sopt-br .sopt-arm { background: #2563EB; color: #fff; border: 0; border-radius: 8px; padding: 5px 10px; font-weight: 700; }
+.br-ready { border-color: rgba(242,193,78,.45); background: rgba(242,193,78,.05); margin: 0 0 18px; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -3342,6 +3347,7 @@ twq('config','rk6e6');
     <div id="mkt" hidden></div>
   </div>
   <div class="vpill" id="vPill" hidden></div>
+  <div id="brReady" hidden></div>
   <div class="retest" id="retest" hidden></div>
   <div class="retest xr" id="crossed" hidden></div>
   <div class="lk-strip" id="lkStrip" hidden></div>
@@ -5049,6 +5055,7 @@ function shelfOptSet(f, v) {
   } else if (f === "strike") { SOPT.strike = +v; const k = shelfOptContract(); SOPT.price = k ? k.mid : SOPT.price; }
   else if (f === "qty") SOPT.qty = Math.max(1, Math.min(100, Math.round(+v) || 1));
   else if (f === "price") { SOPT.price = +v; SOPT.preview = null; shelfOptQueue(); return shelfOptPaintBits(); }
+  else if (f === "brMode") { SOPT.brMode = v; try { localStorage.setItem("ns_br_mode", v); } catch (e) {} SOPT.preview = null; shelfOptPaint(); shelfOptQueue(); return; }
   else if (f === "stop" || f === "tp" || f === "sl") { SOPT[f] = +v; SOPT.preview = null; shelfOptQueue(); return shelfOptPaintBits(); }
   else SOPT[f] = v;
   if (f === "type" || f === "strike" || f === "exp" || f === "call") { SOPT.tp = SOPT.sl = null; }
@@ -5062,6 +5069,7 @@ function shelfOptSet(f, v) {
 // Nov 25 (owner): order types like Webull's — simple, stop, and "exits attached" (a bracket done the SnapTrade way)
 const SOPT_TYPES = [["Simple", [["LIMIT", "Limit"], ["MARKET", "Market"], ["STOP", "Stop"], ["STOP_LIMIT", "Stop limit"]]],
   ["With exits attached", [["LIMIT_BR", "Limit + target & stop"], ["MARKET_BR", "Market + target & stop"], ["EXITS", "Exits only (on a contract you hold)"]]]];
+const soptMode = (S) => S.brMode || (() => { try { return localStorage.getItem("ns_br_mode") || "auto"; } catch (e) { return "auto"; } })();
 const soptBase = (t) => ({LIMIT_BR: "LIMIT", MARKET_BR: "MARKET"})[t] || t;
 const soptBr = (t) => t === "LIMIT_BR" || t === "MARKET_BR" || t === "EXITS";
 const soptHasLimit = (t) => ["LIMIT", "STOP_LIMIT", "LIMIT_BR", "EXITS"].includes(t) && t !== "EXITS";
@@ -5093,7 +5101,7 @@ async function shelfOptPreview() {
   const req = ++S.req; out.textContent = "Checking the order with SnapTrade…"; shelfOptPaintBits();
   try {
     const br = soptBr(S.type), base = soptBase(S.type);
-    const r = await api("/api/broker/options/impact", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, action: S.action, units: S.qty, order_type: base, price: lim ? S.price : null, stop: (S.type === "STOP" || S.type === "STOP_LIMIT") ? S.stop : null, time_in_force: S.tif || "Day", take_profit: br ? S.tp : null, stop_loss: br ? S.sl : null})});
+    const r = await api("/api/broker/options/impact", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, action: S.action, units: S.qty, order_type: base, price: lim ? S.price : null, stop: (S.type === "STOP" || S.type === "STOP_LIMIT") ? S.stop : null, time_in_force: S.tif || "Day", take_profit: br ? S.tp : null, stop_loss: br ? S.sl : null, bracket_mode: soptMode(S)})});
     if (S !== SOPT || req !== S.req) return;
     S.preview = r.preview_id;
     const fee = shelfTradeFee(r.impact || {}), unit = lim ? S.price : (S.type === "STOP" ? S.stop : k.mid), est = unit * 100 * S.qty;
@@ -5110,7 +5118,7 @@ async function shelfOptSubmit() {
   if (!(await soptConfirm(S, k, d))) return;
   if (S.type === "EXITS") {
     S.preview = null; const out = $("soptImpact"); if (out) out.textContent = "Placing the exit pair with your brokerage…";
-    try { await api("/api/broker/options/exits", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, units: S.qty, take_profit: S.tp, stop_loss: S.sl, confirm: true})});
+    try { await api("/api/broker/options/exits", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, units: S.qty, take_profit: S.tp, stop_loss: S.sl, confirm: true, bracket_mode: soptMode(S)})});
       if (out) out.innerHTML = `<b>Exits placed</b> · ${esc(line)}`; toast("Exit pair placed."); soptBrackets(); }
     catch (e) { if (out) out.textContent = e.message || "The brokerage refused the exit pair."; toast(e.message || "Exits failed."); }
     return;
@@ -5129,8 +5137,28 @@ async function shelfOptSubmit() {
 async function soptBrackets() {
   const el = $("soptBr"); if (!el || !ME || !ME.is_admin) return;
   let d; try { d = await api("/api/broker/brackets"); } catch (e) { return; }
-  const rows = (d.brackets || []).filter(b => ["waiting_fill", "armed", "failed"].includes(b.state) && (!SOPT || b.occ.replace(/\s+/g, "").startsWith(SOPT.sym)));
-  el.innerHTML = rows.length ? `<div class="sopt-brs"><b>Exits NextShelf is managing</b>${rows.map(b => `<div class="sopt-br ${b.state}"><span>${esc(b.occ.replace(/\s+/g, " "))} · ${b.units} ct</span><span>TP ${money(b.take_profit)} · SL ${money(b.stop_loss)}</span><em>${esc(b.word)}</em><button type="button" onclick="soptBrStop(${b.id})">Stop</button></div>`).join("")}</div>` : "";
+  const rows = (d.brackets || []).filter(b => ["waiting_fill", "ready", "armed", "failed"].includes(b.state) && (!SOPT || b.occ.replace(/\s+/g, "").startsWith(SOPT.sym)));
+  el.innerHTML = rows.length ? `<div class="sopt-brs"><b>Exits NextShelf is managing</b>${rows.map(brRow).join("")}</div>` : "";
+}
+function brRow(b) {
+  return `<div class="sopt-br ${b.state}"><span>${esc(b.occ.replace(/\s+/g, " "))} · ${b.units} ct</span><span>TP ${money(b.take_profit)} · SL ${money(b.stop_loss)}${b.mode === "ask" ? " · asks first" : ""}</span><em>${esc(b.word)}</em>${b.state === "ready" || b.state === "failed" ? `<button type="button" class="sopt-arm" onclick="brArm(${b.id}, this)">Place exits</button>` : ""}<button type="button" onclick="soptBrStop(${b.id})">Stop</button>${b.note && b.state === "failed" ? `<small>${esc(b.note)}</small>` : ""}</div>`;
+}
+async function brArm(id, btn) {
+  if (btn) btn.disabled = true;
+  try { const r = await api(`/api/broker/brackets/${id}/arm`, {method: "POST"}); toast(r.state === "armed" ? "Exits placed." : (r.note || "The broker refused the exits.")); }
+  catch (e) { toast(e.message || "Couldn't place the exits."); }
+  soptBrackets(); brReadyBanner(true);
+}
+// Today (owner): exits waiting for the member's tap ('ask me first'), right under the context strip
+let BR_T = 0;
+async function brReadyBanner(force) {
+  const el = $("brReady"); if (!el) return;
+  if (!ME || !ME.is_admin) { el.hidden = true; return; }
+  if (!force && Date.now() - BR_T < 60000) return; BR_T = Date.now();
+  let d; try { d = await api("/api/broker/brackets"); } catch (e) { return; }
+  const rows = (d.brackets || []).filter(b => b.state === "ready" || b.state === "failed");
+  el.innerHTML = rows.length ? `<div class="sopt-brs br-ready"><b>${rows.some(b => b.state === "failed") ? "⚠ Exits need you" : "🟡 Exits waiting for your tap"}</b>${rows.map(brRow).join("")}</div>` : "";
+  el.hidden = !rows.length;
 }
 async function soptBrStop(id) {
   if (!confirm("Stop managing these exits? Orders already at your broker stay until they fill, expire or you cancel them.")) return;
@@ -5892,7 +5920,9 @@ function shelfOptPaint() {
       return `${g.plan ? `<div class="sopt-plan">From the plan${g.name ? `: <b>${esc(g.name)}</b>` : ""} · target <b>${money(g.tgt)}</b> · stop <b>${money(g.kill)}</b>. The exits below are set from it — edit any number.</div>` : `<div class="sopt-plan muted">No plan on this stock right now: the exits start at +50% / −40% of the price. Set your own.</div>`}
       <div class="sopt-leg tp"><div><b>Take profit</b><em>LIMIT · SELL TO CLOSE</em></div><input type="number" min="0.01" step="0.01" value="${S.tp > 0 ? S.tp.toFixed(2) : ""}" oninput="shelfOptSet('tp', this.value)">${g.plan ? `<small>≈ ${esc(S.sym)} at ${money(g.tgt)}</small>` : ""}</div>
       <div class="sopt-leg sl"><div><b>Stop loss</b><em>STOP · SELL TO CLOSE</em></div><input type="number" min="0.01" step="0.01" value="${S.sl > 0 ? S.sl.toFixed(2) : ""}" oninput="shelfOptSet('sl', this.value)">${g.plan ? `<small>≈ ${esc(S.sym)} at ${money(g.kill)}</small>` : ""}</div>
-      <ol class="sopt-flow">${S.type === "EXITS" ? `<li>NextShelf places the take-profit and the stop-loss together, now</li><li>The first one to fill cancels the other</li><li>They're Day orders: NextShelf puts them back each morning while you hold it</li>` : `<li>Buy ${S.qty} contract${S.qty > 1 ? "s" : ""}${S.type === "LIMIT_BR" ? ` at ${money(S.price)} or lower` : " at the market"}</li><li>When it fills, NextShelf places the take-profit and the stop-loss together</li><li>The first one to fill cancels the other; they're put back each morning while you hold it</li>`}</ol>
+      <div class="sopt-mode"><label>${S.type === "EXITS" ? "Each morning (they're day orders)" : "When the buy fills"}</label><div class="shelf-seg">${[["auto", S.type === "EXITS" ? "Put them back for me" : "Place my exits"], ["ask", "Ask me first"]].map(([v, l]) => `<button type="button" class="${soptMode(S) === v ? "on" : ""}" onclick="shelfOptSet('brMode', '${v}')">${l}</button>`).join("")}</div>
+        <small>${soptMode(S) === "ask" ? "NextShelf texts you and waits for your tap before sending anything. Until you tap, the position has no exits." : "NextShelf sends the exits you set here to your broker as soon as it's time, and tells you it did."}</small></div>
+      <ol class="sopt-flow">${S.type === "EXITS" ? `<li>NextShelf places the take-profit and the stop-loss together, now</li><li>The first one to fill cancels the other</li><li>They're Day orders: NextShelf ${soptMode(S) === "ask" ? "asks you each morning to put them back" : "puts them back each morning"} while you hold it</li>` : `<li>Buy ${S.qty} contract${S.qty > 1 ? "s" : ""}${S.type === "LIMIT_BR" ? ` at ${money(S.price)} or lower` : " at the market"}</li><li>When it fills, ${soptMode(S) === "ask" ? "NextShelf asks you, and your tap places" : "NextShelf places"} the take-profit and the stop-loss together</li><li>The first one to fill cancels the other; they're ${soptMode(S) === "ask" ? "offered again" : "put back"} each morning while you hold it</li>`}</ol>
       <p class="shelf-trade-note" style="margin:4px 0 8px">The stop-loss is a broker stop on the option: it fires on a touch. The plan's own kill is a 4-hour close, and NextShelf still tells you when that happens.</p>`; })()}
     <div class="shelf-qty-row"><div><label>Quantity</label><small>Contracts (100 shares each)</small></div><div class="shelf-stepper"><button type="button" aria-label="Fewer contracts" onclick="shelfOptSet('qty', ${S.qty - 1})">−</button><b>${S.qty}</b><button type="button" aria-label="More contracts" onclick="shelfOptSet('qty', ${S.qty + 1})">+</button></div></div>
     ${S.type === "STOP" || S.type === "STOP_LIMIT" ? `<div class="shelf-limit-wrap"><label>Stop price per share · USD <small>(the order goes in when the option trades here)</small></label><input type="number" min="0.01" step="0.01" value="${S.stop > 0 ? S.stop.toFixed(2) : ""}" oninput="shelfOptSet('stop', this.value)"></div>` : ""}
@@ -9526,7 +9556,7 @@ function renderToday() {
   renderRule();
   renderKpis();
   renderPhoneNudge();
-  renderMoreRows();
+  renderMoreRows(); brReadyBanner();
 
   // welcome checklist: the few things that make NextShelf useful, in order
   const flag = (k) => { try { return !!localStorage.getItem(k); } catch (e) { return false; } };
