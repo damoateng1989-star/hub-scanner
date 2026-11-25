@@ -414,29 +414,50 @@ def _option_form(payload: dict) -> dict:
     if isinstance(units, bool) or not isinstance(units, int) or not 1 <= units <= 100:
         raise ValueError("Contracts must be a whole number from 1 to 100")
     order_type = str(payload.get("order_type") or "LIMIT").upper()
-    if order_type not in ("LIMIT", "MARKET"):
-        raise ValueError("Only limit and market option orders are supported")
-    price = None
-    if order_type == "LIMIT":
+    order_type = {"STOP": "STOP_LOSS_MARKET", "STOP_LIMIT": "STOP_LOSS_LIMIT"}.get(order_type, order_type)   # Nov 25: stop entries
+    if order_type not in ("LIMIT", "MARKET", "STOP_LOSS_MARKET", "STOP_LOSS_LIMIT"):
+        raise ValueError("Order type must be limit, market, stop or stop limit")
+    price = stop = None
+    if order_type in ("LIMIT", "STOP_LOSS_LIMIT"):
         try:
             price = round(float(payload.get("price")), 2)
         except (TypeError, ValueError):
             raise ValueError("A valid limit price is required")
         if not 0 < price < 100000:
             raise ValueError("Enter a valid limit price")
+    if order_type in ("STOP_LOSS_MARKET", "STOP_LOSS_LIMIT"):
+        try:
+            stop = round(float(payload.get("stop")), 2)
+        except (TypeError, ValueError):
+            raise ValueError("A valid stop price is required")
+        if not 0 < stop < 100000:
+            raise ValueError("Enter a valid stop price")
     tif = str(payload.get("time_in_force") or "Day").strip().upper()
     tif = {"DAY": "Day", "GTC": "GTC"}.get(tif)
     if not tif:
         raise ValueError("Time in force must be Day or GTC")
-    if tif == "GTC" and order_type != "LIMIT":
+    if tif == "GTC" and order_type not in ("LIMIT", "STOP_LOSS_LIMIT"):
         raise ValueError("Good-till-cancelled needs a limit price")
-    return dict(occ=occ, action=action, units=units, order_type=order_type, price=price, tif=tif)
+    out = dict(occ=occ, action=action, units=units, order_type=order_type, price=price, stop=stop, tif=tif)
+    tp, sl = payload.get("take_profit"), payload.get("stop_loss")       # Nov 25: exits attached (bracket)
+    if tp is not None or sl is not None:
+        if action != "BUY_TO_OPEN":
+            raise ValueError("Exits attach to a buy-to-open order")
+        try:
+            tp, sl = round(float(tp), 2), round(float(sl), 2)
+        except (TypeError, ValueError):
+            raise ValueError("Enter both a take-profit and a stop-loss price")
+        if not (0 < sl < tp < 100000):
+            raise ValueError("The stop-loss must be below the take-profit, both above zero")
+        out.update(take_profit=tp, stop_loss=sl)
+    return out
 
 
 def _option_call(client, fn, uid: str, secret: str, account_id: str, f: dict):
     return fn(account_id=account_id, user_id=uid, user_secret=secret, order_type=f["order_type"], time_in_force=f.get("tif") or "Day",
               limit_price=None if f["price"] is None else f"{f['price']:.2f}",
-              price_effect=None if f["order_type"] == "MARKET" else ("DEBIT" if f["action"] == "BUY_TO_OPEN" else "CREDIT"),
+              stop_price=None if f.get("stop") is None else f"{f['stop']:.2f}",
+              price_effect=None if f["order_type"] in ("MARKET", "STOP_LOSS_MARKET") else ("DEBIT" if f["action"] == "BUY_TO_OPEN" else "CREDIT"),
               legs=[{"instrument": {"symbol": f["occ"], "instrument_type": "OPTION"}, "action": f["action"], "units": f["units"]}])
 
 
@@ -456,7 +477,8 @@ def option_impact(user: dict, payload: dict) -> dict:
                                 "expires": now + _PREVIEW_TTL}
     return {"preview_id": preview_id, "expires_in_seconds": _PREVIEW_TTL,
             "order": {"contract": f["occ"], "action": f["action"], "units": f["units"], "order_type": f["order_type"],
-                      "limit_price": f["price"], "time_in_force": f["tif"]},
+                      "limit_price": f["price"], "stop_price": f.get("stop"), "time_in_force": f["tif"],
+                      "take_profit": f.get("take_profit"), "stop_loss": f.get("stop_loss")},
             "impact": body if isinstance(body, dict) else {"impact": body}}
 
 
@@ -470,7 +492,29 @@ def place_checked_option(user: dict, preview_id: str) -> Any:
     if pending["user_id"] != int(user["id"]):
         raise PermissionError("This order preview belongs to another member")
     _owned_account(user, pending["account_id"])
-    return _body(_option_call(client, client.trading.place_mleg_order, uid, secret, pending["account_id"], pending["form"]))
+    f = pending["form"]
+    body = _body(_option_call(client, client.trading.place_mleg_order, uid, secret, pending["account_id"], f))
+    if f.get("take_profit") is not None:      # Nov 25: the exit pair goes in once this entry fills (brackets.py)
+        import brackets
+        oid = body.get("brokerage_order_id") if isinstance(body, dict) else None
+        b = brackets.create(user, pending["account_id"], f["occ"], f["units"], f["take_profit"], f["stop_loss"], entry_order_id=oid)
+        body = dict(body) if isinstance(body, dict) else {"result": body}
+        body["bracket"] = b
+    return body
+
+
+def option_oco(user: dict, account_id: str, occ: str, units: int, take_profit: float, stop_loss: float) -> Any:
+    """Nov 25: the exit pair for a held long option — one Limit take-profit and one Stop stop-loss, both SELL_TO_CLOSE,
+    Day, same contract and size (SnapTrade's option OCO; on Webull these become STOP_PROFIT / STOP_LOSS with one combo)."""
+    client = _client()
+    uid, secret = _credentials(user)
+    _owned_account(user, account_id)
+    inst = {"symbol": occ21(occ), "type": "OPTION"}
+    leg = lambda kind, px: {"order_role": "PEER", "action": "SELL_TO_CLOSE", "instrument": inst, "units": int(units),
+                            "time_in_force": "Day", "order_type": kind,
+                            **({"price": round(float(px), 2)} if kind == "Limit" else {"stop": round(float(px), 2)})}
+    return _body(client.trading.place_complex_order(account_id=account_id, user_id=uid, user_secret=secret, type="OCO",
+                                                    orders=[leg("Limit", take_profit), leg("Stop", stop_loss)]))
 
 
 # ---------------------------------------------------------------- positions & orders view (owner, Nov 22)

@@ -267,6 +267,12 @@ async def lifespan(_app: FastAPI):
                   misfire_grace_time=120, coalesce=True, max_instances=1)
     sched.start()
     # Patch 102: rebuild the in-memory chart cache after every restart, off the request path.
+    try:      # Nov 25: brackets — a filled buy arms its exit pair; held positions get it back each morning (Day-only)
+        import brackets
+        sched.add_job(brackets.tick, CronTrigger(day_of_week="mon-fri", hour="9-15", minute="*", timezone="America/New_York"),
+                      id="brackets", replace_existing=True, max_instances=1, coalesce=True)
+    except Exception as e:
+        log.warning("brackets not scheduled: %s", e)
     try:      # Patch 219: the economic calendar — daily at 6:00 AM ET, and on boot when missing or older than 36 hours
         import econ
         sched.add_job(econ.refresh, CronTrigger(hour=6, minute=0, timezone="America/New_York"),
@@ -2618,7 +2624,19 @@ class BrokerOptionImpactBody(BaseModel):
     units: int
     order_type: str = "LIMIT"
     price: float | None = None
+    stop: float | None = None              # Nov 25: stop / stop-limit entries
     time_in_force: str = "Day"
+    take_profit: float | None = None       # Nov 25: exits attached (placed by brackets.py once the buy fills)
+    stop_loss: float | None = None
+
+
+class BracketExitsBody(BaseModel):
+    account_id: str
+    contract: str
+    units: int
+    take_profit: float
+    stop_loss: float
+    confirm: bool = False
 
 
 _BROKER_PLAIN = [   # Nov 23 (owner): plain words for the brokerage's common refusals
@@ -2721,6 +2739,37 @@ async def broker_option_order(body: BrokerOrderBody, u: dict = Admin):
         return {"order": await run_in_threadpool(snaptrade.place_checked_option, u, body.preview_id)}
     except Exception as e:
         _broker_error(e, _snap_reason(e))
+
+
+@app.post("/api/broker/options/exits")
+async def broker_option_exits(body: BracketExitsBody, u: dict = Admin):
+    """Nov 25: 'Exits only' — a take-profit and a stop-loss on a held long option, one cancels the other (owner-only)."""
+    import brackets
+    if body.confirm is not True:
+        raise HTTPException(400, "Explicit order confirmation is required")
+    if not 1 <= body.units <= 100:
+        raise HTTPException(400, "Contracts must be a whole number from 1 to 100")
+    try:
+        return await run_in_threadpool(brackets.exits_now, u, body.account_id, body.contract, body.units, body.take_profit, body.stop_loss)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception as e:
+        _broker_error(e, _snap_reason(e))
+
+
+@app.get("/api/broker/brackets")
+def broker_brackets(u: dict = Admin):
+    import brackets
+    return {"brackets": brackets.list_for(u)}
+
+
+@app.post("/api/broker/brackets/{bid}/stop")
+def broker_bracket_stop(bid: int, u: dict = Admin):
+    import brackets
+    try:
+        return brackets.stop(u, bid)
+    except LookupError:
+        raise HTTPException(404, "Not found")
 
 
 @app.post("/api/broker/order")
