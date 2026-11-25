@@ -9223,7 +9223,8 @@ function renderRetest() {
   if (q) { q.innerHTML = gapQ || waitQ ? `<div class="t2-h"><span>THE QUEUE</span></div>${gapQ}${waitQ}` : ""; q.hidden = !(gapQ || waitQ); }
   if (wel) { wel.hidden = true; wel.innerHTML = ""; }
   if (heroRow && heroRow.hub && heroRow.tape_flow && heroRow.tape_flow.line) ckHeroRecord(heroRow.sym);
-  if (heroRow) ckHeroGrade(heroRow.sym, heroRow.kind || "hub");
+  // Nov 25 (owner): the hero wears its OWN setup grade (the one that decides "A setup"); the lookup only fills a gap
+  if (heroRow && !(heroRow.grade && heroRow.grade !== "?")) ckHeroGrade(heroRow.sym, heroRow.kind || "hub");
 }
 // Nov 24 (owner): the hero always wears a grade — the same letter the stock's card shows (the A-retest grade, or the
 // measured A record across the universe when the stock's own history is thin). Fetched once per stock.
@@ -9234,9 +9235,9 @@ async function ckHeroGrade(sym, kind) {
   try { if (!GRADE[key] || GRADE[key] === "loading" || GRADE[key] === "failed") GRADE[key] = await api(`/api/grade/${encodeURIComponent(sym)}?kind=${k}`); }
   catch (e) { if (el.textContent === "…") el.remove(); return; }
   const G = GRADE[key]; let letter = null;
-  if (k === "gapfade") { const g = G.up; letter = g && g.grade !== "?" ? g.grade : G.universe && G.universe.grade; }
+  if (k === "gapfade") { const g = G.up; letter = g && g.grade !== "?" ? g.grade : null; }
   else if (k === "double_top") letter = null;                     // watch only: no plan to grade
-  else { const R = G.retest; letter = R && R.grade !== "?" ? R.grade : G.universe_a ? G.universe_a.grade : null; }
+  else { const R = G.retest; letter = R && R.grade !== "?" ? R.grade : null; }   // never the all-stocks A record: it isn't this setup's grade
   const now = document.querySelector(`.ckh-g[data-hg="${CSS.escape(sym)}"]`); if (!now) return;
   if (!letter) { if (now.textContent === "…") now.remove(); return; }
   now.textContent = letter; now.className = `sg-in ${GRADE_CLS[letter] || "gq"} ckh-g`;
