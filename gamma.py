@@ -469,8 +469,8 @@ def shelves(symbol: str, spot: float | None, fetch: bool = True, n: int = 2) -> 
 
 
 _GRID_BAND = 0.10
-_GRID_MAX_ROWS = 25
-_GRID_MAX_EXP = 4
+_GRID_MAX_ROWS = 25        # the strikes nearest the price, contiguous (Nov 25: every strike in the band, not the top ones)
+_GRID_MAX_EXP = 8
 
 
 def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
@@ -512,10 +512,11 @@ def grid(symbol: str, spot: float | None, fetch: bool = True) -> dict | None:
                 for k, vals in net.items() if any(vals) or any(gross[k])]
         if not rows:
             return None
-        rows.sort(key=lambda r: -sum(abs(x) for x in r["gex"]))
+        rows.sort(key=lambda r: abs(r["strike"] - spot))          # Nov 25 (owner): every strike around the price, evenly
         rows = rows[:_GRID_MAX_ROWS]
         rows.sort(key=lambda r: -r["strike"])
-        return {"expiries": [e.isoformat() for e in exps], "spot": spot, "rows": rows}
+        total = round(sum(sum(v) for v in net.values()), 1)           # the whole band, every listed expiry: the regime
+        return {"expiries": [e.isoformat() for e in exps], "spot": spot, "rows": rows, "net_total": total}
     except Exception as e:
         log.warning("grid compute failed for %s: %s", symbol, e)
         return None

@@ -275,6 +275,27 @@ section[data-view="today"] .t2-h { padding: 0; }
 .sim-q b { display: block; font: 700 14px var(--mono); } .sim-q.up b { color: #3DD68C; } .sim-q.dn b { color: #FF6B5E; }
 .sim-q.on.up { border-color: rgba(61,214,140,.6); background: rgba(61,214,140,.08); } .sim-q.on.dn { border-color: rgba(255,107,94,.6); background: rgba(255,107,94,.08); }
 .sim-note { font-size: 11.5px; color: var(--muted); margin: 8px 0 0; line-height: 1.5; }
+
+/* Nov 25 (owner): the heat map, every strike coloured by size */
+.bf-heat .gh-note { font-size: 12px; color: var(--bh-mute); background: rgba(255,255,255,.03); border: 1px solid var(--bh-line); border-radius: 10px; padding: 6px 10px; margin: 0 0 8px; }
+.bf-heat .gh-note b { color: #F2C14E; font-weight: 600; }
+.bf-heat .gh-scroll { position: relative; display: block !important; height: auto !important; max-height: 520px; overflow: auto !important; border-radius: 10px; }
+.bf-heat table.gh-t { display: table !important; position: static !important; inset: auto !important; }
+.bf-heat table.gh-t { border-collapse: separate; border-spacing: 0; width: 100%; font: 600 12px var(--mono); }
+.bf-heat table.gh-t thead th { position: sticky; top: 0; z-index: 2; background: var(--bh-bg); color: var(--bh-mute); font: 700 11px var(--mono); padding: 7px 8px; text-align: right; }
+.bf-heat table.gh-t th:first-child { position: sticky; left: 0; z-index: 3; background: var(--bh-bg); text-align: right; padding: 0 10px 0 4px; color: var(--bh-ink); font: 600 12px var(--mono); }
+.bf-heat table.gh-t thead th:first-child { z-index: 4; color: var(--bh-mute); }
+.bf-heat td.gh-c { text-align: right; padding: 6px 8px; color: #E9EBEF; border-bottom: 1px solid rgba(0,0,0,.25); white-space: nowrap; }
+.bf-heat td.gh-c.dk { color: #0B0D12; } .bf-heat td.gh-max { box-shadow: inset 0 0 0 2px #F2C14E; font-weight: 800; }
+.bf-heat tr.gh-spot th, .bf-heat tr.gh-spot td { padding: 0; height: 0; border-top: 2px solid var(--bh-ink); position: relative; }
+.bf-heat tr.gh-spot th span { position: absolute; left: 2px; top: -9px; z-index: 4; background: var(--bh-ink); color: var(--bh-bg); font: 800 10.5px var(--mono); padding: 1px 5px; border-radius: 4px; }
+.bf-heat .gh { position: relative; }
+.bf-heat .gh-wrap { position: relative; } .bf-heat .gh-center { position: absolute; right: 10px; bottom: 10px; z-index: 5; width: 36px; height: 36px; border-radius: 10px; background: #1A1D22; border: 1px solid #2A2E35; color: #E9EBEF; font-size: 17px; cursor: pointer; }
+.bf-heat .gh-legend { display: flex; align-items: center; gap: 8px; margin: 10px 2px 0; font: 600 10.5px var(--mono); color: var(--bh-mute); }
+.bf-heat .gh-bar { flex: 1; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #6A2C9A, #3A4FA0, #163B44, #2FA37A, #F2E14E); }
+.bf-heat .gh-levels { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 10px 0 0; padding: 9px 11px; border: 1px solid var(--bh-line); border-radius: 12px; font: 700 12px var(--mono); }
+.bf-heat .gh-levels span { display: inline-flex; align-items: center; gap: 6px; } .bf-heat .gh-levels i { display: inline-block; width: 16px; }
+.bf-heat .gh-foot { font-size: 11.5px; color: var(--bh-mute); margin: 8px 0 0; line-height: 1.5; }
 </style>
 <link rel="preload" href="/fonts/Inter.woff2" as="font" type="font/woff2" crossorigin>
 <meta charset="utf-8">
@@ -6459,10 +6480,19 @@ async function loadConfluence() {
   let R; try { R = await api("/api/admin/confluence"); } catch (e) { el.innerHTML = ""; return; }
   const rows = R.rows || [], sg = (v) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%", pc = (v) => v == null ? "–" : v + "%";
   const tagged = rows.reduce((a, r) => a + r.tagged, 0);
-  const GL = {any: "with confluence", none: "without", gamma: "of which gamma at a level", multi: "of which 2+ levels agree"};
+  const GL = {any: "with confluence", none: "without", gamma: "of which gamma at a level", multi: "of which 2+ levels agree",
+    wall_y: "gamma wall before the target", wall_n: "no wall before the target", neg_y: "negative net GEX", neg_n: "positive net GEX",
+    edge_y: "gamma support at the edge", edge_n: "no support at the edge"};
+  // Nov 25 (owner): the three gamma questions, judged at 40 resolved a side — tagged yes must beat tagged no
+  const Q = [["wall", "A gamma wall before the target", "if yes stalls: aim at the wall on those setups"], ["neg", "Negative net GEX", "if yes runs further: a strength chip or a grade step"], ["edge", "Gamma support at the edge", "if yes holds more: it joins the A grade, like clear path"]];
+  const qcard = ([k, name, then]) => ["setup", "breakout"].map(kind => { const y = rows.find(r => r.kind === kind && r.group === k + "_y") || {}, n = rows.find(r => r.kind === kind && r.group === k + "_n") || {};
+    const ready = (y.resolved || 0) >= 40 && (n.resolved || 0) >= 40, diff = y.avg_ret != null && n.avg_ret != null ? y.avg_ret - n.avg_ret : null;
+    return `<tr><td><b>${name}</b> · ${kind === "setup" ? "setups" : "breakouts"}</td><td>${y.resolved || 0} / 40</td><td>${n.resolved || 0} / 40</td><td>${sg(y.avg_ret)}</td><td>${sg(n.avg_ret)}</td><td>${ready ? (diff > 0 ? "<b style=\"color:var(--up)\">yes beats no</b>" : "<b>no difference worth a rule</b>") : "collecting"}</td></tr>`; }).join("");
   const tr = (r) => `<tr><td><b>${r.kind === "setup" ? "Confirmed setups" : "Breakouts"}</b> · ${GL[r.group] || r.group}</td><td>${r.tagged}</td><td>${r.resolved}</td><td>${pc(r.hit_pct)}</td><td>${sg(r.avg_ret)}</td><td>${pc(r.next_day_green)}</td><td>${sg(r.next_day_avg)}</td></tr>`;
   el.innerHTML = `<div class="panel"><div class="ph"><h2>Confluence check</h2><span class="note">does a gamma level on the trigger or target help? tagged when each signal fires</span>
       <button class="btnx sm" onclick="this.disabled=true;this.textContent='Tagging…';api('/api/admin/confluence/run',{method:'POST',timeout:180000}).then(r=>{toast(r.tagged+' tagged');loadConfluence()}).catch(e=>{toast(e.message);loadConfluence()})">Tag now</button></div>
+    <div class="tbl" style="padding:0 18px 10px"><h3 style="margin:6px 0">Gamma questions <small class="note">tagged from Nov 25 · judged at 40 resolved a side</small></h3><table><tr><th></th><th>Yes (resolved)</th><th>No (resolved)</th><th>Avg if yes</th><th>Avg if no</th><th>Verdict</th></tr>${Q.map(qcard).join("")}</table>
+      <p class="note" style="margin:6px 0 0">${Q.map(q => `<b>${q[1]}:</b> ${q[2]}.`).join(" ")} Until a question passes, gamma stays context on the card and the heat map.</p></div>
     ${tagged ? `<div class="tbl" style="padding:0 18px 10px"><table><tr><th></th><th>Tagged</th><th>Resolved</th><th>Reached target</th><th>Avg result</th><th>Next day went its way</th><th>Avg next close</th></tr>${rows.map(tr).join("")}</table></div>` : ""}
     <p class="note" style="padding:0 18px 16px;margin:0">${tagged ? "" : "Nothing tagged yet. "}Each confirmed setup and hub breakout is tagged at the moment it fires: confluence when another kind of level sits on its trigger or target — a monthly or weekly call/put wall, a gamma shelf of real size (25%+ of the biggest), a gamma node with all 8 nearest expiries added up, an old high or low, a 4H or daily moving average (9/21/50, and the daily 200), or a round number. "On it" means within a quarter of the stock's 4-hour ATR (0.4%–1.5% of price). Option chains aren't kept historically, so this starts from now. Give it 40–50 resolved trades a side before reading anything into the gap.</p></div>`;
 }
@@ -8926,28 +8956,40 @@ function paintGamma(sym) {
 // A SPOT divider row marks where price sits; a legend under the grid names the tiers.
 // NEXT rows = j.next_levels (server-side 25% rule). Fail-open.
 function bfHeatHTML(j) {
+  // Nov 25 (owner): every strike in the band, every cell coloured by size (green→yellow positive, blue→purple negative),
+  // the biggest cell ringed, a line where the price sits, a scale, the levels bar, and when the chain was read.
   const g = j && j.grid;
   if (!g || !g.rows || !g.rows.length || !g.expiries || !g.expiries.length) return null;
-  const spot = Number(g.spot) || 0;
-  const M = (v) => { const n = Number(v) || 0; return (n < 0 ? "−" : "") + (Math.abs(n) / 1e6).toFixed(2) + "M"; };
-  const colMax = g.expiries.map((_, i) => Math.max(0, ...g.rows.map(r => Math.abs(Number((r.gex || [])[i]) || 0))));
-  const md = (e) => new Date(e + "T12:00:00").toLocaleDateString("en-US", {month: "short", day: "numeric"});
-  const head = g.expiries.map(e => `<th>${md(e).toUpperCase()}</th>`).join("");
-  const spotStrike = spot > 0 ? g.rows.reduce((a, b) => Math.abs(b.strike - spot) < Math.abs(a.strike - spot) ? b : a).strike : null;
-  const rowHTML = g.rows.map(r => {
-    const cells = (r.gex || []).map((v, i) => {
-      v = Number(v) || 0;
-      if (colMax[i] > 0 && Math.abs(v) === colMax[i]) return `<td class="${v < 0 ? "bh-neg" : "bh-pos"}">${M(v)}</td>`;   // that expiry's strongest pull: chart green +, chart orange −
-      return `<td class="bh-dim">${M(v)}</td>`;          // everything else is dimmed
-    }).join("");
-    const atSpot = r.strike === spotStrike;                // the strike nearest the price wears a white arrow tag
-    return `<tr><th>${atSpot ? `<span class="bh-spot" title="Price $${spot.toFixed(2)}">${r.strike}</span>` : r.strike}</th>${cells}</tr>`;
-  });
-  const rows = rowHTML.join("");
-  const sw = (v) => `<i style="background:var(${v})"></i>`;
-  const legend = `<div class="bh-legend"><span>${sw("--bh-up")}Positive gamma</span><span>${sw("--bh-down")}Negative gamma</span><em>the strongest pull in each expiry · the rest is dimmed</em></div>`;
-  return `<div class="bh-card"><button type="button" class="bh-back" onclick="heatChoose(false)">‹ Back to movies</button><div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")} · ${esc(md(g.expiries[0]))} – ${esc(md(g.expiries[g.expiries.length - 1]))} · M = $1,000,000</span></div><div class="bh-scroll"><table class="bh"><thead><tr><th>STRIKE</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>${legend}</div>`;
+  const spot = Number(g.spot) || 0, all = g.rows.flatMap(r => (r.gex || []).map(Number)), mx = Math.max(1, ...all.map(Math.abs));
+  const mn = Math.min(0, ...all), mxp = Math.max(0, ...all);
+  const fmt = (v) => { const a = Math.abs(v), s = v < 0 ? "−" : ""; return a >= 1e9 ? s + (a / 1e9).toFixed(1) + "B" : a >= 1e6 ? s + Math.round(a / 1e6) + "M" : a >= 1e3 ? s + Math.round(a / 1e3) + "K" : "0"; };
+  const mix = (A, B, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), a = p(A), b = p(B); return "#" + a.map((x, i) => Math.round(x + (b[i] - x) * t).toString(16).padStart(2, "0")).join(""); };
+  const col = (v) => { const t = Math.min(1, Math.pow(Math.abs(v) / mx, 0.55));
+    return v >= 0 ? (t < .6 ? mix("#163B44", "#2FA37A", t / .6) : mix("#2FA37A", "#F2E14E", (t - .6) / .4)) : (t < .6 ? mix("#163B44", "#3A4FA0", t / .6) : mix("#3A4FA0", "#6A2C9A", (t - .6) / .4)); };
+  const md = (e) => { const d = new Date(e + "T12:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const head = g.expiries.map(e => `<th>${md(e)}</th>`).join("");
+  let spotDone = false;
+  const rows = g.rows.map((r, i) => {
+    const below = spot > 0 && !spotDone && r.strike < spot;      // rows run high → low: the first strike under the price gets the line
+    if (below) spotDone = true;
+    const cells = (r.gex || []).map(v => { v = Number(v) || 0; const big = Math.abs(v) === mx, light = v > 0 && Math.abs(v) / mx > .75;
+      return `<td class="gh-c${light ? " dk" : ""}${big ? " gh-max" : ""}" style="background:${col(v)}">${fmt(v)}</td>`; }).join("");
+    return `${below ? `<tr class="gh-spot"><th><span>${spot.toFixed(2)}</span></th><td colspan="${g.expiries.length}"></td></tr>` : ""}<tr${below ? ' id="ghSpotRow"' : ""}><th>${Number(r.strike).toFixed(r.strike % 1 ? 1 : 0)}</th>${cells}</tr>`;
+  }).join("");
+  const w = (GAMMA[j.symbol] && typeof GAMMA[j.symbol] === "object") ? GAMMA[j.symbol] : (j.walls || {});
+  const net = g.net_total;
+  const asOf = j.chain_as_of ? new Date(j.chain_as_of).toLocaleString("en-US", {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}) : null;
+  const lv = (c, dash, txt) => `<span><i style="border-top:2px ${dash ? "dashed" : "solid"} ${c}"></i>${txt}</span>`;
+  return `<div class="bh-card gh"><button type="button" class="bh-back" onclick="heatChoose(false)">‹ Back to movies</button>
+    <div class="bh-head"><span class="t">GEX HEAT MAP</span><span class="s">${esc(j.symbol || "")}${spot ? " · $" + spot.toFixed(2) : ""}</span></div>
+    ${asOf ? `<div class="gh-note"><b>Delayed:</b> chain read ${esc(asOf)} ET · shown until the next update</div>` : ""}
+    <div class="gh-wrap"><div class="bh-scroll gh-scroll" id="ghScroll"><table class="gh-t"><thead><tr><th>STK</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>
+    <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter()">⌖</button></div>
+    <div class="gh-legend">${fmt(mn)}<span class="gh-bar"></span>${fmt(mxp)}</div>
+    <div class="gh-levels">${net != null ? `<span>Net GEX <b class="${net < 0 ? "u-down" : "u-up"}">${fmt(net)}</b></span>` : ""}${w.call_wall ? lv("#F2C14E", false, `Call wall ${Number(w.call_wall).toFixed(2)}`) : ""}${w.flip ? lv("#3DD68C", true, `Flip ${Number(w.flip).toFixed(2)}`) : ""}${w.put_wall ? lv("#FF6B5E", true, `Put wall ${Number(w.put_wall).toFixed(2)}`) : ""}</div>
+    <p class="gh-foot">Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to purple is negative (moves can speed up). Brighter is bigger; the ringed cell is the biggest on the grid. Context only: never part of a grade or an alert.</p></div>`;
 }
+function ghCenter() { const r = $("ghSpotRow"), sc = $("ghScroll"); if (r && sc) sc.scrollTop = Math.max(0, r.offsetTop - sc.clientHeight / 2); }
 function paintHeat(sym) {
   const el = $("bfHeat"); if (!el) return;
   if (BRIEF_SYM !== sym) return;
@@ -8957,7 +8999,7 @@ function paintHeat(sym) {
   if (!heatWanted()) { hideHeat(); return; }      // Nov 23 (owner): the movies keep this space; the heat map is one tap away
   const cc = candleColors();                       // the chart's candle colours, the member's own if they set them
   if (cc[0]) el.style.setProperty("--bh-up", cc[0]); if (cc[1]) el.style.setProperty("--bh-down", cc[1]);
-  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on"); briefSideRoom();
+  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on"); briefSideRoom(); setTimeout(ghCenter, 30);
 }
 // computers: the Waiting Room plays in the space left of the shelf card (when it's wide enough and the GEX
 // heat map isn't using it); phones never see it here, the card fills the screen

@@ -24,7 +24,9 @@ with db._lock:
         signal_id TEXT PRIMARY KEY, symbol TEXT, kind TEXT, confluence INTEGER, detail TEXT,
         trigger REAL, target REAL, logged_at TEXT DEFAULT CURRENT_TIMESTAMP)""")
     db._conn.commit()
-    for _c, _d in (("n_levels", "INTEGER"), ("gamma_conf", "INTEGER")):
+    for _c, _d in (("n_levels", "INTEGER"), ("gamma_conf", "INTEGER"),
+                   # Nov 25 (owner): three gamma questions, tagged from today, judged at 40+ resolved a side
+                   ("wall_before", "INTEGER"), ("neg_gex", "INTEGER"), ("edge_support", "INTEGER"), ("net_gex", "REAL")):
         try:
             db._conn.execute(f"ALTER TABLE confluence_log ADD COLUMN {_c} {_d}")
             db._conn.commit()
@@ -66,9 +68,31 @@ def check(sig: dict) -> dict | None:
     atr = float(tr.rolling(14).mean().iloc[-1]) if len(c4) > 15 else None
     conf = swing_card._gamma_confluence(gx, d, float(trigger), float(target), atr, swing_card.price_levels(c4))
     detail = "; ".join(f"{c['what']} {c['strike']:g} at the {c['at']}" for c in conf)
+    q = gamma_questions(sig["symbol"], float(spot), d, float(trigger), float(target), atr)
     return dict(signal_id=sig["id"], symbol=sig["symbol"], kind="setup" if sig.get("pattern") == "rules" else "breakout",
                 confluence=int(bool(conf)), detail=detail or None, trigger=float(trigger), target=float(target),
-                n_levels=len(conf), gamma_conf=int(any(c["kind"] == "gamma" for c in conf)))
+                n_levels=len(conf), gamma_conf=int(any(c["kind"] == "gamma" for c in conf)), **q)
+
+
+NODE_SHARE = 0.25      # a strike counts as a node when its net GEX (all grid expiries added) is 25%+ of the band's largest
+
+
+def gamma_questions(sym: str, spot: float, d: int, trigger: float, target: float, atr: float | None) -> dict:
+    """Nov 25 (owner), pre-decided before any result:
+      wall_before   a positive node strictly between the trigger and the target (it may stall the move)
+      neg_gex       the band's total net GEX is below zero (moves can run)
+      edge_support  a positive node within 0.5 ATR of the trigger (the retest may hold)
+    From the same grid the heat map draws. Unknown (None) when the chain can't be read."""
+    g = gamma.grid(sym, spot)
+    if not g or not g.get("rows"):
+        return dict(wall_before=None, neg_gex=None, edge_support=None, net_gex=None)
+    sums = {r["strike"]: sum(r["gex"]) for r in g["rows"]}
+    big = max((abs(v) for v in sums.values()), default=0) or 1
+    nodes = [k for k, v in sums.items() if v > 0 and v >= NODE_SHARE * big]
+    lo, hi = sorted((trigger, target))
+    tol = 0.5 * atr if atr else trigger * 0.005
+    return dict(wall_before=int(any(lo < k < hi for k in nodes)), neg_gex=int((g.get("net_total") or 0) < 0),
+                edge_support=int(any(abs(k - trigger) <= tol for k in nodes)), net_gex=g.get("net_total"))
 
 
 def tag_recent() -> int:
@@ -90,7 +114,9 @@ def tag_recent() -> int:
 def stats() -> list[dict]:
     """Results split by confluence, per kind: resolved record outcomes and next-day closes."""
     out = []
-    groups = (("any", "c.confluence = 1"), ("none", "c.confluence = 0"), ("gamma", "c.gamma_conf = 1"), ("multi", "c.n_levels >= 2"))
+    groups = (("any", "c.confluence = 1"), ("none", "c.confluence = 0"), ("gamma", "c.gamma_conf = 1"), ("multi", "c.n_levels >= 2"),
+              ("wall_y", "c.wall_before = 1"), ("wall_n", "c.wall_before = 0"), ("neg_y", "c.neg_gex = 1"), ("neg_n", "c.neg_gex = 0"),
+              ("edge_y", "c.edge_support = 1"), ("edge_n", "c.edge_support = 0"))
     for kind in ("setup", "breakout"):
         for flag, where in groups:
             rows = [dict(r) for r in db._run(
