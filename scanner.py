@@ -1448,6 +1448,29 @@ def price_alerts_check(now: pd.Timestamp | None = None) -> int:
     return fired
 
 
+def price_past(v: dict | None, trig: float, down: bool, now: pd.Timestamp | None = None) -> float | None:
+    """Nov 25 (QQQ alert said "fell below $627.09: now $626.81" while QQQ traded ~$629): one stray or stale print is not
+    a cross. The live price counts only when the last trade is fresh (under 3 min old) AND the last one-minute bar's close
+    is past the trigger too. Returns the price to quote, or None."""
+    if not v or v.get("price") is None:
+        return None
+    px = float(v["price"])
+    past = (lambda p: p < trig) if down else (lambda p: p > trig)
+    if not past(px):
+        return None
+    if v.get("time"):
+        try:
+            age = (pd.Timestamp.now(tz="UTC") if now is None else pd.Timestamp(now)) - pd.Timestamp(v["time"])
+            if age > pd.Timedelta(minutes=3):
+                return None
+        except Exception:
+            pass
+    mc = v.get("minute_close")
+    if mc is not None and not past(float(mc)):
+        return None
+    return px
+
+
 def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
     """Every minute in market hours: alert watchers when the live price crosses a setup's trigger or neckline
     (hub triggers and breakdown triggers, double-bottom necklines and gap-day highs going up; double-top necklines going down, as a heads-up).
@@ -1477,11 +1500,13 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
         except Exception:
             continue
         sym = row["symbol"]
-        if st.get("state") == "forming" and st.get("trigger_up"):
+        lc = st.get("last_close")
+        if st.get("state") == "forming" and st.get("trigger_up") and not (lc is not None and lc > float(st["trigger_up"])):
             sh = st.get("shelf_up")
             cands.append((sym, "hub", float(st["trigger_up"]), sh["level"] if sh else st.get("target_up"),
                           round((st["hub"]["high"] + st["hub"]["low"]) / 2, 2) if st.get("hub") else None))
-        if st.get("state") == "forming" and st.get("trigger_down"):
+        # a cross means the last 4H close was on the other side (Nov 25: no "fell below" for a stock already below)
+        if st.get("state") == "forming" and st.get("trigger_down") and not (lc is not None and lc < float(st["trigger_down"])):
             sh = st.get("shelf_down")
             cands.append((sym, "hub_down", float(st["trigger_down"]), sh["level"] if sh else None,
                           round((st["hub"]["high"] + st["hub"]["low"]) / 2, 2) if st.get("hub") else None))
@@ -1501,8 +1526,8 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
     start = engine.current_candle_start(now)
     sent = []
     for sym, kind, trig, target, stop in cands:
-        px = (prices.get(sym) or {}).get("price")
-        if px is None or (px >= trig if kind in ("double_top", "hub_down") else px <= trig):
+        px = price_past(prices.get(sym), trig, kind in ("double_top", "hub_down"), now)
+        if px is None:
             continue
         need = "a daily close (4:00 PM)" if kind == "gapfade" else f"a 4-hour close ({'1:30 PM' if start.hour < 13 else '4:00 PM'})"
         msg = format_trigger(sym, kind, trig, px, need, round(target, 2) if target else None, round(stop, 2) if stop else None)

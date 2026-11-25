@@ -161,8 +161,9 @@ def check(now: pd.Timestamp | None = None) -> list[dict]:
     start = engine.current_candle_start(now)
     made = []
     for p in plans:
-        px = (prices.get(p["symbol"]) or {}).get("price")
-        if px is None or px < p["trigger"]:
+        import scanner
+        px = scanner.price_past(prices.get(p["symbol"]), p["trigger"], False, now)   # Nov 25: fresh + minute bar confirms
+        if px is None:
             continue
         row = _create(p, px, start, at_close=False, seen_at=now.tz_convert("UTC").isoformat())
         if row:
