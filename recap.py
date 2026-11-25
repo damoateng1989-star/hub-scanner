@@ -47,6 +47,30 @@ def _earn(sym: str) -> str:
     return f" · 📅 earnings {e['label']}" if e and e["days"] <= 7 else ""
 
 
+def next_session(today) -> dict:
+    """Patch 222 §5: the next day the market actually opens, from the NYSE holiday / early-close calendar the bar logic
+    already uses (flow_signal), and — when that day is an early close — the next full session after it."""
+    import flow_signal
+    from datetime import timedelta
+    d0 = today.date() if hasattr(today, "date") else today
+
+    def nxt(d):
+        d += timedelta(days=1)
+        while not flow_signal.is_trading_day(d):
+            d += timedelta(days=1)
+        return d
+    lbl = lambda d: d.strftime("%a %b ") + str(d.day)
+    full = lambda d: d.strftime("%A %b ") + str(d.day)
+    d = nxt(d0)
+    out = dict(date=d.isoformat(), short=lbl(d), long=full(d), early=d.isoformat() in flow_signal.NYSE_EARLY_CLOSES)
+    if out["early"]:
+        f = nxt(d)
+        while f.isoformat() in flow_signal.NYSE_EARLY_CLOSES:
+            f = nxt(f)
+        out.update(full_short=lbl(f), full_long=full(f))
+    return out
+
+
 def build(u: dict | None) -> dict:
     b = board.board()
     pro = auth.is_pro(u)
@@ -83,7 +107,7 @@ def build(u: dict | None) -> dict:
         xs["rec_avg"] = cross.record()["avg"]
     except Exception:
         xs = dict(n=0)
-    return dict(cross=xs, swept_at=upd.strftime("%-I:%M %p").replace("AM", "AM").lstrip("0") if upd is not None else None,
+    return dict(cross=xs, next=next_session(today), swept_at=upd.strftime("%-I:%M %p").replace("AM", "AM").lstrip("0") if upd is not None else None,
                 swept_day=upd.strftime("%a %b %-d") if upd is not None else None, fresh=fresh,
                 date=today.strftime("%a %b %-d"), pro=pro, universe=b["universe"], new_count=len(new), held_count=len(held),
                 near_count=len(b["near"]), new=new_rows if pro else [], near=near_rows if pro else [],
@@ -105,11 +129,12 @@ def _mine_line(m: dict) -> str:
 
 
 def text(d: dict) -> str:
+    nx = d.get("next") or next_session(pd.Timestamp.now(tz=engine.NY))
     when = d.get("swept_at") or "?"
     if d.get("swept_day") and d["swept_day"] != d["date"]:
         when = f"{d['swept_day']} {when}"
     L = [f"🌙 NextShelf evening recap · {d['date']}",
-         f"Sweep at {when}: {d['universe']} stocks · {_n(d['new_count'], 'new breakout')} · {d['near_count']} at the edge going into tomorrow"]
+         f"Sweep at {when}: {d['universe']} stocks · {_n(d['new_count'], 'new breakout')} · {d['near_count']} at the edge going into the next session ({nx['short']})"]
     if not d.get("fresh"):
         L.append("⚠️ Today's after-the-close sweep hasn't finished, so this uses the earlier one. Check the app for the final 4:00 PM closes.")
     L.append("")
@@ -119,7 +144,7 @@ def text(d: dict) -> str:
             L += ["• " + _plan(c) for c in d["new"]]
             L.append("")
         if d["near"]:
-            L.append("👀 Watch tomorrow (at the edge of a hub)")
+            L.append(f"👀 Watch the next session ({nx['short']}) (at the edge of a hub)")
             L += [f"• {c['symbol']} at the {'top' if c['side'] == 'up' else 'bottom'} of {_money(c['low'])}–{_money(c['high'])}{c['earn']}" for c in d["near"]]
             L.append("")
     else:
@@ -139,7 +164,11 @@ def text(d: dict) -> str:
               f"{xs['avg_trig']:+.2f}% per signal from the trigger · {xs['avg_touch']:+.2f}% from the first touch "
               f"(the gap is the fill cost: {xs['fill_cost']:+.2f}%)",
               f"• The 2-year test: {xs.get('rec_avg', 0):+.2f}% per signal from the trigger."]
-    L += ["", "Next decision points: tomorrow's 4H closes at 1:30 PM and 4:00 PM ET.",
+    # Patch 222 §5: never promise a close that won't happen (holidays skipped; an early close named with its real end)
+    nxt_line = (f"Next session: {nx['long']}, an early close at 1:00 PM ET. Full 4H decision points resume "
+                f"{nx['full_long']} at 1:30 PM and 4:00 PM ET." if nx.get("early") else
+                f"Next decision points: {nx['long']}'s 4H closes at 1:30 PM and 4:00 PM ET.")
+    L += ["", nxt_line,
           "Don't force trades. Let the trade come to you.", "Educational, not financial advice."]
     if APP_URL:
         L.append(f"{APP_URL}/app#today")

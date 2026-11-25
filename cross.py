@@ -55,6 +55,42 @@ def init() -> None:
     CREATE INDEX IF NOT EXISTS cross_sym ON cross_setups(symbol, state);
     """)
     db._conn.commit()
+    _p222_dedupe()
+    try:       # Patch 222 §2, enforced by the database too: one live row per symbol, whatever two threads do at once
+        db._conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS cross_one_live ON cross_setups(symbol) WHERE state='live'")
+        db._conn.commit()
+    except Exception as e:
+        log.warning("cross one-live index not created: %s", e)
+
+
+def _p222_dedupe() -> None:
+    """Patch 222 §4, once: a row that opened while an earlier row for the same symbol was still live is the phantom
+    second episode §2 now prevents (a hub whose measured edges/start drifted got a new ep_key). It is deleted, not
+    re-scored, and the closed summary restates itself from the table. The removed rows are kept in the setting
+    cross_p222_removed (shown on /api/admin/cross-log) as the evidence."""
+    if db.get_setting("cross_p222_done"):
+        return
+    rows = _rows("ORDER BY cross_at, id")
+    removed = []
+    for i, r in enumerate(rows):
+        for o in rows[:i]:
+            if o["symbol"] != r["symbol"] or o["id"] in {x["id"] for x in removed}:
+                continue
+            end = o.get("exit_at")
+            if o["cross_at"] <= r["cross_at"] and (o["state"] == "live" or (end and r["cross_at"] < end)):
+                removed.append(r)
+                break
+    for r in removed:
+        db._run("DELETE FROM cross_setups WHERE id=?", (r["id"],))
+    db.set_setting("cross_p222_removed", json.dumps(removed, default=str))
+    db.set_setting("cross_p222_done", _now())
+    if removed:
+        log.warning("Patch 222: removed %d phantom cross rows: %s", len(removed),
+                    ", ".join(f"{r['symbol']}#{r['id']}" for r in removed))
+
+
+def _live_syms() -> set[str]:
+    return {r["symbol"] for r in db._run("SELECT symbol FROM cross_setups WHERE state='live'").fetchall()}
 
 
 def _money(v) -> str:
@@ -148,7 +184,9 @@ def check(now: pd.Timestamp | None = None) -> list[dict]:
     now = pd.Timestamp.now(tz="UTC") if now is None else now
     if not data.market_open(now):
         return []
-    plans = [p for sym, st in _statuses().items() if (p := plan_from_status(sym, st)) and not _exists(p["ep_key"])]
+    held = _live_syms()      # Patch 222 §2: a symbol with a live episode never opens a second one
+    plans = [p for sym, st in _statuses().items()
+             if sym not in held and (p := plan_from_status(sym, st)) and not _exists(p["ep_key"])]
     live = _rows("WHERE state='live' AND touched=0")
     syms = sorted({p["symbol"] for p in plans} | {r["symbol"] for r in live})
     if not syms:
@@ -190,7 +228,7 @@ def on_close(sym: str, c4: pd.DataFrame, old_status: dict | None) -> None:
         return
     try:
         p = plan_from_status(sym, old_status or {})
-        if p and not _exists(p["ep_key"]):
+        if p and sym not in _live_syms() and not _exists(p["ep_key"]):      # Patch 222 §2
             # the candles since the status was written (normally just the one that closed)
             since = pd.Timestamp((old_status or {}).get("last_candle") or c4.index[-2])
             now_ny = pd.Timestamp.now(tz=NY)
@@ -243,8 +281,12 @@ def _resolve(r: dict, verdict: str, exit_px: float, t: pd.Timestamp, n: int) -> 
     rt = round((exit_px / r["trigger"] - 1) * 100, 3)
     ru = round((exit_px / r["first_px"] - 1) * 100, 3) if r.get("first_px") else None
     end = engine.candle_end(t.tz_convert(NY))
-    _set(r["id"], state=verdict, closes=n, last_close=t.isoformat(), exit_px=round(exit_px, 2),
-         exit_at=end.tz_convert("UTC").isoformat(), ret_trig=rt, ret_touch=ru)
+    # Patch 222 §3: out of 'live' exactly once. A second call (two sweeps walking the same row) changes nothing, says nothing.
+    cur = db._run("""UPDATE cross_setups SET state=?, closes=?, last_close=?, exit_px=?, exit_at=?, ret_trig=?, ret_touch=?
+                     WHERE id=? AND state='live'""",
+                  (verdict, n, t.isoformat(), round(exit_px, 2), end.tz_convert("UTC").isoformat(), rt, ru, r["id"]))
+    if not cur.rowcount:
+        return
     when = end.strftime("%-I:%M %p")
     line = {"target": f"✅ {r['symbol']}: cross setup reached the target — 4H close at or above {_money(r['target'])} ({when} close). {rt:+.2f}% from the trigger.",
             "stop": f"🛑 {r['symbol']}: cross setup stopped — 4H close {_money(exit_px)} at or under the stop {_money(r['stop'])} ({when} close). {rt:+.2f}% from the trigger.",
@@ -318,7 +360,9 @@ def _follow(r: dict, kind: str, line: str) -> None:
     (approximated by today's tape: the follow-up is one line either way)."""
     import notify
     try:
-        if db.add_alert(f"{r['ep_key']}|{kind}", r["symbol"], "cross", r["cross_candle"], line):
+        # Patch 222 §3 backstop: a verdict is keyed by the row id, so one row gives at most one line anywhere
+        key = f"cross#{r['id']}|{kind}" if kind in ("target", "stop", "dead", "expired") else f"{r['ep_key']}|{kind}"
+        if db.add_alert(key, r["symbol"], "cross", r["cross_candle"], line):
             sent = {u["id"] for u in db.watchers(r["symbol"])}
             notify.symbol_alert(r["symbol"], "cross", line, style="hub")
             for u in db.all_users():

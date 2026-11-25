@@ -1305,7 +1305,10 @@ async def admin_data_check(u: dict = Admin):
 def cross_log(u: dict = Admin):
     """Patch 218 §7: the forward log, both scorings."""
     import cross
-    return dict(summary=cross.forward_summary(), rows=cross._rows("ORDER BY cross_at DESC LIMIT 200"))
+    import json as _j
+    return dict(summary=cross.forward_summary(), rows=cross._rows("ORDER BY cross_at DESC LIMIT 200"),
+                p222_removed=_j.loads(db.get_setting("cross_p222_removed") or "[]"),       # Patch 222 §1/§4 evidence
+                p222_ran=db.get_setting("cross_p222_done"))
 
 
 @app.get("/api/board")
