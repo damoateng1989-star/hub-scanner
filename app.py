@@ -1275,6 +1275,39 @@ def cross_for(symbol: str, u: dict | None = Maybe):
     return {"cross": cross.for_symbol(scanner.clean_symbol(symbol)) if u else None}
 
 
+@app.get("/api/admin/why/{sym}")
+async def admin_why(sym: str, u: dict = Admin):
+    """Nov 25 (V closed above its trigger, no alert): what the engine sees for one stock right now — the last 4H
+    candles with their volume test, the hub, the state, and when the scanner last processed this stock."""
+    sym = sym.upper().strip()
+    def run():
+        c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
+        res = engine.analyze(c4, scanner.SETTINGS)
+        st = engine.current_status(c4, res, scanner.SETTINGS)
+        s = scanner.SETTINGS
+        vol = c4["Volume"] if "Volume" in c4.columns else None
+        va = engine.slot_volume_avg(c4, s.vol_window) if vol is not None else None
+        last = []
+        for i in range(max(0, len(c4) - 4), len(c4)):
+            v = float(vol.iloc[i]) if vol is not None else None
+            a = float(va.iloc[i]) if va is not None and not pd.isna(va.iloc[i]) else None
+            last.append(dict(candle=str(c4.index[i]), close=round(float(c4["Close"].iloc[i]), 2), volume=v,
+                             slot_avg=round(a) if a else None, needs=round(s.vol_mult * a) if a else None,
+                             volume_ok=(v >= s.vol_mult * a) if (v is not None and a) else True))
+        hubs = res.get("hubs") or []
+        h = hubs[-1] if hubs else None
+        row = db.get_ticker(sym) or {}
+        return dict(symbol=sym, state=st.get("state"), label=st.get("label"), trigger_up=st.get("trigger_up"),
+                    target=st.get("target") or st.get("target_up"), last_close=st.get("last_close"),
+                    hub=dict(low=h["low"], high=h["high"], active=h["active"], no_room=h.get("no_room")) if h else None,
+                    vol_rule=f"breakout candle volume >= {s.vol_mult}x its same-slot average", min_room_pct=s.min_room_pct,
+                    last_candles=last, scanner_last_candle=row.get("last_candle"), scanner_checked=row.get("last_checked") or row.get("updated_at"))
+    try:
+        return await run_in_threadpool(run)
+    except Exception as e:
+        raise HTTPException(500, f"{type(e).__name__}: {e}")
+
+
 @app.get("/api/admin/data-check")
 async def admin_data_check(u: dict = Admin):
     """Nov 25: is the real-time (Algo Trader Plus) data working? Asks Alpaca for SPY's live full-market (SIP) trade and
