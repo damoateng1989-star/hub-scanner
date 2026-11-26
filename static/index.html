@@ -9090,6 +9090,9 @@ function tkFindKey(e, inp) {
 function tkFindClose() { document.querySelectorAll(".mp-tkres").forEach(b => { b.hidden = true; }); }
 function tkGo(sym) {         // a search opens the stock's own view: the shelf card, not a heat map left open from before
   tkFindClose(); sym = String(sym || "").toUpperCase().replace(/[^A-Z.\-]/g, ""); if (!sym) return;
+  // the chart doesn't repaint while the search box has focus (so typing isn't wiped): let go of it first, or the
+  // header and candles stay on the old stock while the legend shows the new one (GS → NBIS, Nov 25)
+  document.querySelectorAll(".mp-tksearch input").forEach(i => { i.value = ""; i.blur(); });
   if (typeof GH_FULL !== "undefined" && GH_FULL) ghFull(false);
   if (heatWanted()) heatChoose(false);
   openBrief(sym);
