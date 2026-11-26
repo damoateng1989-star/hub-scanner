@@ -47,6 +47,13 @@ def send(text: str, chat_id: str | None = None, silent: bool = False, html: bool
                                 "disable_notification": bool(silent), **({"parse_mode": "HTML"} if html else {}),
                                 # Nov 25: tap buttons under the message — a list of (label, url), one row
                                 **({"reply_markup": {"inline_keyboard": [[{"text": t, "url": u} for t, u in buttons]]}} if buttons else {})})
+        if r.status_code == 400 and html:      # a markup slip must never lose the alert: resend it plain
+            import html as _h
+            import re as _re
+            plain = _h.unescape(_re.sub(r"<[^>]+>", "", text))
+            r = requests.post(f"{API}/sendMessage", timeout=15,
+                              json={"chat_id": chat, "text": plain, "disable_web_page_preview": True,
+                                    "disable_notification": bool(silent)})
         if r.status_code != 200:
             log.warning("Telegram send failed: %s", r.text[:200])
     except requests.RequestException as e:
