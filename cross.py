@@ -135,9 +135,23 @@ def _set(row_id: int, **kv) -> None:
 # ---------------------------------------------------------------- the population
 def plan_from_status(sym: str, st: dict) -> dict | None:
     """The cross plan for a scan status, or None when the hub isn't in the measured population."""
-    if not st or st.get("state") != "forming":
+    if not st:
         return None
     h, atr = st.get("hub") or {}, st.get("atr")
+    # Nov 26 (VICI): the Lab's population is a FINISHED hub's first touch of its top within 'horizon' closes of the end,
+    # unless a 4H close below the hub came first. Live, that is a forming hub (the touch on the candle that ends it) or a
+    # hub that ended a few candles ago ('watching') whose top hasn't been touched since and that never closed below.
+    if st.get("state") == "watching":
+        try:
+            if h.get("closed_below") or int(h.get("closes_since_end") or 0) >= HORIZON \
+                    or (h.get("high_since_end") is not None and float(h["high_since_end"]) >= float(h["high"])):
+                return None
+            if "closes_since_end" not in h:     # a status written before this field existed: can't verify, skip
+                return None
+        except (TypeError, ValueError, KeyError):
+            return None
+    elif st.get("state") != "forming":
+        return None
     try:
         hi, lo, sess = float(h["high"]), float(h["low"]), int(h.get("sessions") or 0)
         atr = float(atr)
@@ -180,8 +194,15 @@ def explain(sym: str, lookback: int = 8) -> list[dict]:
             continue
         h = st.get("hub") or {}
         why = []
-        if st.get("state") != "forming":
-            why.append(f"state going in was '{st.get('state')}', not a forming hub")
+        if st.get("state") not in ("forming", "watching"):
+            why.append(f"state going in was '{st.get('state')}', not a forming or just-ended hub")
+        elif st.get("state") == "watching":
+            if h.get("closed_below"):
+                why.append("a 4H close below the hub came first")
+            if h.get("high_since_end") is not None and h.get("high") is not None and float(h["high_since_end"]) >= float(h["high"]):
+                why.append("its top was already touched after the hub ended (the first cross is the one measured)")
+            if int(h.get("closes_since_end") or 0) >= HORIZON:
+                why.append(f"more than {HORIZON} closes since the hub ended")
         sess = int(h.get("sessions") or 0)
         if sess < SESS_MIN:
             why.append(f"hub only {sess} sessions (needs {SESS_MIN})")

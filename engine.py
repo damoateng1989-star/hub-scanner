@@ -498,6 +498,22 @@ def double_retest_grade(trade, entry, is_pm):
 
 def current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
     st = _current_status(c4, res, s)
+    try:      # Nov 26: what the cross entry needs to know about a hub that has ENDED (the Lab's cross population is
+        # finished hubs: the first touch of the top within 'horizon' closes, unless a 4H close below the hub came first)
+        if res["hubs"] and st.get("hub"):
+            h = res["hubs"][-1]
+            e, n = int(h["end_i"]), len(c4)
+            after = c4.iloc[e + 1:]
+            st["hub"].update(active=bool(h.get("active")), closes_since_end=max(0, n - 1 - e),
+                             closed_below=bool((res["close"].iloc[e + 1:] < h["low"]).any()),
+                             high_since_end=round(float(after["High"].max()), 2) if len(after) else None)
+            if st.get("state") == "watching" and not st.get("cross_target"):
+                a_ = float(res["atr"].iloc[-1])
+                if a_ == a_ and a_ > 0:
+                    st["atr"] = st.get("atr") or round(a_, 2)
+                    st["cross_target"] = round(float(target_for(res["hubs"], h, 1, a_, s)[0]), 2)
+    except Exception:
+        pass
     try:      # volume on the breakout candle (information only: it doesn't change the rules)
         t = next((t for t in res["trades"] if t["outcome"] == "pending"), None) if st.get("state") in ("breakout_up", "breakdown") else None
         if t:
