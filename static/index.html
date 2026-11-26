@@ -12638,7 +12638,7 @@ html[data-theme="light"] .mp-ext b.u { color: #0F7A4F; } html[data-theme="light"
 html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="light"] .mp-svg .mp-vol.dn { fill:#dc2626; }
 .mp-tksearch { display:none; }
 @media (min-width:900px) {
-  .mp-protitle { min-height:58px; }
+  .mp-protitle { min-height:44px; }
   .mp-tksearch { display:block; position:absolute; left:50%; top:2px; transform:translateX(-50%); width:min(320px, 36%); z-index:30; }
   .mp-tksearch input { width:100%; box-sizing:border-box; height:30px; padding:0 12px 0 32px; border-radius:9px; border:1px solid var(--mp-line); background:rgba(255,255,255,.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA0AC' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 11px center; color:inherit; font:600 12.5px var(--sans); outline:none; }
   .mp-tksearch input:focus { border-color:#4E7BFF; background-color:rgba(78,123,255,.08); }
@@ -12648,7 +12648,7 @@ html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="l
   .mp-tkres button { display:flex; align-items:center; gap:8px; width:100%; padding:7px 8px; border:0; border-radius:7px; background:transparent; color:inherit; cursor:pointer; text-align:left; font:12.5px var(--sans); }
   .mp-tkres button b { font:700 12.5px var(--mono); min-width:46px; } .mp-tkres button span { color:#9AA0AC; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .mp-tkres button.on, .mp-tkres button:hover { background:rgba(78,123,255,.14); }
-  .mp-protitle .mp-prostatus { top:auto; bottom:6px; transform:translateX(-50%); }
+  .mp-protitle .mp-prostatus { display:none; }   /* Nov 25 (owner): the header pill already says Live / Market closed */
   html[data-theme="light"] .mp-tkres { background:#fff; } html[data-theme="light"] .mp-tksearch input { background-color:#fff; }
 }
 @media (max-width:559px) { .mp-protitle small { font-size:10.5px; } .mp-prostatus { left:54px; top:2px; transform:none; } .mp-prostatus .w2 { display:none; } }   /* right after "Chart", clear of the clocks and the symbol line */
