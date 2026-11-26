@@ -140,6 +140,7 @@ def signals_for(sym: str, b30: pd.DataFrame, s) -> list[dict]:
         t_cross = hit.index[0]
         fill = max(trig, float(hit["Open"].iloc[0]))
         sig = dict(sym=sym, t=str(t_cross), edge=edge, trig=trig, target=float(target), room=round(room, 2),
+                   late=bool(cross > e + 1),       # Nov 26: crossed AFTER the candle right after the hub (live can see it)
                    saved=bool(close4[cross] <= edge))           # the cross candle's own 4H close fell back inside
         # ---- Arm A: cross entry
         rA = _walk4(close4, ends4, cross, t_cross.value, fill, edge, target, fill - A, s.horizon)
@@ -248,7 +249,14 @@ def summarize(sigs: list[dict], b_all: list[float]) -> dict:
             best = k if best is None or card["avg"] > (A if best == "A" else C)["avg"] else best
     verdict = ("no verdict: Arm B's entered trades don't reproduce the hub A card" if not repro["ok"] else
                f"Arm {best} earns the change" if best else "the standing rule stays (no challenger beat it by 0.05%+/signal and passed its gate)")
-    return dict(A=A, B=B, C=C, diag=diag, repro=repro, verdict=verdict)
+    # Nov 26 (owner): live now alerts only crosses of a hub that ended at an EARLIER close — the 'late' slice (the
+    # candle right after the hub can't be told apart live from a poke that closes back inside). Arm A, split.
+    split = {}
+    for name, keep in (("just_ended", True), ("next_candle", False)):
+        g = [x for x in ok if bool(x.get("late")) == keep]
+        split[name] = _card(np.array([x["a"] for x in g]), np.ones(len(g), bool), [x["t"] for x in g], [x["sym"] for x in g]) if g else dict(n=0)
+        split[name]["n"] = len(g)
+    return dict(A=A, B=B, C=C, diag=diag, repro=repro, verdict=verdict, split=split)
 
 
 def run(years: int = 2):

@@ -150,7 +150,10 @@ def plan_from_status(sym: str, st: dict) -> dict | None:
                 return None
         except (TypeError, ValueError, KeyError):
             return None
-    elif st.get("state") != "forming":
+    else:
+        # Nov 26 (owner): no crosses on a still-forming hub. Live can't tell a real cross from a poke that closes back
+        # inside (the hub just keeps going), and the Lab, in hindsight, never counted those. A hub that ended at an
+        # earlier close is the same event live and in the Lab. Fewer alerts, none outside the measured population.
         return None
     try:
         hi, lo, sess = float(h["high"]), float(h["low"]), int(h.get("sessions") or 0)
@@ -194,8 +197,10 @@ def explain(sym: str, lookback: int = 8) -> list[dict]:
             continue
         h = st.get("hub") or {}
         why = []
-        if st.get("state") not in ("forming", "watching"):
-            why.append(f"state going in was '{st.get('state')}', not a forming or just-ended hub")
+        if st.get("state") == "forming":
+            why.append("the hub was still forming: only a hub that ended at an earlier close gets a cross entry")
+        elif st.get("state") != "watching":
+            why.append(f"state going in was '{st.get('state')}', not a just-ended hub")
         elif st.get("state") == "watching":
             if h.get("closed_below"):
                 why.append("a 4H close below the hub came first")
@@ -401,7 +406,16 @@ def _resolve(r: dict, verdict: str, exit_px: float, t: pd.Timestamp, n: int) -> 
 
 # ---------------------------------------------------------------- alerts (§5) and who gets them (§6)
 def record() -> dict:
+    """Nov 26: live alerts only just-ended hubs, so once the trigger-cross test has been re-run with the split, the
+    record is that slice's own numbers; until then the original Arm A record (all crosses)."""
     import scanner
+    try:
+        import lab_trigcross
+        sp = ((lab_trigcross.status().get("result") or {}).get("split") or {}).get("just_ended") or {}
+        if sp.get("n") and sp.get("avg") is not None and sp.get("pf") is not None:
+            return dict(avg=float(sp["avg"]), pf=float(sp["pf"]), n=int(sp["n"]))
+    except Exception:
+        pass
     return scanner.UNIVERSE_RECORD["hub"]["cross"]
 
 
