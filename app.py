@@ -1506,6 +1506,44 @@ def scanner_status(request: Request):
     return sc
 
 
+class GuestSikaBody(BaseModel):
+    symbol: str
+
+
+_GUEST_SIKA_COOKIE = "ns_sika_q"
+
+
+@app.post("/api/public/sika")
+async def guest_sika(body: GuestSikaBody, request: Request):
+    """Patch 226 §A4: the landing's one free question. One bare ticker, routed through the same grounded Sika
+    pipeline as the app (same supplied context, same rules). One per visitor (cookie); nothing is stored and the
+    question is not logged with any identifier. Rate-limited per IP and overall."""
+    if request.cookies.get(_GUEST_SIKA_COOKIE):
+        return {"used": True}
+    raw = (body.symbol or "").strip()
+    try:
+        sym = scanner.clean_symbol(raw)
+    except ValueError:
+        raise HTTPException(400, "Type a ticker like NVDA")
+    try:
+        auth.throttle("gsika:" + auth.client_ip(request), limit=4, window=3600)
+        auth.throttle("gsika:all", limit=400, window=86400)
+    except HTTPException:
+        raise HTTPException(429, "Sika is busy right now. Try again in a little while.")
+    try:
+        out = await run_in_threadpool(
+            sika_chat.answer, sym, f"What's the setup on {sym}, and how has this setup performed?", [], "",
+            include_flow=False)
+    except ValueError:
+        raise HTTPException(400, f"Sika has no chart for {sym}. Try a US stock ticker like AAPL.")
+    except Exception as e:
+        log.warning("Guest Sika unavailable: %s", type(e).__name__)
+        raise HTTPException(503, "Sika couldn't answer that right now. Try again in a moment.")
+    resp = JSONResponse({"symbol": sym, "answer": out.get("answer", "")})
+    resp.set_cookie(_GUEST_SIKA_COOKIE, "1", max_age=365 * 86400, httponly=False, samesite="lax", secure=request.url.scheme == "https")
+    return resp
+
+
 @app.get("/api/public/summary")
 def public_summary():
     """Real numbers for the landing page: today's board and the hub track record (no symbols from the Pro groups)."""

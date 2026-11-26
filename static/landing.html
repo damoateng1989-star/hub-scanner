@@ -550,6 +550,41 @@ html[data-theme="light"] .hero.ns.hcx .journey figcaption{color:#4B5260}
 @media(max-width:860px){.hero.ns.hcx .journey svg.journey-wide{display:none}.hero.ns.hcx .journey svg.journey-tall{display:block}}
 @media(prefers-reduced-motion:reduce){.journey .j-m{display:none}.journey .j-s{display:inline}}
 
+/* Patch 226: Meet Sika. .sika-ava / .sika-live are the app's existing avatar and LIVE pill, copied byte-for-byte */
+.sika-ava { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: 50%; background: #2B2C2F; font-size: 14px; }
+html[data-theme="light"] .sika-ava { background: #E9E8E2; }
+.sika-ava svg { width: 19px; height: 19px; display: block; }
+.sika-live { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .12em; color: #3DD68C; border: 1px solid rgba(61,214,140,.55); border-radius: 999px; padding: 3px 10px; background: #0E1512; box-shadow: 0 0 12px rgba(61,214,140,.28); font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+.sika-live i { width: 6px; height: 6px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); display: inline-block; flex: none; }
+html[data-theme="light"] .sika-live { background: #fff; border-color: rgba(18,128,92,.55); color: #12805C; box-shadow: 0 0 12px rgba(18,128,92,.18); }
+html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
+#sika .sk-col { max-width: 680px; margin: 0 auto; } #sika [hidden] { display: none !important; }
+#sika .sk-top { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
+#sika .sk-top .kicker { margin: 0; }
+#sika h2, #sika .sub { text-align: center; margin-left: auto; margin-right: auto; }
+#sika .sk-cards { display: flex; flex-direction: column; gap: 14px; margin-top: 36px; }
+#sika .sk-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; }
+#sika .sk-you { display: flex; gap: 12px; align-items: baseline; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+#sika .sk-who { font: 600 11px var(--mono); letter-spacing: .1em; color: var(--ink3); flex: none; min-width: 44px; }
+#sika .sk-you p { margin: 0; font-style: italic; color: var(--ink); font-size: 15px; }
+#sika .sk-sika { display: flex; gap: 12px; padding-top: 12px; }
+#sika .sk-sika .sk-who { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; color: #3DD68C; }
+html[data-theme="light"] #sika .sk-sika .sk-who { color: #12805C; }
+#sika .sk-body p { margin: 0 0 8px; color: var(--ink); font-size: 14.5px; line-height: 1.55; }
+#sika .sk-body p:last-child { margin-bottom: 0; }
+#sika .sk-lv { display: inline-block; margin: 2px 0 10px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; font: 600 12px var(--mono); letter-spacing: .04em; color: var(--ink); background: var(--paper); }
+#sika .sk-body .sk-rec { color: var(--ink2); font-size: 13.5px; }
+#sika .sk-cap { margin: 12px 2px 0; font: 500 12px var(--mono); color: var(--ink3); text-align: center; }
+#sika .sk-ask { display: flex; gap: 8px; margin: 30px auto 0; padding: 6px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); max-width: 520px; }
+#sika .sk-ask input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: 500 15px var(--sans, inherit); padding: 8px 14px; outline: none; }
+#sika .sk-ask input::placeholder { color: var(--ink3); }
+#sika .sk-ask button, #sika a.sk-askbtn { border: 0; border-radius: 999px; padding: 9px 20px; background: #3DD68C; color: #04140B; font: 700 14px var(--sans, inherit); cursor: pointer; text-decoration: none; }
+#sika .sk-ask button[disabled] { opacity: .6; cursor: default; }
+#sika .sk-note { margin: 10px 0 0; font-size: 12.5px; color: var(--ink2); text-align: center; }
+#sika .sk-out { margin-top: 18px; }
+#sika .sk-out .sk-err { color: var(--ink2); font-size: 13.5px; text-align: center; margin: 0; }
+#sika .sk-more { margin-top: 18px; text-align: center; color: var(--ink2); font-size: 14px; }
+#sika .sk-more .btn { margin-left: 10px; } @media (max-width: 560px) { #sika .sk-more .btn { display: flex; justify-content: center; margin: 10px 0 0; } }
 /* Nov 22: "See how it works" beside the waitlist button (the hero's not-financial-advice line moved out; the footer keeps it) */
 .hero.ns.hcx .ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
 .hero.ns.hcx .btn.hx-how{background:#fff!important;color:#0B0D12!important;border:1px solid #fff!important;box-shadow:0 6px 18px -8px rgba(37,99,235,.6),0 0 12px rgba(37,99,235,.18)!important}
@@ -1178,6 +1213,59 @@ twq('config','rk6e6');
 <div class="pk-pop" id="pkPop" hidden role="dialog" aria-live="polite"><b id="pkSym"></b><p id="pkMsg"></p><a class="btn blue" href="#join" data-cta id="pkCta">Join the waitlist</a><button type="button" class="pk-x" aria-label="Close" onclick="document.getElementById('pkPop').hidden=true">×</button></div>
 </div><div class="hero-board" id="heroBoard"><div><b id="heroUniverse">—</b><span>stocks scanned</span></div><div><b id="heroForming">—</b><span>forming hubs</span></div><div><b id="heroNear">—</b><span>near an edge</span></div><div><b id="heroLive">—</b><span>live breakouts</span></div></div></div></header>
 
+
+<!-- Patch 226: Meet Sika (before #how). The sample exchanges are snapshots from Nov 26, 2026, labelled as samples; not wired to data. -->
+<section id="sika"><div class="wrap"><div class="sk-col">
+  <div class="sk-top"><span class="sika-ava"><svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="7" x2="32" y2="14" stroke="#4a5a70" stroke-width="1.5" stroke-linecap="round"/><circle class="ag-ant" cx="32" cy="5.5" r="3" fill="#7C93FF"/>
+  <rect x="11" y="15" width="42" height="34" rx="15" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="17" y="23" width="30" height="14" rx="7" fill="#0B0C0F"/>
+  <g class="ag-eyes"><circle cx="25.5" cy="29.5" r="3.6" fill="#7C93FF"/><circle cx="38.5" cy="29.5" r="3.6" fill="#7C93FF"/></g>
+  <rect x="19.5" y="25" width="3" height="10" rx="1.5" fill="#ffffff" opacity="0.3"/>
+  <path d="M27 43 Q32 47 37 43" stroke="#565A61" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span><div class="kicker">Meet Sika</div><span class="sika-live"><i></i>LIVE</span></div>
+  <h2>She only speaks when the numbers do.</h2>
+  <p class="sub">Sika is the agent inside NextShelf. Ask her about a ticker and she answers from the record — the setup, the plan, and how that setup has actually performed. If there's nothing measured to stand on, she tells you that instead.</p>
+  <div class="sk-cards">
+    <div class="sk-card"><div class="sk-you"><span class="sk-who">YOU</span><p>What's the setup on AAPL?</p></div>
+      <div class="sk-sika"><div class="sk-who"><span class="sika-ava"><svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="7" x2="32" y2="14" stroke="#4a5a70" stroke-width="1.5" stroke-linecap="round"/><circle class="ag-ant" cx="32" cy="5.5" r="3" fill="#7C93FF"/>
+  <rect x="11" y="15" width="42" height="34" rx="15" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="17" y="23" width="30" height="14" rx="7" fill="#0B0C0F"/>
+  <g class="ag-eyes"><circle cx="25.5" cy="29.5" r="3.6" fill="#7C93FF"/><circle cx="38.5" cy="29.5" r="3.6" fill="#7C93FF"/></g>
+  <rect x="19.5" y="25" width="3" height="10" rx="1.5" fill="#ffffff" opacity="0.3"/>
+  <path d="M27 43 Q32 47 37 43" stroke="#565A61" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>SIKA</div><div class="sk-body">
+        <p>AAPL is resting inside its hub, $349.25–$355.57. Nothing counts until a 4H close above the trigger — the close, not a wick.</p>
+        <div class="sk-lv">TRIGGER 362.74 · STOP 352.41 · TARGET 368.44</div>
+        <!-- THE RECORD numbers = UNIVERSE_RECORD["hub"]["a"] in scanner.py (avg 0.53, pf 1.41, n 233). Update both together. -->
+        <p class="sk-rec">Hub retests with a clear path: +0.53% average · PF 1.41 · 233 trades.</p></div></div></div>
+    <div class="sk-card"><div class="sk-you"><span class="sk-who">YOU</span><p>Anything worth my time today?</p></div>
+      <div class="sk-sika"><div class="sk-who"><span class="sika-ava"><svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="7" x2="32" y2="14" stroke="#4a5a70" stroke-width="1.5" stroke-linecap="round"/><circle class="ag-ant" cx="32" cy="5.5" r="3" fill="#7C93FF"/>
+  <rect x="11" y="15" width="42" height="34" rx="15" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="17" y="23" width="30" height="14" rx="7" fill="#0B0C0F"/>
+  <g class="ag-eyes"><circle cx="25.5" cy="29.5" r="3.6" fill="#7C93FF"/><circle cx="38.5" cy="29.5" r="3.6" fill="#7C93FF"/></g>
+  <rect x="19.5" y="25" width="3" height="10" rx="1.5" fill="#ffffff" opacity="0.3"/>
+  <path d="M27 43 Q32 47 37 43" stroke="#565A61" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>SIKA</div><div class="sk-body">
+        <p>One. TFC is retesting the top edge of its hub at $46.89 — the careful entry, not the chase. Next shelf $47.51.</p>
+        <div class="sk-lv">TRIGGER 46.89 · TARGET 47.51 · KILL: a 4H close back inside</div>
+        <p>You'll get the alert on the close. Until then, there's nothing to do.</p></div></div></div>
+    <div class="sk-card"><div class="sk-you"><span class="sk-who">YOU</span><p>NVDA — is it ripping tomorrow?</p></div>
+      <div class="sk-sika"><div class="sk-who"><span class="sika-ava"><svg viewBox="0 0 64 64" aria-hidden="true">
+  <line x1="32" y1="7" x2="32" y2="14" stroke="#4a5a70" stroke-width="1.5" stroke-linecap="round"/><circle class="ag-ant" cx="32" cy="5.5" r="3" fill="#7C93FF"/>
+  <rect x="11" y="15" width="42" height="34" rx="15" fill="#1F2023" stroke="#2f4258" stroke-width="1.5"/>
+  <rect x="17" y="23" width="30" height="14" rx="7" fill="#0B0C0F"/>
+  <g class="ag-eyes"><circle cx="25.5" cy="29.5" r="3.6" fill="#7C93FF"/><circle cx="38.5" cy="29.5" r="3.6" fill="#7C93FF"/></g>
+  <rect x="19.5" y="25" width="3" height="10" rx="1.5" fill="#ffffff" opacity="0.3"/>
+  <path d="M27 43 Q32 47 37 43" stroke="#565A61" stroke-width="2" fill="none" stroke-linecap="round"/></svg></span>SIKA</div><div class="sk-body">
+        <p>I don't forecast. NVDA has no live setup right now — no hub, no trigger, no record to stand on.</p>
+        <p>When it has one, you'll get the plan: trigger, stop, target, and the numbers behind it. Not a prediction.</p></div></div></div>
+  </div>
+  <p class="sk-cap">Sample exchanges.</p>
+  <form class="sk-ask" id="skAsk" autocomplete="off"><input id="skSym" placeholder="Ask Sika a ticker — try AAPL" maxlength="10" autocapitalize="characters" spellcheck="false" aria-label="Ticker"><button type="submit" id="skBtn">Ask</button></form>
+  <p class="sk-note" id="skNote">One free question. No signup. Members ask all day.</p>
+  <div class="sk-out" id="skOut" aria-live="polite"></div>
+  <div class="sk-more" id="skMore" hidden>Members ask all day.<a class="btn blue" href="#join" data-cta>Join the waitlist</a></div>
+</div></div></section>
 
 <section id="how" class="band"><div class="wrap">
   <div class="kicker">From hub to alert</div>
@@ -1838,5 +1926,30 @@ document.querySelectorAll(".lm").forEach(function (m) {
   size(); addEventListener("resize", size); frame();
 })();
 </script>
+<script>/* Patch 226 §A4: the guest question. One bare ticker, one per visitor; the server enforces it too. */
+(function () {
+  const $ = (id) => document.getElementById(id), f = $("skAsk"); if (!f) return;
+  const esc = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"}[c]));
+  const used = () => /(?:^|;\s*)ns_sika_q=/.test(document.cookie);
+  const done = () => { f.hidden = true; $("skNote").hidden = true; $("skMore").hidden = false; };
+  if (used()) done();
+  const ava = document.querySelector("#sika .sk-sika .sk-who").innerHTML;
+  f.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (used()) { done(); return; }
+    const s = $("skSym").value.trim().toUpperCase().replace(/^\$/, "");
+    if (!/^[A-Z][A-Z.\-]{0,9}$/.test(s)) { $("skSym").value = ""; $("skSym").placeholder = "Type a ticker like NVDA"; $("skSym").focus(); return; }
+    $("skBtn").disabled = true; $("skOut").innerHTML = '<p class="sk-err">Sika is reading the chart…</p>';
+    try {
+      const r = await fetch("/api/public/sika", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({symbol: s})});
+      const j = await r.json().catch(() => ({}));
+      if (j.used) { $("skOut").innerHTML = ""; done(); return; }
+      if (!r.ok) { $("skOut").innerHTML = `<p class="sk-err">${esc(j.detail || "Sika couldn't answer that right now.")}</p>`; $("skBtn").disabled = false; return; }
+      const body = esc(j.answer).split(/\n{2,}/).map(t => `<p>${t.replace(/\n/g, "<br>")}</p>`).join("");
+      $("skOut").innerHTML = `<div class="sk-card"><div class="sk-you"><span class="sk-who">YOU</span><p>${esc(j.symbol)}</p></div><div class="sk-sika"><div class="sk-who">${ava}</div><div class="sk-body"><p style="margin-bottom:10px"><span class="sika-live"><i></i>LIVE</span></p>${body}</div></div></div>`;
+      done();
+    } catch (err) { $("skOut").innerHTML = '<p class="sk-err">Sika couldn\'t answer that right now.</p>'; $("skBtn").disabled = false; }
+  });
+})();</script>
 </body>
 </html>
