@@ -299,6 +299,13 @@ html .bf-heat table.gh-t td.gh-c { color: #F4F7F6 !important; } html .bf-heat ta
 .bf-heat td.gh-rp, .bf-heat i.gh-k.gh-rp { outline: 2px solid #FF8A00; outline-offset: -2px; font-weight: 800; }
 .bf-heat td.gh-rn, .bf-heat i.gh-k.gh-rn { outline: 2px solid #C9A2FF; outline-offset: -2px; font-weight: 800; }
 .bf-heat td.gh-rmax, .bf-heat i.gh-k.gh-rmax { outline: 2px solid #FFFFFF; outline-offset: -2px; box-shadow: inset 0 0 0 4px rgba(0,0,0,.55); font-weight: 900; }
+/* Nov 26 (owner, option B): the magnet cell — white border, ★ badge, a slow gold glow that breathes */
+.bf-heat td.gh-mag, .bf-heat i.gh-k.gh-mag { outline: 2px solid #FFFFFF; outline-offset: -2px; z-index: 3; }
+.bf-heat td.gh-mag { font-weight: 900; padding-left: 26px; animation: ghMag 2.4s ease-in-out infinite; }
+.bf-heat i.gh-k.gh-mag { box-shadow: 0 0 8px 2px rgba(244,232,90,.7); }
+@keyframes ghMag { 0%, 100% { box-shadow: 0 0 10px 1px rgba(244,232,90,.45); } 50% { box-shadow: 0 0 20px 5px rgba(244,232,90,.85); } }
+.bf-heat .gh-star { position: absolute; left: 4px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border-radius: 50%; background: #0d1117; color: #F4E85A; font: 900 10px/16px var(--sans); text-align: center; box-shadow: 0 0 0 1.5px #F4E85A; }
+@media (prefers-reduced-motion: reduce) { .bf-heat td.gh-mag { animation: none; box-shadow: 0 0 14px 3px rgba(244,232,90,.65); } }
 .bf-heat .gh-levels i.gh-k { width: 12px; height: 12px; border-radius: 3px; background: #4E9A84; }
 .bf-heat table.gh-t th:first-child { font: 600 11px var(--mono) !important; }
 .bf-heat .gh-spottag { display: inline-block; background: #3DD68C; color: #062014; font-weight: 800; padding: 1px 6px; border-radius: 0 4px 4px 0; position: relative; }
@@ -9085,6 +9092,11 @@ function ghModel(j) {     // Nov 25: shared by the board and the little window u
   const top = cells.reduce((m, c) => Math.abs(c.v) > Math.abs(m.v) ? c : m, {v: 0});
   const ring = {}; pos.forEach(c => ring[c.ri + ":" + c.ci] = "gh-rp"); neg.forEach(c => ring[c.ri + ":" + c.ci] = "gh-rn");
   if (top.ri != null) ring[top.ri + ":" + top.ci] = "gh-rmax";
+  // Nov 26 (owner, option B): the magnet — the biggest positive cell in the nearest expiry, where price tends to drift
+  // into that expiry. A white border, a ★ badge and a slow gold glow. Context only, never a grade or alert input.
+  const mag = cells.filter(c => c.ci === 0 && c.v > 0).reduce((m, c) => c.v > (m.v || 0) ? c : m, {v: 0});
+  const magK = mag.ri != null ? mag.ri + ":0" : null;
+  const magTip = "Magnet: the biggest positive exposure in the nearest expiry. Price often drifts toward it into that expiry. A tendency, not a forecast.";
   const w = (GAMMA[j.symbol] && typeof GAMMA[j.symbol] === "object") ? GAMMA[j.symbol] : (j.walls || {});
   const near = (lvl) => { if (!lvl) return -1; let bi = -1, bd = Infinity; g.rows.forEach((r, i) => { const d = Math.abs(r.strike - lvl); if (d < bd) { bd = d; bi = i; } }); return bi; };
   const lines = {};
@@ -9093,7 +9105,7 @@ function ghModel(j) {     // Nov 25: shared by the board and the little window u
   if (w.call_wall) addLine(w.call_wall, "call", "Call Wall");
   if (w.put_wall) addLine(w.put_wall, "put", "Put Wall");
   const spotI = spot > 0 ? near(spot) : -1;
-  return {g, hasVex, mode, key, spot, vals, all, mx, fmt, mix, col, ring, top, w, lines, spotI};
+  return {g, hasVex, mode, key, spot, vals, all, mx, fmt, mix, col, ring, top, w, lines, spotI, magK, magTip};
 }
 // Nov 25 (owner): search a ticker right in the chart header (desktop), above the LIVE / MARKET CLOSED line
 function tkMatches(q) {
@@ -9133,13 +9145,14 @@ function ghMiniHTML(j) {
   // the little window: the 9 strikes nearest the price × the next 4 expiries, coloured on the FULL board's scale, with
   // the full board's rings and FLIP / wall lines where they fall inside the window. Tap anywhere → the full board.
   const M = ghModel(j); if (!M) return null;
-  const {g, hasVex, mode, spot, vals, fmt, col, ring, lines, spotI, mx} = M;
+  const {g, hasVex, mode, spot, vals, fmt, col, ring, lines, spotI, mx, magK, magTip} = M;
   const c = spotI >= 0 ? spotI : Math.floor(g.rows.length / 2), r0 = Math.max(0, Math.min(g.rows.length - 9, c - 4));
   const idx = g.rows.slice(r0, r0 + 9).map((_, i) => r0 + i), nE = Math.min(4, g.expiries.length);
   const md = (e) => { const d = new Date(e + "T12:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
   const rows = idx.map(ri => { const r = g.rows[ri], ln = lines[ri] || [];
     const tds = vals(r).slice(0, nE).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", light = v > 0 && Math.pow(Math.abs(v) / mx, .75) > .6;
-      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="--c:${col(v)};background:${col(v)}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("");
+      const mg = magK === ri + ":" + ci;
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}${mg ? " gh-mag" : ""}" style="--c:${col(v)};background:${col(v)}"${mg ? ` title="${esc(magTip)}"` : ""}>${mg ? '<span class="gh-star">★</span>' : ""}${fmt(v)}${rc === "gh-rmax" && !mg ? "★" : ""}</td>`; }).join("");
     const st = Number(r.strike).toFixed(1);
     return `<tr class="${ln.map(l => "gh-l-" + l.cls).join(" ")}"><th>${ri === spotI ? `<span class="gh-spottag">${st}</span>` : st}</th>${tds}<td class="gh-lv">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.cls === "flip" ? "FLIP" : l.cls === "call" ? "CALL" : "PUT")}</b>`).join("")}</td></tr>`; }).join("");
   const tot = mode === "vex" ? g.vex_total : g.net_total, w = M.w || {};
@@ -9157,14 +9170,15 @@ function bfHeatHTML(j, full) {
   // (top 3 positive in yellow, top 3 negative in violet, the single largest in white with a star); FLIP, call wall and
   // put wall drawn across the board with tags; the strike nearest the price tagged. Context only, never a grade input.
   const M = ghModel(j); if (!M) return null;
-  const {g, hasVex, mode, spot, vals, all, fmt, col, ring, lines, spotI, mx} = M;
+  const {g, hasVex, mode, spot, vals, all, fmt, col, ring, lines, spotI, mx, magK, magTip} = M;
   const md = (e) => { const d = new Date(e + "T12:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
   const head = g.expiries.map(e => `<th>${md(e)}</th>`).join("");
   const rows = g.rows.map((r, ri) => {
     const ln = lines[ri] || [], lcls = ln.map(l => " gh-l-" + l.cls).join("");
     const tags = ln.length ? `<span class="gh-tags">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.label)}</b>`).join("")}</span>` : "";
     const tds = vals(r).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", t = Math.abs(v) / mx, light = v > 0 && Math.pow(t, .75) > .6;
-      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}" style="--c:${col(v)};background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v))}">${fmt(v)}${rc === "gh-rmax" ? "★" : ""}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
+      const mg = magK === ri + ":" + ci;
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}${mg ? " gh-mag" : ""}" style="--c:${col(v)};background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v) + (mg ? " · " + magTip : ""))}">${mg ? '<span class="gh-star">★</span>' : ""}${fmt(v)}${rc === "gh-rmax" && !mg ? "★" : ""}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
     const st = Number(r.strike).toFixed(1);
     return `<tr class="${lcls.trim()}"${ri === spotI ? ' data-spot="1"' : ""}><th>${ri === spotI ? `<span class="gh-spottag" title="Price ${spot.toFixed(2)}">${st}</span>` : st}</th>${tds}</tr>`;
   }).join("");
@@ -9176,7 +9190,7 @@ function bfHeatHTML(j, full) {
     <div class="gh-wrap"><div class="bh-scroll gh-scroll" ><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter(this)">⌖</button></div>
     <div class="gh-legend">${fmt(Math.min(0, ...all))}<span class="gh-bar"></span>${fmt(Math.max(0, ...all))}</div>
-    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
+    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span><span title="${esc(magTip)}"><i class="gh-k gh-mag"></i>Magnet · nearest expiry</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
     <p class="gh-foot">${mode === "vex" ? "Each cell: net dealer vanna at that strike for that expiry, in dollars per 1 point of implied volatility (how much dealer hedging shifts when IV moves). Positive (green to yellow): a drop in IV tends to support price; negative (blue to indigo): falling IV adds selling." : "Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to indigo is negative (moves can speed up)."} The ringed cells are the biggest concentrations. Context only: never part of a grade or an alert.</p></div>`;
 }
 function ghCenter(btn) {        // scroll each board (side panel, full screen) so the price row sits mid-view
