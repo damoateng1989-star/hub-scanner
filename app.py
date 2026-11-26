@@ -2106,6 +2106,29 @@ def admin_lab_trigcross_run(years: int = 2, u: dict = Admin):
     return dict(started=True, years=years)
 
 
+@app.get("/api/admin/lab/crossreplay")
+def admin_lab_crossreplay(u: dict = Admin):
+    import lab_crossreplay
+    return lab_crossreplay.status()
+
+
+@app.post("/api/admin/lab/crossreplay/run")
+def admin_lab_crossreplay_run(years: int = 2, u: dict = Admin):
+    import lab_crossreplay
+    if years not in (2, 3):
+        raise HTTPException(400, "Pick 2 or 3 years")
+    if not lab_crossreplay.start(years=years):
+        raise HTTPException(409, "Another Lab test is running. Wait for it to finish.")
+    return dict(started=True, years=years)
+
+
+@app.post("/api/admin/lab/crossreplay/stop")
+def admin_lab_crossreplay_stop(u: dict = Admin):
+    import lab_crossreplay
+    lab_crossreplay.stop()
+    return dict(stopping=True)
+
+
 @app.post("/api/admin/lab/trigcross/stop")
 def admin_lab_trigcross_stop(u: dict = Admin):
     import lab_trigcross

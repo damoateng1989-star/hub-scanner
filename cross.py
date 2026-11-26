@@ -133,7 +133,7 @@ def _set(row_id: int, **kv) -> None:
 
 
 # ---------------------------------------------------------------- the population
-def plan_from_status(sym: str, st: dict) -> dict | None:
+def plan_from_status(sym: str, st: dict, allow_forming: bool = False) -> dict | None:
     """The cross plan for a scan status, or None when the hub isn't in the measured population."""
     if not st:
         return None
@@ -150,6 +150,8 @@ def plan_from_status(sym: str, st: dict) -> dict | None:
                 return None
         except (TypeError, ValueError, KeyError):
             return None
+    elif allow_forming and st.get("state") == "forming":
+        pass                                  # the cross-replay Lab measures the forming case too (live never passes this)
     else:
         # Nov 26 (owner): no crosses on a still-forming hub. Live can't tell a real cross from a poke that closes back
         # inside (the hub just keeps going), and the Lab, in hindsight, never counted those. A hub that ended at an

@@ -6607,12 +6607,13 @@ async function loadLab() {
       <td>${st.win_rate ?? "–"}${st.win_rate == null ? "" : "%"}</td><td style="${pc(st.avg_ret)}">${sign(st.avg_ret)}</td></tr>` : "";
   const kindName = { symmetric: "Symmetric ◇", ascending: "Ascending ◢", descending: "Descending ◥" };
   const live = (S.live || []);
-  setTimeout(loadNextDay, 0); setTimeout(loadConfluence, 0); setTimeout(loadLabTrig, 0);
+  setTimeout(loadNextDay, 0); setTimeout(loadConfluence, 0); setTimeout(loadLabTrig, 0); setTimeout(loadLabReplay, 0);
   $("lab").innerHTML = `
     <div id="labNextDay"></div>
     <div id="labConfluence"></div>
     <div id="labExits"></div>
     <div id="labTrig"></div>
+    <div id="labReplay"></div>
     <div class="panel"><div class="ph"><h2>What's being tested</h2></div>
       <p class="note" style="padding:0 18px 16px;margin:0">A <b>tightening hub</b> is a range that narrows: highs falling and/or lows rising, so the end of the range is at most 60% as wide as the start. The rules are the same as for hubs: breakout = a 4-hour close outside the lines, target = next shelf, failed = close back inside.</p></div>
     <div class="panel"><div class="ph"><h2>Last ${S.days || 200} days, ${S.symbols || 0} stocks</h2><span class="note">${S.updated ? "updated " + when(S.updated) : "runs with each Discover scan"}</span></div>
@@ -6634,6 +6635,26 @@ async function loadLab() {
 let LABX = null, LABX_EXIT = "edge", LABX_GROUP = "hub", LABX_POLL = null, LABX_ENTRY = "breakout";
 
 // ---------------------------------------------------------------- Nov 24: trigger-cross test (Arms A / B / C), per signal
+async function loadLabReplay() {     // Nov 26: the cross entry, replayed live (no hindsight)
+  const box = $("labReplay"); if (!box) return;
+  let T; try { T = await api("/api/admin/lab/crossreplay"); } catch (e) { box.innerHTML = ""; return; }
+  const R = T.result, G = (R && R.groups) || {}, p = (v) => v == null ? "–" : (v > 0 ? "+" : "") + Number(v).toFixed(2) + "%";
+  const ck = (c, k) => c.checks ? (c.checks[k] ? "✓" : "✕") : "";
+  const row = (name, c) => !c || !c.n ? `<tr><td><b>${name}</b></td><td>0</td><td colspan="8">–</td></tr>` : `<tr><td><b>${name}</b>${c.passed ? ' <span style="color:var(--up)">passes</span>' : ' <span style="color:var(--down)">fails</span>'}</td><td>${c.n}</td>
+      <td>${c.win ?? "–"}%</td><td style="color:var(${c.avg > 0 ? "--up" : "--down"})"><b>${p(c.avg)}</b></td><td>${c.pf ?? "–"}</td>
+      <td>${p(c.early)} ${ck(c, "early")}</td><td>${p(c.late)} ${ck(c, "late")}</td><td>${p(c.recent)} (${c.recent_n}) ${ck(c, "recent")}</td><td>${p(c.ex_top5)} ${ck(c, "ex_top5")}</td><td>${c.back_inside}%</td></tr>`;
+  box.innerHTML = `<div class="panel"><div class="ph"><h2>Cross entries, replayed live</h2><span class="note">${T.finished ? "finished " + when(T.finished) : ""}</span></div>
+    <p class="note" style="padding:0 18px 10px;margin:0">No hindsight: before every 4H candle the hub is measured from the closed bars only (the live scan's lookback), the live cross rule decides, and a buy-stop fills on the first 30-minute bar through the trigger. Same exits as the live plan. <b>Forming</b> = the hub was still forming when price crossed (the trigger-cross test's "next candle" slice, measured honestly). <b>Just ended</b> = what live alerts now, as a heads-up.</p>
+    <div style="padding:0 18px 10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      ${T.status === "running" ? `<span class="note" style="margin:0">Running… ${T.done || 0} / ${T.total || "?"} stocks · ${T.signals || 0} crosses (a few hours: it re-measures every stock at every candle)</span><button class="btnx sm" onclick="api('/api/admin/lab/crossreplay/stop',{method:'POST'}).then(loadLabReplay)">Stop</button>`
+        : `<button class="btnx sm" onclick="this.disabled=true;api('/api/admin/lab/crossreplay/run?years=2',{method:'POST'}).then(loadLabReplay).catch(e=>{toast(friendly(e));loadLabReplay()})">${R ? "Run again" : "Run the live replay"} (2 years)</button>`}
+      ${T.error ? `<span class="note" style="color:var(--down);margin:0">${esc(T.error)}</span>` : ""}</div>
+    ${R ? `<div class="tbl" style="padding:0 18px 10px"><table><tr><th>Group</th><th>Crosses</th><th>Win</th><th>Avg per cross</th><th>PF</th><th>Early</th><th>Late</th><th>Last 6 mo (n)</th><th>W/o top 5</th><th>Closed back inside</th></tr>
+        ${row("All crosses", G.all)}${row("Forming hub", G.forming)}${row("Just-ended hub (live now)", G.just_ended)}</table></div>
+      <p class="note" style="padding:0 18px 6px;margin:0"><b>Compare:</b> the hindsight test's next-candle slice made +0.58% with only 6.7% closing back inside on the cross candle. "Closed back inside" here is the real rate.</p>
+      <p class="note" style="padding:0 18px 14px;margin:0"><b>Verdict (decided in advance):</b> ${esc(R.verdict)}</p>` : ""}</div>`;
+  if (T.status === "running") setTimeout(() => { if (CUR === "lab") loadLabReplay(); }, 20000);
+}
 async function loadLabTrig() {
   const box = $("labTrig"); if (!box) return;
   let T; try { T = await api("/api/admin/lab/trigcross"); } catch (e) { box.innerHTML = ""; return; }
