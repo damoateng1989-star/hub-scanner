@@ -1303,6 +1303,7 @@ async def admin_why(sym: str, u: dict = Admin):
                     vol_rule=f"breakout candle volume >= {s.vol_mult}x its same-slot average", min_room_pct=s.min_room_pct,
                     last_candles=last, scanner_last_candle=row.get("last_candle"), scanner_checked=row.get("last_checked") or row.get("updated_at"),
                     watchers=len(db.watchers(sym)),
+                    cross=__import__("cross").explain(sym),
                     recent_alerts=[dict(id=r["id"], type=r["type"], candle=r["candle_time"], at=r["created_at"],
                                         first_line=(r["message"] or "").split("\n")[0][:140])
                                    for r in db._run("SELECT * FROM alerts WHERE symbol=? ORDER BY created_at DESC LIMIT 15", (sym,)).fetchall()])

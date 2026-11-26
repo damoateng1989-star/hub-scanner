@@ -163,6 +163,50 @@ def plan_from_status(sym: str, st: dict) -> dict | None:
                 ep_key=f"{sym}|cross|{hi:.2f}|{lo:.2f}|{h.get('start') or ''}")
 
 
+def explain(sym: str, lookback: int = 8) -> list[dict]:
+    """Nov 26 (owner: DE, VICI, AXON broke out with no cross alert): for each of the last few 4H candles, the status the
+    stock had going INTO it, and why the cross plan was or wasn't open. Read-only."""
+    import engine
+    import scanner
+    c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
+    out = []
+    for j in range(max(60, len(c4) - lookback), len(c4)):
+        prev = c4.iloc[:j]
+        try:
+            res = engine.analyze(prev, scanner.SETTINGS)
+            st = engine.current_status(prev, res, scanner.SETTINGS)
+        except Exception as e:
+            out.append(dict(candle=str(c4.index[j]), error=str(e)[:120]))
+            continue
+        h = st.get("hub") or {}
+        why = []
+        if st.get("state") != "forming":
+            why.append(f"state going in was '{st.get('state')}', not a forming hub")
+        sess = int(h.get("sessions") or 0)
+        if sess < SESS_MIN:
+            why.append(f"hub only {sess} sessions (needs {SESS_MIN})")
+        tgt = st.get("cross_target") or ((st.get("shelf_up") or {}).get("level")) or st.get("target_up")
+        room = None
+        try:
+            hi, lo = float(h["high"]), float(h["low"])
+            mid = hi - (hi - lo) / 2
+            room = (float(tgt) - hi) / (hi - mid) if tgt and hi > mid else None
+        except Exception:
+            pass
+        if room is not None and room < ROOM_MIN:
+            why.append(f"room {room:.2f}× half the hub (needs {ROOM_MIN})")
+        if tgt is None:
+            why.append("no target above")
+        p = plan_from_status(sym, st)
+        out.append(dict(candle=str(c4.index[j]), high=round(float(c4["High"].iloc[j]), 2), close=round(float(c4["Close"].iloc[j]), 2),
+                        state_in=st.get("state"), hub=[h.get("low"), h.get("high")], sessions=sess, target=tgt,
+                        room=round(room, 2) if room is not None else None, plan_open=bool(p),
+                        trigger=p["trigger"] if p else None, crossed=bool(p and float(c4["High"].iloc[j]) >= p["trigger"]),
+                        why_not=why if not p else []))
+    out.append(dict(rows=[_public(r) for r in _rows("WHERE symbol=? ORDER BY cross_at DESC LIMIT 5", (sym,))]))
+    return out
+
+
 def _statuses() -> dict[str, dict]:
     """Every scanned stock's latest status: the board's universe, plus watchlist stocks the board doesn't sweep."""
     out = {}
