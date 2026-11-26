@@ -7227,7 +7227,11 @@ function mapPlan(sym, st) {
     Object.assign(P, {hub: h, trig: tu, shelf: st.shelf_up ? st.shelf_up.level : st.target_up ?? null, shelfZone: st.shelf_up || null, atrTarget: !st.shelf_up && st.target_up != null,
       stop: Math.round((h.high + h.low) / 2 * 100) / 100, steps: "hub"});
     P.status = "Waiting for confirmation";
-    P.sub = px > tu ? `Above ${money(tu)} now, but it hasn't closed there yet. The next check is ${nextCloseText()}.`
+    const lc = st.last_close != null ? +st.last_close : null;
+    // Nov 25 (V): after the hub ends, a 4H close past the edge that didn't count was turned away by the volume rule
+    P.sub = st.state === "watching" && lc != null && lc > h.high
+        ? `Closed above ${money(h.high)}, but on lighter volume than normal for that time of day, so it didn't count (rule #5). It needs a 4H close above with normal volume; the next check is ${nextCloseText()}.`
+      : px > tu ? `Above ${money(tu)} now, but it hasn't closed there yet. The next check is ${nextCloseText()}.`
       : px > h.high ? "Above the top, but a close here only widens the hub."
       : px < h.low ? "Below the hub. Breakdowns are watch only." : "Price is still inside the hub.";
   } else if (pend) {
