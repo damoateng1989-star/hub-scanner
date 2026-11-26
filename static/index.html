@@ -8325,7 +8325,7 @@ try { if (localStorage.getItem("ns-map-wide") === "1") document.body.classList.a
 function paintMap() {
   const el = $("bfMap"); if (!el) return;
   if (!MAP_ON() || !BRIEF_SYM) { el.innerHTML = ""; return; }
-  if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#mpCalc, .mp-rp")) return;
+  if (document.activeElement && document.activeElement.closest && document.activeElement.closest("#mpCalc, .mp-rp, .mp-tksearch")) return;   // don't wipe a half-typed search
   mapBodyHome();                         // put the lower sections back before redrawing (they live inside the map's left column)   // typing: don't redraw under the cursor
   const sym = BRIEF_SYM, chart4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart4 && chart4.status) || findStatus(sym);
   // the candles drawn: daily when 1D is picked and loaded, else the 4-hour chart (levels and status always come from 4H)
@@ -8373,7 +8373,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><span class="mp-prostatus">${P.isLive ? "LIVE" : `<span class="w2">MARKET </span>CLOSED`}</span></div><div class="mp-ctop mp-ctop1"><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><span class="mp-ctsp"></span>${rp ? "" : `${wi ? `<button class="mp-planbtn on" onclick="mapPlanToggle()">✓ Done</button>` : ""}<button class="mp-planbtn mp-laybtn ${MAP_LAYERS_OPEN ? "on" : ""}" onclick="mapLayersToggle()" aria-expanded="${MAP_LAYERS_OPEN}">Layers <b>${layerCount()} on</b></button><button class="mp-planbtn mp-morebtn" onclick="mapMoreOpen(this, event)" aria-haspopup="menu" aria-label="More chart tools">⋯</button>${canPlan ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade<span class="w2"> this</span></button>` : ""}`}</div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F2C14E"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#7C93FF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}${rp ? "" : mapLayersHTML()}<div class="mp-mom" id="mpMom"></div><div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><div class="mp-tksearch"><input type="search" placeholder="Search a ticker or company" aria-label="Search a ticker" autocomplete="off" spellcheck="false" oninput="tkFind(this)" onkeydown="tkFindKey(event, this)" onblur="setTimeout(() => tkFindClose(), 150)"><div class="mp-tkres" hidden></div></div><span class="mp-prostatus">${P.isLive ? "LIVE" : `<span class="w2">MARKET </span>CLOSED`}</span></div><div class="mp-ctop mp-ctop1"><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><span class="mp-ctsp"></span>${rp ? "" : `${wi ? `<button class="mp-planbtn on" onclick="mapPlanToggle()">✓ Done</button>` : ""}<button class="mp-planbtn mp-laybtn ${MAP_LAYERS_OPEN ? "on" : ""}" onclick="mapLayersToggle()" aria-expanded="${MAP_LAYERS_OPEN}">Layers <b>${layerCount()} on</b></button><button class="mp-planbtn mp-morebtn" onclick="mapMoreOpen(this, event)" aria-haspopup="menu" aria-label="More chart tools">⋯</button>${canPlan ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade<span class="w2"> this</span></button>` : ""}`}</div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F2C14E"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#7C93FF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}${rp ? "" : mapLayersHTML()}<div class="mp-mom" id="mpMom"></div><div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>
@@ -9063,6 +9063,32 @@ function ghModel(j) {     // Nov 25: shared by the board and the little window u
   const spotI = spot > 0 ? near(spot) : -1;
   return {g, hasVex, mode, key, spot, vals, all, mx, fmt, mix, col, ring, top, w, lines, spotI};
 }
+// Nov 25 (owner): search a ticker right in the chart header (desktop), above the LIVE / MARKET CLOSED line
+function tkMatches(q) {
+  q = String(q || "").trim().toUpperCase(); if (!q) return [];
+  const N = window.NS_NAMES || {}, out = [], seen = new Set();
+  const add = (sym) => { if (!seen.has(sym)) { seen.add(sym); out.push(sym); } };
+  if (/^[A-Z.\-]{1,6}$/.test(q) && N[q]) add(q);
+  Object.keys(N).filter(k => k.startsWith(q)).sort((a, b) => a.length - b.length || a.localeCompare(b)).slice(0, 6).forEach(add);
+  if (q.length >= 2) Object.keys(N).filter(k => String(N[k]).toUpperCase().includes(q)).slice(0, 8).forEach(add);
+  if (!out.length && /^[A-Z.\-]{1,6}$/.test(q)) add(q);          // not in the list yet: still open it
+  return out.slice(0, 8);
+}
+function tkFind(inp) {
+  const box = inp.parentElement.querySelector(".mp-tkres"), m = tkMatches(inp.value), N = window.NS_NAMES || {};
+  if (!m.length) { box.hidden = true; box.innerHTML = ""; return; }
+  box.innerHTML = m.map((k, i) => `<button type="button" class="${i === 0 ? "on" : ""}" onmousedown="event.preventDefault(); tkGo('${k}')">${tkTile(k, 20)}<b>${esc(k)}</b><span>${esc(N[k] || "")}</span></button>`).join("");
+  box.hidden = false;
+}
+function tkFindKey(e, inp) {
+  const box = inp.parentElement.querySelector(".mp-tkres"), btns = [...box.querySelectorAll("button")];
+  let i = btns.findIndex(b => b.classList.contains("on"));
+  if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); if (!btns.length) return; btns.forEach(b => b.classList.remove("on")); i = (i + (e.key === "ArrowDown" ? 1 : -1) + btns.length) % btns.length; btns[i].classList.add("on"); }
+  else if (e.key === "Enter") { e.preventDefault(); const pick = btns[i >= 0 ? i : 0]; const sym = pick ? pick.querySelector("b").textContent : String(inp.value || "").trim().toUpperCase(); if (sym) tkGo(sym); }
+  else if (e.key === "Escape") { inp.value = ""; tkFindClose(); inp.blur(); }
+}
+function tkFindClose() { document.querySelectorAll(".mp-tkres").forEach(b => { b.hidden = true; }); }
+function tkGo(sym) { tkFindClose(); sym = String(sym || "").toUpperCase().replace(/[^A-Z.\-]/g, ""); if (sym) openBrief(sym); }
 function ghMiniHTML(j) {
   // the little window: the 9 strikes nearest the price × the next 4 expiries, coloured on the FULL board's scale, with
   // the full board's rings and FLIP / wall lines where they fall inside the window. Tap anywhere → the full board.
@@ -12602,6 +12628,21 @@ html[data-theme="light"] .mp-ext b.u { color: #0F7A4F; } html[data-theme="light"
 .mp-svg .mp-vol { opacity:.58; } .mp-svg .mp-vol.up { fill:#3DD68C; } .mp-svg .mp-vol.dn { fill:#FF6B5E; }
 .mp-svg .mp-vol-lab { fill:var(--mp-mut); font:700 9px var(--sans, system-ui); letter-spacing:.08em; }
 html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="light"] .mp-svg .mp-vol.dn { fill:#dc2626; }
+.mp-tksearch { display:none; }
+@media (min-width:900px) {
+  .mp-protitle { min-height:58px; }
+  .mp-tksearch { display:block; position:absolute; left:50%; top:2px; transform:translateX(-50%); width:min(320px, 36%); z-index:30; }
+  .mp-tksearch input { width:100%; box-sizing:border-box; height:30px; padding:0 12px 0 32px; border-radius:9px; border:1px solid var(--mp-line); background:rgba(255,255,255,.04) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA0AC' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat 11px center; color:inherit; font:600 12.5px var(--sans); outline:none; }
+  .mp-tksearch input:focus { border-color:#4E7BFF; background-color:rgba(78,123,255,.08); }
+  .mp-tksearch::before { content:""; position:absolute; left:11px; top:8px; width:14px; height:14px; pointer-events:none; z-index:1; background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239AA0AC' stroke-width='2.2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-3.5-3.5'/%3E%3C/svg%3E") no-repeat center; }
+  .mp-tksearch input::placeholder { color:#7D8492; }
+  .mp-tkres { position:absolute; left:0; right:0; top:34px; background:#15171B; border:1px solid var(--mp-line); border-radius:10px; padding:4px; box-shadow:0 12px 30px rgba(0,0,0,.45); }
+  .mp-tkres button { display:flex; align-items:center; gap:8px; width:100%; padding:7px 8px; border:0; border-radius:7px; background:transparent; color:inherit; cursor:pointer; text-align:left; font:12.5px var(--sans); }
+  .mp-tkres button b { font:700 12.5px var(--mono); min-width:46px; } .mp-tkres button span { color:#9AA0AC; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .mp-tkres button.on, .mp-tkres button:hover { background:rgba(78,123,255,.14); }
+  .mp-protitle .mp-prostatus { top:auto; bottom:6px; transform:translateX(-50%); }
+  html[data-theme="light"] .mp-tkres { background:#fff; } html[data-theme="light"] .mp-tksearch input { background-color:#fff; }
+}
 @media (max-width:559px) { .mp-protitle small { font-size:10.5px; } .mp-prostatus { left:54px; top:2px; transform:none; } .mp-prostatus .w2 { display:none; } }   /* right after "Chart", clear of the clocks and the symbol line */
 .mp-cw { width: 100%; overflow: hidden; position: relative; touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
 .mp-lwc { width:100%; height:430px; min-height:330px; position:relative; touch-action:pan-x pan-y; }
