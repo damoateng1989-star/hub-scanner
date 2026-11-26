@@ -119,6 +119,8 @@ html[data-theme="light"] .mp-more { background: #fff; border-color: #DCE1E8; } h
 
 /* Patch 218: CROSSED */
 .xr-tag { font: 700 10px var(--mono); letter-spacing: .08em; color: #3DD68C; background: rgba(61,214,140,.12); border: 1px solid rgba(61,214,140,.35); padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+.xr-chk { font: 700 9.5px var(--mono); letter-spacing: .06em; padding: 2px 6px; border-radius: 5px; white-space: nowrap; }
+.xr-chk.ok { color: #7DD3FC; background: rgba(125,211,252,.1); border: 1px solid rgba(125,211,252,.3); } .xr-chk.no { color: #F2C14E; background: rgba(242,193,78,.1); border: 1px solid rgba(242,193,78,.3); }
 .xr-tag.done { color: var(--muted); background: rgba(154,160,172,.1); border-color: rgba(154,160,172,.3); }
 .xr-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 10px; margin: 10px 0; background: var(--surface, #15171C); }
 .xr-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; } .xr-head span { font: 500 12px var(--mono); color: var(--muted); }
@@ -5901,7 +5903,7 @@ function renderCrossed() {
   if (!xs.length) { el.hidden = true; el.innerHTML = ""; return; }
   const live = xs.filter(x => x.state === "live"), done = xs.filter(x => x.state !== "live");
   const row = (x) => `<a class="arow cmp${x.watching ? " mine" : ""}" href="#today" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(--up)">
-      <span class="t"><span class="c1">${tkTile(x.symbol, 22)}<span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
+      <span class="t"><span class="c1">${tkTile(x.symbol, 22)}<span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.clear_path === 1 ? '<b class="xr-chk ok">CLEAR PATH</b>' : x.clear_path === 0 ? '<b class="xr-chk no">STACK IN WAY</b>' : ""}${x.tape === 1 ? '<b class="xr-chk ok">TAPE ✓</b>' : ""}${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
       <span class="c2"><small>trigger ${money(x.trigger)} · target ${money(x.target)} · stop ${money(x.stop)} · dead on a 4H close under ${money(x.hub_high)}</small></span></span><span class="go">›</span></a>`;
   live.forEach(x => TODAY_HEAD.add(x.symbol));
   el.innerHTML = `<div class="week-head"><div class="week-k">CROSSED TODAY · ${live.length}</div></div>

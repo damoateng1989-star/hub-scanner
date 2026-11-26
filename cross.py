@@ -56,6 +56,12 @@ def init() -> None:
     CREATE INDEX IF NOT EXISTS cross_sym ON cross_setups(symbol, state);
     """)
     db._conn.commit()
+    for col, typ in (("clear_path", "INTEGER"), ("blocking", "TEXT"), ("tape", "INTEGER")):   # Nov 26: the two checks
+        try:
+            db._conn.execute(f"ALTER TABLE cross_setups ADD COLUMN {col} {typ}")
+        except Exception:
+            pass
+    db._conn.commit()
     _p222_dedupe()
     try:       # Patch 222 §2, enforced by the database too: one live row per symbol, whatever two threads do at once
         db._conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS cross_one_live ON cross_setups(symbol) WHERE state='live'")
@@ -404,14 +410,62 @@ def _tape_confirmed(sym: str) -> bool:
         return False
 
 
+def _checks(r: dict) -> dict:
+    """Nov 26 (owner): two checks on every cross, stored on the row and shown in the alert. Context only — the cross
+    rules don't change; the forward log will say whether either one separates the winners.
+      clear path: no stack of 2+ kinds of level (pivots, averages, older hubs) between the trigger and the target
+                  — the Stacked Shelf rule, price-only, the same levels the Lab uses
+      tape:       today's options flow leans the same way (the member gate already used this)"""
+    out = dict(clear_path=None, blocking=None, tape=None)
+    try:
+        out["tape"] = int(_tape_confirmed(r["symbol"]))
+    except Exception:
+        pass
+    try:
+        import engine
+        import scanner
+        import stacked
+        c4 = scanner.load_4h(r["symbol"], scanner.SCAN_DAYS)
+        res = engine.analyze(c4, scanner.SETTINGS)
+        h = res["hubs"][-1] if res.get("hubs") else None
+        trig, tgt = float(r["trigger"]), float(r["target"])
+        own = {round(float(x), 2) for x in (r["hub_high"], r["hub_low"])}
+        cands = [c for c in stacked.History(c4, res).at(len(c4) - 1, own_hub=h, price=trig) if round(c["price"], 2) not in own]
+        chk = stacked.check(cands, 1, trig, trig, tgt, stacked.tol(trig, r.get("atr")))
+        out["clear_path"], out["blocking"] = int(bool(chk["clear_path"])), json.dumps(chk["blocking"])
+    except Exception as e:
+        log.warning("cross checks failed for %s: %s", r["symbol"], e)
+    try:
+        db._run("UPDATE cross_setups SET clear_path=?, blocking=?, tape=? WHERE id=?",
+                (out["clear_path"], out["blocking"], out["tape"], r["id"]))
+    except Exception:
+        pass
+    r.update(out)
+    return out
+
+
+def check_lines(r: dict) -> list[str]:
+    cp, tp = r.get("clear_path"), r.get("tape")
+    out = []
+    if cp is not None:
+        bl = json.loads(r.get("blocking") or "[]") if isinstance(r.get("blocking"), str) else (r.get("blocking") or [])
+        out.append("✅ Clear path to the target" if cp else
+                   "⚠️ Stack in the way at " + ", ".join(_money(x) for x in bl[:2]) + " (2+ kinds of level before the target)")
+    if tp is not None:
+        out.append("✅ Tape confirmed: today's options flow agrees" if tp else "· Tape not confirmed")
+    return out
+
+
 def _alert_new(r: dict) -> None:
     """§6 as drafted: admins every cross; members when the stock is on their watchlist or the cross is tape-confirmed.
     Everyone else sees it on the board. The forward-log row exists whatever this decides."""
     import earnings
     import notify
     eline = earnings.alert_line(r["symbol"])
-    msg = alert_text(r) + eline
-    card, btns = alert_html(r, eline), alert_buttons(r["symbol"])
+    _checks(r)
+    cl = check_lines(r)
+    msg = alert_text(r) + ("\n" + "\n".join(cl) if cl else "") + eline
+    card, btns = alert_html(r, "\n".join(cl) + eline), alert_buttons(r["symbol"])
     if not db.add_alert(f"{r['ep_key']}", r["symbol"], "cross", r["cross_candle"], msg):
         return
     sent = set()
@@ -422,12 +476,12 @@ def _alert_new(r: dict) -> None:
                             tg_html=card, tg_buttons=btns)
     except Exception as e:
         log.warning("cross alert (watchers) failed for %s: %s", r["symbol"], e)
-    tape = _tape_confirmed(r["symbol"])
+    tape = bool(r.get("tape")) if r.get("tape") is not None else _tape_confirmed(r["symbol"])
     for u in db.all_users():
         if u["id"] in sent or not (u["is_admin"] or tape):
             continue
         try:
-            tc = "\nTape confirmed." if tape and not u["is_admin"] else ""
+            tc = ""          # the tape line is already in the card
             notify.user_alert(u, msg + tc, f"/t/{r['symbol']}", f"{r['symbol']}-cross", tg_html=card + tc, tg_buttons=btns)
         except Exception as e:
             log.warning("cross alert failed for user %s: %s", u.get("id"), e)
@@ -457,6 +511,7 @@ def _follow(r: dict, kind: str, line: str, html: str | None = None) -> None:
 def _public(r: dict) -> dict:
     out = {k: r[k] for k in ("id", "symbol", "trigger", "target", "stop", "hub_high", "hub_low", "first_px", "state",
                              "closes", "exit_px", "ret_trig", "ret_touch", "at_close", "touched")}
+    out["clear_path"], out["tape"] = r.get("clear_path"), r.get("tape")
     out["cross_at"] = r["cross_at"]
     out["exit_at"] = r.get("exit_at")
     out["closes_left"] = max(0, HORIZON - int(r.get("closes") or 0)) if r["state"] == "live" else 0
@@ -497,7 +552,18 @@ def forward_summary() -> dict:
     b = [r["ret_touch"] if r["ret_touch"] is not None else (r["ret_trig"] or 0) for r in rows]
     return dict(n=n, live=len(_rows("WHERE state='live'")), avg_trig=round(sum(a) / n, 2), avg_touch=round(sum(b) / n, 2),
                 fill_cost=round(sum(a) / n - sum(b) / n, 2), wins=sum(1 for x in a if x > 0),
-                since=min(r["cross_at"] for r in rows)[:10])
+                since=min(r["cross_at"] for r in rows)[:10], splits=_splits(rows))
+
+
+def _splits(rows: list) -> dict:
+    """Nov 26: does either check separate the winners? Per group: n and avg from the trigger. Rows from before the
+    checks existed (NULL) are left out of both sides."""
+    out = {}
+    for key, lab in (("clear_path", ("clear path", "stack in the way")), ("tape", ("tape confirmed", "tape not confirmed"))):
+        for val, name in ((1, lab[0]), (0, lab[1])):
+            g = [r["ret_trig"] or 0 for r in rows if r.get(key) == val]
+            out[name] = dict(n=len(g), avg=round(sum(g) / len(g), 2) if g else None)
+    return out
 
 
 init()      # the table exists as soon as anything imports this module
