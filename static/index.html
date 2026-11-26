@@ -8064,7 +8064,7 @@ function initLightweightMapChart() {
       const bar=param.seriesData&&param.seriesData.get(candles);
       if(!bar||!param.point){tip.classList.remove("on");if(xh)xh.classList.remove("on");return;}
       const date=typeof param.time==="number"?new Date(param.time*1000):null;
-      const when=date?date.toLocaleString("en-US",{month:"short",day:"numeric",hour:D.daily?undefined:"numeric",minute:D.daily?undefined:"2-digit",timeZone:"America/New_York"}):"";
+      const when=date?date.toLocaleString("en-US",{month:"short",day:"numeric",hour:D.daily?undefined:"numeric",minute:D.daily?undefined:"2-digit",timeZone:"UTC"})+(D.daily?"":" ET"):"";   // Nov 25: candle times are already ET wall-clock (stored as UTC); converting again showed 6:00 AM for 11:00 AM
       const chg=bar.close>=bar.open, volBar=vol?param.seriesData.get(vol):null;
       tip.innerHTML='<b>'+when+'</b><div class="mp-ohlc"><span>O <b>'+money(bar.open)+'</b></span><span>H <b>'+money(bar.high)+'</b></span><span>L <b>'+money(bar.low)+'</b></span><span>C <b class="'+(chg?"u":"d")+'">'+money(bar.close)+'</b></span></div>'+(volBar?'<div>Volume <b>'+Number(volBar.value).toLocaleString()+'</b></div>':'');
       tip.classList.add("on");tip.style.left=Math.max(4,Math.min(param.point.x+12,cw.clientWidth-190))+"px";tip.style.top=Math.max(4,Math.min(param.point.y+10,(MAP_LWC_HOSTEL||host).clientHeight-95))+"px";
