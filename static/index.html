@@ -1656,6 +1656,15 @@ html[data-theme="light"] .sika-ava { background: #E9E8E2; }
 .sika-live i { width: 6px; height: 6px; border-radius: 50%; background: #3DD68C; box-shadow: 0 0 8px rgba(61,214,140,.9); display: inline-block; flex: none; }
 html[data-theme="light"] .sika-live { background: #fff; border-color: rgba(18,128,92,.55); color: #12805C; box-shadow: 0 0 12px rgba(18,128,92,.18); }
 html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px rgba(18,128,92,.7); }
+/* Patch 226 §B1: Sika's brief card at the top of Today (her existing avatar and LIVE pill, unchanged) */
+.t2-sika { margin: 4px 0 14px; padding: 14px 16px 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--card, transparent); }
+.t2-sika .sb-h { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.t2-sika .sb-k { font: 700 11px var(--mono); letter-spacing: .12em; color: var(--muted); }
+.t2-sika .sb-h .sika-live { margin-left: auto; } .t2-sika .sika-live[hidden] { display: none; }
+.t2-sika p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink); }
+.t2-sika .sb-sign { margin-top: 8px; font-weight: 700; color: #3DD68C !important; }
+html[data-theme="light"] .t2-sika .sb-sign { color: #12805C !important; }
+.mbrief .mb-sign { margin: 10px 0 0; font-weight: 700; color: var(--muted); }
 .sika-analyzing { font-size: 13px; color: #9AA0AC; line-height: 1.9; }
 .sika-step { opacity: 0; transition: opacity .3s ease; }
 .sika-step.on { opacity: 1; }
@@ -3448,6 +3457,7 @@ twq('config','rk6e6');
     <h1 id="hello">Welcome</h1>
     <div id="mkt" hidden></div>
   </div>
+  <div class="t2-sika" id="sikaBrief" hidden></div>   <!-- Patch 226 §B1: Sika's brief opens Today -->
   <div class="vpill" id="vPill" hidden></div>
   <div id="brReady" hidden></div>
   <div class="retest" id="retest" hidden></div>
@@ -4027,6 +4037,17 @@ function wlState(st, s) {
     return "resting in hub";
   }
   return "resting";
+}
+// Patch 226 §B4: the watchlist in her words. Engine state only, in the recap's sentence pattern; the numbers are the
+// trigger levels sit in the row's own level column beside it. No sentence for a state the engine didn't measure: the plain label stays.
+function wlSentence(st, s) {
+  if (s !== "forming") return "";
+  const w = wlState(st, s), u = tUp(st), d = tDn(st);
+  if (!(u > 0 && d > 0)) return "";
+  if (w === "at the top of its hub") return "resting at the top edge · nothing counts until a 4H close above";
+  if (w === "at the bottom of its hub") return "resting at the bottom edge · nothing counts until a 4H close below";
+  if (w === "resting in hub") return "still inside its hub";
+  return "";
 }
 function wlLevels(st, s) {      // the owner's design: plain numbers, ↑/↓; only the side it's pressing, in colour
   const n = (v) => Number(v).toFixed(2), w = wlState(st, s);
@@ -5907,8 +5928,9 @@ function xrRecordHTML(rec) {
 function renderCrossed() {
   const el = $("crossed"); if (!el) return;
   const xs = (BOARD && BOARD.crosses) || [];
-  if (!xs.length) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!xs.length) { el.hidden = true; el.innerHTML = ""; XR_LIVE_N = null; renderSikaBrief(); return; }
   const live = xs.filter(x => x.state === "live"), done = xs.filter(x => x.state !== "live");
+  XR_LIVE_N = live.length; setTimeout(renderSikaBrief, 0);
   const row = (x) => `<a class="arow cmp${x.watching ? " mine" : ""}" href="#today" onclick="event.preventDefault();openBrief('${esc(x.symbol)}')" style="--c:var(--up)">
       <span class="t"><span class="c1">${tkTile(x.symbol, 22)}<span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.clear_path === 1 ? '<b class="xr-chk ok">CLEAR PATH</b>' : x.clear_path === 0 ? '<b class="xr-chk no">STACK IN WAY</b>' : ""}${x.tape === 1 ? '<b class="xr-chk ok">TAPE ✓</b>' : ""}${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
       <span class="c2"><small>trigger ${money(x.trigger)} · target ${money(x.target)} · stop ${money(x.stop)} · dead on a 4H close under ${money(x.hub_high)}</small></span></span><span class="go">›</span></a>`;
@@ -9582,6 +9604,7 @@ function renderRetest() {
   const byTape = (a, b) => ((b.watch ? 0 : 1) - (a.watch ? 0 : 1)) || (isA(b) - isA(a)) || ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
   const now = rows.filter(x => x.near).sort(byTape);
   const wait = rows.filter(x => !x.near).sort(byTape);
+  RT_NOW = now; renderSikaBrief();      // Patch 226: Sika's brief reads the same rows the card shows
   renderCkChips(now.length, wait.length);
   const head = `<div class="t2-h"><span>RETESTING NOW</span><em>${now.length} at the edge · ${wait.length} waiting</em></div>`;
   if (!now.length && !wait.length && !gaps.length) {
@@ -9859,6 +9882,43 @@ function renderPremarket() {
   el.innerHTML = group("Top gainers", g, true) + group("Top losers", l, false);
   el.hidden = false;
 }
+// Patch 226 §B1: Sika's brief. Composed only from what this page already shows (the retest rows, the crossed count,
+// the watchlist states) and the session calendar from /api/brief. No number that isn't on the page, no forecast.
+let SIKA_SESSION = null, RT_NOW = null, XR_LIVE_N = null;
+function renderSikaBrief() {
+  const el = $("sikaBrief"); if (!el) return;
+  const S = SIKA_SESSION; if (!S || !S.next) { el.hidden = true; return; }
+  const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), nx = S.next;
+  // an early-close day has one decision point, the 1:00 close (the same rule the cards' clocks and the NEXT CONFIRM pill use)
+  const closesLeft = !S.trading ? [] : S.early ? (mins < 13 * 60 ? ["1:00"] : []) : (mins < 13 * 60 + 30 ? ["1:30", "4:00"] : mins < 16 * 60 ? ["4:00"] : []);
+  const nextDay = (nx.long || "").split(" ")[0];                       // "Monday"
+  const nextUp = nx.early ? `${nextDay}'s short session, with one decision point at 1:00` : `${nextDay}'s closes at 1:30 and 4:00`;
+  const L = [];
+  if (!S.trading) L.push(nx.early ? `The market is closed today. ${nx.long} is a short session: one decision point, the 1:00 close. Full closes resume ${nx.full_long}.`
+                                  : `The market is closed today. The next 4H closes are ${nx.long} at 1:30 and 4:00.`);
+  else if (S.early) L.push(closesLeft.length ? "Short session today — the market closes at 1:00, and that close is the only decision point." : "Short session today, and its 1:00 close is in.");
+  else if (closesLeft.length === 2) L.push("Two closes decide things today: 1:30 and 4:00.");
+  else if (closesLeft.length === 1) L.push("One close left today: 4:00.");
+  else L.push(`Today's closes are in. Next up: ${nextUp}.`);
+  const trade = (RT_NOW || []).filter(x => !x.watch && !x.gap), top = trade[0];
+  if (top) L.push(`${top.sym} is ${trade.length > 1 ? "one of the stocks sitting" : "sitting"} on its retest edge at ${money(top.edge)}`
+                  + (closesLeft.length ? "." : `; nothing can confirm until ${nx.early ? nextDay + "'s 1:00 close" : nextDay}.`));
+  else if (RT_NOW) L.push("Nothing is sitting on its retest edge right now.");
+  if (XR_LIVE_N) {
+    const gap = Math.round((new Date(nx.date + "T12:00:00") - new Date(S.today + "T12:00:00")) / 864e5);
+    L.push(`${XR_LIVE_N} cross${XR_LIVE_N === 1 ? " is" : "es are"} live${!closesLeft.length && gap > 1 ? " and riding the weekend" : ""}.`);
+  }
+  const moved = (TICKERS || []).filter(t => ["breakout_up", "breakdown"].includes(effState(t.status || {}))).map(t => t.symbol);
+  if (moved.length) L.push(`On your watchlist, ${moved.slice(0, 2).join(" and ")}${moved.length > 2 ? " and others" : ""} ${moved.length === 1 ? (effState(TICKERS.find(t => t.symbol === moved[0]).status || {}) === "breakdown" ? "broke down" : "broke out") : "moved out of their hubs"}.`);
+  const plan = top && top.grade === "A" && closesLeft.length ? top : null;
+  const sign = plan ? `One thing needs you: ${plan.sym} at the ${closesLeft[0]} close.` : "Nothing needs you today.";
+  const k = mins < 12 * 60 ? "THIS MORNING" : mins < 16 * 60 ? "THIS AFTERNOON" : "TONIGHT";
+  let run = false, bot = "";
+  try { run = !!(SCOUT_SC.running || MY_SCANNING); bot = ROBOT_SVG; } catch (e) {}      // declared further down the script
+  el.innerHTML = `<div class="sb-h"><span class="sika-ava">${bot}</span><span class="sb-k">SIKA · ${k}</span><span class="sika-live"${run ? "" : " hidden"}><i></i>LIVE</span></div>
+    <p>${L.slice(0, 4).map(esc).join(" ")}</p><p class="sb-sign">${esc(sign)}</p>`;
+  el.hidden = false;
+}
 function renderToday() {
   const h = etNow().getHours();
   const greet = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
@@ -9914,7 +9974,7 @@ function renderToday() {
   const wl = urgent.filter(t => !TODAY_HEAD.has(t.symbol));
   $("attn").innerHTML = wl.length ? capList(wl.map(t => {
     const [, c] = STATES[st(t)] || ["", "--idle"];
-    return `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')"><span class="t2-tk">${tkTile(t.symbol, 22)}${esc(t.symbol)}</span><span class="t2-mid">${wlState(t.status || {}, st(t))}</span>${wlLevels(t.status || {}, st(t))}</a>`;
+    return `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(t.symbol)}')"><span class="t2-tk">${tkTile(t.symbol, 22)}${esc(t.symbol)}</span><span class="t2-mid">${esc(wlSentence(t.status || {}, st(t)) || wlState(t.status || {}, st(t)))}</span>${wlLevels(t.status || {}, st(t))}</a>`;
   }), "attn") : urgent.length ? `<div class="empty">Everything moving on your watchlist is already above.</div>` : `<div class="empty">${!TICKERS.length
       ? `Nothing yet. Add a few stocks to your <a href="#list">Watchlist</a> and we'll tell you here when one sets up.`
       : `Nothing changed state on your watchlist. Nothing is in a range or breaking out right now. We'll alert you when that changes.`}</div>`;
@@ -10968,12 +11028,13 @@ async function loadRecapCard() {
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">🌙 Evening recap <span>${esc(d.date)}${d.swept_at ? " · sweep " + esc(d.swept_at) : ""}</span></div>
       <div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.new_count}</b> new breakout${d.new_count === 1 ? "" : "s"} · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
     ${stale}<div class="mb-cols"><div class="mb-col">${neu.replace('<p class="mb-quiet">', '<div class="mb-k">Today</div><p class="mb-quiet">')}</div>${watch ? `<div class="mb-col">${watch}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
+  el.insertAdjacentHTML("beforeend", '<p class="mb-sign">— Sika</p>');   // Patch 226 §B2: her byline
   el.hidden = false;
   return true;
 }
 async function loadBrief() {
-  if (eveningNow() && await loadRecapCard()) { api("/api/brief").then(renderCkClosest).catch(() => {}); return; }   // the closest card still comes from the brief
-  let d; try { d = await api("/api/brief"); renderCkClosest(d); } catch (e) { const el = $("mbrief"); if (el) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">Couldn\'t load the brief. <a href="#" onclick="loadBrief();return false">Tap to retry</a>.</p>'; } return; }
+  if (eveningNow() && await loadRecapCard()) { api("/api/brief").then(d => { SIKA_SESSION = d.session || null; renderSikaBrief(); renderCkClosest(d); }).catch(() => {}); return; }   // the closest card still comes from the brief
+  let d; try { d = await api("/api/brief"); SIKA_SESSION = d.session || null; renderSikaBrief(); renderCkClosest(d); } catch (e) { const el = $("mbrief"); if (el) { el.hidden = false; el.innerHTML = '<p class="mb-quiet">Couldn\'t load the brief. <a href="#" onclick="loadBrief();return false">Tap to retry</a>.</p>'; } return; }
   const el = $("mbrief"); if (!el) return;
   const chip = (sym, sub, col) => `<button class="mb-chip" style="--c:${col}" onclick="openBrief('${esc(sym)}')"><b>${esc(sym)}</b><small>${sub}</small></button>`;
   let main;
@@ -10993,6 +11054,7 @@ async function loadBrief() {
   el.innerHTML = `<div class="mb-h"><div><div class="mb-t">☀️ Morning brief <span>${esc(d.date)}</span></div>
       ${d.vix_line ? `<div class="mb-s">Market: ${esc(d.vix_line)}</div>` : ""}<div class="mb-s">${d.universe} stocks swept · <b style="color:#3DD68C">${d.live_count}</b> breakout${d.live_count === 1 ? "" : "s"} in play · <b style="color:#F2C14E">${d.near_count}</b> at a hub edge</div></div></div>
     <div class="mb-cols"><div class="mb-col">${main.replace('<p class="mb-quiet">', '<div class="mb-k">Closest to a breakout today</div><p class="mb-quiet">')}</div>${d.pro ? `<div class="mb-col">${play || '<div class="mb-k">Breakouts still in play</div><p class="mb-quiet">None right now. The next 4-hour closes are 1:30 PM and 4:00 PM ET.</p>'}</div>` : ""}</div><div class="mb-f">${deliver}</div>`;
+  el.insertAdjacentHTML("beforeend", '<p class="mb-sign">— Sika</p>');   // Patch 226 §B2: her byline
   el.hidden = false;
 }
 // Patch 220 (owner's design): More is a list of one-line rows to each place; the full cards live on their pages
@@ -12072,6 +12134,7 @@ function renderScout() {
   pop.classList.toggle("run", !!sc.running); pop.classList.toggle("mine", MY_SCANNING);
   $("scoutFab").classList.toggle("run", !!sc.running || MY_SCANNING);
   $("spState").textContent = MY_SCANNING || sc.running ? "Scanning" : "Live";
+  { const p = document.querySelector("#sikaBrief .sika-live"); if (p) p.hidden = !(sc.running || MY_SCANNING); }
   if (sc.running) $("spBar").style.width = Math.max(3, sc.total ? Math.round(sc.done / sc.total * 100) : 3) + "%";
   const guest = !ME || ME.guest, admin = ME && ME.is_admin, n = TICKERS.length;
   let line;

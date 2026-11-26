@@ -71,6 +71,14 @@ def next_session(today) -> dict:
     return out
 
 
+def today_session(now) -> dict:
+    """Patch 226 §B1: today's session from the same calendar (trading day? early close?) plus the next session."""
+    import flow_signal
+    d0 = now.date() if hasattr(now, "date") else now
+    return dict(today=d0.isoformat(), trading=bool(flow_signal.is_trading_day(d0)),
+                early=d0.isoformat() in flow_signal.NYSE_EARLY_CLOSES, next=next_session(now))
+
+
 def build(u: dict | None) -> dict:
     b = board.board()
     pro = auth.is_pro(u)
@@ -171,7 +179,7 @@ def text(d: dict) -> str:
                 f"{nx['full_long']} at 1:30 PM and 4:00 PM ET." if nx.get("early") else
                 f"Next decision points: {nx['long']}'s 4H closes at 1:30 PM and 4:00 PM ET.")
     L += ["", nxt_line,
-          "Don't force trades. Let the trade come to you.", "Educational, not financial advice."]
+          "Don't force trades. Let the trade come to you.", "— Sika", "Educational, not financial advice."]   # Patch 226 §B2: her byline
     if APP_URL:
         L.append(f"{APP_URL}/app#today")
     return "\n".join(L)

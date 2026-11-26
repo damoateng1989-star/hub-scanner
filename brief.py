@@ -89,7 +89,16 @@ def build(u: dict | None) -> dict:
                 universe_name=universe.describe(), live_count=len(b["live"]), near_count=len(b["near"]),
                 forming_count=len(forming), closest=closest if pro else [], in_play=in_play if pro else [],
                 resting=resting, mine=mine, watching=watching, updated=b.get("updated"),
-                vix=scanner.vix_stored(), vix_line=scanner.vix_line())      # Patch 190: context, never a gate
+                vix=scanner.vix_stored(), vix_line=scanner.vix_line(),      # Patch 190: context, never a gate
+                session=_session(now))       # Patch 226 §B1: Sika's brief on Today reads the calendar from here
+
+
+def _session(now) -> dict | None:
+    try:
+        import recap
+        return recap.today_session(now)
+    except Exception:
+        return None
 
 
 def _mine_line(m: dict) -> str:
@@ -146,7 +155,7 @@ def text(d: dict) -> str:
         L.append("Nothing on your watchlist is setting up. That's a good day to do nothing.")
     else:
         L.append("Your watchlist is empty. Add a few stocks and NextShelf will watch them for you.")
-    L += ["", "Don't force trades. Let the trade come to you.", "Educational, not financial advice."]
+    L += ["", "Don't force trades. Let the trade come to you.", "— Sika", "Educational, not financial advice."]   # Patch 226 §B2: her byline
     if APP_URL:
         L.append(f"{APP_URL}/app#today")
     return "\n".join(L)
@@ -180,6 +189,7 @@ def email_html(d: dict, footer: str) -> str:
         parts.append(f'<p style="margin:22px 0"><a href="{APP_URL}/app#today" style="background:#16a34a;color:#fff;padding:10px 16px;border-radius:999px;'
                      f'text-decoration:none;font-weight:700">Open NextShelf</a></p>')
     parts.append(f'<p style="margin-top:22px;font-weight:700;color:#16a34a">Don\'t force trades. Let the trade come to you.</p>'
+                 f'<p style="margin:4px 0 0;color:#111">— Sika</p>'      # Patch 226 §B2: her byline
                  f'<p style="color:#777;font-size:12px">Educational, not financial advice. {footer}</p></div>')
     return "".join(parts)
 
