@@ -9616,7 +9616,7 @@ function renderRetest() {
   TODAY_HEAD = new Set([heroRow && heroRow.sym, ...restNow.map(x => x.sym)].filter(Boolean));
   // Patch 220: the queue — gap fades and the waiting list, each capped at 5 with "See all"
   const qRow = (x, mid, away) => `<a class="t2-row" href="#today" onclick="event.preventDefault();openBrief('${esc(x.sym)}')"><span class="t2-tk">${tkTile(x.sym, 22)}${esc(x.sym)}</span><span class="t2-mid">${mid}</span><b class="t2-away">${away}</b></a>`;
-  const gapQr = (x) => x.live ? qRow(x, `<span class="u-up">triggered</span> · target ${money(x.target)}`, `day ${x.day}`) : qRow(x, "close above trigger", `${x.dist.toFixed(1)}% away`);
+  const gapQr = (x) => x.live ? qRow(x, `<span class="u-up">triggered</span> · target ${money(x.target)}`, `day ${x.day}`) : qRow(x, `needs a daily close above ${money(x.edge)}`, `${x.dist.toFixed(1)}% away`);   // Nov 26: was "close above trigger", read as if it already had
   const waitQr = (x) => { const up = x.state !== "breakdown", px = +x.px, d = px > 0 ? Math.abs(up ? (x.edge / px - 1) : (px / x.edge - 1)) * 100 : 0;
     return qRow(x, x.mine ? '<b class="t2-mine">ON YOUR LIST</b>' : x.watch ? '<span class="t2-mute">watch only</span>' : "", `${d.toFixed(1)}% away`); };
   const gapQ = gapList.length ? `<div class="t2-grp"><div class="t2-gh">Gap fade &amp; rip · ${gapList.length}</div>${capList(gapList.map(gapQr), "gap", 3)}</div>` : "";
