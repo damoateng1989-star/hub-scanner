@@ -619,23 +619,24 @@ def format_event(sym: str, e: dict) -> str:
         edge = e["high"] if up else e["low"]
         d = 1 if up else -1
         hist = retest_grade_line(sym, d)
-        return (f"{'🚀' if up else '🔻'} {side_tag(d)} — {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if e.get('shelf') else 'target'}\n"
-                f"4H close {'above' if up else 'below'} the hub\n"
+        return ((f"🔵 BREAKOUT CONFIRMED · {sym} — {side_tag(d)}\n" if up else f"🔵 BREAKDOWN · {sym} — {side_tag(d)}\n")
+                + (f"Not the entry yet: NextShelf waits for the retest, a pullback to {_money(edge)} that holds. You'll get a 🟢 alert.\n" if up else "")
+                + (f"4H close {'above' if up else 'below'} the hub, heading to {'the next shelf' if e.get('shelf') else 'the target'}\n"
                 f"Close {_money(e['close'])} vs hub {zone} ({e['sessions']} sessions)\n"
                 f"Hub grade: {e.get('grade', 'ledge').capitalize()} ({e.get('grade_score', '?')}/6)\n"
                 + plan_lines(e["close"], edge, e["target"], d, (e["close"] - e["target"]) * d >= 0, e.get("shelf"),
                              entry_text=f"Entry ≈ the retest close — a 4H close back near {_money(edge)} that holds {'above' if up else 'below'} it")
-                + (f"\n{hist}" if hist else "") + f"\nCandle closed: {t}")
+                + (f"\n{hist}" if hist else "") + f"\nCandle closed: {t}"))
     if e["type"] == "follow-through":
         what = "the next shelf" if e.get("shelf") else "the target"
-        return (f"✅ {sym}: follow-through\n4H close {_money(e['close'])} reached {what} {_money(e['target'])}, "
+        return (f"🎯 TARGET HIT · {sym} · breakout\n4H close {_money(e['close'])} reached {what} {_money(e['target'])}, "
                 + ("on the breakout candle itself" if e["candles"] == 0 else
                    f"{e['candles']} candle{'s' if e['candles'] > 1 else ''} after the breakout")
                 + f"\nCandle closed: {t}")
     if e["type"] == "snap-back":
-        return (f"↩️ {sym}: snap-back\n4H close {_money(e['close'])} is back inside the hub {zone}\nCandle closed: {t}")
+        return (f"⚪ DEAD · {sym} · breakout\n4H close {_money(e['close'])} is back inside the hub {zone}. Out before the stop: the rule did its job.\nCandle closed: {t}")
     if e["type"] == "stalled":
-        return (f"⏸ {sym}: stalled\nDidn't reach the {'next shelf' if e.get('shelf') else 'target'} or close back inside within {SETTINGS.horizon} candles "
+        return (f"⚪ EXPIRED · {sym} · breakout\nDidn't reach the {'next shelf' if e.get('shelf') else 'target'} or close back inside within {SETTINGS.horizon} candles "
                 f"(last close {_money(e['close'])})\nCandle closed: {t}")
     return f"{sym}: {e['type']}"
 
@@ -825,7 +826,8 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                     extra = None
                     early = db.get_alert(f"{sym}|early|{e['time'].isoformat()}") if e["type"] in ("breakout", "breakdown") else None
                     if early and early["type"] == e["type"]:      # already told them at 1:31 PM: confirm, don't ring again
-                        msg = "✅ Confirmed with the full market data\n" + msg
+                        h_, sp_, r_ = msg.partition("\n")      # the confirmation goes under the 🔵 headline
+                        msg = f"{h_}\n✅ Confirmed with the full market data{sp_}{r_}"
                         speech = None
                     # Nov 20: members get heads-ups only for setups that can lead to a member alert — hub longs
                     if e["type"] == "breakdown":
@@ -875,8 +877,21 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
         last = c4.index[-1]
         early = db.get_alert(f"{sym}|early|{last.isoformat()}")
         if early and not any(e["time"] == last and e["type"] == early["type"] for e in res["events"]):
-            msg = (f"⚠️ {sym}: not confirmed after all\n" f"The full market data puts the {engine.candle_end(last).strftime('%-I:%M %p')} close short of the trigger"
-                   f" ({_money(float(c4['Close'].iloc[-1]))}). No breakout, so no trade. If you entered on the early read, the plan says exit.")
+            cl_ = float(c4["Close"].iloc[-1])
+            hb_ = res["hubs"][-1] if res["hubs"] else None
+            past_ = hb_ is not None and (cl_ > hb_["high"] if early["type"] == "breakout" else cl_ < hb_["low"])
+            why_ = f"closed at {_money(cl_)}, short of the trigger"
+            if past_:
+                try:
+                    va_ = engine.slot_volume_avg(c4, SETTINGS.vol_window).iloc[-1]
+                    pct_ = float(c4["Volume"].iloc[-1]) / float(va_) * 100 if va_ and va_ == va_ else None
+                    why_ = f"closed at {_money(cl_)}" + (f" on {pct_:.0f}% of normal volume" if pct_ else " on lighter volume than normal") + ", so it didn't count"
+                except Exception:
+                    why_ = f"closed at {_money(cl_)} on lighter volume than normal, so it didn't count"
+            et_ = engine.candle_end(last).strftime('%-I:%M %p')
+            msg = (f"🟠 NOT CONFIRMED · {sym}\n"
+                   f"Ignore the {et_} early-read breakout alert. With the full market data the candle {why_}.\n"
+                   f"No breakout, so no trade. If you entered on the early read, the plan says exit.")
             if db.add_alert(f"{sym}|unconfirmed|{last.isoformat()}", sym, "unconfirmed", last.isoformat(), msg):
                 notify.symbol_alert(sym, "unconfirmed", msg, None, candle_start=last)
                 sent.append(msg)
@@ -920,6 +935,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                                     entry=edge, entry_state="the retest — at the edge now",
                                     exit_px=pend["target"], exit_name="the next shelf" if pend.get("shelf") else "1 ATR past the hub",
                                     stop_rule=f"4H close back under {_money(g_['stop'])}", stop_short=f"4H close under {_money(g_['stop'])}",
+                                    stop_px=g_["stop"],
                                     tape_line=alert_format.tape_text(tape_row_, d),
                                     window=alert_format.window_after_candle(c4.index[j], left_),
                                     earnings=alert_format.earnings_label(sym))
@@ -981,6 +997,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                             entry=close2, entry_state="the retest, held",
                             exit_px=pend["target"], exit_name="the next shelf" if pend.get("shelf") else "1 ATR past the hub",
                             stop_rule=f"4H close back under {_money(grade['stop'])}", stop_short=f"4H close under {_money(grade['stop'])}",
+                            stop_px=grade["stop"],
                             tape_line=alert_format.tape_text(tape_row_, d),
                             window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None,
                             earnings=alert_format.earnings_label(sym))
@@ -1047,6 +1064,7 @@ def scan_symbol(sym: str) -> tuple[dict, list[str]]:
                             entry=close2, entry_state="the retest, held",
                             exit_px=dbl["target"], exit_name="the next shelf" if dbl.get("shelf") else "the measured move",
                             stop_rule=f"4H close back under {_money(grade['stop'])}", stop_short=f"4H close under {_money(grade['stop'])}",
+                            stop_px=grade["stop"],
                             window=alert_format.window_after_candle(c4.index[j], left) if left > 0 else None,
                             earnings=alert_format.earnings_label(sym))
                     elif not grade["is_a"]:
@@ -1344,7 +1362,7 @@ def early_all(now: pd.Timestamp | None = None) -> list[str]:
                     continue          # outside the hub but short of the trigger: the hub only widens, it isn't a break
                 up = sig["direction"] == 1
                 typ = "breakout" if up else "breakdown"
-                msg = (f"{'🚀' if up else '🔻'} {sym} {'broke out' if up else 'broke down'} · heading to {'next shelf' if sig.get('shelf') else 'target'} (early read)\n"
+                msg = (f"🔵 EARLY READ · {sym} {'broke out' if up else 'broke down'} · heading to {'the next shelf' if sig.get('shelf') else 'the target'}\n"
                        f"1:30 PM close {'above' if up else 'below'} the hub\n"
                        f"Close ≈ {_money(close)} · hub {_money(sig['low'])}–{_money(sig['high'])} · trigger {_money(sig['trigger'])}\n"
                        + plan_lines(close, sig["edge"], sig["target"], sig["direction"], sig["reached"], sig.get("shelf"))
@@ -1395,25 +1413,16 @@ TRIGGER_ALERTS = os.getenv("TRIGGER_ALERTS", "on").lower() != "off"
 
 def format_trigger(sym: str, kind: str, trig: float, price: float, need: str, target: float | None, stop: float | None) -> str:
     if kind == "hub_down":
-        lines = [f"⚡ SHORT · PUTS — {sym} fell below its hub trigger {_money(trig)}: now {_money(price)}",
-                 f"Not a trade yet. It counts only on {need} below {_money(trig)}.",
-                 "Then NextShelf waits for the retest (a pullback to the edge that holds) for the A entry."]
-        if target is not None:
-            lines.append(f"Target {_money(target)}" + (f" · stop {_money(stop)}" if stop is not None else ""))
-        return "\n".join(lines)
+        return (f"🟡 SHORT · PUTS — {sym} fell below {_money(trig)} · now {_money(price)}\n"      # Nov 25: heads-ups stay small
+                f"Not a trade yet · counts only on {need} below {_money(trig)}")
     if kind == "double_top":                       # the short side: a heads-up only
         return "\n".join([f"⚠️ SHORT · PUTS (watch only) — {sym} broke below its double-top neckline {_money(trig)}: now {_money(price)}",
                            f"Watch only: double tops lost money in the two-year test, so there's no entry plan. "
                            f"It completes only on {need} below {_money(trig)}."]
                           + ([f"Pattern target {_money(target)}"] if target is not None else []))
     name = {"hub": "its hub trigger", "double_bottom": "its double-bottom neckline", "gapfade": "its gap-day high"}[kind]
-    lines = [f"⚡ LONG · CALLS — {sym} crossed {name} {_money(trig)}: now {_money(price)}",
-             f"Not a trade yet. It counts only on {need} above {_money(trig)}."]
-    if kind != "gapfade":
-        lines.append("Then NextShelf waits for the retest (a pullback to the edge that holds) for the A entry.")
-    if target is not None:
-        lines.append(f"Target {_money(target)}" + (f" · stop {_money(stop)}" if stop is not None else ""))
-    return "\n".join(lines)
+    return (f"🟡 LONG · CALLS — {sym} crossed {name} {_money(trig)} · now {_money(price)}\n"
+            f"Not a trade yet · counts only on {need} above {_money(trig)}")
 
 
 def price_alerts_check(now: pd.Timestamp | None = None) -> int:

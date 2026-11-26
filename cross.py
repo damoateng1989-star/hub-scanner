@@ -289,6 +289,16 @@ def _resolve(r: dict, verdict: str, exit_px: float, t: pd.Timestamp, n: int) -> 
     if not cur.rowcount:
         return
     when = end.strftime("%-I:%M %p")
+    import alert_style            # Nov 25: the 🎯 / 🔴 / ⚪ trade-over card
+    head = {"target": f"at the shelf {_money(r['target'])}", "stop": f"at the stop {_money(r['stop'])} (4H close {_money(exit_px)})",
+            "dead": f"closed back inside the hub at {_money(exit_px)}", "expired": f"10 closes without the target or the stop · {_money(exit_px)}"}[verdict]
+    det = {"target": f"{_money(r['trigger'])} → {_money(r['target'])} · {n} candle{'s' if n != 1 else ''} · {when} close",
+           "stop": f"The loss the plan allowed · {n} candle{'s' if n != 1 else ''} · {when} close",
+           "dead": f"Out before the stop · the rule did its job · {when} close",
+           "expired": f"The plan's time ran out · {when} close"}[verdict]
+    plain, html = alert_style.trade_over(verdict, r["symbol"], "cross entry", rt, head, det)
+    _follow(r, verdict, plain, html)
+    return
     line = {"target": f"✅ {r['symbol']}: cross setup reached the target — 4H close at or above {_money(r['target'])} ({when} close). {rt:+.2f}% from the trigger.",
             "stop": f"🛑 {r['symbol']}: cross setup stopped — 4H close {_money(exit_px)} at or under the stop {_money(r['stop'])} ({when} close). {rt:+.2f}% from the trigger.",
             "dead": f"❌ {r['symbol']}: cross setup dead — 4H close {_money(exit_px)} back inside the hub ({when} close). {rt:+.2f}% from the trigger.",
@@ -333,7 +343,7 @@ def alert_html(r: dict, extra: str = "") -> str:
     if r.get("first_px") and r["first_px"] > r["trigger"] * 1.002:
         gap = f"\n<i>First seen at {_money(r['first_px'])}: a stop order fills above the trigger on a gap.</i>"
     rec = record()
-    return (f"🟢 <b>CROSS ENTRY · {sym}</b>\n"
+    return (f"🟣 <b>CROSS ENTRY · {sym}</b>\n"
             f"<i>LONG · CALLS · hub cross {_h.escape(_when(r))}</i>\n\n"
             f"<b>{_money(r['trigger'])} → {_money(r['target'])}</b>\n"
             f"{n['up']:+.1f}% to the next shelf\n"
@@ -356,7 +366,7 @@ def alert_text(r: dict) -> str:
     if r.get("first_px") and r["first_px"] > r["trigger"] * 1.002:
         gap = f"\nFirst seen at {_money(r['first_px'])}: a stop order fills above the trigger on a gap."
     n = _plan_nums(r)        # plain version (push, texts, the alert log): design A's facts, no markup
-    return (f"🟢 CROSS ENTRY · {r['symbol']} — LONG · CALLS\n"
+    return (f"🟣 CROSS ENTRY · {r['symbol']} — LONG · CALLS\n"
             f"Hub cross {when}: {_money(r['trigger'])} → {_money(r['target'])} ({n['up']:+.1f}% to the next shelf)\n"
             f"⚡ Trigger {_money(r['trigger'])} · 🎯 Target {_money(r['target'])} · 🛑 Stop {_money(r['stop'])} ({n['dn']:+.1f}%)"
             + (f" · ⚖️ {n['rr']:.1f}× the risk" if n["rr"] else "") + "\n"
@@ -403,19 +413,22 @@ def _alert_new(r: dict) -> None:
             log.warning("cross alert failed for user %s: %s", u.get("id"), e)
 
 
-def _follow(r: dict, kind: str, line: str) -> None:
+def _follow(r: dict, kind: str, line: str, html: str | None = None) -> None:
     """Follow-ups go to whoever could have had the first alert: watchers, admins, members if it was tape-confirmed
     (approximated by today's tape: the follow-up is one line either way)."""
     import notify
+    import alert_style
+    html = html or alert_style.generic_html(line)      # a follow-up wears its own colour, never the 🟣 entry header
+    btns = alert_style.buttons(r["symbol"], record=True)
     try:
         # Patch 222 §3 backstop: a verdict is keyed by the row id, so one row gives at most one line anywhere
         key = f"cross#{r['id']}|{kind}" if kind in ("target", "stop", "dead", "expired") else f"{r['ep_key']}|{kind}"
         if db.add_alert(key, r["symbol"], "cross", r["cross_candle"], line):
             sent = {u["id"] for u in db.watchers(r["symbol"])}
-            notify.symbol_alert(r["symbol"], "cross", line, style="hub")
+            notify.symbol_alert(r["symbol"], "cross", line, style="hub", tg_html=html, tg_buttons=btns)
             for u in db.all_users():
                 if u["is_admin"] and u["id"] not in sent:
-                    notify.user_alert(u, line, f"/t/{r['symbol']}", f"{r['symbol']}-cross")
+                    notify.user_alert(u, line, f"/t/{r['symbol']}", f"{r['symbol']}-cross", tg_html=html, tg_buttons=btns)
     except Exception as e:
         log.warning("cross follow-up failed for %s: %s", r["symbol"], e)
 

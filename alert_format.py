@@ -111,7 +111,8 @@ def _label(t: pd.Timestamp | None, ref: pd.Timestamp) -> str | None:
 
 def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, trigger_what: str, entry: float,
             entry_state: str, exit_px: float, exit_name: str, stop_rule: str, stop_short: str,
-            tape_line: str | None = None, window: str | None = None, earnings: str | None = None, side: int = 1) -> dict | None:
+            tape_line: str | None = None, window: str | None = None, earnings: str | None = None, side: int = 1,
+            stop_px: float | None = None) -> dict | None:
     """The conviction alert, in the four forms the notifier needs (Telegram/push × with/without the tape segment).
     Returns None when any slot is missing — the caller then sends its plain text (§1: never a partial plan)."""
     rec = record(rec_key)
@@ -120,7 +121,7 @@ def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, t
         return None
 
     def tg(tape: bool) -> str:
-        tag = "LONG · CALLS" if side == 1 else "SHORT · PUTS"   # Nov 25 (owner): the side, up front
+        tag = "🟢 LONG · CALLS" if side == 1 else "SHORT · PUTS"   # Nov 25 (owner): the side, up front; 🟢 = an entry
         lines = [f"{tag} — {sym} — {grade} {setup.upper()}" + (" · TAPE CONFIRMED" if tape else ""), "", record_line(rec), "",
                  f"TRIGGER  {_money(trigger)} — {trigger_what}",
                  f"ENTRY    {_money(entry)} — {entry_state}",
@@ -134,7 +135,7 @@ def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, t
         return "\n".join(lines)
 
     def push(tape: bool) -> str:
-        head = f"{'LONG · CALLS' if side == 1 else 'SHORT · PUTS'} · {sym} · {grade} {setup.lower()}" + (", tape confirmed" if tape else "")
+        head = f"{'🟢 LONG · CALLS' if side == 1 else 'SHORT · PUTS'} · {sym} · {grade} {setup.lower()}" + (", tape confirmed" if tape else "")
         plan = f"Trig {_money(trigger)} · Entry {_money(entry)} · Exit {_money(exit_px)} · Stop: {stop_short}."
         ern = f" Earnings {earnings}." if earnings else ""
         line = f"{head}. {plan} Record: {_push_record(rec)}.{ern}"
@@ -142,9 +143,46 @@ def compose(*, sym: str, grade: str, setup: str, rec_key: str, trigger: float, t
             line = f"{head}. {plan} Record: {_push_record(rec, short=True)}.{ern}"
         return line
 
+    def card(tape: bool) -> str:      # Nov 25 (owner): the 🟢 entry ticket, same facts as tg()
+        import html as _h
+        e = lambda x: _h.escape(str(x))
+        sl_ = setup.lower()
+        word = "RETEST ENTRY" if sl_ == "retest" else "DOUBLE-BOTTOM RETEST" if "double" in sl_ else f"{setup.upper()} ENTRY"
+        up = (exit_px / entry - 1) * 100 * side
+        rows = [f"{'🧱 EDGE' if 'retest' in setup.lower() else '⚡ TRIGGER':<11}{_money(trigger)}",
+                f"{'🎯 TARGET':<11}{_money(exit_px)}  {up:+.1f}%"]
+        rr = None
+        if stop_px is not None and pd.notna(stop_px):
+            dn = (stop_px / entry - 1) * 100 * side
+            rows.append(f"{'🛑 STOP':<11}{_money(stop_px)}  {dn:+.1f}%")
+            risk = abs(entry - stop_px)
+            rr = abs(exit_px - entry) / risk if risk > 0 else None
+        if rr:
+            rows.append(f"{'⚖️ REWARD':<11}{rr:.1f}× the risk")
+        parts = [f"🟢 <b>{e(word)} · {e(sym)}</b> <code>{e(grade)}</code>" + (" · <b>TAPE CONFIRMED</b>" if tape else ""),
+                 f"<i>{'LONG · CALLS' if side == 1 else 'SHORT · PUTS'} · {e(entry_state)}</i>", "",
+                 f"<b>{_money(entry)} → {_money(exit_px)}</b>", f"{up:+.1f}% to {e(exit_name)}",
+                 f"<pre>{e(chr(10).join(rows))}</pre><blockquote>Dead on a {e(stop_rule)}</blockquote>"
+                 f"Window closes {e(window)}", e(record_line(rec))]
+        if tape and tape_line:
+            parts.append(e(tape_line))
+        if earnings:
+            parts.append(f"📅 Earnings {e(earnings)}: a gap can jump past the stop. Holding through it is a separate bet.")
+        return "\n".join(parts)
+
     has_tape = bool(tape_line)
     out = dict(tg_plain=tg(False), push_plain=push(False), title=f"{sym} · {grade} {setup.lower()}",
                tg_rich=tg(True) if has_tape else None, push_rich=push(True) if has_tape else None)
+    try:
+        out["tg_html"] = card(False)
+        out["tg_html_rich"] = card(True) if has_tape else None
+        import alert_style
+        sl = setup.lower()
+        ln = ("the-retest", "📘 Why the retest") if sl == "retest" else \
+             ("double-tops-and-bottoms", "📘 Double bottoms") if "double" in sl else ("gap-fade-and-rip", "📘 Gap fade & rip")
+        out["buttons"] = alert_style.buttons(sym, *ln)
+    except Exception:
+        out["tg_html"] = None      # the plain conviction text still goes out
     for k in ("tg_plain", "push_plain", "tg_rich", "push_rich"):
         if out[k] and any(w in out[k].lower() for w in BANNED):
             return None                            # §6 belt-and-braces: a banned word means the plain text goes out

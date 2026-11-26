@@ -4072,6 +4072,12 @@ const ALERT_WORD = {hub_formed: "new hub", breakout: "broke out", breakdown: "br
   retesting_now: "retesting now", board_rt: "retesting now", preclose: "near a close outside", trigger: "crossed the trigger", cross: "crossed",
   every_a: "A setup", unconfirmed: "break unconfirmed", premarket_gap: "premarket gap", "follow-through": "reached the target",
   "snap-back": "snapped back", stalled: "stalled"};
+// Nov 25: the alert family colour (the same marker the Telegram headline carries), as a strip beside each alert
+const ALERT_EMO_COLOR = {"🟢": "#22C55E", "🟣": "#A855F7", "🔵": "#3B82F6", "🟡": "#FACC15", "🟠": "#FB923C", "🎯": "#FBBF24", "🔴": "#EF4444", "⚪": "#94A3B8"};
+function alertColor(x) {
+  const m = String(x.message || "").trim(), k = Object.keys(ALERT_EMO_COLOR).find(e => m.startsWith(e));
+  return k ? ALERT_EMO_COLOR[k] : null;
+}
 function alertMini(x) {
   let first = String(x.message || "").split("\n")[0].replace(/^[^\p{L}\p{N}$]+/u, "");
   const sm = first.match(/^(LONG · CALLS|SHORT · PUTS)(?: \(watch only\))? — /), side = sm ? (sm[1][0] === "L" ? "Long" : "Short") : "";   // Nov 25: the side tag
@@ -4079,14 +4085,15 @@ function alertMini(x) {
   const sym = String(x.symbol || ""), what = (side ? side + " · " : "") + (ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40));
   let t = ""; try { const raw = String(x.created_at || ""), d = new Date(raw.replace(" ", "T") + (/Z$|[+-]\d\d:?\d\d$/.test(raw) ? "" : "Z"));
     if (!isNaN(d)) t = d.toLocaleString("en-US", {weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) {}
-  return `<a class="t2-row" href="#alerts" title="${esc(first)}"><span class="t2-tk">${sym ? tkTile(sym, 20) : ""}${esc(sym)}</span><span class="t2-mid">${esc(what)}${t ? ` · ${esc(t)}` : ""}</span></a>`;
+  const ac = alertColor(x);
+  return `<a class="t2-row${ac ? " al-c" : ""}" href="#alerts" title="${esc(first)}"${ac ? ` style="--al:${ac}"` : ""}><span class="t2-tk">${sym ? tkTile(sym, 20) : ""}${esc(sym)}</span><span class="t2-mid">${esc(what)}${t ? ` · ${esc(t)}` : ""}</span></a>`;
 }
 function alertRow(x, compact) {
   const lines = String(x.message).split("\n");
   const title = lines[0].replace(/^[^\p{L}\p{N}$]+/u, "");
   const rest = lines.slice(1).filter(l => !l.startsWith("Candle closed")).join("\n");
   const t = (lines.find(l => l.startsWith("Candle closed")) || "").replace("Candle closed: ", "");
-  return `<div class="item" style="--c:var(${ALERT_COLORS[x.type] || "--idle"})"><i></i><div>
+  return `<div class="item" style="--c:${alertColor(x) || `var(${ALERT_COLORS[x.type] || "--idle"})`}"><i></i><div>
     <b>${esc(title)}</b>${compact ? "" : `<p>${esc(rest)}</p>`}<div class="t">${esc(t)}</div></div></div>`;
 }
 async function loadAlerts() {
@@ -12600,6 +12607,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: #E2E5EB; --mp-i
 @keyframes tkUp { from { color: #3DD68C; text-shadow: 0 0 10px rgba(61,214,140,.6); } } @keyframes tkDn { from { color: #FF6B5E; text-shadow: 0 0 10px rgba(255,107,94,.6); } }
 .tk-up { animation: tkUp .6s ease-out; } .tk-dn { animation: tkDn .6s ease-out; }
 .mp-px em.u { color: var(--mp-shelf); } .mp-px em.d { color: var(--mp-obst); }
+.t2-row.al-c { box-shadow: inset 3px 0 0 var(--al); padding-left: 10px; }
 .mp-pxl { font: 600 11px var(--sans); color: var(--muted, #9AA0AC); letter-spacing: .02em; }
 .mp-ext b { font: 700 12.5px var(--mono, ui-monospace, monospace); color: var(--mp-ink, inherit); } .mp-ext b.u { color: #3DD68C; } .mp-ext b.d { color: #FF6B5E; }
 .mp-upd i.ext { background: #F2C14E; box-shadow: 0 0 8px rgba(242,193,78,.7); }

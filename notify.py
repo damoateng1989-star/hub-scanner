@@ -78,6 +78,13 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
     conv: Patch 213's conviction format (alert_format.compose) — when given, it replaces `text` exactly as composed:
     the tape segment only for recipients the flow gate allows, push gets its one-line form, texts never carry the tape."""
     extra_cache = {}
+    silent_type = False
+    if conv is None and tg_html is None:       # Nov 25: the family look (colour header, Telegram card, silent heads-ups)
+        try:
+            import alert_style
+            text, tg_html, tg_buttons, silent_type = alert_style.dress(alert_type, symbol, text)
+        except Exception as e:
+            log.warning("alert_style.dress failed for %s %s: %s", symbol, alert_type, e)
     for u in db.watchers(symbol):
         if not member_wants(u, alert_type, style):
             continue
@@ -90,7 +97,9 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
         if candle_start is not None and (u.get("closes") or "both") == "midday" and late_close(candle_start):
             continue                     # this member only trades the 1:30 PM close; the recap covers the 4:00 PM one
         quiet = quiet_now(u)
+        hush = quiet or silent_type              # heads-ups land silently on Telegram and push; texts/calls unchanged
         msg = text
+        pro_line = None
         if pro_extra and _pro(u):
             if "v" not in extra_cache:
                 try:
@@ -99,12 +108,15 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
                     extra_cache["v"] = None
             if extra_cache["v"]:
                 msg = f"{text}\n{extra_cache['v']}"
+                pro_line = extra_cache["v"]
         rich = msg                       # Patch 182: the tape line, for recipients the flow gate allows
+        flow_ok = False
         if flow_extra:
             try:
                 import swing_card
                 if swing_card.flow_allowed(u):
                     rich = f"{msg}\n{flow_extra}"
+                    flow_ok = True
             except Exception:
                 pass                     # never delays or blocks the alert
         if conv:                         # Patch 213: the record + the plan, exactly as composed
@@ -116,18 +128,23 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
                 except Exception:
                     tape_ok = False
             tg_txt = conv["tg_rich"] if tape_ok else conv["tg_plain"]
-            if u["telegram_chat"]:
+            card = (conv.get("tg_html_rich") if tape_ok else None) or conv.get("tg_html")   # Nov 25: the entry card
+            if u["telegram_chat"] and card:
+                telegram_bot.send(card, u["telegram_chat"], silent=quiet, html=True, buttons=conv.get("buttons"))
+            elif u["telegram_chat"]:
                 telegram_bot.send(tg_txt, u["telegram_chat"], silent=quiet)
             _push(u["id"], tg_txt, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet,
                   title=conv["title"], body=conv["push_rich"] if tape_ok else conv["push_plain"])
             if _pro(u) and u["phone"] and not quiet:
                 phone.safe_text(conv["tg_plain"], to=u["phone"])      # texts and calls never carry the tape line
         else:
-            if u["telegram_chat"] and tg_html:       # Nov 25: a designed Telegram card (cross entries); push/texts stay plain
-                telegram_bot.send(tg_html, u["telegram_chat"], silent=quiet, html=True, buttons=tg_buttons)
+            if u["telegram_chat"] and tg_html:       # Nov 25: a designed Telegram card; push/texts stay plain
+                import html as _hh
+                card = tg_html + (f"\n{_hh.escape(pro_line)}" if pro_line else "") + (f"\n{_hh.escape(flow_extra)}" if flow_ok else "")
+                telegram_bot.send(card, u["telegram_chat"], silent=hush, html=True, buttons=tg_buttons)
             elif u["telegram_chat"]:
-                telegram_bot.send(rich, u["telegram_chat"], silent=quiet)
-            _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
+                telegram_bot.send(rich, u["telegram_chat"], silent=hush)
+            _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", hush)
             if _pro(u) and u["phone"] and not quiet:
                 phone.safe_text(msg, to=u["phone"])     # texts and calls never carry the tape line
         if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
