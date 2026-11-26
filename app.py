@@ -1301,7 +1301,11 @@ async def admin_why(sym: str, u: dict = Admin):
                     target=st.get("target") or st.get("target_up"), last_close=st.get("last_close"),
                     hub=dict(low=h["low"], high=h["high"], active=h["active"], no_room=h.get("no_room")) if h else None,
                     vol_rule=f"breakout candle volume >= {s.vol_mult}x its same-slot average", min_room_pct=s.min_room_pct,
-                    last_candles=last, scanner_last_candle=row.get("last_candle"), scanner_checked=row.get("last_checked") or row.get("updated_at"))
+                    last_candles=last, scanner_last_candle=row.get("last_candle"), scanner_checked=row.get("last_checked") or row.get("updated_at"),
+                    watchers=len(db.watchers(sym)),
+                    recent_alerts=[dict(id=r["id"], type=r["type"], candle=r["candle_time"], at=r["created_at"],
+                                        first_line=(r["message"] or "").split("\n")[0][:140])
+                                   for r in db._run("SELECT * FROM alerts WHERE symbol=? ORDER BY created_at DESC LIMIT 15", (sym,)).fetchall()])
     try:
         return await run_in_threadpool(run)
     except Exception as e:

@@ -1511,6 +1511,17 @@ def trigger_all(now: pd.Timestamp | None = None) -> list[str]:
             sh = st.get("shelf_down")
             cands.append((sym, "hub_down", float(st["trigger_down"]), sh["level"] if sh else None,
                           round((st["hub"]["high"] + st["hub"]["low"]) / 2, 2) if st.get("hub") else None))
+        # Nov 25 (V): a hub that just ENDED is still live for 'horizon' closes ("watching"): a close past its edge with
+        # volume is the breakout. It had no live heads-up, so crossing the edge said nothing. Same alert as a forming hub.
+        hb = st.get("hub") or {}
+        if st.get("state") == "watching" and hb.get("high") is not None and hb.get("low") is not None:
+            mid = round((hb["high"] + hb["low"]) / 2, 2)
+            if not (lc is not None and lc > float(hb["high"])):
+                sh = st.get("shelf_up")
+                cands.append((sym, "hub", float(hb["high"]), sh["level"] if sh else st.get("target_up"), mid))
+            if not (lc is not None and lc < float(hb["low"])):
+                sh = st.get("shelf_down")
+                cands.append((sym, "hub_down", float(hb["low"]), sh["level"] if sh else None, mid))
         for x in st.get("setups") or []:
             if x.get("state") != "forming":
                 continue
