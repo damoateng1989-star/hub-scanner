@@ -104,7 +104,7 @@ def build(u: dict | None) -> dict:
     try:      # Patch 218 §7: the cross forward log, both scorings (shown once the first row has closed)
         import cross
         xs = cross.forward_summary() if (u or {}).get("is_admin") else dict(n=0)   # Nov 26: crosses are a heads-up; the log is the owner's
-        xs["rec_avg"] = cross.record()["avg"]
+        rec = cross.record(); xs.update(rec_avg=rec["avg"], rec_pf=rec.get("pf"), rec_n=rec.get("n"), rec_slice=rec.get("slice", ""))
     except Exception:
         xs = dict(n=0)
     return dict(cross=xs, next=next_session(today), swept_at=upd.strftime("%-I:%M %p").replace("AM", "AM").lstrip("0") if upd is not None else None,
@@ -163,7 +163,9 @@ def text(d: dict) -> str:
               f"• {_n(xs['n'], 'closed setup')} since {xs['since']}, {xs.get('live', 0)} live · "
               f"{xs['avg_trig']:+.2f}% per signal from the trigger · {xs['avg_touch']:+.2f}% from the first touch "
               f"(the gap is the fill cost: {xs['fill_cost']:+.2f}%)",
-              f"• The 2-year test: {xs.get('rec_avg', 0):+.2f}% per signal from the trigger."]
+              # Nov 26: name the slice so the benchmark can't be mistaken for another test's number
+              f"• The 2-year test{' (' + xs['rec_slice'] + ')' if xs.get('rec_slice') else ''}: {xs.get('rec_avg', 0):+.2f}% per signal "
+              f"from the trigger" + (f" · PF {xs['rec_pf']:.2f} · n {xs['rec_n']:,}" if xs.get('rec_pf') is not None and xs.get('rec_n') else "") + "."]
     # Patch 222 §5: never promise a close that won't happen (holidays skipped; an early close named with its real end)
     nxt_line = (f"Next session: {nx['long']}, an early close at 1:00 PM ET. Full 4H decision points resume "
                 f"{nx['full_long']} at 1:30 PM and 4:00 PM ET." if nx.get("early") else

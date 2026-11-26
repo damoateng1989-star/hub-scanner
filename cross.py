@@ -415,10 +415,10 @@ def record() -> dict:
         import lab_trigcross
         sp = ((lab_trigcross.status().get("result") or {}).get("split") or {}).get("just_ended") or {}
         if sp.get("n") and sp.get("avg") is not None and sp.get("pf") is not None:
-            return dict(avg=float(sp["avg"]), pf=float(sp["pf"]), n=int(sp["n"]))
+            return dict(avg=float(sp["avg"]), pf=float(sp["pf"]), n=int(sp["n"]), slice="just-ended hubs")
     except Exception:
         pass
-    return scanner.UNIVERSE_RECORD["hub"]["cross"]
+    return dict(scanner.UNIVERSE_RECORD["hub"]["cross"], slice="all crosses")
 
 
 def record_line() -> str:
