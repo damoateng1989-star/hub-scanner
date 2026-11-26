@@ -9088,7 +9088,12 @@ function tkFindKey(e, inp) {
   else if (e.key === "Escape") { inp.value = ""; tkFindClose(); inp.blur(); }
 }
 function tkFindClose() { document.querySelectorAll(".mp-tkres").forEach(b => { b.hidden = true; }); }
-function tkGo(sym) { tkFindClose(); sym = String(sym || "").toUpperCase().replace(/[^A-Z.\-]/g, ""); if (sym) openBrief(sym); }
+function tkGo(sym) {         // a search opens the stock's own view: the shelf card, not a heat map left open from before
+  tkFindClose(); sym = String(sym || "").toUpperCase().replace(/[^A-Z.\-]/g, ""); if (!sym) return;
+  if (typeof GH_FULL !== "undefined" && GH_FULL) ghFull(false);
+  if (heatWanted()) heatChoose(false);
+  openBrief(sym);
+}
 function ghMiniHTML(j) {
   // the little window: the 9 strikes nearest the price × the next 4 expiries, coloured on the FULL board's scale, with
   // the full board's rings and FLIP / wall lines where they fall inside the window. Tap anywhere → the full board.
