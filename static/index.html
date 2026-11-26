@@ -5895,7 +5895,7 @@ function xrPlanHTML(x, full) {
 }
 function xrRecordHTML(rec) {
   if (!rec) return "";
-  return `<p class="xr-rec"><b>Cross entries: ${rec.avg > 0 ? "+" : ""}${Number(rec.avg).toFixed(2)}% per signal · PF ${Number(rec.pf).toFixed(1)} · ${Number(rec.n).toLocaleString()} signals</b> (2-year test). Per signal, not per trade: a skipped opportunity scores 0, so it doesn't compare like-for-like with the retest lines.</p>`;
+  return `<p class="xr-rec"><b>Why only a heads-up: as an entry, these crosses made ${rec.avg > 0 ? "+" : ""}${Number(rec.avg).toFixed(2)}% per signal · PF ${Number(rec.pf).toFixed(1)} · ${Number(rec.n).toLocaleString()} signals</b> (2-year test) — no proven edge. Per signal, not per trade: a skipped opportunity scores 0, so it doesn't compare like-for-like with the retest lines.</p>`;
 }
 function renderCrossed() {
   const el = $("crossed"); if (!el) return;
@@ -5906,8 +5906,8 @@ function renderCrossed() {
       <span class="t"><span class="c1">${tkTile(x.symbol, 22)}<span class="tk">${esc(x.symbol)}</span>${x.watching ? '<b class="cmp-mine">ON YOUR LIST</b>' : ""}<b class="xr-tag${x.state === "live" ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b>${x.clear_path === 1 ? '<b class="xr-chk ok">CLEAR PATH</b>' : x.clear_path === 0 ? '<b class="xr-chk no">STACK IN WAY</b>' : ""}${x.tape === 1 ? '<b class="xr-chk ok">TAPE ✓</b>' : ""}${x.state === "live" ? `<b class="cmp-d">${x.closes_left} closes left</b>` : x.ret_trig != null ? `<b class="cmp-d ${x.ret_trig > 0 ? "u-up" : "u-down"}">${x.ret_trig > 0 ? "+" : ""}${Number(x.ret_trig).toFixed(2)}%</b>` : ""}</span>
       <span class="c2"><small>trigger ${money(x.trigger)} · target ${money(x.target)} · stop ${money(x.stop)} · dead on a 4H close under ${money(x.hub_high)}</small></span></span><span class="go">›</span></a>`;
   live.forEach(x => TODAY_HEAD.add(x.symbol));
-  el.innerHTML = `<div class="week-head"><div class="week-k">CROSSED TODAY · ${live.length}</div></div>
-    <p class="retest-rule" style="margin:2px 0 8px">The first cross of a hub's top, with the plan: a buy-stop at the trigger, the next shelf as the target, out on a 4H close back inside. The early entry, measured; the trade is yours.</p>
+  el.innerHTML = `<div class="week-head"><div class="week-k">CROSSED · HEADS-UP · ${live.length}</div></div>
+    <p class="retest-rule" style="margin:2px 0 8px">Price touched the top of a hub that just ended. A heads-up, not an entry: tested this way, these crosses showed no edge. It counts on a 4H close above with volume, then NextShelf waits for the retest.</p>
     ${capList(live.map(row), "xlive")}${done.length ? `<div class="retest-sub" style="margin-top:8px">Resolved · ${done.length}</div>${capList(done.map(row), "xdone")}` : ""}`;
   el.hidden = false;
 }
@@ -5919,8 +5919,8 @@ async function paintBriefCross(sym) {
   let el = $("bfCross"); if (!el) { el = document.createElement("div"); el.id = "bfCross"; }
   body.prepend(el);
   const live = x.state === "live";
-  el.innerHTML = `<div class="xr-card"><div class="xr-head"><b class="xr-tag${live ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b><span>Hub ${money(x.hub_low)}–${money(x.hub_high)} · cross entry</span></div>
-    ${xrPlanHTML(x, true)}${xrRecordHTML(x.record)}
+  el.innerHTML = `<div class="xr-card"><div class="xr-head"><b class="xr-tag${live ? "" : " done"}">${esc(XR_WORD[x.state] || x.state)}</b><span>Hub ${money(x.hub_low)}–${money(x.hub_high)} · cross · heads-up</span></div>
+    <p class="xr-meta">Price touched the top of the hub at ${money(x.trigger)}. Not an entry: it counts on a 4H close above with volume, then NextShelf waits for the retest.</p>${xrRecordHTML(x.record)}
     ${live ? `<button type="button" class="btnx sm xr-watch" onclick='lookoutWindow({ticker: ${JSON.stringify(sym)}, direction: 1, edge: ${x.trigger}, target: ${x.target}, kill: ${x.hub_high}, kind: "cross", placed: false})'>${lkEyes(18)} Watch this trade</button>` : ""}</div>`;
 }
 // ---------------------------------------------------------------- Patch 208: Lookout (watch, never trade)

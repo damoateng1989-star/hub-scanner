@@ -542,11 +542,18 @@ def _alert_new(r: dict) -> None:
     Everyone else sees it on the board. The forward-log row exists whatever this decides."""
     import earnings
     import notify
-    eline = earnings.alert_line(r["symbol"])
+    import html as _h
     _checks(r)
-    cl = check_lines(r)
-    msg = alert_text(r) + ("\n" + "\n".join(cl) if cl else "") + eline
-    card, btns = alert_html(r, "\n".join(cl) + eline), alert_buttons(r["symbol"])
+    # Nov 26 (owner): after the split Lab run (just-ended crosses +0.04%/signal, PF 1.06, fails its gate) a cross is a
+    # 🟡 HEADS-UP, not an entry: silent, short, no buy-stop plan, no record claim, no result follow-ups. The row is
+    # still logged and scored in the forward log (watch-only).
+    tag = (" · clear path" if r.get("clear_path") == 1 else " · stack in the way" if r.get("clear_path") == 0 else "") + \
+          (" · tape ✓" if r.get("tape") == 1 else "")
+    msg = (f"🟡 {r['symbol']} crossed the top of its hub {_money(r['trigger'])} {_when(r)}\n"
+           f"Heads-up, not an entry · it counts on a 4H close above with volume, then NextShelf waits for the retest{tag}")
+    card = (f"🟡 <b>{_h.escape(r['symbol'])} crossed the top of its hub {_money(r['trigger'])}</b> <i>{_h.escape(_when(r))}</i>\n"
+            f"Heads-up, not an entry · it counts on a 4H close above with volume, then NextShelf waits for the retest{_h.escape(tag)}")
+    btns = None
     if not db.add_alert(f"{r['ep_key']}", r["symbol"], "cross", r["cross_candle"], msg):
         return
     sent = set()
@@ -554,16 +561,15 @@ def _alert_new(r: dict) -> None:
         for u in db.watchers(r["symbol"]):
             sent.add(u["id"])
         notify.symbol_alert(r["symbol"], "cross", msg, style="hub", candle_start=pd.Timestamp(r["cross_candle"]),
-                            tg_html=card, tg_buttons=btns)
+                            tg_html=card, tg_buttons=btns, silent=True)
     except Exception as e:
         log.warning("cross alert (watchers) failed for %s: %s", r["symbol"], e)
-    tape = bool(r.get("tape")) if r.get("tape") is not None else _tape_confirmed(r["symbol"])
-    for u in db.all_users():
-        if u["id"] in sent or not (u["is_admin"] or tape):
+    for u in db.all_users():          # a heads-up: watchers (above) and admins only — no tape-based member broadcast
+        if u["id"] in sent or not u["is_admin"]:
             continue
         try:
             tc = ""          # the tape line is already in the card
-            notify.user_alert(u, msg + tc, f"/t/{r['symbol']}", f"{r['symbol']}-cross", tg_html=card + tc, tg_buttons=btns)
+            notify.user_alert(u, msg + tc, f"/t/{r['symbol']}", f"{r['symbol']}-cross", tg_html=card + tc, tg_buttons=btns, silent=True)
         except Exception as e:
             log.warning("cross alert failed for user %s: %s", u.get("id"), e)
 
@@ -571,9 +577,13 @@ def _alert_new(r: dict) -> None:
 def _follow(r: dict, kind: str, line: str, html: str | None = None) -> None:
     """Follow-ups go to whoever could have had the first alert: watchers, admins, members if it was tape-confirmed
     (approximated by today's tape: the follow-up is one line either way)."""
+    # Nov 26: heads-up only — the cross is no longer an entry, so its results aren't sent; they stay in the forward log
+    if kind in ("target", "stop", "dead", "expired", "touch"):
+        log.info("cross %s %s (forward log only): %s", r["symbol"], kind, line.split("\n")[0])
+        return
     import notify
     import alert_style
-    html = html or alert_style.generic_html(line)      # a follow-up wears its own colour, never the 🟣 entry header
+    html = html or alert_style.generic_html(line)
     btns = alert_style.buttons(r["symbol"], record=True)
     try:
         # Patch 222 §3 backstop: a verdict is keyed by the row id, so one row gives at most one line anywhere

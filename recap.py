@@ -103,7 +103,7 @@ def build(u: dict | None) -> dict:
     fresh = bool(upd is not None and upd.date() == today.date() and upd.hour * 60 + upd.minute >= 16 * 60)
     try:      # Patch 218 §7: the cross forward log, both scorings (shown once the first row has closed)
         import cross
-        xs = cross.forward_summary()
+        xs = cross.forward_summary() if (u or {}).get("is_admin") else dict(n=0)   # Nov 26: crosses are a heads-up; the log is the owner's
         xs["rec_avg"] = cross.record()["avg"]
     except Exception:
         xs = dict(n=0)
@@ -159,7 +159,7 @@ def text(d: dict) -> str:
                  "Your watchlist is empty. Add a few stocks and NextShelf will watch them while you work.")
     xs = d.get("cross") or {}
     if xs.get("n"):
-        L += ["", "📈 Cross entries (managed)",
+        L += ["", "📈 Cross heads-ups (forward log, owner only)",
               f"• {_n(xs['n'], 'closed setup')} since {xs['since']}, {xs.get('live', 0)} live · "
               f"{xs['avg_trig']:+.2f}% per signal from the trigger · {xs['avg_touch']:+.2f}% from the first touch "
               f"(the gap is the fill cost: {xs['fill_cost']:+.2f}%)",

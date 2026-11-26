@@ -72,13 +72,13 @@ def late_close(candle_start) -> bool:
 
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
                  pro_extra=None, candle_start=None, members: bool = True, flow_extra: str | None = None,
-                 conv: dict | None = None, tg_html: str | None = None, tg_buttons: list | None = None):
+                 conv: dict | None = None, tg_html: str | None = None, tg_buttons: list | None = None, silent: bool = False):
     """Telegram to every watcher (Pro-only types to Pro users); texts to Pro users with a number; phone calls to Pro users with a number (preclose + breakouts only).
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea.
     conv: Patch 213's conviction format (alert_format.compose) — when given, it replaces `text` exactly as composed:
     the tape segment only for recipients the flow gate allows, push gets its one-line form, texts never carry the tape."""
     extra_cache = {}
-    silent_type = False
+    silent_type = bool(silent)
     if conv is None and tg_html is None:       # Nov 25: the family look (colour header, Telegram card, silent heads-ups)
         try:
             import alert_style
@@ -295,9 +295,10 @@ def pd_date(iso: str) -> str:
     return _pd.Timestamp(iso).tz_convert("America/New_York").date().isoformat()
 
 
-def user_alert(u: dict, text: str, url: str, tag: str | None = None, tg_html: str | None = None, tg_buttons: list | None = None):
+def user_alert(u: dict, text: str, url: str, tag: str | None = None, tg_html: str | None = None, tg_buttons: list | None = None,
+               silent: bool = False):
     """One message to one member (their own price alerts): Telegram, push, and a text for Pro members with a number."""
-    quiet = quiet_now(u)
+    quiet = quiet_now(u) or silent
     if u.get("telegram_chat") and tg_html:
         telegram_bot.send(tg_html, u["telegram_chat"], silent=quiet, html=True, buttons=tg_buttons)
     elif u.get("telegram_chat"):
