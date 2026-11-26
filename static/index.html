@@ -108,13 +108,13 @@ html[data-theme="light"] .mp-more { background: #fff; border-color: #DCE1E8; } h
 /* Patch 216: compact waiting rows */
 .arow.cmp { grid-template-columns: 1fr auto; }
 .arow.cmp .t { display: grid; gap: 4px; min-width: 0; }
-.arow.cmp .c1 { display: flex; align-items: center; gap: 8px; min-width: 0; } .arow.cmp .c1 .cmp-d { margin-left: auto; font: 700 13px var(--mono); white-space: nowrap; }
+.arow.cmp .c1 { display: flex; align-items: center; gap: 6px 8px; min-width: 0; flex-wrap: wrap; } .arow.cmp .c1 .cmp-d { margin-left: auto; font: 700 13px var(--mono); white-space: nowrap; }
 .arow.cmp .c2 { display: flex; align-items: center; gap: 10px; } .arow.cmp .c2 small { font: 500 12px var(--mono); color: var(--muted); flex: 1; min-width: 0; }
 .cmp-bar { width: 68px; height: 4px; border-radius: 99px; background: rgba(154,160,172,.22); flex: none; overflow: hidden; } .arow.cmp .cmp-bar i { display: block; position: static; height: 100%; min-height: 0; margin: 0; background: #3CC488; border-radius: 99px; box-shadow: none; }
 .arow.cmp .c1 b { white-space: nowrap; } .arow.cmp .c1 .rt-watch { font-size: 12px; }
 .cmp-mine { font: 700 9.5px var(--mono); letter-spacing: .08em; color: #C9A548; background: rgba(201,165,72,.12); padding: 2px 6px; border-radius: 5px; }
 .cmp-tape { font: 600 10px var(--mono); color: #7C93FF; }
-.arow.cmp.mine { background: var(--surface, #15171C); border: 1px solid var(--line); border-radius: 12px; margin: 4px 8px; }
+.arow.cmp.mine { background: var(--surface, #15171C); border: 1px solid var(--line); border-radius: 12px; margin: 4px 0; box-sizing: border-box; max-width: 100%; }
 .retest-rule { display: block; font-weight: 400; font-size: 12px; color: var(--muted); text-transform: none; letter-spacing: 0; margin-top: 3px; }
 
 /* Patch 218: CROSSED */
@@ -4082,7 +4082,8 @@ function alertMini(x) {
   let first = String(x.message || "").split("\n")[0].replace(/^[^\p{L}\p{N}$]+/u, "");
   const sm = first.match(/^(LONG · CALLS|SHORT · PUTS)(?: \(watch only\))? — /), side = sm ? (sm[1][0] === "L" ? "Long" : "Short") : "";   // Nov 25: the side tag
   if (sm) first = first.slice(sm[0].length);
-  const sym = String(x.symbol || ""), what = (side ? side + " · " : "") + (ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40));
+  const xo = x.type === "cross" && /^(TARGET HIT|STOPPED|DEAD|EXPIRED|touched)/i.exec(first.replace(/^[^\p{L}]+/u, ""));
+  const sym = String(x.symbol || ""), what = xo ? `cross entry · ${xo[1].toLowerCase()}` : (side ? side + " · " : "") + (ALERT_WORD[x.type] || (first.startsWith(sym) ? first.slice(sym.length).replace(/^[:\s]+/, "") : first).slice(0, 40));
   let t = ""; try { const raw = String(x.created_at || ""), d = new Date(raw.replace(" ", "T") + (/Z$|[+-]\d\d:?\d\d$/.test(raw) ? "" : "Z"));
     if (!isNaN(d)) t = d.toLocaleString("en-US", {weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) {}
   const ac = alertColor(x);
@@ -5878,7 +5879,7 @@ async function renderCineStrip() {
 }
 
 // ---------------------------------------------------------------- Patch 218: CROSSED — a hub's first trigger cross, a measured setup
-const XR_WORD = {live: "CROSSED", target: "Reached the target", stop: "Stopped", dead: "Dead: closed back inside", expired: "Expired: 10 closes"};
+const XR_WORD = {live: "CROSSED", target: "TARGET HIT", stop: "STOPPED", dead: "DEAD", expired: "EXPIRED"};   // Nov 26: short, so the row never runs off a phone
 function xrTime(iso) { try { return new Date(iso).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}); } catch (e) { return ""; } }
 function xrPlanHTML(x, full) {
   const live = x.state === "live";

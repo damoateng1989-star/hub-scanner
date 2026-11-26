@@ -69,9 +69,23 @@ def _p222_dedupe() -> None:
     second episode §2 now prevents (a hub whose measured edges/start drifted got a new ep_key). It is deleted, not
     re-scored, and the closed summary restates itself from the table. The removed rows are kept in the setting
     cross_p222_removed (shown on /api/admin/cross-log) as the evidence."""
-    if db.get_setting("cross_p222_done"):
-        return
     rows = _rows("ORDER BY cross_at, id")
+    if db.get_setting("cross_p222_done"):
+        # second pass (Nov 26): the same symbol twice on the same candle is one episode; keep the first row
+        if db.get_setting("cross_p222b_done"):
+            return
+        seen, dup = set(), []
+        for r in rows:
+            k = (r["symbol"], r["cross_candle"])
+            (dup.append(r) if k in seen else seen.add(k))
+        for r in dup:
+            db._run("DELETE FROM cross_setups WHERE id=?", (r["id"],))
+        old = json.loads(db.get_setting("cross_p222_removed") or "[]")
+        db.set_setting("cross_p222_removed", json.dumps(old + dup, default=str))
+        db.set_setting("cross_p222b_done", _now())
+        if dup:
+            log.warning("cross: removed %d same-candle duplicates: %s", len(dup), ", ".join(f"{r['symbol']}#{r['id']}" for r in dup))
+        return
     removed = []
     for i, r in enumerate(rows):
         for o in rows[:i]:
@@ -164,6 +178,12 @@ def _exists(ep_key: str) -> bool:
 
 
 def _create(p: dict, first_px: float, candle_start: pd.Timestamp, at_close: bool, seen_at: str | None = None) -> dict | None:
+    # Nov 26 (UNH twice again): the 4H sweep and the scan both call on_close for the same close. The first created the
+    # row and killed it on that same close, so no row was 'live' when the second came in with a slightly different
+    # hub measure, and it opened a second episode. One episode per symbol per candle, whatever state the first is in.
+    cc = candle_start.tz_convert("UTC").isoformat()
+    if db._run("SELECT 1 FROM cross_setups WHERE symbol=? AND cross_candle=? LIMIT 1", (p["symbol"], cc)).fetchone():
+        return None
     try:
         cur = db._run("""INSERT OR IGNORE INTO cross_setups (symbol, ep_key, trigger, target, stop, hub_high, hub_low, atr,
             cross_at, cross_candle, first_px, at_close, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
