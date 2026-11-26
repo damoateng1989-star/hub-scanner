@@ -72,7 +72,7 @@ def late_close(candle_start) -> bool:
 
 def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = None, style: str = "hub",
                  pro_extra=None, candle_start=None, members: bool = True, flow_extra: str | None = None,
-                 conv: dict | None = None):
+                 conv: dict | None = None, tg_html: str | None = None, tg_buttons: list | None = None):
     """Telegram to every watcher (Pro-only types to Pro users); texts to Pro users with a number; phone calls to Pro users with a number (preclose + breakouts only).
     pro_extra: a line (or a function that makes one, called once) added for Pro members, e.g. the options swing idea.
     conv: Patch 213's conviction format (alert_format.compose) — when given, it replaces `text` exactly as composed:
@@ -123,7 +123,9 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
             if _pro(u) and u["phone"] and not quiet:
                 phone.safe_text(conv["tg_plain"], to=u["phone"])      # texts and calls never carry the tape line
         else:
-            if u["telegram_chat"]:
+            if u["telegram_chat"] and tg_html:       # Nov 25: a designed Telegram card (cross entries); push/texts stay plain
+                telegram_bot.send(tg_html, u["telegram_chat"], silent=quiet, html=True, buttons=tg_buttons)
+            elif u["telegram_chat"]:
                 telegram_bot.send(rich, u["telegram_chat"], silent=quiet)
             _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet)
             if _pro(u) and u["phone"] and not quiet:
@@ -276,10 +278,12 @@ def pd_date(iso: str) -> str:
     return _pd.Timestamp(iso).tz_convert("America/New_York").date().isoformat()
 
 
-def user_alert(u: dict, text: str, url: str, tag: str | None = None):
+def user_alert(u: dict, text: str, url: str, tag: str | None = None, tg_html: str | None = None, tg_buttons: list | None = None):
     """One message to one member (their own price alerts): Telegram, push, and a text for Pro members with a number."""
     quiet = quiet_now(u)
-    if u.get("telegram_chat"):
+    if u.get("telegram_chat") and tg_html:
+        telegram_bot.send(tg_html, u["telegram_chat"], silent=quiet, html=True, buttons=tg_buttons)
+    elif u.get("telegram_chat"):
         telegram_bot.send(text, u["telegram_chat"], silent=quiet)
     _push(u["id"], text, url, tag, quiet)
     if _pro(u) and u.get("phone") and not quiet:

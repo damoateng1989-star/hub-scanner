@@ -20,6 +20,7 @@ member's.
 from __future__ import annotations
 
 import json
+import os
 import logging
 
 import pandas as pd
@@ -306,6 +307,47 @@ def record_line() -> str:
     return f"Record: cross entries {r['avg']:+.2f}% per signal · PF {r['pf']:.1f} · {r['n']:,} signals (2-yr test)"
 
 
+def _plan_nums(r: dict) -> dict:
+    tg, tp, sp = float(r["trigger"]), float(r["target"]), float(r["stop"])
+    up, dn = (tp / tg - 1) * 100, (sp / tg - 1) * 100
+    rr = (tp - tg) / (tg - sp) if tg > sp else None
+    return dict(up=up, dn=dn, rr=rr)
+
+
+def _when(r: dict) -> str:
+    t = pd.Timestamp(r["cross_at"]).tz_convert(NY)
+    return (f"at the {engine.candle_end(pd.Timestamp(r['cross_candle']).tz_convert(NY)).strftime('%-I:%M %p')} close"
+            if r.get("at_close") else f"at {t.strftime('%-I:%M %p')} ET")
+
+
+def alert_html(r: dict, extra: str = "") -> str:
+    """Nov 25 (owner, design A 'the ticket'): the Telegram card for a cross entry. Same facts as alert_text."""
+    import html as _h
+    n, sym = _plan_nums(r), _h.escape(r["symbol"])
+    w = lambda s: s.ljust(9)
+    plan = (f"⚡ {w('TRIGGER')}{_money(r['trigger'])}\n"
+            f"🎯 {w('TARGET')}{_money(r['target'])}  {n['up']:+.1f}%\n"
+            f"🛑 {w('STOP')}{_money(r['stop'])}  {n['dn']:+.1f}%"
+            + (f"\n⚖️ {w('REWARD')}{n['rr']:.1f}× the risk" if n["rr"] else ""))
+    gap = ""
+    if r.get("first_px") and r["first_px"] > r["trigger"] * 1.002:
+        gap = f"\n<i>First seen at {_money(r['first_px'])}: a stop order fills above the trigger on a gap.</i>"
+    rec = record()
+    return (f"🟢 <b>CROSS ENTRY · {sym}</b>\n"
+            f"<i>LONG · CALLS · hub cross {_h.escape(_when(r))}</i>\n\n"
+            f"<b>{_money(r['trigger'])} → {_money(r['target'])}</b>\n"
+            f"{n['up']:+.1f}% to the next shelf\n"
+            f"<pre>{_h.escape(plan)}</pre>"
+            f"<blockquote>Dead on a 4H close back inside {_money(r['hub_low'])}–{_money(r['hub_high'])}</blockquote>"
+            f"Record: {rec['avg']:+.2f}% per signal · PF {rec['pf']:.1f} · {rec['n']:,} signals (2-yr test){gap}"
+            + (f"\n{_h.escape(extra.strip())}" if extra and extra.strip() else ""))
+
+
+def alert_buttons(sym: str) -> list:
+    base = os.getenv("APP_URL", "").strip().rstrip("/") or "https://nextshelfapp.com"
+    return [("📈 Open chart", f"{base}/t/{sym}"), ("📘 How cross entries work", f"{base}/learn/the-cross")]
+
+
 def alert_text(r: dict) -> str:
     t = pd.Timestamp(r["cross_at"]).tz_convert(NY)
     when = f"at the {engine.candle_end(pd.Timestamp(r['cross_candle']).tz_convert(NY)).strftime('%-I:%M %p')} close" if r.get("at_close") \
@@ -313,11 +355,13 @@ def alert_text(r: dict) -> str:
     gap = ""
     if r.get("first_px") and r["first_px"] > r["trigger"] * 1.002:
         gap = f"\nFirst seen at {_money(r['first_px'])}: a stop order fills above the trigger on a gap."
-    return (f"▲ LONG · CALLS — {r['symbol']} hub cross\n"
-            f"Hub {_money(r['hub_low'])}–{_money(r['hub_high'])} · crossed {_money(r['trigger'])} {when}\n"
-            f"{record_line()}\n"
-            f"TRIGGER {_money(r['trigger'])} · TARGET {_money(r['target'])} · STOP {_money(r['stop'])}\n"
-            f"Dead on a 4H close back inside the hub.{gap}")
+    n = _plan_nums(r)        # plain version (push, texts, the alert log): design A's facts, no markup
+    return (f"🟢 CROSS ENTRY · {r['symbol']} — LONG · CALLS\n"
+            f"Hub cross {when}: {_money(r['trigger'])} → {_money(r['target'])} ({n['up']:+.1f}% to the next shelf)\n"
+            f"⚡ Trigger {_money(r['trigger'])} · 🎯 Target {_money(r['target'])} · 🛑 Stop {_money(r['stop'])} ({n['dn']:+.1f}%)"
+            + (f" · ⚖️ {n['rr']:.1f}× the risk" if n["rr"] else "") + "\n"
+            f"Dead on a 4H close back inside {_money(r['hub_low'])}–{_money(r['hub_high'])}.\n"
+            f"{record_line()}{gap}")
 
 
 def _tape_confirmed(sym: str) -> bool:
@@ -335,14 +379,17 @@ def _alert_new(r: dict) -> None:
     Everyone else sees it on the board. The forward-log row exists whatever this decides."""
     import earnings
     import notify
-    msg = alert_text(r) + earnings.alert_line(r["symbol"])
+    eline = earnings.alert_line(r["symbol"])
+    msg = alert_text(r) + eline
+    card, btns = alert_html(r, eline), alert_buttons(r["symbol"])
     if not db.add_alert(f"{r['ep_key']}", r["symbol"], "cross", r["cross_candle"], msg):
         return
     sent = set()
     try:
         for u in db.watchers(r["symbol"]):
             sent.add(u["id"])
-        notify.symbol_alert(r["symbol"], "cross", msg, style="hub", candle_start=pd.Timestamp(r["cross_candle"]))
+        notify.symbol_alert(r["symbol"], "cross", msg, style="hub", candle_start=pd.Timestamp(r["cross_candle"]),
+                            tg_html=card, tg_buttons=btns)
     except Exception as e:
         log.warning("cross alert (watchers) failed for %s: %s", r["symbol"], e)
     tape = _tape_confirmed(r["symbol"])
@@ -350,7 +397,8 @@ def _alert_new(r: dict) -> None:
         if u["id"] in sent or not (u["is_admin"] or tape):
             continue
         try:
-            notify.user_alert(u, msg + ("\nTape confirmed." if tape and not u["is_admin"] else ""), f"/t/{r['symbol']}", f"{r['symbol']}-cross")
+            tc = "\nTape confirmed." if tape and not u["is_admin"] else ""
+            notify.user_alert(u, msg + tc, f"/t/{r['symbol']}", f"{r['symbol']}-cross", tg_html=card + tc, tg_buttons=btns)
         except Exception as e:
             log.warning("cross alert failed for user %s: %s", u.get("id"), e)
 
