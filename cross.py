@@ -86,6 +86,8 @@ def _p222_dedupe() -> None:
             (dup.append(r) if k in seen else seen.add(k))
         for r in dup:
             db._run("DELETE FROM cross_setups WHERE id=?", (r["id"],))
+            # and the alerts that phantom row sent (its entry + its verdict), so the feed shows the episode once
+            db._run("DELETE FROM alerts WHERE id=? OR id LIKE ?", (r["ep_key"], f"cross#{r['id']}|%"))
         old = json.loads(db.get_setting("cross_p222_removed") or "[]")
         db.set_setting("cross_p222_removed", json.dumps(old + dup, default=str))
         db.set_setting("cross_p222b_done", _now())
