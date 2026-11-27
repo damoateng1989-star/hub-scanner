@@ -738,7 +738,10 @@ def snapshot_watchlist(symbols: list[str], spots: dict[str, object]) -> dict:
         return {"saved": 0, "skipped": len(symbols)}
     try:
         for p in _GEX_DIR.glob("*.json"):
-            if p.name.rsplit("_", 2)[-2] != now.date().isoformat():
+            # Nov 27: prune snapshot files only (SYM_YYYY-MM-DD_HHMM.json). The old test also matched
+            # gex_log's wall_log.json in this folder ("wall" != today) and deleted Patch 149's log every 5 minutes.
+            m = re.fullmatch(r"[A-Z0-9.\-]+_(\d{4}-\d{2}-\d{2})_\d{4}\.json", p.name)
+            if m and m.group(1) != now.date().isoformat():
                 try:
                     p.unlink()
                 except OSError:
