@@ -2100,6 +2100,9 @@ html .bf-heat .bh-card.gh table td.gh-c.gh-rn.gh-pulse { background: #5B2FC9 !im
 .bf-heat .bh-card.gh .gh-spottag { background: #fff !important; color: #0B2723 !important; border-radius: 0 !important; }
 .bf-heat .bh-card.gh .gh-spottag::before { border-right-color: #fff !important; }
 .bf-heat .bh-card.gh .gh-tag, .bf-heat .bh-card.gh .gh-seg, .bf-heat .bh-card.gh .gh-seg button, .bf-heat .bh-card.gh .gh-exp, .bf-heat .bh-card.gh .bh-back, .bf-heat .bh-card.gh .gh-center { border-radius: 0 !important; }
+.bf-heat table.gh-t thead th.gh-lv { background: transparent !important; }      /* never hides the last date heading */
+.bf-heat .gh-wrap.gh-more .gh-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 46px), rgba(0,0,0,.25)); mask-image: linear-gradient(90deg, #000 calc(100% - 46px), rgba(0,0,0,.25)); }
+.bf-heat .gh-morehint { position: static; display: block; margin: 6px auto 0 0; z-index: 6; border: 0; border-radius: 0; padding: 4px 8px; background: #0d1117; color: #E9F7F3; font: 700 10.5px var(--mono); letter-spacing: .04em; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -9283,7 +9286,7 @@ function ghFull(on, keep) {             // Expand: the board full screen in its 
   const j = BRIEF_SYM && GAMMA_GRID[BRIEF_SYM], html = j ? bfHeatHTML(j, true) : null;
   if (!html) { host.remove(); GH_FULL = false; return; }
   const cc = candleColors(); if (cc[0]) host.style.setProperty("--bh-up", cc[0]); if (cc[1]) host.style.setProperty("--bh-down", cc[1]);
-  host.innerHTML = html; if (!keep) setTimeout(() => ghCenter(host.querySelector(".gh-center")), 30);
+  host.innerHTML = html; if (!keep) setTimeout(() => ghCenter(host.querySelector(".gh-center")), 30); setTimeout(ghEdgeAll, 60);
 }
 function ghModel(j) {     // Nov 25: shared by the board and the little window under the chart (same colours, rings, lines)
   const g = j && j.grid;
@@ -9402,7 +9405,7 @@ function bfHeatHTML(j, full) {
   const seg = `<span class="gh-seg"><button type="button" class="${mode === "gex" ? "on" : ""}" onclick="ghMode('gex')">GEX</button><button type="button" class="${mode === "vex" ? "on" : ""}" ${hasVex ? "" : "disabled title=\"Vanna needs implied volatility from the chain\""} onclick="ghMode('vex')">VEX</button></span>`;
   return `<div class="bh-card gh${full ? " gh-full" : ""}"><button type="button" class="bh-back" onclick="${full ? "ghFull(false)" : "heatChoose(false)"}">‹ ${full ? "Back" : "Back to movies"}</button>
     <div class="bh-head"><span class="t">${mode === "vex" ? "VEX" : "GEX"} HEAT MAP ${seg}</span><span class="s"><b class="gh-tk">${esc(j.symbol || "")}</b>${spot ? `<span class="gh-px"> · $${spot.toFixed(2)}</span>` : ""} <button type="button" class="gh-exp" onclick="ghFull(${!full})">${full ? "Close ✕" : "Expand ⤢"}</button></span></div>
-    <div class="gh-wrap"><div class="bh-scroll gh-scroll" ><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="gh-wrap"><div class="bh-scroll gh-scroll" onscroll="ghEdge(this)"><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter(this)">⌖</button></div>
     <div class="gh-legend">${fmt(Math.min(0, ...all))}<span class="gh-bar"></span>${fmt(Math.max(0, ...all))}</div>
     <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rp gh-pulse"></i>Largest · pulses</span><span title="${esc(magTip)}"><i class="gh-k gh-mag"></i>Magnet · nearest expiry</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
@@ -9422,6 +9425,21 @@ function ghSwap(root, html) {
   if (sc) { sc.scrollTop = top; sc.scrollLeft = left; }
   return true;
 }
+// Nov 27 (owner: "the expiration date on the right looks cut off"): when more expiries sit off to the right, the
+// board fades at its right edge and says how many more there are, so a half-shown column reads as "scroll", not a bug.
+function ghEdge(sc) {
+  if (!sc) return; const wrap = sc.closest(".gh-wrap"); if (!wrap) return;
+  const more = sc.scrollWidth - sc.clientWidth - sc.scrollLeft > 6;
+  wrap.classList.toggle("gh-more", more);
+  let h = wrap.querySelector(".gh-morehint");
+  if (more) {
+    const ths = [...sc.querySelectorAll("thead th")].slice(1, -1), right = sc.getBoundingClientRect().right;
+    const n = ths.filter(th => th.getBoundingClientRect().right > right - 2).length;
+    if (!h) { h = document.createElement("button"); h.type = "button"; h.className = "gh-morehint"; h.onclick = () => sc.scrollBy({left: sc.clientWidth * .7, behavior: "smooth"}); wrap.appendChild(h); }
+    h.textContent = n ? `+${n} expir${n === 1 ? "y" : "ies"} →` : "more →";
+  } else if (h) h.remove();
+}
+function ghEdgeAll() { document.querySelectorAll(".bf-heat .gh-scroll").forEach(ghEdge); }
 function ghCenter(btn) {        // scroll each board (side panel, full screen) so the price row sits mid-view
   const roots = btn ? [btn.closest(".gh")] : [...document.querySelectorAll(".bf-heat .gh")];
   roots.forEach(root => { const sc = root && root.querySelector(".gh-scroll"), r = sc && sc.querySelector("tr[data-spot]");
@@ -9446,7 +9464,7 @@ function paintHeat(sym) {
   if (!heatWanted()) { hideHeat(); return; }      // Nov 23 (owner): the movies keep this space; the heat map is one tap away
   const cc = candleColors();                       // the chart's candle colours, the member's own if they set them
   if (cc[0]) el.style.setProperty("--bh-up", cc[0]); if (cc[1]) el.style.setProperty("--bh-down", cc[1]);
-  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on"); briefSideRoom(); setTimeout(ghCenter, 30);
+  el.innerHTML = html; el.hidden = false; document.body.classList.add("heat-on"); briefSideRoom(); setTimeout(ghCenter, 30); setTimeout(ghEdgeAll, 60);
 }
 // computers: the Waiting Room plays in the space left of the shelf card (when it's wide enough and the GEX
 // heat map isn't using it); phones never see it here, the card fills the screen
