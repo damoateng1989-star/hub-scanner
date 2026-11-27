@@ -9166,14 +9166,26 @@ const GAMMA_NL = {};
 const GAMMA_GRID = {};   // Patch 166: the full /api/gamma payload per symbol, for the heat-map panel
 async function loadGamma(sym) {
   if (!ME || ME.guest) return;
-  if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 600000)) {   // re-read every 10 min: walls follow the price
+  if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 290000)) {   // Nov 27 (owner): re-read every 5 min
     if (!(sym in GAMMA)) { GAMMA[sym] = "loading"; paintGamma(sym); }
     try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); GAMMA[sym] = j.walls || null; GAMMA_NL[sym] = gexNextLine(j); GAMMA_GRID[sym] = j; }
     catch (e) { GAMMA[sym] = null; GAMMA_NL[sym] = null; GAMMA_GRID[sym] = null; }
     GAMMA_AT[sym] = Date.now();
   }
   paintGamma(sym); paintHeat(sym); if (BRIEF_SYM === sym) paintMap();
+  if (GH_FULL && BRIEF_SYM === sym) ghFull(true, true);         // the full-screen board repaints with the new read
 }
+// Nov 27 (owner): while a Shelf card is open, the heat map refreshes itself every 5 minutes (the server re-reads
+// watchlist chains every 5 minutes; other names re-compute at the current price).
+setInterval(() => {
+  if (document.hidden || !BRIEF_SYM || !ME || ME.guest) return;
+  const host = $("ghFullHost"), sc = host ? host.scrollTop : 0, inner = host && host.querySelector(".gh-scroll, .gh-wrap");
+  const isc = inner ? [inner.scrollTop, inner.scrollLeft] : null;
+  GAMMA_AT[BRIEF_SYM] = 1;                        // stale: force the re-read
+  loadGamma(BRIEF_SYM).then(() => {
+    const h = $("ghFullHost"); if (h) { h.scrollTop = sc; const i2 = h.querySelector(".gh-scroll, .gh-wrap"); if (i2 && isc) { i2.scrollTop = isc[0]; i2.scrollLeft = isc[1]; } }
+  });
+}, 300000);
 function paintGamma(sym) {
   const el = $("bfGamma"); if (!el || BRIEF_SYM !== sym) return;
   const row = $("bf-walls"), pv = $("vzWallPrev"), w = GAMMA[sym];
@@ -9213,7 +9225,7 @@ function paintGamma(sym) {
 let GH_MODE = (() => { try { return localStorage.getItem("ns-gh-mode") === "vex" ? "vex" : "gex"; } catch (e) { return "gex"; } })();
 let GH_FULL = false;
 function ghMode(m) { GH_MODE = m; try { localStorage.setItem("ns-gh-mode", m); } catch (e) {} if (BRIEF_SYM) paintHeat(BRIEF_SYM); }
-function ghFull(on) {             // Expand: the board full screen in its own layer on top of the page
+function ghFull(on, keep) {             // Expand: the board full screen in its own layer on top of the page
   GH_FULL = !!on;
   let host = $("ghFullHost");
   if (!GH_FULL) { if (host) host.remove(); return; }
@@ -9221,7 +9233,7 @@ function ghFull(on) {             // Expand: the board full screen in its own la
   const j = BRIEF_SYM && GAMMA_GRID[BRIEF_SYM], html = j ? bfHeatHTML(j, true) : null;
   if (!html) { host.remove(); GH_FULL = false; return; }
   const cc = candleColors(); if (cc[0]) host.style.setProperty("--bh-up", cc[0]); if (cc[1]) host.style.setProperty("--bh-down", cc[1]);
-  host.innerHTML = html; setTimeout(() => ghCenter(host.querySelector(".gh-center")), 30);
+  host.innerHTML = html; if (!keep) setTimeout(() => ghCenter(host.querySelector(".gh-center")), 30);
 }
 function ghModel(j) {     // Nov 25: shared by the board and the little window under the chart (same colours, rings, lines)
   const g = j && j.grid;
