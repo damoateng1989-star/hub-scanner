@@ -11,6 +11,17 @@ NY = "America/New_York"
 OPEN_MIN = 9 * 60 + 30     # 9:30
 MID_MIN = 13 * 60 + 30     # 13:30
 CLOSE_MIN = 16 * 60        # 16:00
+EARLY_MIN = 13 * 60        # 13:00, the close on an NYSE early-close day
+# Nov 27: NYSE early-close days (1:00 PM). The regular session ends at 1:00, so prints from 1:00 to 4:00 are
+# after-hours and must not build a 4H candle (they made a fake 1:30-4:00 candle on Nov 27). flow_signal reads this.
+EARLY_CLOSES = {"2024-11-29", "2024-12-24", "2025-07-03", "2025-11-28", "2025-12-24", "2026-11-27", "2026-12-24",
+                "2027-11-26", "2027-12-23"}
+
+
+def _close_mins(idx) -> np.ndarray:
+    """The regular-session close (minutes after midnight, New York) for each timestamp's date."""
+    days = np.asarray(idx.strftime("%Y-%m-%d"))
+    return np.where(np.isin(days, list(EARLY_CLOSES)), EARLY_MIN, CLOSE_MIN)
 
 
 @dataclass
@@ -54,14 +65,15 @@ def to_4h(bars: pd.DataFrame, now: pd.Timestamp | None = None) -> pd.DataFrame:
         return bars
     df = bars.tz_convert(NY)
     mins = df.index.hour * 60 + df.index.minute
-    df = df[(mins >= OPEN_MIN) & (mins < CLOSE_MIN)]
+    df = df[(mins >= OPEN_MIN) & (mins < _close_mins(df.index))]
     if df.empty:
         return df
     mins = df.index.hour * 60 + df.index.minute
+    cm = _close_mins(df.index)
     second = mins >= MID_MIN
     day = df.index.normalize()
     start = day + pd.to_timedelta(np.where(second, MID_MIN, OPEN_MIN), unit="m")
-    end = day + pd.to_timedelta(np.where(second, CLOSE_MIN, MID_MIN), unit="m")
+    end = day + pd.to_timedelta(np.minimum(np.where(second, CLOSE_MIN, MID_MIN), cm), unit="m")   # early close: 9:30-1:00
     df = df.assign(_start=start, _end=end)
     out = df.groupby("_start").agg(
         Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),
@@ -81,15 +93,16 @@ def to_hours(bars: pd.DataFrame, hours: float, now: pd.Timestamp | None = None) 
         return bars
     df = bars.tz_convert(NY)
     mins = df.index.hour * 60 + df.index.minute
-    df = df[(mins >= OPEN_MIN) & (mins < CLOSE_MIN)]
+    df = df[(mins >= OPEN_MIN) & (mins < _close_mins(df.index))]
     if df.empty:
         return df
     mins = df.index.hour * 60 + df.index.minute
+    cm = _close_mins(df.index)
     step = int(round(hours * 60))      # Nov 25: hours may be 0.5 (the 30-minute view)
     k = (mins - OPEN_MIN) // step
     day = df.index.normalize()
     start = day + pd.to_timedelta(OPEN_MIN + k * step, unit="m")
-    end = day + pd.to_timedelta(np.minimum(OPEN_MIN + (k + 1) * step, CLOSE_MIN), unit="m")
+    end = day + pd.to_timedelta(np.minimum(OPEN_MIN + (k + 1) * step, cm), unit="m")
     df = df.assign(_start=start, _end=end)
     out = df.groupby("_start").agg(
         Open=("Open", "first"), High=("High", "max"), Low=("Low", "min"),
@@ -118,9 +131,10 @@ def to_hours_ext(bars: pd.DataFrame, hours: float, now: pd.Timestamp | None = No
     if df.empty:
         return df.assign(session=pd.Series(dtype=str))
     mins = np.asarray(df.index.hour * 60 + df.index.minute)
-    sess = np.where(mins < OPEN_MIN, "pre", np.where(mins < CLOSE_MIN, "reg", "post"))
-    lo = np.where(sess == "pre", PRE_MIN, np.where(sess == "reg", OPEN_MIN, CLOSE_MIN))
-    hi = np.where(sess == "pre", OPEN_MIN, np.where(sess == "reg", CLOSE_MIN, POST_END))
+    cm = _close_mins(df.index)
+    sess = np.where(mins < OPEN_MIN, "pre", np.where(mins < cm, "reg", "post"))
+    lo = np.where(sess == "pre", PRE_MIN, np.where(sess == "reg", OPEN_MIN, cm))
+    hi = np.where(sess == "pre", OPEN_MIN, np.where(sess == "reg", cm, POST_END))
     step = int(round(hours * 60))
     k = (mins - lo) // step
     day = df.index.normalize()
@@ -154,7 +168,8 @@ def to_daily(c4: pd.DataFrame) -> pd.DataFrame:
 
 def candle_end(ts: pd.Timestamp) -> pd.Timestamp:
     """4H candles are labelled by their start time; this returns when they close."""
-    return ts + pd.Timedelta(hours=4) if ts.hour == 9 else ts.normalize() + pd.Timedelta(hours=16)
+    close = ts.normalize() + pd.Timedelta(minutes=int(_close_mins(pd.DatetimeIndex([ts]))[0]))
+    return min(ts + pd.Timedelta(hours=4), close) if ts.hour == 9 else close
 
 
 def find_shelf(hubs: list, cur: dict, d: int, edge: float, atr_v: float, s: Settings) -> dict | None:

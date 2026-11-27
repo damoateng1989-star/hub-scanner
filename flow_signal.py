@@ -69,7 +69,7 @@ NYSE_HOLIDAYS = {
 
 # Early closes (1:00 PM ET): the session still trades, so these stay trading days above; the app uses them
 # to name the right deadline (one 4-hour close that day, at 1:00 PM). Through Dec 2026, like the closures.
-NYSE_EARLY_CLOSES = {"2024-11-29", "2024-12-24", "2025-07-03", "2025-11-28", "2025-12-24", "2026-11-27", "2026-12-24"}
+from engine import EARLY_CLOSES as NYSE_EARLY_CLOSES      # Nov 27: one list, shared with the candle builder
 
 
 def is_trading_day(d: date) -> bool:
