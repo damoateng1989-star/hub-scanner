@@ -2073,6 +2073,33 @@ html[data-theme="light"] .vback button { background: radial-gradient(circle at 3
   box-shadow: 0 0 0 1px rgba(15,23,42,.12), 0 0 0 4px rgba(37,99,235,.08), 0 8px 18px rgba(15,23,42,.12); }
 .sopt-acct-sel { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 15px var(--sans); }
 .sopt-acct { display: grid; gap: 6px; margin: 4px 0 12px; } .sopt-acct span { font: 600 11px var(--mono); letter-spacing: .1em; color: var(--muted); }
+/* Nov 27 (owner): the heat map in the Skylight teal, sharp edges, white / purple concentrations that pulse */
+.bf-heat .bh-card.gh { background: #2E7268 !important; border: 1px solid rgba(255,255,255,.14) !important; border-radius: 0 !important; --bh-ink: #E9F7F3; }
+.bf-heat .bh-card.gh .bh-head .t { color: #fff; } .bf-heat .bh-card.gh .bh-head .s { color: #D6F1EA; }
+.bf-heat .bh-card.gh .gh-tk { font: 800 15px var(--sans) !important; color: #fff !important; letter-spacing: 0; }
+.bf-heat .bh-card.gh .gh-levels b.u-up { color: #C8FFEF !important; } .bf-heat .bh-card.gh .gh-levels b.u-down { color: #E2D6FF !important; } .bf-heat .bh-card.gh .gh-px { font-weight: 500; }
+.bf-heat .bh-card.gh .gh-scroll, .bf-heat .bh-card.gh .bh-scroll { border-radius: 0 !important; background: transparent; }
+.bf-heat .bh-card.gh table.gh-t, .bf-heat .bh-card.gh table.gh-minit { border-collapse: separate !important; border-spacing: 2px !important; background: transparent; }
+.bf-heat .bh-card.gh th { background: #2E7268 !important; color: #CFEDE6 !important; }
+html .bf-heat .bh-card.gh table td.gh-c { border-radius: 0 !important; border-bottom: 0 !important; color: #0B2723 !important; }
+html .bf-heat .bh-card.gh table td.gh-c:not(.dk) { color: #fff !important; }
+html .bf-heat .bh-card.gh table td.gh-c.gh-rp { background: #F4FFFC !important; color: #0B2723 !important; outline: 0; box-shadow: 0 0 0 1px rgba(255,255,255,.9); font-weight: 800; }
+html .bf-heat .bh-card.gh table td.gh-c.gh-rn { background: #6E4FD0 !important; color: #fff !important; outline: 0; font-weight: 800; }
+html .bf-heat .bh-card.gh table td.gh-c.gh-rp.gh-pulse { background: #fff !important; animation: ghPw 2.2s ease-in-out infinite; z-index: 2; }
+html .bf-heat .bh-card.gh table td.gh-c.gh-rn.gh-pulse { background: #5B2FC9 !important; animation: ghPn 2.2s ease-in-out infinite; z-index: 2; }
+@keyframes ghPw { 0%, 100% { box-shadow: 0 0 0 2px #fff, 0 0 8px 2px rgba(255,255,255,.5); } 50% { box-shadow: 0 0 0 2px #fff, 0 0 18px 6px rgba(255,255,255,.9); } }
+@keyframes ghPn { 0%, 100% { box-shadow: 0 0 0 2px #C9B5FF, 0 0 8px 2px rgba(150,110,255,.5); } 50% { box-shadow: 0 0 0 2px #C9B5FF, 0 0 18px 6px rgba(150,110,255,.9); } }
+@media (prefers-reduced-motion: reduce) { html .bf-heat .bh-card.gh table td.gh-c.gh-pulse { animation: none; } }
+.bf-heat .bh-card.gh i.gh-k { border-radius: 0 !important; outline: 0 !important; box-shadow: none !important; }
+.bf-heat .bh-card.gh i.gh-k.gh-rp { background: #fff !important; } .bf-heat .bh-card.gh i.gh-k.gh-rn { background: #5B2FC9 !important; }
+.bf-heat .bh-card.gh i.gh-k.gh-mag { background: #0d1117 !important; box-shadow: 0 0 0 1.5px #F4E85A !important; border-radius: 50% !important; }
+.bf-heat .bh-card.gh i.gh-k.gh-rp.gh-pulse { box-shadow: 0 0 6px 2px rgba(255,255,255,.8) !important; }
+.bf-heat .bh-card.gh .gh-bar { border-radius: 0 !important; background: linear-gradient(90deg, #5B3FA8, #3F8F84, #9FE3D3) !important; }
+.bf-heat .bh-card.gh .gh-legend, .bf-heat .bh-card.gh .gh-levels, .bf-heat .bh-card.gh .gh-foot { color: #E3F6F1 !important; }
+.bf-heat .bh-card.gh .gh-levels { background: rgba(0,0,0,.14) !important; border-radius: 0 !important; border-color: rgba(255,255,255,.12) !important; }
+.bf-heat .bh-card.gh .gh-spottag { background: #fff !important; color: #0B2723 !important; border-radius: 0 !important; }
+.bf-heat .bh-card.gh .gh-spottag::before { border-right-color: #fff !important; }
+.bf-heat .bh-card.gh .gh-tag, .bf-heat .bh-card.gh .gh-seg, .bf-heat .bh-card.gh .gh-seg button, .bf-heat .bh-card.gh .gh-exp, .bf-heat .bh-card.gh .bh-back, .bf-heat .bh-card.gh .gh-center { border-radius: 0 !important; }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -9268,16 +9295,18 @@ function ghModel(j) {     // Nov 25: shared by the board and the little window u
   const fmt = (v) => { const a = Math.abs(v), s = v < 0 ? "-" : "", t = (x) => String(+x.toFixed(2));
     return a >= 1e9 ? s + t(a / 1e9) + "B" : a >= 1e6 ? s + t(a / 1e6) + "M" : a >= 1e3 ? s + t(a / 1e3) + "K" : a >= 1 ? s + t(a) : "0"; };
   const mix = (A, B, t) => { const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)), x = p(A), y = p(B); return "#" + x.map((c, i) => Math.round(c + (y[i] - c) * Math.max(0, Math.min(1, t))).toString(16).padStart(2, "0")).join(""); };
-  const BASE = "#4E9A84";
-  const col = (v) => { const t = Math.pow(Math.abs(v) / mx, 0.75);      // most cells stay near the teal base; only real concentrations light up
-    return v >= 0 ? (t < .55 ? mix(BASE, "#8FD07A", t / .55) : mix("#8FD07A", "#F4E85A", (t - .55) / .45))
-                  : (t < .55 ? mix(BASE, "#3F5DA6", t / .55) : mix("#3F5DA6", "#2A0B4E", (t - .55) / .45)); };
+  // Nov 27 (owner, the Skylight teal): cells sit on teal, lighter toward mint as positive exposure grows, toward
+  // purple as it turns negative. The 3 largest positives are white, the 3 largest negatives purple; the biggest pulse.
+  const BASE = "#3F8F84";
+  const col = (v) => { const t = Math.pow(Math.abs(v) / mx, 0.7);
+    return v >= 0 ? mix(BASE, "#9FE3D3", t) : mix(BASE, "#5B3FA8", t); };
   // the biggest concentrations: top 3 each side get a coloured ring, the largest of all a white ring and a star
   const cells = []; g.rows.forEach((r, ri) => vals(r).forEach((v, ci) => cells.push({ri, ci, v})));
   const pos = cells.filter(c => c.v > 0).sort((a, b) => b.v - a.v).slice(0, 3), neg = cells.filter(c => c.v < 0).sort((a, b) => a.v - b.v).slice(0, 3);
   const top = cells.reduce((m, c) => Math.abs(c.v) > Math.abs(m.v) ? c : m, {v: 0});
   const ring = {}; pos.forEach(c => ring[c.ri + ":" + c.ci] = "gh-rp"); neg.forEach(c => ring[c.ri + ":" + c.ci] = "gh-rn");
-  if (top.ri != null) ring[top.ri + ":" + top.ci] = "gh-rmax";
+  if (pos[0]) ring[pos[0].ri + ":" + pos[0].ci] = "gh-rp gh-pulse";
+  if (neg[0]) ring[neg[0].ri + ":" + neg[0].ci] = "gh-rn gh-pulse";
   // Nov 26 (owner, option B): the magnet — the biggest positive cell in the nearest expiry, where price tends to drift
   // into that expiry. A white border, a ★ badge and a slow gold glow. Context only, never a grade or alert input.
   const mag = cells.filter(c => c.ci === 0 && c.v > 0).reduce((m, c) => c.v > (m.v || 0) ? c : m, {v: 0});
@@ -9336,9 +9365,9 @@ function ghMiniHTML(j) {
   const idx = g.rows.slice(r0, r0 + 9).map((_, i) => r0 + i), nE = Math.min(4, g.expiries.length);
   const md = (e) => { const d = new Date(e + "T12:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
   const rows = idx.map(ri => { const r = g.rows[ri], ln = lines[ri] || [];
-    const tds = vals(r).slice(0, nE).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", light = v > 0 && Math.pow(Math.abs(v) / mx, .75) > .6;
+    const tds = vals(r).slice(0, nE).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", light = !(v < 0 && Math.pow(Math.abs(v) / mx, .7) > .5);
       const mg = magK === ri + ":" + ci;
-      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}${mg ? " gh-mag" : ""}" style="--c:${col(v)};background:${col(v)}"${mg ? ` title="${esc(magTip)}"` : ""}>${mg ? '<span class="gh-star">★</span>' : ""}${fmt(v)}${rc === "gh-rmax" && !mg ? "★" : ""}</td>`; }).join("");
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}${mg ? " gh-mag" : ""}" style="--c:${col(v)};background:${col(v)}"${mg ? ` title="${esc(magTip)}"` : ""}>${mg ? '<span class="gh-star">★</span>' : ""}${fmt(v)}</td>`; }).join("");
     const st = Number(r.strike).toFixed(1);
     return `<tr class="${ln.map(l => "gh-l-" + l.cls).join(" ")}"><th>${ri === spotI ? `<span class="gh-spottag">${st}</span>` : st}</th>${tds}<td class="gh-lv">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.cls === "flip" ? "FLIP" : l.cls === "call" ? "CALL" : "PUT")}</b>`).join("")}</td></tr>`; }).join("");
   const tot = mode === "vex" ? g.vex_total : g.net_total, w = M.w || {};
@@ -9362,9 +9391,9 @@ function bfHeatHTML(j, full) {
   const rows = g.rows.map((r, ri) => {
     const ln = lines[ri] || [], lcls = ln.map(l => " gh-l-" + l.cls).join("");
     const tags = ln.length ? `<span class="gh-tags">${ln.map(l => `<b class="gh-tag gh-tag-${l.cls}">${esc(l.label)}</b>`).join("")}</span>` : "";
-    const tds = vals(r).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", t = Math.abs(v) / mx, light = v > 0 && Math.pow(t, .75) > .6;
+    const tds = vals(r).map((v, ci) => { const rc = ring[ri + ":" + ci] || "", t = Math.abs(v) / mx, light = !(v < 0 && Math.pow(t, .7) > .5);
       const mg = magK === ri + ":" + ci;
-      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}${mg ? " gh-mag" : ""}" style="--c:${col(v)};background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v) + (mg ? " · " + magTip : ""))}">${mg ? '<span class="gh-star">★</span>' : ""}${fmt(v)}${rc === "gh-rmax" && !mg ? "★" : ""}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
+      return `<td class="gh-c${light ? " dk" : ""}${rc ? " " + rc : ""}${mg ? " gh-mag" : ""}" style="--c:${col(v)};background:${col(v)}" title="${esc(md(g.expiries[ci]) + " · $" + r.strike + " · " + (mode === "vex" ? "VEX " : "GEX ") + fmt(v) + (mg ? " · " + magTip : ""))}">${mg ? '<span class="gh-star">★</span>' : ""}${fmt(v)}</td>`; }).join("") + `<td class="gh-lv">${tags}</td>`;
     const st = Number(r.strike).toFixed(1);
     return `<tr class="${lcls.trim()}"${ri === spotI ? ' data-spot="1"' : ""}><th>${ri === spotI ? `<span class="gh-spottag" title="Price ${spot.toFixed(2)}">${st}</span>` : st}</th>${tds}</tr>`;
   }).join("");
@@ -9372,11 +9401,11 @@ function bfHeatHTML(j, full) {
   const asOf = j.chain_as_of ? new Date(j.chain_as_of).toLocaleString("en-US", {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}) : null;
   const seg = `<span class="gh-seg"><button type="button" class="${mode === "gex" ? "on" : ""}" onclick="ghMode('gex')">GEX</button><button type="button" class="${mode === "vex" ? "on" : ""}" ${hasVex ? "" : "disabled title=\"Vanna needs implied volatility from the chain\""} onclick="ghMode('vex')">VEX</button></span>`;
   return `<div class="bh-card gh${full ? " gh-full" : ""}"><button type="button" class="bh-back" onclick="${full ? "ghFull(false)" : "heatChoose(false)"}">‹ ${full ? "Back" : "Back to movies"}</button>
-    <div class="bh-head"><span class="t">${mode === "vex" ? "VEX" : "GEX"} HEAT MAP ${seg}</span><span class="s">${esc(j.symbol || "")}${spot ? " · $" + spot.toFixed(2) : ""} <button type="button" class="gh-exp" onclick="ghFull(${!full})">${full ? "Close ✕" : "Expand ⤢"}</button></span></div>
+    <div class="bh-head"><span class="t">${mode === "vex" ? "VEX" : "GEX"} HEAT MAP ${seg}</span><span class="s"><b class="gh-tk">${esc(j.symbol || "")}</b>${spot ? `<span class="gh-px"> · $${spot.toFixed(2)}</span>` : ""} <button type="button" class="gh-exp" onclick="ghFull(${!full})">${full ? "Close ✕" : "Expand ⤢"}</button></span></div>
     <div class="gh-wrap"><div class="bh-scroll gh-scroll" ><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter(this)">⌖</button></div>
     <div class="gh-legend">${fmt(Math.min(0, ...all))}<span class="gh-bar"></span>${fmt(Math.max(0, ...all))}</div>
-    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span><span title="${esc(magTip)}"><i class="gh-k gh-mag"></i>Magnet · nearest expiry</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
+    <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rp gh-pulse"></i>Largest · pulses</span><span title="${esc(magTip)}"><i class="gh-k gh-mag"></i>Magnet · nearest expiry</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
     <p class="gh-foot">${mode === "vex" ? "Each cell: net dealer vanna at that strike for that expiry, in dollars per 1 point of implied volatility (how much dealer hedging shifts when IV moves). Positive (green to yellow): a drop in IV tends to support price; negative (blue to indigo): falling IV adds selling." : "Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to indigo is negative (moves can speed up)."} The ringed cells are the biggest concentrations. Context only: never part of a grade or an alert.</p></div>`;
 }
 // Nov 27 (owner: "it refreshes but it shakes the whole panel"): a background refresh swaps only the table, the
