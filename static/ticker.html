@@ -937,7 +937,7 @@ async function loadSwingCard() {
     host.innerHTML = heading + '<p class="ox-note">Sika couldn\'t read the swing play right now.</p>';
     return;
   }
-  host.innerHTML = heading + renderSwingCard(c);
+  host.innerHTML = renderSwingCard(c);      // Nov 27: the card carries its own "Swing play · Educational" header (it showed twice)
 }
 
 // Patch 208: the second door — "I'm in — watch this" for a trade placed in the member's own broker app
