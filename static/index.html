@@ -2046,8 +2046,19 @@ html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
 .uni-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .uni-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 11px; border: 1px solid var(--line); border-radius: 999px; font: 600 13px var(--mono); }
 .uni-chip small { color: var(--muted); font-weight: 500; } .uni-chip button { border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0 4px; }
-.vback { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 10px -4px; padding: 7px 14px 7px 8px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: 600 14px var(--sans); cursor: pointer; }
-.vback:hover { background: var(--line); }
+/* Nov 27 (owner, option C): the back orb + breadcrumb */
+.vback { display: flex; align-items: center; gap: 12px; margin: 2px 0 16px; }
+.vback button { position: relative; flex: none; display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; border: 0; cursor: pointer;
+  background: radial-gradient(circle at 30% 25%, #2a2f3a, #12151b); color: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 0 0 4px rgba(124,147,255,.10), 0 8px 22px rgba(0,0,0,.45); transition: transform .15s; }
+.vback button::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid transparent; pointer-events: none;
+  background: conic-gradient(from 200deg, #7C93FF, #3DD68C, transparent 55%) border-box;
+  -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+.vback button:active { transform: scale(.94); }
+.vback nav { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--muted); background: none !important; border: 0 !important; padding: 0 !important; position: static !important; box-shadow: none !important; backdrop-filter: none !important; height: auto !important; }
+.vback nav span { margin: 0 8px; opacity: .6; } .vback nav b { color: var(--ink); }
+html[data-theme="light"] .vback button { background: radial-gradient(circle at 30% 25%, #ffffff, #EEF0F4); color: #141412;
+  box-shadow: 0 0 0 1px rgba(15,23,42,.12), 0 0 0 4px rgba(37,99,235,.08), 0 8px 18px rgba(15,23,42,.12); }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -5125,21 +5136,35 @@ function showTab() {
 }
 window.addEventListener("hashchange", showTab);
 // Nov 27 (owner): pages you reach from another page (Account's Dashboard, Positions, Paper, Lab, Futures, and the
-// Alerts / Diary / Guide / Chat pages) get a back button. It goes back within the app when there's somewhere to go
-// back to, else to the page they're usually opened from.
-let NAV_DEPTH = 0;
-window.addEventListener("hashchange", () => { NAV_DEPTH++; });
+// Alerts / Diary / Guide / Chat pages) get a back control: the orb + breadcrumb (owner's option C). It goes back
+// within the app when there's somewhere to go back to, else to the page they're usually opened from.
+let NAV_DEPTH = 0, PREV_VIEW = null, CUR_VIEW = (location.hash || "#today").slice(1).split(/[/?]/)[0];
 const BACK_HOME = {admin: "account", positions: "account", paper: "account", lab: "account", futures: "account",
                    alerts: "today", diary: "today", guide: "today", chat: "today"};
-function goBack() {
+const VIEW_NAME = {today: "Today", discover: "Browse", list: "Watchlist", cinema: "Cinema", results: "Track record", account: "Account",
+                   admin: "Dashboard", positions: "Positions", paper: "Paper trades", lab: "Lab", futures: "Futures",
+                   alerts: "Alerts", diary: "Diary", guide: "Guide", chat: "Chat"};
+function backTarget(v) { return NAV_DEPTH > 0 && PREV_VIEW && PREV_VIEW !== v ? PREV_VIEW : (BACK_HOME[v] || "today"); }
+function paintBack() {
+  const v = CUR_VIEW, sec = document.querySelector(`section[data-view="${v}"] > .vback nav`);
+  if (sec) sec.innerHTML = `${esc((VIEW_NAME[backTarget(v)] || "Back").toUpperCase())}<span>/</span><b>${esc((VIEW_NAME[v] || v).toUpperCase())}</b>`;
+}
+window.addEventListener("hashchange", () => {
+  NAV_DEPTH++;
   const v = (location.hash || "#today").slice(1).split(/[/?]/)[0];
-  if (NAV_DEPTH > 0) { NAV_DEPTH -= 2; history.back(); return; }
+  if (v !== CUR_VIEW) { PREV_VIEW = CUR_VIEW; CUR_VIEW = v; }
+  paintBack();
+});
+function goBack() {
+  const v = CUR_VIEW;
+  if (NAV_DEPTH > 0 && PREV_VIEW && PREV_VIEW !== v) { NAV_DEPTH -= 2; history.back(); return; }
   location.hash = "#" + (BACK_HOME[v] || "today");
 }
 document.querySelectorAll("section[data-view]").forEach(sec => {
   if (!(sec.dataset.view in BACK_HOME) || sec.querySelector(":scope > .vback")) return;
-  sec.insertAdjacentHTML("afterbegin", '<button type="button" class="vback" onclick="goBack()" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>');
+  sec.insertAdjacentHTML("afterbegin", '<div class="vback"><button type="button" onclick="goBack()" aria-label="Back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><nav aria-label="Breadcrumb"></nav></div>');
 });
+paintBack();
 
 // ---------------------------------------------------------------- help: glossary, "?" tips, sheet
 const GLOSS = {
