@@ -1346,8 +1346,13 @@ async def admin_gex_check(u: dict = Admin):
             chains[sym] = dict(chain_as_of=gamma.chain_as_of(sym), snapshots_today=len(times),
                                first_snapshot=times[0] if times else None, last_snapshot=times[-1] if times else None,
                                walls_first=(first or {}).get("walls"), walls_last=(last or {}).get("walls"))
+        try:
+            import gex_shadow
+            shadow = gex_shadow.stats()
+        except Exception as e:
+            shadow = {"error": str(e)[:200]}
         return dict(now_et=_dt.now(_Z("America/New_York")).isoformat(timespec="seconds"),
-                    patch149_log=log_info, patch149_stats=st,
+                    patch149_log=log_info, patch149_stats=st, patch227_shadow=shadow,
                     snapshot_cadence="every 5 min, 09:35-16:00 ET, Mon-Fri, shared watchlist; only today's files kept",
                     watchlist=chains)
     return await run_in_threadpool(run)

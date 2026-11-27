@@ -725,6 +725,11 @@ def snapshot_symbol(symbol: str, spot: float | None) -> bool:
         tmp.write_text(json.dumps(payload, separators=(",", ":"), allow_nan=False), encoding="utf-8")
         os.replace(tmp, path)
         summed(sym, float(spot), fetch=False)      # also records today's summed gamma for the day-over-day change
+        try:      # Patch 227: the shadow log's one writer hook. Cache-only, first snapshot of the day wins, never raises.
+            import gex_shadow
+            gex_shadow.record(sym, float(spot))
+        except Exception as exc:
+            log.warning("gex_shadow hook skipped for %s: %s", sym, exc)
         return True
     except Exception as exc:
         log.warning("GEX snapshot skipped for %s: %s", sym, exc)
@@ -897,3 +902,171 @@ def line(c: dict) -> str:
         return f"🧱 Open gamma to ${target:.2f} · {name.lower()} ${wall:.2f}{other_s}{flip_s}{sp_s}{exp_s}"
     except Exception:
         return ""
+
+
+# ---------------------------------------------------------------- Patch 227: precise GEX, SHADOW MODE
+# A second computation beside _compute/grid, for gex_shadow's log only. Nothing displayed reads it, it never
+# fetches (cache-only), and it never raises. Same expiry selection, strikes, OI and sign convention (calls +,
+# puts -) as the current one: only gamma's sigma source (a per-expiry IV smile) and the flip method change.
+_SURF_CACHE: dict[tuple[str, str, str], object] = {}    # (symbol, day, expiry) -> fitted smile or None; dies with the day
+_SURF_R = 0.04                                          # matches _vanna
+
+
+def _smile_fit(points: list, spot: float):
+    """points: [(strike, iv)]. Fits sigma(m) = a + b*m + c*m^2, m = ln(K/S), by least squares (3x3 normal
+    equations, pure Python). Returns a callable sigma(K, S) with the spec's clamps, or None if under-determined."""
+    import math
+    if len(points) < 6 or len({k for k, _ in points}) < 4:
+        return None
+    xs = [(math.log(k / spot), iv) for k, iv in points if k > 0 and iv > 0]
+    if len(xs) < 6:
+        return None
+    s = [sum(m ** p for m, _ in xs) for p in range(5)]                 # sums of m^0..m^4
+    t = [sum(iv * m ** p for m, iv in xs) for p in range(3)]           # sums of iv*m^0..m^2
+    A = [[s[0], s[1], s[2]], [s[1], s[2], s[3]], [s[2], s[3], s[4]]]
+    det = lambda M: (M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0])
+                     + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]))
+    D = det(A)
+    if not D or abs(D) < 1e-18:
+        return None
+    coef = []
+    for i in range(3):
+        M = [row[:] for row in A]
+        for r in range(3):
+            M[r][i] = t[r]
+        coef.append(det(M) / D)
+    a, b, c = coef
+    ks = sorted(points)
+    k_lo, k_hi = ks[0][0], ks[-1][0]
+    iv_lo = sum(iv for k, iv in points if k == k_lo) / sum(1 for k, _ in points if k == k_lo)
+    iv_hi = sum(iv for k, iv in points if k == k_hi) / sum(1 for k, _ in points if k == k_hi)
+
+    def sigma(k: float, s_ref: float) -> float:
+        m = math.log(k / s_ref)
+        v = a + b * m + c * m * m
+        if k < k_lo:
+            v = min(max(v, 0.5 * iv_lo), 2 * iv_lo)
+        elif k > k_hi:
+            v = min(max(v, 0.5 * iv_hi), 2 * iv_hi)
+        return min(max(v, 0.05), 2.50)
+    sigma.n = len(points)
+    return sigma
+
+
+def _surface(sym: str, day: str, exp: date, spot: float, contracts_exp: list, ivs: dict):
+    """The smile for one expiry, cached per (symbol, day, expiry). contracts_exp: [(call, k, g, oi, v)]."""
+    key = (sym, day, exp.isoformat())
+    with _LOCK:
+        if key in _SURF_CACHE:
+            return _SURF_CACHE[key]
+    pts = [(k, ivs[(exp, call, k)]) for call, k, g, oi, v in contracts_exp
+           if oi > 0 and abs(k - spot) / spot <= _BAND and ivs.get((exp, call, k))]
+    fit = _smile_fit(pts, spot)
+    with _LOCK:
+        for k in [k for k in _SURF_CACHE if k[1] != day]:
+            del _SURF_CACHE[k]
+        _SURF_CACHE[key] = fit
+    return fit
+
+
+def _bs_gamma(s: float, k: float, t: float, iv: float, r: float = _SURF_R) -> float:
+    import math
+    try:
+        if s <= 0 or k <= 0 or t <= 0 or iv <= 0:
+            return 0.0
+        sq = iv * math.sqrt(t)
+        d1 = (math.log(s / k) + (r + iv * iv / 2) * t) / sq
+        return math.exp(-d1 * d1 / 2) / math.sqrt(2 * math.pi) / (s * sq)
+    except (ValueError, ZeroDivisionError, OverflowError):
+        return 0.0
+
+
+def precise_shadow(symbol: str, spot: float | None) -> dict | None:
+    """Patch 227 shadow numbers from the CACHED chain only: {'cur': current walls, 'new': precise walls or None,
+    'reason', 'expiry', 'surface_points', 'vex_cur', 'vex_new'}. None when no chain is cached. Never fetches, never raises."""
+    import math
+    try:
+        sym = (symbol or "").upper()
+        if not spot or float(spot) <= 0:
+            return None
+        spot = float(spot)
+        day = date.today().isoformat()
+        with _LOCK:
+            contracts = list(_CHAIN_CACHE.get((sym, day), []))
+            ivs = dict(_IV_CACHE.get((sym, day), {}))
+        if not contracts:
+            return None
+        today = date.today()
+        cur = _compute(contracts, spot, today)
+        out = {"cur": {k: (cur or {}).get(k) for k in ("call_wall", "put_wall", "flip")} if cur else None,
+               "expiry": (cur or {}).get("expiry"), "new": None, "reason": None, "surface_points": 0,
+               "vex_cur": None, "vex_new": None}
+        slim = _slim(contracts)
+        # ---- walls + solved flip, on _compute's expiry
+        by_exp: dict[date, list] = {}
+        for exp, call, k, g, oi, v in slim:
+            if abs(k - spot) / spot <= _BAND:
+                by_exp.setdefault(exp, []).append((call, k, g, oi, v))
+        if not cur:
+            out["reason"] = "no_walls"
+        elif not ivs:
+            out["reason"] = "no_iv"
+        else:
+            exp = date.fromisoformat(cur["expiry"])
+            rows = by_exp.get(exp, [])
+            fit = _surface(sym, day, exp, spot, rows, ivs)
+            if not fit:
+                out["reason"] = "fit_failed"
+            else:
+                out["surface_points"] = getattr(fit, "n", 0)
+                t = max((exp - today).days, 1) / 365
+                cg: dict[float, float] = {}
+                pg: dict[float, float] = {}
+                for call, k, g, oi, v in rows:
+                    book = cg if call else pg
+                    book[k] = book.get(k, 0.0) + _bs_gamma(spot, k, t, fit(k, spot)) * oi * 100
+                cg = {k: x for k, x in cg.items() if x > 0}
+                pg = {k: x for k, x in pg.items() if x > 0}
+
+                def net_at(s2: float) -> float:        # sticky-strike: sigma evaluated at m = ln(K/S')
+                    return sum((1 if call else -1) * _bs_gamma(s2, k, t, fit(k, s2)) * oi * 100 for call, k, g, oi, v in rows)
+                flip, prev_s, prev_v = None, None, None
+                steps = int(round((1.25 - 0.80) / 0.0025))
+                for i in range(steps + 1):
+                    s2 = spot * (0.80 + 0.0025 * i)
+                    val = net_at(s2)
+                    if prev_v is not None and prev_v < 0 <= val:
+                        flip = prev_s + (s2 - prev_s) * (-prev_v) / (val - prev_v) if val != prev_v else s2
+                        break
+                    prev_s, prev_v = s2, val
+                out["new"] = {"call_wall": max(cg, key=cg.get) if cg else None,
+                              "put_wall": max(pg, key=pg.get) if pg else None,
+                              "flip": round(flip, 2) if flip is not None else None}
+        # ---- net VEX over grid()'s contract set: current IV vs the surface's sigma
+        if ivs:
+            gb: dict[date, list] = {}
+            for exp, call, k, g, oi, v in slim:
+                if abs(k - spot) / spot <= _GRID_BAND:
+                    gb.setdefault(exp, []).append((call, k, g, oi, v))
+            vc = vn = 0.0
+            fitted = 0
+            exps_v = sorted(gb)[:_GRID_MAX_EXP]
+            for exp in exps_v:
+                fit_e = _surface(sym, day, exp, spot, by_exp.get(exp, gb[exp]), ivs)
+                fitted += bool(fit_e)
+                t = max(0.5, (exp - today).days) / 365
+                for call, k, g, oi, v in gb[exp]:
+                    iv = ivs.get((exp, call, k))
+                    if not (iv and oi):
+                        continue
+                    sgn = 1 if call else -1
+                    vc += sgn * _vanna(spot, k, t, iv) * 0.01 * oi * 100 * spot
+                    # an expiry whose smile can't be fitted keeps its own IVs in both sums, so the delta is the surface's alone
+                    vn += sgn * _vanna(spot, k, t, fit_e(k, spot) if fit_e else iv) * 0.01 * oi * 100 * spot
+            out["vex_cur"] = round(vc, 1)
+            out["vex_new"] = round(vn, 1) if fitted else None
+            out["vex_fitted_expiries"] = f"{fitted}/{len(exps_v)}"
+        return out
+    except Exception as e:
+        log.warning("precise_shadow failed for %s: %s", symbol, e)
+        return None
