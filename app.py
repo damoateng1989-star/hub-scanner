@@ -1543,6 +1543,44 @@ async def extended_price(symbol: str, u: dict = User):
     return await run_in_threadpool(data.extended_price, symbol.strip().upper()[:12])
 
 
+_RT_TF_CACHE: dict = {}
+
+
+@app.get("/api/retest-watch")
+async def retest_watch(u: dict | None = Maybe):
+    """Nov 27 (owner): for each setup at its retest edge on the board, which lower timeframes have already met the
+    retest rule, plus the 4H status. Feeds Sika's retest watch on Today. Display only. Cached 5 minutes per row."""
+    if not u:
+        return dict(rows=[])
+    b = board.board()
+    rows, seen = [], set()
+    for r in list(b.get("live", [])) + list(b.get("setups", [])):
+        rt = r.get("retest") or {}
+        if not rt or rt.get("candles_left", 0) <= 0 or not rt.get("near") or r["symbol"] in seen:
+            continue
+        seen.add(r["symbol"])
+        rows.append(dict(symbol=r["symbol"], kind=r.get("name") or ("Hub" if r in b.get("live", []) else r.get("kind")),
+                         edge=rt.get("edge"), atr=rt.get("atr"), after=rt.get("after"), d=rt.get("dir", 1),
+                         left=rt.get("candles_left"), retested_4h=bool(rt.get("retested")), grade=r.get("grade")))
+    rows = rows[:8]
+
+    def fill():
+        import time as _t
+        for x in rows:
+            if not (x["edge"] and x["atr"] and x["after"]):
+                x["tfs"] = {}
+                continue
+            key = (x["symbol"], x["edge"], x["after"])
+            hit = _RT_TF_CACHE.get(key)
+            if hit and _t.time() - hit[0] < 300:
+                x["tfs"] = hit[1]
+                continue
+            x["tfs"] = board.retest_by_tf(x["symbol"], float(x["edge"]), float(x["atr"]), int(x["after"]), int(x["d"] or 1))
+            _RT_TF_CACHE[key] = (_t.time(), x["tfs"])
+        return rows
+    return dict(rows=await run_in_threadpool(fill))
+
+
 @app.get("/api/premarket")
 def premarket_data(u: dict | None = Maybe):
     if not u:

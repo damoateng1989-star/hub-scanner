@@ -643,6 +643,7 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
         try:
             i0 = trade["i0"]
             st["retest"]["atr"] = round(A0, 4)
+            st["retest"]["dir"] = int(trade["direction"])
             if i0 + 1 < n:
                 st["retest"]["after"] = int(pd.Timestamp(c4.index[i0 + 1]).timestamp())
             cl, lo_, hi_ = c4["Close"].to_numpy(), c4["Low"].to_numpy(), c4["High"].to_numpy()

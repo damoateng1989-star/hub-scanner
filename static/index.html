@@ -1665,6 +1665,18 @@ html[data-theme="light"] .sika-live i { background: #12805C; box-shadow: 0 0 8px
 .t2-sika p { margin: 0; font-size: 14.5px; line-height: 1.55; color: var(--ink); }
 .t2-sika .sb-sign { margin-top: 8px; font-weight: 700; color: #3DD68C !important; }
 html[data-theme="light"] .t2-sika .sb-sign { color: #12805C !important; }
+.t2-sika .rw { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+.t2-sika .rw-k { font: 700 10.5px var(--mono); letter-spacing: .12em; color: var(--muted); margin-bottom: 8px; }
+.t2-sika .rw-row { margin-bottom: 12px; } .t2-sika .rw-row:last-child { margin-bottom: 0; }
+.t2-sika .rw-sym { border: 0; background: none; padding: 0; margin-right: 6px; color: var(--ink); font: 700 14px var(--mono); cursor: pointer; }
+.t2-sika .rw-kind { font-size: 12px; color: var(--muted); }
+.t2-sika .rw-tfs { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 5px; }
+.t2-sika .rw-tf { font: 700 10px var(--mono); padding: 3px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--faint); }
+.t2-sika .rw-tf.y { color: #3DD68C; border-color: rgba(61,214,140,.6); background: #0E1512; }
+.t2-sika .rw-tf.w { color: #0d1117; background: #E9EBEF; border-color: #E9EBEF; }
+html[data-theme="light"] .t2-sika .rw-tf.y { color: #12805C; background: #fff; border-color: rgba(18,128,92,.5); }
+html[data-theme="light"] .t2-sika .rw-tf.w { color: #fff; background: #141412; border-color: #141412; }
+.t2-sika .rw-nx { font-size: 13px; color: var(--muted); line-height: 1.45; } .t2-sika .rw-nx b { color: var(--ink); }
 .mbrief .mb-sign { margin: 10px 0 0; font-weight: 700; color: var(--muted); }
 .sika-analyzing { font-size: 13px; color: #9AA0AC; line-height: 1.9; }
 .sika-step { opacity: 0; transition: opacity .3s ease; }
@@ -9721,7 +9733,7 @@ function renderRetest() {
   const byTape = (a, b) => ((b.watch ? 0 : 1) - (a.watch ? 0 : 1)) || (isA(b) - isA(a)) || ((b.tape_flow && b.tape_flow.line ? 1 : 0) - (a.tape_flow && a.tape_flow.line ? 1 : 0)) || (a.left - b.left);
   const now = rows.filter(x => x.near).sort(byTape);
   const wait = rows.filter(x => !x.near).sort(byTape);
-  RT_NOW = now; renderSikaBrief();      // Patch 226: Sika's brief reads the same rows the card shows
+  RT_NOW = now; renderSikaBrief(); loadRetestWatch();      // Patch 226: Sika's brief reads the same rows the card shows
   renderCkChips(now.length, wait.length);
   const head = `<div class="t2-h"><span>RETESTING NOW</span><em>${now.length} at the edge · ${wait.length} waiting</em></div>`;
   if (!now.length && !wait.length && !gaps.length) {
@@ -10039,8 +10051,37 @@ function renderSikaBrief() {
   let run = false, bot = "";
   try { run = !!(SCOUT_SC.running || MY_SCANNING); bot = ROBOT_SVG; } catch (e) {}      // declared further down the script
   el.innerHTML = `<div class="sb-h"><span class="sika-ava">${bot}</span><span class="sb-k">SIKA · ${k}</span><span class="sika-live"${run ? "" : " hidden"}><i></i>LIVE</span></div>
-    <p>${L.slice(0, 4).map(esc).join(" ")}</p><p class="sb-sign">${esc(sign)}</p>`;
+    <p>${L.slice(0, 4).map(esc).join(" ")}</p><p class="sb-sign">${esc(sign)}</p>${retestWatchHTML()}`;
   el.hidden = false;
+}
+// Nov 27 (owner, option A): Sika's retest watch under her sign-off. Which timeframes have already held the edge
+// (same rule as the chart dots) and what she's waiting for next: always the 4H close, the one that counts.
+let RT_WATCH = null, RT_WATCH_AT = 0;
+async function loadRetestWatch() {
+  if (Date.now() - RT_WATCH_AT < 240000 && RT_WATCH) return;
+  RT_WATCH_AT = Date.now();
+  try { RT_WATCH = (await api("/api/retest-watch", {timeout: 45000})).rows || []; } catch (e) { RT_WATCH = RT_WATCH || []; }
+  renderSikaBrief();
+}
+function retestWatchHTML() {
+  if (!RT_WATCH || !RT_WATCH.length) return "";
+  const S = SIKA_SESSION || {}, n = etNow(), mins = n.getHours() * 60 + n.getMinutes();
+  const closeLeft = S.trading && (S.early ? mins < 780 : mins < 960);
+  const nextClose = !closeLeft ? null : S.early ? "Today's 1:00 close" : mins < 810 ? "Today's 1:30 close" : "Today's 4:00 close";
+  const nx = S.next || {}, nextDay = (nx.long || "").split(" ")[0];
+  const later = nx.early ? `${nextDay}'s 1:00 close` : `${nextDay}'s 1:30 close`;
+  const rows = RT_WATCH.slice().sort((a, b) => (a.retested_4h - b.retested_4h)).slice(0, 4).map(x => {
+    const tfs = x.tfs || {}, held = ["30m", "1h", "2h", "3h"].filter(k => tfs[k]);
+    const up = (x.d || 1) === 1, word = up ? "above" : "below";
+    const chips = ["30m", "1h", "2h", "3h"].map(k => `<span class="rw-tf${tfs[k] ? " y" : ""}">${k.toUpperCase()}${tfs[k] ? " ✓" : ""}</span>`).join("")
+      + `<span class="rw-tf ${x.retested_4h ? "y" : "w"}">${x.retested_4h ? "4H ✓" : "4H WAITING"}</span>`;
+    const next = x.retested_4h ? `The 4H retest is in. Tap ${esc(x.symbol)} for the plan and its grade.`
+      : held.length ? `Next: a <b>4H close that holds ${word} ${money(x.edge)}</b>. ${esc(nextClose || later)} is the first chance.`
+      : `Next: a pullback to <b>${money(x.edge)}</b> that holds. No timeframe has done it yet.`;
+    return `<div class="rw-row"><button type="button" class="rw-sym" onclick="openBrief('${esc(x.symbol)}')">${esc(x.symbol)}</button><span class="rw-kind">${esc(x.kind || "")} · edge ${money(x.edge)}</span>
+      <div class="rw-tfs">${chips}</div><div class="rw-nx">${next}</div></div>`;
+  }).join("");
+  return `<div class="rw"><div class="rw-k">RETEST WATCH</div>${rows}</div>`;
 }
 function renderToday() {
   const h = etNow().getHours();

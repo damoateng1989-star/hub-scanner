@@ -867,3 +867,24 @@ def _build_chart(sym: str, tf: str, lab_mode: bool, ext: bool = False) -> dict:
                                          chase=x["chase"]) for x in tri["trades"]]
         out["tightening_stats"] = engine.stats(tri["trades"])
     return out
+
+
+def retest_by_tf(sym: str, edge: float, atr: float, after: int, d: int = 1) -> dict:
+    """Nov 27 (owner): did any candle on the 30M / 1H / 2H / 3H regroupings meet the 4H retest rule since the
+    breakout candle closed? Same rule as engine.retest_check (touch within 0.25 ATR, close back on the breakout
+    side within 0.5 ATR). Display only: alerts, grades and the record stay on the 4H rule. {tf: bool}."""
+    out = {}
+    try:
+        raw = scanner.load_raw(sym, scanner.SCAN_DAYS)
+        t0 = pd.Timestamp(int(after), unit="s", tz="UTC")
+        for tf in ("30m", "1h", "2h", "3h"):
+            f = engine.to_hours(raw, _TF_HOURS[tf], now=pd.Timestamp.now(tz="UTC"))
+            f = f[f.index >= t0]
+            if d == 1:
+                ok = (f["Low"] <= edge + engine.RETEST_TOUCH * atr) & (f["Close"] > edge) & (f["Close"] <= edge + engine.RETEST_NEAR * atr)
+            else:
+                ok = (f["High"] >= edge - engine.RETEST_TOUCH * atr) & (f["Close"] < edge) & (f["Close"] >= edge - engine.RETEST_NEAR * atr)
+            out[tf] = bool(ok.any())
+    except Exception as e:
+        log.warning("retest_by_tf failed for %s: %s", sym, e)
+    return out

@@ -691,6 +691,13 @@ def live_json(sym: str, c4: pd.DataFrame, res: dict, pa: dict, with_news: bool =
                     else (float(c4["High"].iloc[-1]) >= t["edge"] - engine.RETEST_TOUCH * A0)
                 row["retest"] = dict(edge=round(t["edge"], 2), candles_since=kk,
                                      candles_left=max(0, engine.RETEST_MAX - kk), near=bool(near))
+                try:      # Nov 27 (owner): the rule's inputs for the per-timeframe retest view (display only)
+                    row["retest"]["atr"] = round(A0, 4)
+                    row["retest"]["dir"] = int(t["direction"])
+                    if t["i0"] + 1 < n:
+                        row["retest"]["after"] = int(pd.Timestamp(c4.index[t["i0"] + 1]).timestamp())
+                except Exception:
+                    pass
             if k not in ("gapfade", "flush"):    # these run on daily candles
                 row["strength"] = engine.break_strength(c4, res["atr"], t["i0"], t["direction"], t["edge"], float(close.iloc[t["i0"]]))
             if k == "sr":
