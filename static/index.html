@@ -2100,8 +2100,11 @@ html .bf-heat .bh-card.gh table td.gh-c.gh-rn.gh-pulse { background: #5B2FC9 !im
 .bf-heat .bh-card.gh .gh-spottag { background: #fff !important; color: #0B2723 !important; border-radius: 0 !important; }
 .bf-heat .bh-card.gh .gh-spottag::before { border-right-color: #fff !important; }
 .bf-heat .bh-card.gh .gh-tag, .bf-heat .bh-card.gh .gh-seg, .bf-heat .bh-card.gh .gh-seg button, .bf-heat .bh-card.gh .gh-exp, .bf-heat .bh-card.gh .bh-back, .bf-heat .bh-card.gh .gh-center { border-radius: 0 !important; }
-.bf-heat table.gh-t thead th.gh-lv { background: transparent !important; }      /* never hides the last date heading */
+.bf-heat .bh-card.gh table.gh-t thead th.gh-lv { background: #2E7268 !important; }      /* not sticky sideways any more, so it can be solid again */
 .bf-heat .gh-wrap.gh-more .gh-scroll { -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 46px), rgba(0,0,0,.25)); mask-image: linear-gradient(90deg, #000 calc(100% - 46px), rgba(0,0,0,.25)); }
+/* Nov 27 (owner): the sticky level-tag column sat on top of the last expiries; it is now an ordinary last column, and the strike cell carries a colour bar so levels still show without scrolling */
+.bf-heat table.gh-t td.gh-lv { position: static !important; padding: 0 6px 0 8px; } .bf-heat table.gh-t thead th.gh-lv { position: sticky !important; top: 0; right: auto !important; z-index: 2; }
+.bf-heat tr.gh-l-call > th:first-child { box-shadow: inset 4px 0 0 #3DD68C; } .bf-heat tr.gh-l-put > th:first-child { box-shadow: inset 4px 0 0 #E5484D; } .bf-heat tr.gh-l-flip > th:first-child { box-shadow: inset 4px 0 0 #F2C14E; }
 .bf-heat .gh-morehint { position: static; display: block; margin: 6px auto 0 0; z-index: 6; border: 0; border-radius: 0; padding: 4px 8px; background: #0d1117; color: #E9F7F3; font: 700 10.5px var(--mono); letter-spacing: .04em; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
