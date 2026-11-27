@@ -9969,7 +9969,7 @@ function renderPremarket() {
     ? `<div class="week-head"><div class="week-k">${title}</div></div><div class="lrows">${rows.map(x => row(x, up)).join("")}</div>` : "";
   // Nothing to list yet (or the data is unavailable): hide the card instead of a placeholder sentence.
   if (!g.length && !l.length) { el.hidden = true; el.innerHTML = ""; return; }
-  el.innerHTML = group("Top gainers", g, true) + group("Top losers", l, false);
+  el.innerHTML = group("Pre-market gainers", g, true) + group("Pre-market losers", l, false);   // Nov 27 (owner): say what list it is
   el.hidden = false;
 }
 // Patch 226 §B1: Sika's brief. Composed only from what this page already shows (the retest rows, the crossed count,
