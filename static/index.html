@@ -2027,6 +2027,20 @@ html[data-theme="light"] .install-banner { background: #F8F9FD; border-color: rg
 .phone-nudge .pn-err:empty { display: none; }
 .install-btn { border-radius: 8px !important; padding: 10px 18px !important; margin-top: 4px; }
 .inst h3 { margin: 0 0 10px; padding-right: 40px; font: 800 20px var(--sans); } .inst ol { padding-left: 20px; line-height: 1.7; } .inst li { margin: 6px 0; }
+/* Nov 27 (owner): the install sheet, steps with Safari's own icons */
+.inst2 .in-h h3 { margin: 0; padding-right: 44px; font: 700 20px var(--sans); }
+.inst2 .in-k { margin-top: 4px; font: 500 11.5px var(--mono); letter-spacing: .08em; color: var(--muted); }
+.inst2 .in-icon { display: block; width: 64px; height: 64px; border-radius: 15px; margin: 18px 0 12px; box-shadow: 0 0 0 1px var(--line); }
+.inst2 .in-lede { margin: 0 0 16px; color: var(--muted); font-size: 15px; line-height: 1.5; }
+.inst2 .in-step { display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 14px; margin-bottom: 10px; border: 1px solid var(--line); border-radius: 14px; }
+.inst2 .in-n { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border: 1.5px solid var(--ink); border-radius: 8px; font: 700 13px var(--mono); }
+.inst2 .in-t { flex: 1; min-width: 0; } .inst2 .in-t > b { display: block; font-size: 16px; } .inst2 .in-t small b { color: var(--ink); } .inst2 .in-t small { display: block; margin-top: 2px; color: var(--muted); font-size: 13.5px; }
+.inst2 .in-tile { flex: none; width: 104px; height: 56px; display: grid; place-items: center; border-radius: 14px; background: #26272C; }
+html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
+.inst2 .in-more { display: inline-flex; align-items: center; gap: 6px; color: #0A84FF; font: 600 14px var(--sans); }
+.inst2 .in-copy { border: 0; background: none; color: #0A84FF; font: 700 14px var(--sans); cursor: pointer; }
+.inst2 .in-foot { margin: 14px 0 0; color: var(--muted); font-size: 13.5px; }
+.inst2 .in-acts { display: flex; justify-content: flex-end; margin-top: 14px; } .inst2 .in-acts .primary { min-width: 120px; }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -11437,14 +11451,49 @@ function installCard() {
   return `<div class="acct"><h3>Get the app</h3><p>Install NextShelf on your phone or computer: its own icon, full screen, no browser bars, opens straight to Today.</p>
     <button class="primary install-btn" onclick="installApp()">⬇ Install NextShelf</button></div>`;
 }
+// Nov 27 (owner, reference: a step-by-step install sheet): Android/desktop Chrome installs in one tap through the
+// browser's own prompt; iPhone Safari doesn't allow that, so the sheet walks the four taps with the real Safari icons.
+const IN_ICON = {
+  dots: `<svg width="34" height="10" viewBox="0 0 34 10" aria-hidden="true"><circle cx="5" cy="5" r="4" fill="#0A84FF"/><circle cx="17" cy="5" r="4" fill="#0A84FF"/><circle cx="29" cy="5" r="4" fill="#0A84FF"/></svg>`,
+  share: `<svg width="26" height="32" viewBox="0 0 26 32" fill="none" stroke="#0A84FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2v18M7 8l6-6 6 6"/><path d="M8.5 12H4v18h18V12h-4.5"/></svg>`,
+  more: `<span class="in-more">View More <svg width="12" height="8" viewBox="0 0 12 8" fill="none" stroke="#0A84FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 1.5l5 5 5-5"/></svg></span>`,
+  plus: `<svg width="32" height="32" viewBox="0 0 32 32" fill="none" stroke="#0A84FF" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="2.5" width="27" height="27" rx="6"/><path d="M16 9v14M9 16h14"/></svg>`,
+  kebab: `<svg width="10" height="30" viewBox="0 0 10 30" aria-hidden="true"><circle cx="5" cy="5" r="3.4" fill="#0A84FF"/><circle cx="5" cy="15" r="3.4" fill="#0A84FF"/><circle cx="5" cy="25" r="3.4" fill="#0A84FF"/></svg>`,
+  safari: `<svg width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true"><circle cx="15" cy="15" r="12.5" stroke="#0A84FF" stroke-width="2.4"/><path d="M19.5 10.5l-3 6-6 3 3-6z" fill="#0A84FF"/></svg>`,
+};
+function installSheet(kind) {
+  const step = (n, t, sub, tile) => `<div class="in-step"><span class="in-n">${String(n).padStart(2, "0")}</span><div class="in-t"><b>${t}</b><small>${sub}</small></div><span class="in-tile">${tile}</span></div>`;
+  const tag = {ios: "IOS · SAFARI", iosother: "IOS · OPEN IN SAFARI", android: "ANDROID · CHROME", desktop: "DESKTOP"}[kind];
+  const steps = kind === "ios" ? [
+      step(1, "Tap the three dots", "Bottom bar in Safari", IN_ICON.dots),
+      step(2, "Tap Share", "Square with an arrow up", IN_ICON.share),
+      step(3, "Tap View More", "Scroll the share row", IN_ICON.more),
+      step(4, "Add to Home Screen", "Tap <b>+</b>, then tap <b>Add</b>", IN_ICON.plus)].join("")
+    : kind === "iosother" ? [
+      step(1, "Open this page in Safari", "Copy the link, then paste it in Safari", `<button type="button" class="in-copy" onclick="installCopy(this)">Copy link</button>`),
+      step(2, "Tap the three dots, then Share", "Bottom bar in Safari", IN_ICON.share),
+      step(3, "Add to Home Screen", "Tap <b>+</b>, then tap <b>Add</b>", IN_ICON.plus)].join("")
+    : kind === "android" ? [
+      step(1, "Tap the menu", "Three dots, top right in Chrome", IN_ICON.kebab),
+      step(2, "Add to Home screen", "Or <b>Install app</b>, then tap <b>Install</b>", IN_ICON.plus)].join("")
+    : [step(1, "Click the install icon", "Right end of the address bar in Chrome or Edge", IN_ICON.plus),
+       step(2, "Or use the browser menu", "<b>⋮</b> → <b>Install NextShelf</b>. In Safari on a Mac: File → Add to Dock", IN_ICON.kebab)].join("");
+  return `<div class="inst2"><div class="in-h"><h3>Add NextShelf to your Home Screen</h3><div class="in-k">NEXTSHELF · INSTALL · ${tag}</div></div>
+    <img class="in-icon" src="/apple-touch-icon.png?v=203" alt="" width="64" height="64">
+    <p class="in-lede">Open it like an app: full screen, one tap, no browser bar. Takes 10 seconds.</p>
+    ${steps}
+    <p class="in-foot">Look for the NextShelf icon on your Home Screen.</p>
+    <div class="in-acts"><button type="button" class="primary" onclick="$('sheet').hidden = true">Got it</button></div></div>`;
+}
+function installCopy(btn) {
+  const url = location.origin + "/app";
+  (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => { btn.textContent = "Copied ✓"; }).catch(() => { prompt("Copy this link:", url); });
+}
 async function installApp() {
   if (INSTALL_EVT) { INSTALL_EVT.prompt(); const r = await INSTALL_EVT.userChoice.catch(() => null); INSTALL_EVT = null; if (r && r.outcome === "accepted") return; paintInstall(); return; }
-  showSheet(isIOS() ? `<div class="inst"><h3>Add to your Home Screen</h3>
-      <ol><li>Tap the <b>Share</b> button <span class="kbd">⬆︎</span> at the bottom of Safari.</li><li>Scroll and tap <b>Add to Home Screen</b> <span class="kbd">＋</span>.</li><li>Tap <b>Add</b>. NextShelf now opens like an app.</li></ol>
-      <p class="note">Use Safari. Other iPhone browsers may not show this option.</p></div>`
-    : `<div class="inst"><h3>Install NextShelf</h3><ol><li>In Chrome or Edge, click the <b>install icon</b> <span class="kbd">⊕</span> at the right of the address bar,</li>
-      <li>or open the browser menu <span class="kbd">⋮</span> and choose <b>Install NextShelf</b> (on Android: <b>Add to Home screen</b>).</li></ol>
-      <p class="note">On a Mac in Safari: File → Add to Dock.</p></div>`);
+  const ua = navigator.userAgent;
+  const kind = isIOS() ? (/CriOS|FxiOS|EdgiOS|OPiOS|GSA\/|FBAN|FBAV|Instagram|Line\//.test(ua) ? "iosother" : "ios") : /Android/i.test(ua) ? "android" : "desktop";
+  showSheet(installSheet(kind));
 }
 function paintInstall() {
   const b = $("installBanner"); if (!b) return;
