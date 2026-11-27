@@ -7436,22 +7436,23 @@ class MapLabelsPaneView {
         if (d.retest && d.retest.edge != null) {
           const yEdge = yOf(d.retest.edge);
           if (yEdge != null && yEdge >= 0 && yEdge <= H) {
-            const text = d.retest.near ? "RETESTING NOW" : "RETEST";
+            // Nov 27 (owner, option A): until price is back at the edge it is waiting, not retesting; a smaller pill
+            const near = !!d.retest.near, text = near ? "RETESTING NOW" : "WAITING FOR RETEST", ph = near ? 24 : 19;
             // Monochrome button, not a level: ink fill, background text. (Patch 125.)
             const ink = document.documentElement.dataset.theme === "light" ? "#141412" : "#FFFFFF";
             const bg = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
-            ctx.font = "700 11px 'JetBrains Mono',ui-monospace,monospace";
+            ctx.font = near ? "700 11px 'JetBrains Mono',ui-monospace,monospace" : "700 9px 'JetBrains Mono',ui-monospace,monospace";
             ctx.textBaseline = "middle";
-            const tagW = ctx.measureText(text).width + 20;
+            const tagW = ctx.measureText(text).width + (near ? 20 : 14);
             // Nov 24 (owner): the tag sits where the retest is happening — just left of the latest candle, on the edge
             const xL = d.lastTime != null && chart ? chart.timeScale().timeToCoordinate(d.lastTime) : null;
             const tagX = xL != null && xL > tagW + 24 ? Math.min(W - tagW - 4, xL - tagW - 16) : Math.max(4, (W - 178) - 12 - tagW);
-            const tagY = yEdge - 12;
-            MAP_RETEST_BOX = { x: tagX, y: tagY, w: tagW, h: 24 };
-            ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, 24, 12);
+            const tagY = yEdge - ph / 2;
+            MAP_RETEST_BOX = { x: tagX, y: tagY, w: tagW, h: ph };
+            ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, ph, ph / 2);
             ctx.fillStyle = ink; ctx.fill();
             ctx.fillStyle = bg;
-            ctx.fillText(text, tagX + 10, yEdge);
+            ctx.fillText(text, tagX + (near ? 10 : 7), yEdge);
             if (d.retest.near && d.lastTime != null) {
               const xLast = chart && chart.timeScale().timeToCoordinate(d.lastTime);
               if (xLast != null && xLast >= 0 && xLast <= W) {
