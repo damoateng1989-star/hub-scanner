@@ -168,6 +168,9 @@ async def lifespan(_app: FastAPI):
         sched.add_job(_lookout.evaluate_closes, CronTrigger(day_of_week="mon-fri", hour=h, minute=m, timezone="America/New_York"),
                       misfire_grace_time=1800, coalesce=True, max_instances=1)
     import backup as _backup   # Nov 23: nightly database backup (local snapshots + off-server when a bucket is set)
+    import xhours as _xhours          # Nov 27 (owner): pre-market / after-hours retest heads-ups, after each 30M candle
+    sched.add_job(_xhours.tick, CronTrigger(day_of_week="mon-fri", hour="4-9,13-20", minute="2,32", timezone="America/New_York"),
+                  id="xhours_retest", replace_existing=True, max_instances=1, coalesce=True)
     sched.add_job(_backup.run, CronTrigger(hour=2, minute=17, timezone="America/New_York"), id="db_backup", replace_existing=True,
                   misfire_grace_time=3600)
     sched.add_job(_lookout.evaluate_earnings_eve, CronTrigger(day_of_week="mon-fri", hour=16, minute=25, timezone="America/New_York"),

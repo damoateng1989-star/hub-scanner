@@ -15,7 +15,7 @@ import html as _h
 import os
 import re
 
-SILENT = {"trigger", "preclose", "premarket_gap", "snap-back", "stalled"}
+SILENT = {"trigger", "preclose", "premarket_gap", "snap-back", "stalled", "xretest"}
 
 EMOJI = {
     "retest": "🟢", "retest_double": "🟢",
