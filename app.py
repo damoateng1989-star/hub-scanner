@@ -569,6 +569,19 @@ def week_events():
     return JSONResponse(body, headers={"Cache-Control": "public, max-age=300"})
 
 
+@app.get("/api/version")
+def app_version():
+    """Nov 27: a fingerprint of the app page. A home-screen app resumed from memory compares it with the one it
+    loaded and reloads itself after a deploy, instead of running yesterday's code until it's force-closed."""
+    import hashlib
+    try:
+        st = (STATIC / "index.html").stat()
+        v = hashlib.md5(f"{st.st_size}:{st.st_mtime_ns}".encode()).hexdigest()[:12]
+    except OSError:
+        v = "0"
+    return JSONResponse({"v": v}, headers={"Cache-Control": "no-store"})
+
+
 @app.get("/app")
 def index(request: Request):
     """The app. Members only: visitors who aren't signed in go to the sign-in page."""

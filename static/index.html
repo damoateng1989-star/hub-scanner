@@ -11299,6 +11299,18 @@ async function pollLive() {
   LIVE_T = setTimeout(pollLive, LIVE_OPEN ? 30000 : 300000);    // every 30s while the market is open
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pollLive(); });
+// Nov 27 (owner): the home-screen app resumes a page that may predate a deploy (Sika's card only showed after a
+// force-close). On coming back after 2+ minutes away, compare the app's fingerprint and reload if it changed.
+let APP_V = null, APP_HIDDEN_AT = 0;
+fetch("/api/version", {cache: "no-store"}).then(r => r.json()).then(j => { APP_V = j.v; }).catch(() => {});
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) { APP_HIDDEN_AT = Date.now(); return; }
+  if (!APP_V || !APP_HIDDEN_AT || Date.now() - APP_HIDDEN_AT < 120000) return;
+  fetch("/api/version", {cache: "no-store"}).then(r => r.json()).then(j => {
+    const busy = document.activeElement && /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if (j.v && j.v !== APP_V && !busy) location.reload();
+  }).catch(() => {});
+});
 // the next 4-hour close, in words: "today's 1:30 PM close", "tomorrow's 1:30 PM close", "Monday's 1:30 PM close"
 // when the next 4-hour close is: [day word, time], e.g. ["today", "4:00 PM"], ["tomorrow", "1:30 PM"], ["Monday", "1:30 PM"]
 // Live candle: move the forming candle in place as the price ticks (no chart rebuild).
