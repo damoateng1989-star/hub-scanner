@@ -2046,6 +2046,8 @@ html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
 .uni-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .uni-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 11px; border: 1px solid var(--line); border-radius: 999px; font: 600 13px var(--mono); }
 .uni-chip small { color: var(--muted); font-weight: 500; } .uni-chip button { border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0 4px; }
+.vback { display: inline-flex; align-items: center; gap: 4px; margin: 4px 0 10px -4px; padding: 7px 14px 7px 8px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); font: 600 14px var(--sans); cursor: pointer; }
+.vback:hover { background: var(--line); }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -5122,6 +5124,22 @@ function showTab() {
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", showTab);
+// Nov 27 (owner): pages you reach from another page (Account's Dashboard, Positions, Paper, Lab, Futures, and the
+// Alerts / Diary / Guide / Chat pages) get a back button. It goes back within the app when there's somewhere to go
+// back to, else to the page they're usually opened from.
+let NAV_DEPTH = 0;
+window.addEventListener("hashchange", () => { NAV_DEPTH++; });
+const BACK_HOME = {admin: "account", positions: "account", paper: "account", lab: "account", futures: "account",
+                   alerts: "today", diary: "today", guide: "today", chat: "today"};
+function goBack() {
+  const v = (location.hash || "#today").slice(1).split(/[/?]/)[0];
+  if (NAV_DEPTH > 0) { NAV_DEPTH -= 2; history.back(); return; }
+  location.hash = "#" + (BACK_HOME[v] || "today");
+}
+document.querySelectorAll("section[data-view]").forEach(sec => {
+  if (!(sec.dataset.view in BACK_HOME) || sec.querySelector(":scope > .vback")) return;
+  sec.insertAdjacentHTML("afterbegin", '<button type="button" class="vback" onclick="goBack()" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Back</button>');
+});
 
 // ---------------------------------------------------------------- help: glossary, "?" tips, sheet
 const GLOSS = {
