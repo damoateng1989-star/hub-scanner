@@ -555,6 +555,22 @@ def _alert_new(r: dict) -> None:
            f"Heads-up, not an entry · it counts on a 4H close above with volume, then NextShelf waits for the retest{tag}")
     card = (f"🟡 <b>{_h.escape(r['symbol'])} crossed the top of its hub {_money(r['trigger'])}</b> <i>{_h.escape(_when(r))}</i>\n"
             f"Heads-up, not an entry · it counts on a 4H close above with volume, then NextShelf waits for the retest{_h.escape(tag)}")
+    # Nov 27 (owner): the heads-up carries the plan the forward log scores it on, labelled as not a NextShelf trade:
+    # target, stop, reward and the kill line. Still no trigger line, no LONG · CALLS tag, no record line.
+    try:
+        n = _plan_nums(r)
+        w = lambda t: t.ljust(8)
+        lv = (f"🎯 {w('TARGET')}{_money(r['target'])}  {n['up']:+.1f}%\n"
+              f"🛑 {w('STOP')}{_money(r['stop'])}  {n['dn']:+.1f}%"
+              + (f"\n⚖️ {w('REWARD')}{n['rr']:.1f}× the risk" if n["rr"] else ""))
+        kill = f"Dead on a 4H close back inside {_money(r['hub_low'])}–{_money(r['hub_high'])}"
+        foot = "No tested record yet · NextShelf isn't trading this one"
+        card += (f"\n\n<b>The plan, if you're watching it</b>\n<pre>{_h.escape(lv)}</pre>"
+                 f"<blockquote>{_h.escape(kill)}</blockquote><i>{foot}</i>")
+        msg += (f"\n\nThe plan, if you're watching it: target {_money(r['target'])} ({n['up']:+.1f}%) · stop {_money(r['stop'])} "
+                f"({n['dn']:+.1f}%)" + (f" · {n['rr']:.1f}× the risk" if n["rr"] else "") + f"\n{kill}.\n{foot}.")
+    except Exception as e:
+        log.warning("cross heads-up plan lines skipped for %s: %s", r.get("symbol"), e)
     btns = None
     if not db.add_alert(f"{r['ep_key']}", r["symbol"], "cross", r["cross_candle"], msg):
         return
