@@ -15,6 +15,7 @@ import os  # noqa: E402
 import requests  # noqa: E402
 import secrets  # noqa: E402
 import threading  # noqa: E402
+import time  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -2061,6 +2062,31 @@ def stack_reveal(body: StackRevealBody, u: dict = User):
         raise HTTPException(400, "not in today's stack")
     return {"id": cid, "place": ds.place_for(cid)}
 
+_GAMMA_FORCED: dict = {}
+_GAMMA_FORCE_LOCK = threading.Lock()
+
+
+def _gamma_fresh(sym: str, spot: float) -> None:
+    """Nov 27 (owner): during market hours, an open heat map gets a chain at most a minute old. One re-read per
+    symbol per minute however many people are looking (open interest itself only changes once a day; gamma and
+    implied vol move with price). Alpaca only; fail-open."""
+    try:
+        if not gamma._alpaca_ok():
+            return
+        now = pd.Timestamp.now(tz="America/New_York")
+        close_m = 13 * 60 if now.date().isoformat() in gamma._early_closes() else 16 * 60
+        m = now.hour * 60 + now.minute
+        if now.weekday() >= 5 or not (9 * 60 + 30 <= m < close_m):
+            return
+        with _GAMMA_FORCE_LOCK:
+            if time.time() - _GAMMA_FORCED.get(sym, 0) < 60:
+                return
+            _GAMMA_FORCED[sym] = time.time()
+        gamma._fetch_contracts(sym, force=True, spot=spot)
+    except Exception as e:
+        log.warning("gamma refresh skipped for %s: %s", sym, e)
+
+
 @app.get("/api/gamma/{symbol}")
 async def gamma_walls(symbol: str, u: dict = User):
     """Gamma walls for the Shelf card (one Cboe chain per symbol per day, cached). Fail-open: walls=None."""
@@ -2075,6 +2101,8 @@ async def gamma_walls(symbol: str, u: dict = User):
             spot = json.loads(row["status"] or "{}").get("last_close")
         except Exception:
             spot = None
+    if spot:
+        await run_in_threadpool(_gamma_fresh, sym, float(spot))
     w = await run_in_threadpool(gamma.walls, sym, spot) if spot else None
     s = await run_in_threadpool(gamma.shelves, sym, spot) if spot else None
     g = await run_in_threadpool(gamma.grid, sym, spot) if spot else None

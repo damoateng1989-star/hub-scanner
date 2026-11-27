@@ -9166,7 +9166,7 @@ const GAMMA_NL = {};
 const GAMMA_GRID = {};   // Patch 166: the full /api/gamma payload per symbol, for the heat-map panel
 async function loadGamma(sym) {
   if (!ME || ME.guest) return;
-  if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 290000)) {   // Nov 27 (owner): re-read every 5 min
+  if (!(sym in GAMMA) || (GAMMA_AT[sym] && Date.now() - GAMMA_AT[sym] > 55000)) {   // Nov 27 (owner): re-read every minute
     if (!(sym in GAMMA)) { GAMMA[sym] = "loading"; paintGamma(sym); }
     try { const j = await api(`/api/gamma/${encodeURIComponent(sym)}`); GAMMA[sym] = j.walls || null; GAMMA_NL[sym] = gexNextLine(j); GAMMA_GRID[sym] = j; }
     catch (e) { GAMMA[sym] = null; GAMMA_NL[sym] = null; GAMMA_GRID[sym] = null; }
@@ -9175,8 +9175,8 @@ async function loadGamma(sym) {
   paintGamma(sym); paintHeat(sym); if (BRIEF_SYM === sym) paintMap();
   if (GH_FULL && BRIEF_SYM === sym) ghFull(true, true);         // the full-screen board repaints with the new read
 }
-// Nov 27 (owner): while a Shelf card is open, the heat map refreshes itself every 5 minutes (the server re-reads
-// watchlist chains every 5 minutes; other names re-compute at the current price).
+// Nov 27 (owner): while a Shelf card is open, the heat map refreshes itself every minute (in market hours the
+// server re-reads the chain at most once a minute per symbol; outside them the numbers don't change).
 setInterval(() => {
   if (document.hidden || !BRIEF_SYM || !ME || ME.guest) return;
   const host = $("ghFullHost"), sc = host ? host.scrollTop : 0, inner = host && host.querySelector(".gh-scroll, .gh-wrap");
@@ -9185,7 +9185,7 @@ setInterval(() => {
   loadGamma(BRIEF_SYM).then(() => {
     const h = $("ghFullHost"); if (h) { h.scrollTop = sc; const i2 = h.querySelector(".gh-scroll, .gh-wrap"); if (i2 && isc) { i2.scrollTop = isc[0]; i2.scrollLeft = isc[1]; } }
   });
-}, 300000);
+}, 60000);
 function paintGamma(sym) {
   const el = $("bfGamma"); if (!el || BRIEF_SYM !== sym) return;
   const row = $("bf-walls"), pv = $("vzWallPrev"), w = GAMMA[sym];
