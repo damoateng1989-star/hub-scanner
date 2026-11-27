@@ -12,7 +12,7 @@
   function apply(p) {
     var t = p === "system" ? (mq && mq.matches ? "light" : "dark") : p;
     document.documentElement.dataset.theme = t; document.documentElement.dataset.themePick = p;
-    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#F6F6F3" : "#0E0F12";
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#F6F6F3" : "#0D1117";
     document.querySelectorAll("[data-theme-btn]").forEach(function (b) { b.setAttribute("aria-label", "Theme: " + p + " (switch)"); b.title = t === "light" ? "Switch to dark" : "Switch to light"; b.dataset.mode = t; });
     document.querySelectorAll("[data-theme-opt]").forEach(function (b) { b.classList.toggle("on", b.dataset.themeOpt === p); });
   }
@@ -23,7 +23,7 @@
   document.addEventListener("DOMContentLoaded", function () { apply(pick); });
 })();
 </script>
-<meta name="theme-color" content="#0E0F12">
+<meta name="theme-color" content="#0D1117">
 <title>NextShelf</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -280,14 +280,14 @@ html[data-theme="light"] #swingPlay .sw-ctx { color:#78350f; background:#fffbeb;
 .oxc svg .mk { stroke-width: .8; stroke-dasharray: 2 3; } .oxc svg .ml { font: 10px var(--sans, Inter, sans-serif); }
 .oxc svg .m-now { stroke: #9AA4B2; fill: #9AA4B2; } .oxc svg .m-fail { stroke: #FF6B5E; fill: #FF6B5E; } .oxc svg .m-be { stroke: #F5C26B; fill: #F5C26B; } .oxc svg .m-tgt { stroke: #3DD68C; fill: #3DD68C; }
 .oxc svg text.ml { stroke: none; }
-.oxc svg .cur { stroke: #E6EBF0; stroke-width: 1; } .oxc svg .du { fill: #3DD68C; stroke: #181A20; stroke-width: 2; } .oxc svg .dd { fill: #FF6B5E; stroke: #181A20; stroke-width: 2; }
+.oxc svg .cur { stroke: #E6EBF0; stroke-width: 1; } .oxc svg .du { fill: #3DD68C; stroke: #0D1117; stroke-width: 2; } .oxc svg .dd { fill: #FF6B5E; stroke: #0D1117; stroke-width: 2; }
 .oxc-date { position: relative; margin: 8px 2px 2px; }
 .oxc-date::after { content: ""; position: absolute; left: var(--t, 50%); top: 3px; width: 2px; height: 12px; background: #3DD68C; border-radius: 1px; pointer-events: none; transform: translateX(-1px); opacity: .8; }
 .oxc-date input[type=range] { -webkit-appearance: none; appearance: none; width: 100% !important; height: 18px !important; min-height: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; border-radius: 0 !important; margin: 0; cursor: pointer; }
 .oxc-date input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #8FB4FF var(--p, 0%), #2A2E37 var(--p, 0%)); }
 .oxc-date input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: #2A2E37; } .oxc-date input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: #8FB4FF; }
-.oxc-date input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #E6EBF0; border: 2px solid #181A20; margin-top: -7px; box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
-.oxc-date input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #E6EBF0; border: 2px solid #181A20; }
+.oxc-date input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #E6EBF0; border: 2px solid #0D1117; margin-top: -7px; box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
+.oxc-date input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #E6EBF0; border: 2px solid #0D1117; }
 .oxc-dl { display: flex; justify-content: space-between; font-size: 10.5px; color: #7D8794; margin-top: 2px; }
 .oxc-tabs { display: flex; gap: 6px; margin-top: 4px; } .oxc-tabs button { all: unset; cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 7px; background: #22252D; color: #9AA4B2; }
 .oxc-tabs button.on { background: #E6EBF0; color: #0B0D12; }

@@ -374,7 +374,7 @@ html[data-theme="light"] .bf-heat .gh-miniopen { color: #0F5A47; background: rgb
   function apply(p) {
     var t = p === "system" ? (mq && mq.matches ? "light" : "dark") : p;
     document.documentElement.dataset.theme = t; document.documentElement.dataset.themePick = p;
-    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#f4f3ef" : "#0E0F12";
+    var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#f4f3ef" : "#0D1117";
     document.querySelectorAll("[data-theme-btn]").forEach(function (b) { b.setAttribute("aria-label", "Theme: " + p + " (switch)"); b.title = t === "light" ? "Switch to dark" : "Switch to light"; b.dataset.mode = t; });
     document.querySelectorAll("[data-theme-opt]").forEach(function (b) { b.classList.toggle("on", b.dataset.themeOpt === p); });
   }
@@ -385,7 +385,7 @@ html[data-theme="light"] .bf-heat .gh-miniopen { color: #0F5A47; background: rgb
   document.addEventListener("DOMContentLoaded", function () { apply(pick); });
 })();
 </script>
-<meta name="theme-color" content="#0E0F12">
+<meta name="theme-color" content="#0D1117">
 <title>NextShelf · Find the setup. Get the plan. Trade it.</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1053,7 +1053,7 @@ body.brief-open .bf-scrim { display: block; animation: mpFade var(--dur-fast) ea
 .ss-ctl .ss-where { margin-left: auto; }
 .ss-ctl button { height: 38px; min-width: 38px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); background: #121418; color: #EDEDED; font-size: 13px; cursor: pointer; }
 .ss-ctl button:disabled { opacity: .4; cursor: default; }
-.ss-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #181A20; z-index: 3; }
+.ss-end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; background: #0D1117; z-index: 3; }
 .ss-end b { font: 400 20px/1.25 "Newsreader", Georgia, serif; color: #fff; margin-bottom: 6px; } .ss-end span { color: #9AA3AF; font-size: 13px; }
 html[data-theme="light"] .ss-ctl button { background: #F3F4F6; color: #1F2328; border-color: rgba(15,23,42,.12); }
 .bf-wr[hidden], body:not(.brief-open) .bf-wr { display: none !important; }
@@ -3212,14 +3212,14 @@ html[data-theme="light"] .soc-acts .soc-cancel { background: #EEF1F5; color: #0D
 .oxc svg .mk { stroke-width: .8; stroke-dasharray: 2 3; } .oxc svg .ml { font: 10px var(--sans, Inter, sans-serif); }
 .oxc svg .m-now { stroke: #9AA4B2; fill: #9AA4B2; } .oxc svg .m-fail { stroke: #FF6B5E; fill: #FF6B5E; } .oxc svg .m-be { stroke: #F5C26B; fill: #F5C26B; } .oxc svg .m-tgt { stroke: #3DD68C; fill: #3DD68C; }
 .oxc svg text.ml { stroke: none; }
-.oxc svg .cur { stroke: #E6EBF0; stroke-width: 1; } .oxc svg .du { fill: #3DD68C; stroke: #181A20; stroke-width: 2; } .oxc svg .dd { fill: #FF6B5E; stroke: #181A20; stroke-width: 2; }
+.oxc svg .cur { stroke: #E6EBF0; stroke-width: 1; } .oxc svg .du { fill: #3DD68C; stroke: #0D1117; stroke-width: 2; } .oxc svg .dd { fill: #FF6B5E; stroke: #0D1117; stroke-width: 2; }
 .oxc-date { position: relative; margin: 8px 2px 2px; }
 .oxc-date::after { content: ""; position: absolute; left: var(--t, 50%); top: 3px; width: 2px; height: 12px; background: #3DD68C; border-radius: 1px; pointer-events: none; transform: translateX(-1px); opacity: .8; }
 .oxc-date input[type=range] { -webkit-appearance: none; appearance: none; width: 100% !important; height: 18px !important; min-height: 0 !important; background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; border-radius: 0 !important; margin: 0; cursor: pointer; }
 .oxc-date input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, #8FB4FF var(--p, 0%), #2A2E37 var(--p, 0%)); }
 .oxc-date input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: #2A2E37; } .oxc-date input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: #8FB4FF; }
-.oxc-date input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #E6EBF0; border: 2px solid #181A20; margin-top: -7px; box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
-.oxc-date input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #E6EBF0; border: 2px solid #181A20; }
+.oxc-date input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #E6EBF0; border: 2px solid #0D1117; margin-top: -7px; box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
+.oxc-date input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #E6EBF0; border: 2px solid #0D1117; }
 .oxc-dl { display: flex; justify-content: space-between; font-size: 10.5px; color: #7D8794; margin-top: 2px; }
 .oxc-tabs { display: flex; gap: 6px; margin-top: 4px; } .oxc-tabs button { all: unset; cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 7px; background: #22252D; color: #9AA4B2; }
 .oxc-tabs button.on { background: #E6EBF0; color: #0B0D12; }
@@ -11295,7 +11295,7 @@ function candlePickHTML() {
 function chartStyleHTML() {
   const p = candlePref(), cur = (p.theme && CHART_THEMES[p.theme]) ? p.theme : "classic", t = p.type || "candles";
   const sw = (k, th) => { const [u, d] = k === "classic" ? [document.documentElement.dataset.theme === "light" ? "#16a34a" : "#3DD68C", document.documentElement.dataset.theme === "light" ? "#dc2626" : "#FF6B5E"] : [th.up, th.down];
-    return `<button class="cs-pal ${cur === k ? "on" : ""}" style="background:${th.bg || "var(--panel, #181A20)"}" onclick="setCandle({theme:'${k}', mono:false, up:null, down:null})" aria-pressed="${cur === k}"><span><i style="background:${u}"></i><i style="background:${d}"></i></span><b>${th.name}</b></button>`; };
+    return `<button class="cs-pal ${cur === k ? "on" : ""}" style="background:${th.bg || "var(--panel, #0D1117)"}" onclick="setCandle({theme:'${k}', mono:false, up:null, down:null})" aria-pressed="${cur === k}"><span><i style="background:${u}"></i><i style="background:${d}"></i></span><b>${th.name}</b></button>`; };
   return `<div class="cs-h"><b>Chart style</b><small>Saved on this device</small><button class="cs-x" onclick="chartStyleClose()" aria-label="Close">✕</button></div>
     <div class="cs-k">Palette</div><div class="cs-pals">${Object.entries(CHART_THEMES).map(([k, th]) => sw(k, th)).join("")}</div>
     <div class="cs-k">Candles</div><div class="cs-types">${[["candles", "Candles"], ["hollow", "Hollow"], ["bars", "Bars"], ["line", "Line"]].map(([k, l]) => `<button class="${t === k ? "on" : ""}" onclick="setCandle({type:'${k}'})">${l}</button>`).join("")}</div>`;
@@ -12626,7 +12626,7 @@ html[data-theme="light"] #brief .bf-head .bf-tag.rest { background: #F1F2F4 !imp
 body.brief-open .bf-scrim { background: rgba(3,6,10,.72) !important; backdrop-filter: blur(4px) !important; }
 #brief .bf-hero { background: linear-gradient(180deg, #1C2030 0%, #171A22 55%) !important; border: 1px solid #343A4A !important;
   box-shadow: inset 0 3px 0 0 #4B6BFF, 0 18px 40px rgba(0,0,0,.45) !important; }
-#brief .vz-card { background: #181A20 !important; border-color: #30333B !important; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
+#brief .vz-card { background: #0D1117 !important; border-color: #30333B !important; box-shadow: 0 12px 30px rgba(0,0,0,.35); }
 #brief .bf-hero .bf-head h3 { letter-spacing: -0.03em; }
 html[data-theme="light"] body.brief-open .bf-scrim { background: rgba(15,23,42,.38) !important; }
 html[data-theme="light"] #brief .bf-hero { background: linear-gradient(180deg, #EEF2FF 0%, #FFFFFF 55%) !important; border-color: #D9DEEA !important;
@@ -13108,7 +13108,7 @@ html[data-theme="light"] #bfMap { --mp-card: #F8F9FD; --mp-line: rgba(13,17,23,.
 .hm-t:hover { filter: brightness(1.25); z-index: 2; outline: 1px solid rgba(255,255,255,.5); }
 .hm-t span { font-family: var(--mono, ui-monospace, monospace); font-weight: 700; color: rgba(255,255,255,.92); letter-spacing: -.01em; pointer-events: none; }
 .hm-up { background: #00C898; } .hm-down { background: #F00060; }   /* Nov 23 (owner): the board's Broke out / Broke down colours */ .hm-edge { background: #FFC400; } .hm-edgedn { background: #C99212; }   /* Patch 204: sharper */
-.hm-rest { background: rgba(160,190,230,.07); box-shadow: inset 0 0 0 1px rgba(170,200,240,.14); }   /* Nov 22 (owner): flat glass */   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #181A20; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
+.hm-rest { background: rgba(160,190,230,.07); box-shadow: inset 0 0 0 1px rgba(170,200,240,.14); }   /* Nov 22 (owner): flat glass */   /* Nov 22 (owner): the app's light hub blue, with its matching soft red for breakdowns */ .hm-none { background: #0D1117; box-shadow: inset 0 0 0 1px #1E2229; } .hm-none span { color: #C3C9D2; }   /* Nov 22 (owner): the card's own colour, so 'No setup' blends in; silver text; a hairline keeps each tile distinct */
 .hm-lock { background: repeating-linear-gradient(135deg, #2b2d34 0 5px, #24262c 5px 10px); }
 html[data-theme="light"] .hm-t { border-color: #fff; } html[data-theme="light"] .hm-sh { color: #0D1117; } html[data-theme="light"] .hm-none { background: #e6e8ee; box-shadow: none; } html[data-theme="light"] .hm-none span { color: #8a909c; }
 html[data-theme="light"] .hm-rest { background: #6C7BD8; } html[data-theme="light"] .hm-lock { background: repeating-linear-gradient(135deg, #e3e5ea 0 5px, #eceef2 5px 10px); }
@@ -13369,17 +13369,17 @@ html[data-theme="light"] .mp-lv .lv-p .u, html[data-theme="light"] .mp-lv .lv-x 
 
 /* Nov 20: solid glass, app-wide (dark theme). Glass LOOK — a glossy sheen, a bright rim, depth — but nothing is
    see-through: every card, bar and button is opaque. A soft colour glow sits on the page itself, in the gaps. */
-html:not([data-theme="light"]) body { background: #181A20 !important; }
+html:not([data-theme="light"]) body { background: #0D1117 !important; }
 html:not([data-theme="light"]), html:not([data-theme="light"]) main.wrap { background: transparent !important; }
 html:not([data-theme="light"]) body::before { content: ""; position: fixed; inset: -20%; z-index: 0; pointer-events: none;
   background: none; }   /* Patch 201 (Nov 22): the colour glow is gone — its green landed as a wedge behind every page title */
 html:not([data-theme="light"]) body > main.wrap, html:not([data-theme="light"]) body > nav:not(.bottom) { position: relative; z-index: 1; }
 html:not([data-theme="light"]) :is(.lesson,.panel,.card,.sheet-card,.tier,.kpi,.stats,.box,.week,.retest,.brief,.tbl,.empty,.board-lock,.mp-card,.sc,.lrow,.msc) {
-  background: #181A20 !important;          /* Nov 20: flat and as dark as the page, like the Waiting Room */
+  background: #0D1117 !important;          /* Nov 20: flat and as dark as the page, like the Waiting Room */
   border: 1px solid rgba(255,255,255,.10) !important;
   box-shadow: none !important; }
 html:not([data-theme="light"]) body > nav:not(.bottom), html:not([data-theme="light"]) nav.bottom {
-  background: #181A20 !important; border-color: rgba(255,255,255,.12) !important; }
+  background: #0D1117 !important; border-color: rgba(255,255,255,.12) !important; }
 /* Nov 20: buttons in the Sika chat skin — rounded 12px, solid dark fill, a soft grey hairline, light-grey bold label;
    the selected / main one is Sika's white "Scan my watchlist now" button. Nothing see-through. */
 html:not([data-theme="light"]) :is(.btnx,.board-filter,.chip,.sk-pills button,.theme-btn,.wl-pills button,button.ghost,.sika-skin-btn):not(.on):not(.active):not(.primary):not(.plain-btn) {
@@ -13461,16 +13461,16 @@ html[data-theme="light"] .wr-pill { background: #F3F4F6 !important; color: #1F23
 .today-stories:not(:has(> :not([hidden]))) { display: none; }
 .wr-row { display: grid; grid-template-columns: 1fr; gap: 16px; }
 @media (min-width: 980px) { .wr-row:has(> #waitingRoom:not([hidden])) { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; } }
-html:not([data-theme="light"]) .wr-card { background: #181A20 !important; border: 1px solid rgba(255,255,255,.10) !important; box-shadow: none !important; }
+html:not([data-theme="light"]) .wr-card { background: #0D1117 !important; border: 1px solid rgba(255,255,255,.10) !important; box-shadow: none !important; }
 /* Nov 20: every card flat and page-dark (dark theme) — the Waiting Room look app-wide */
 html:not([data-theme="light"]) :is(.hz-card,.sk-hero,.wl-card,.board-table,.mkt,.ag-card,.agent,.rec-card,.ex-card,.acct-card,.set-card,.mm-card,.hm-card,.hm-panel,.lab-card,.pricing-card,.cmd,.mbrief) {
-  background: #181A20 !important; border-color: rgba(255,255,255,.10) !important; box-shadow: none !important; background-image: none !important; }
+  background: #0D1117 !important; border-color: rgba(255,255,255,.10) !important; box-shadow: none !important; background-image: none !important; }
 html:not([data-theme="light"]) .cmd { border-radius: 18px !important; }
-/* Nov 22 (owner): ONE background inside the app, dark theme — #181A20, the stock panel's colour, everywhere.
+/* Nov 22 (owner): ONE background inside the app, dark theme — #0D1117, the stock panel's colour, everywhere.
    The near-black (#07090D) and the in-between greys are gone; cards are told apart by their hairline border. */
 html:not([data-theme="light"]) :is(aside.side, .board-filters, #chips, .sk-pills, .wr-window, .bf-foot, .gp-setup, .gp > div, .seg, .style-opt,
   .mb-chip, .board-frame, .acct, .rule1, .setup, .ag-find, #boardSearch, #sym, .tbl th, table th) {
-  background-color: #181A20 !important; background-image: none !important; }
+  background-color: #0D1117 !important; background-image: none !important; }
 html:not([data-theme="light"]) :is(.board-filters, #chips, .sk-pills, .wr-window, .gp > div, .seg, .style-opt, .mb-chip, .board-frame, .acct, .rule1, .setup, #boardSearch, #sym) {
   border-color: rgba(255,255,255,.10) !important; }
 html:not([data-theme="light"]) .bf-foot { border-top: 1px solid rgba(255,255,255,.10) !important; }
@@ -13478,7 +13478,7 @@ html:not([data-theme="light"]) aside.side { border-right: 1px solid rgba(255,255
 
 .mkt { border-radius: 14px !important; padding: 10px 14px !important; }   /* the market pill takes the card shape, like the chips under it */
 /* The Daily Stack (Patch 179) */
-.stack-entry { background: #181A20; border: 1px solid rgba(255,255,255,.10); border-radius: 18px; overflow: hidden; margin: 16px 0; }
+.stack-entry { background: #0D1117; border: 1px solid rgba(255,255,255,.10); border-radius: 18px; overflow: hidden; margin: 16px 0; }
 html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,23,42,.1); }
 .se-banner { aspect-ratio: 16 / 7; background: #000 center 35% / cover no-repeat; }
 .se-body { padding: 14px 16px 16px; }
@@ -13509,7 +13509,7 @@ html[data-theme="light"] .stack-entry { background: #fff; border-color: rgba(15,
 .stack-rail button { width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(255,255,255,.35); background: rgba(0,0,0,.45); color: #fff; font-size: 12px; padding: 0; font-weight: 600; cursor: pointer; }
 .stack-rail button:disabled { opacity: .45; }
 .stack-play { position: absolute; inset: 0; margin: auto; width: 76px; height: 76px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.45); color: #fff; font-size: 26px; z-index: 2; cursor: pointer; }
-.stack-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #181A20; }
+.stack-end { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; background: #0D1117; }
 .stack-end h3 { font: 400 30px/1.2 "Newsreader", Georgia, serif; margin: 0 0 10px; color: #fff; }
 .stack-end p { color: #9AA3AF; margin: 0 0 22px; }
 .stack-end button { padding: 12px 22px; border-radius: 12px; background: #F4F6F9; color: #0E0F12; border: 0; font-weight: 600; font-size: 15px; cursor: pointer; }
