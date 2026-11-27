@@ -676,3 +676,18 @@ def _splits(rows: list) -> dict:
 
 
 init()      # the table exists as soon as anything imports this module
+
+
+def fix_fake_candle(fake_ny: str, prev_ny: str) -> dict:
+    """Nov 27 one-off: undo what the fake 1:30-4:00 candle (after-hours prints on an early-close day) did to the
+    forward log. Rows opened on it are removed; rows that it moved (a close counted, or a verdict) step back one
+    close so the corrected candles are walked again on the next close."""
+    fake_utc = pd.Timestamp(fake_ny).tz_convert("UTC").isoformat()
+    n_del = db._run("DELETE FROM cross_setups WHERE cross_candle=?", (fake_utc,)).rowcount
+    n_back = 0
+    for r in _rows("WHERE last_close=?", (fake_ny,)):
+        k = max(0, int(r.get("closes") or 0) - 1)
+        db._run("""UPDATE cross_setups SET state='live', closes=?, last_close=?, exit_px=NULL, exit_at=NULL,
+                   ret_trig=NULL, ret_touch=NULL WHERE id=?""", (k, prev_ny if k else None, r["id"]))
+        n_back += 1
+    return dict(removed=n_del, stepped_back=n_back)

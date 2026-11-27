@@ -175,6 +175,16 @@ async def lifespan(_app: FastAPI):
                   misfire_grace_time=3600)
     sched.add_job(_lookout.evaluate_earnings_eve, CronTrigger(day_of_week="mon-fri", hour=16, minute=25, timezone="America/New_York"),
                   misfire_grace_time=1800, coalesce=True, max_instances=1)
+    try:      # Nov 27 one-off: the early-close fake candle (see engine.EARLY_CLOSES) — clean what it wrote
+        if not db.get_setting("fix_fake_candle_20261127"):
+            fk, pv = "2026-11-27T13:30:00-05:00", "2026-11-27T09:30:00-05:00"
+            n_sig = db._run("DELETE FROM signals WHERE id LIKE ?", (f"%|{fk}",)).rowcount
+            import cross as _cross
+            res = _cross.fix_fake_candle(fk, pv)
+            db.set_setting("fix_fake_candle_20261127", json.dumps(dict(signals_removed=n_sig, **res)))
+            log.warning("Nov 27 fake-candle cleanup: %s signals removed, cross %s", n_sig, res)
+    except Exception as e:
+        log.warning("Nov 27 fake-candle cleanup failed: %s", e)
     for t in SCAN_TIMES:
         h, m = t.split(":")
         sched.add_job(scanner.scan_all, CronTrigger(day_of_week="mon-fri", hour=int(h), minute=int(m),
