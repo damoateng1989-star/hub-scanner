@@ -7356,7 +7356,7 @@ function mapPlan(sym, st) {
     const d = k === "breakout_up" ? 1 : -1, rt = st.retest;
     Object.assign(P, {dir: d, hub: h, trig: d === 1 ? h.high : h.low, shelf: st.target, shelfZone: d === 1 ? st.shelf_up : st.shelf_down, atrTarget: st.target_kind === "atr", stop: d === 1 ? h.high : h.low,
       steps: d === 1 ? "hub" : "hub_short", watch: d === -1, phase: d === 1 ? (rt && rt.near ? 2 : 1) : 2,
-       retest: d === 1 && rt && rt.candles_left > 0 ? {edge: rt.edge, near: !!rt.near} : null});
+       retest: d === 1 && rt && rt.candles_left > 0 ? {edge: rt.edge, near: !!rt.near, atr: rt.atr || null, after: rt.after || null, retested: !!rt.retested} : null});
     if (d === 1) { P.status = rt && rt.near ? "Retesting the hub top" : rt && rt.candles_left > 0 ? "Broke out · waiting for the retest" : "Broke out";
       P.sub = rt && rt.near ? "Price is back at the edge. The next 4H close decides it." : rt && rt.candles_left > 0 ? `Entry comes on a pullback to ${money(rt.edge)} that holds (window closes ${retestBy(rt.candles_left)}).` : `Aiming for ${money(st.target)}.`; P.tone = "go"; }
     else { P.status = "Broke down · watch only"; P.sub = "Short breakdowns lost money in the two-year test, so there's no entry plan."; P.tone = "bad"; }
@@ -7505,28 +7505,45 @@ class MapLabelsPaneView {
           }
         }
         // The RETEST tag is also shown on phones; the label cluster remains desktop-only.
+        // Nov 27 (owner, option C): dots on this timeframe's candles that met the rule, and a two-part tag:
+        // this timeframe's own status (lower timeframes only) + the 4H status that alerts and the record use.
         MAP_RETEST_BOX = null;
         if (d.retest && d.retest.edge != null) {
           const yEdge = yOf(d.retest.edge);
           if (yEdge != null && yEdge >= 0 && yEdge <= H) {
-            // Nov 27 (owner, option A): until price is back at the edge it is waiting, not retesting; a smaller pill
-            const near = !!d.retest.near, text = near ? "RETESTING NOW" : "WAITING FOR RETEST", ph = near ? 24 : 19;
-            // Monochrome button, not a level: ink fill, background text. (Patch 125.)
-            const ink = document.documentElement.dataset.theme === "light" ? "#141412" : "#FFFFFF";
-            const bg = document.documentElement.dataset.theme === "light" ? "#F8F9FD" : "#121418";
-            ctx.font = near ? "700 11px 'JetBrains Mono',ui-monospace,monospace" : "700 9px 'JetBrains Mono',ui-monospace,monospace";
+            const light = document.documentElement.dataset.theme === "light";
+            const ink = light ? "#141412" : "#FFFFFF", bg = light ? "#F8F9FD" : "#121418";
+            const green = light ? "#12805C" : "#3DD68C", gbg = light ? "#FFFFFF" : "#0E1512";
+            const dots = d.retestDots || [], tf = d.tfName, is4h = tf === "4H";
+            for (const t of dots) {
+              const x = chart && chart.timeScale().timeToCoordinate(t);
+              if (x == null || x < 0 || x > W) continue;
+              ctx.beginPath(); ctx.arc(x, yEdge + 9, 4.5, 0, Math.PI * 2); ctx.fillStyle = green; ctx.fill();
+              ctx.lineWidth = 2; ctx.strokeStyle = bg; ctx.stroke();
+            }
+            const r4 = !!d.retest.retested, near = !!d.retest.near;
+            const pills = [];
+            if (tf && !is4h && dots.length) pills.push({text: `${tf} RETESTED ✓`, kind: "g"});
+            pills.push(r4 ? {text: "4H RETESTED ✓", kind: "g"} : near ? {text: is4h || !tf ? "RETESTING NOW" : "4H RETESTING NOW", kind: "w", big: true}
+                          : {text: is4h || !tf ? "WAITING FOR RETEST" : "4H WAITING", kind: "w"});
             ctx.textBaseline = "middle";
-            const tagW = ctx.measureText(text).width + (near ? 20 : 14);
-            // Nov 24 (owner): the tag sits where the retest is happening — just left of the latest candle, on the edge
+            const ph = 19, gap = 6;
+            pills.forEach(p => { ctx.font = "700 9px 'JetBrains Mono',ui-monospace,monospace"; p.w = ctx.measureText(p.text).width + 14; });
+            const total = pills.reduce((s2, p) => s2 + p.w, 0) + gap * (pills.length - 1);
             const xL = d.lastTime != null && chart ? chart.timeScale().timeToCoordinate(d.lastTime) : null;
-            const tagX = xL != null && xL > tagW + 24 ? Math.min(W - tagW - 4, xL - tagW - 16) : Math.max(4, (W - 178) - 12 - tagW);
+            let x0 = xL != null && xL > total + 24 ? Math.min(W - total - 4, xL - total - 16) : Math.max(4, (W - 178) - 12 - total);
             const tagY = yEdge - ph / 2;
-            MAP_RETEST_BOX = { x: tagX, y: tagY, w: tagW, h: ph };
-            ctx.beginPath(); ctx.roundRect(tagX, tagY, tagW, ph, ph / 2);
-            ctx.fillStyle = ink; ctx.fill();
-            ctx.fillStyle = bg;
-            ctx.fillText(text, tagX + (near ? 10 : 7), yEdge);
-            if (d.retest.near && d.lastTime != null) {
+            pills.forEach(p => {
+              ctx.beginPath(); ctx.roundRect(x0, tagY, p.w, ph, ph / 2);
+              if (p.kind === "g") { ctx.fillStyle = gbg; ctx.fill(); ctx.lineWidth = 1.2; ctx.strokeStyle = green; ctx.stroke(); ctx.fillStyle = green; }
+              else { ctx.fillStyle = ink; ctx.fill(); ctx.fillStyle = bg; }
+              ctx.font = "700 9px 'JetBrains Mono',ui-monospace,monospace";
+              ctx.fillText(p.text, x0 + 7, yEdge);
+              x0 += p.w + gap;
+            });
+            const last = pills[pills.length - 1];
+            MAP_RETEST_BOX = { x: x0 - gap - last.w, y: tagY, w: last.w, h: ph };
+            if (near && !r4 && d.lastTime != null) {
               const xLast = chart && chart.timeScale().timeToCoordinate(d.lastTime);
               if (xLast != null && xLast >= 0 && xLast <= W) {
                 ctx.beginPath(); ctx.arc(xLast, yEdge, 7, 0, Math.PI * 2); ctx.lineWidth = 2; ctx.strokeStyle = ink; ctx.stroke();
@@ -7540,13 +7557,22 @@ class MapLabelsPaneView {
     } };
   }
 }
+// Nov 27 (owner, option C): which candles on the chart's own timeframe met the 4H retest rule (touched within 0.25
+// x the breakout ATR of the edge and closed above it, within 0.5 x ATR), after the breakout candle closed.
+// Chart context only: alerts, grades and the record stay on the 4H rule.
+function mapRetestDots(D) {
+  const R = D && D.P && D.P.retest;
+  if (!R || R.edge == null || !R.atr || !R.after || MAP_TF === "1d" || D.daily || !Array.isArray(D.cs)) return [];
+  const e = +R.edge, a = +R.atr;
+  return D.cs.filter(c => +c.time >= R.after && +c.low <= e + 0.25 * a && +c.close > e && +c.close <= e + 0.5 * a).map(c => +c.time);
+}
 function mapLwcKey(D) {
   // everything the chart draws: if none of it changed, a repaint of the panel can keep the chart as it is
   if (!D || !D.cs || !D.cs.length) return null;
   const P = D.P || {}, last = D.cs[D.cs.length - 1], g = GAMMA[P.sym];
   return JSON.stringify([P.sym, !!D.daily, MAP_TF, mapExtOn(), mapCloudOn(), layerPref(), document.documentElement.dataset.theme, candleColors(), D.cs.length, D.cs[0].time,
     [last.time, last.open, last.high, last.low, last.close, last.volume], P.trig, P.stop, P.shelf, P.atrTarget, P.oldHigh, P.dir,
-    P.hub && [P.hub.high, P.hub.low], P.obst && [P.obst.level, P.obst.name], P.retest && P.retest.edge,
+    P.hub && [P.hub.high, P.hub.low], P.obst && [P.obst.level, P.obst.name], P.retest && P.retest.edge, P.retest && [P.retest.near, P.retest.retested, mapRetestDots(D).length],
     g && g !== "loading" ? [g.call_wall, g.put_wall] : null, P.px,
     LEVELS[P.sym] && LEVELS[P.sym].d ? LEVELS[P.sym].t : null]);
 }
@@ -8135,6 +8161,8 @@ function initLightweightMapChart() {
           shelfColor,
           shelfZone: D.P.shelfZone || null,
           retest: D.P.retest || null,
+          retestDots: mapRetestDots(D),          // Nov 27 (owner, option C): candles on THIS timeframe that met the retest rule
+          tfName: MAP_TF === "1d" || D.daily ? null : MAP_TF.toUpperCase(),
           lastTime: D.cs && D.cs.length ? +D.cs[D.cs.length - 1].time : null,
           trig: LY.plan ? D.P.trig : null, triggerColor,
           stop: LY.plan ? D.P.stop : null, stopColor,

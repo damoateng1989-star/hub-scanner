@@ -638,6 +638,21 @@ def _current_status(c4: pd.DataFrame, res: dict, s: Settings) -> dict:
             near = (lo <= edge_r + RETEST_TOUCH * A0) if trade["direction"] == 1 else (hi >= edge_r - RETEST_TOUCH * A0)
         st["retest"] = dict(edge=round(edge_r, 2), candles_since=k,
                             candles_left=max(0, RETEST_MAX - k), near=bool(near))
+        # Nov 27 (owner): chart context for the retest tag/dots. The 4H rule's own inputs (the ATR at the breakout,
+        # when the breakout candle closed) and whether a 4H candle has already met the rule. Display only.
+        try:
+            i0 = trade["i0"]
+            st["retest"]["atr"] = round(A0, 4)
+            if i0 + 1 < n:
+                st["retest"]["after"] = int(pd.Timestamp(c4.index[i0 + 1]).timestamp())
+            cl, lo_, hi_ = c4["Close"].to_numpy(), c4["Low"].to_numpy(), c4["High"].to_numpy()
+            at = res["atr"].to_numpy()
+            hit = next((j for j in range(i0 + 1, n) if retest_check(cl, lo_, hi_, at, i0, trade["direction"], edge_r, j) == "retest"), None)
+            st["retest"]["retested"] = hit is not None
+            if hit is not None:
+                st["retest"]["retested_at"] = int(pd.Timestamp(c4.index[hit]).timestamp())
+        except Exception:
+            pass
         return st
     from_price()
     if n - 1 - trade["oi"] < s.horizon:
