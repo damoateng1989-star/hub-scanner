@@ -156,6 +156,14 @@ def _alpaca_oi(sym: str, lo: float | None, hi: float | None, exp_lte: str) -> di
     raise RuntimeError(f"Alpaca contracts refused ({last})")
 
 
+def _early_closes() -> set:
+    try:
+        import flow_signal
+        return set(flow_signal.NYSE_EARLY_CLOSES)
+    except Exception:
+        return set()
+
+
 def _alpaca_contracts(sym: str, spot: float | None) -> list:
     """Slim tuples (expiry, is_call, strike, gamma, oi, volume) built from Alpaca: greeks from the option snapshots,
     open interest from the contracts list. Same shape as the Cboe path, so every caller is unchanged."""
@@ -181,13 +189,28 @@ def _alpaca_contracts(sym: str, spot: float | None) -> list:
             break
     oi = _alpaca_oi(sym.replace(".", ""), lo, hi, exp_lte)
     out, ivs = [], {}
+    no_greeks = filled = 0
+    now_ny = datetime.now(_NY)
     for occ, sn in snaps.items():
         p = _occ(occ)
         if not p:
             continue
         g = (sn.get("greeks") or {}).get("gamma")
         if g is None:
-            continue
+            # Nov 27 (owner: "why don't I see today's date for TSLA?"): the feed often sends no greeks for contracts
+            # expiring today, which dropped the whole 0DTE column. Rebuild gamma from the contract's own IV and the
+            # time left to the 4:00 PM close (1:00 PM on an early-close day), when both are there.
+            no_greeks += 1
+            iv = sn.get("impliedVolatility")
+            if not (iv and spot and spot > 0):
+                continue
+            close_h = 13 if p[0].isoformat() in _early_closes() else 16
+            exp_dt = datetime(p[0].year, p[0].month, p[0].day, close_h, 0, tzinfo=_NY)
+            hrs = max((exp_dt - now_ny).total_seconds() / 3600, 0.25)
+            g = _bs_gamma(float(spot), p[2], hrs / (24 * 365), float(iv))
+            if not g:
+                continue
+            filled += 1
         vol = (sn.get("dailyBar") or {}).get("v") or 0
         out.append((p[0], p[1], p[2], float(g), float(oi.get(occ, 0)), float(vol)))
         try:
@@ -195,6 +218,8 @@ def _alpaca_contracts(sym: str, spot: float | None) -> list:
                 ivs[(p[0], p[1], p[2])] = float(sn["impliedVolatility"])
         except (TypeError, ValueError):
             pass
+    if no_greeks:
+        log.info("Alpaca chain %s: %d contracts without greeks, %d rebuilt from IV", sym, no_greeks, filled)
     if not out:
         raise RuntimeError("no Alpaca option greeks returned")
     with _LOCK:
