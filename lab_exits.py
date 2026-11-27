@@ -1452,7 +1452,7 @@ def run(symbols: list[str] | None = None, resume: bool = False, years: int | Non
         else:
             if years in YEARS_OK:
                 DAYS = 360 * years if years == 2 else 365 * years   # 2 years stays 720 days, like every earlier run
-            syms = symbols or universe.board_universe()
+            syms = symbols or universe.base_universe()
             start_i, rows, failed, failed_msg, started = 0, [], 0, None, time.time()
             tp = _load_tprog(only_tests, DAYS) if only_tests in NAMED_TESTS and not symbols else None
             if tp:            # the same test stopped part-way: carry on from where it got to

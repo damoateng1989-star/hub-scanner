@@ -1326,6 +1326,69 @@ async def admin_why(sym: str, u: dict = Admin):
         raise HTTPException(500, f"{type(e).__name__}: {e}")
 
 
+class UniverseAddBody(BaseModel):
+    symbol: str
+
+
+@app.get("/api/admin/universe")
+async def admin_universe(u: dict = Admin):
+    """Nov 27 (owner): the dashboard's "Add to universe" list."""
+    ex = universe.extras()
+    return dict(base=len(universe.base_universe()), extras=ex, total=len(universe.board_universe()), cap=150)
+
+
+@app.post("/api/admin/universe")
+async def admin_universe_add(body: UniverseAddBody, u: dict = Admin):
+    """Add one ticker. Checked first: a real symbol with enough 4H history for the engine, and enough trading
+    ($ volume over the board's own minimum), so a thin or broken name can't muddy the board."""
+    try:
+        sym = scanner.clean_symbol((body.symbol or "").strip().lstrip("$"))
+    except ValueError:
+        raise HTTPException(400, "Type a ticker like PLTR")
+    if sym in set(universe.base_universe()):
+        raise HTTPException(400, f"{sym} is already scanned (it's in the S&P 500, Nasdaq-100 or the ETF list)")
+    ex = universe.extras()
+    if any(r["symbol"] == sym for r in ex):
+        raise HTTPException(400, f"{sym} is already on your added list")
+    if len(ex) >= 150:
+        raise HTTPException(400, "The added list is full (150). Remove one first.")
+
+    def check():
+        bars = data.get_bars_many([sym], 40).get(sym)
+        dv = board._dollar_volume_20d(bars)
+        if bars is None or bars.empty:
+            return None, f"No price data for {sym}. Check the ticker (US stocks and ETFs only)."
+        if dv is not None and dv < board.MIN_DOLLAR_VOLUME:
+            return None, (f"{sym} trades about ${dv / 1e6:.1f}M a day, under the board's "
+                          f"${board.MIN_DOLLAR_VOLUME / 1e6:.0f}M minimum. Thin stocks make messy hubs.")
+        try:
+            c4 = scanner.load_4h(sym, scanner.SCAN_DAYS)
+        except Exception:
+            c4 = None
+        if c4 is None or len(c4) < scanner.SETTINGS.window + 15:
+            return None, f"{sym} doesn't have enough 4H history yet for the engine to read."
+        last = float(bars["Close"].iloc[-1])
+        from datetime import datetime as _dt, timezone as _tz
+        return dict(symbol=sym, added=_dt.now(_tz.utc).isoformat(timespec="seconds"),
+                    dollar_volume=round(dv) if dv else None, price=round(last, 2)), None
+    row, err = await run_in_threadpool(check)
+    if err:
+        raise HTTPException(400, err)
+    universe.save_extras(universe.extras() + [row])
+    return dict(ok=True, added=row, total=len(universe.board_universe()))
+
+
+@app.delete("/api/admin/universe/{symbol}")
+async def admin_universe_remove(symbol: str, u: dict = Admin):
+    sym = (symbol or "").upper()
+    ex = universe.extras()
+    keep = [r for r in ex if r["symbol"] != sym]
+    if len(keep) == len(ex):
+        raise HTTPException(404, f"{sym} isn't on the added list")
+    universe.save_extras(keep)
+    return dict(ok=True, total=len(universe.board_universe()))
+
+
 @app.get("/api/admin/gex-check")
 async def admin_gex_check(u: dict = Admin):
     """Nov 27 (GEX context validation spec, Step 0): read-only. Patch 149's wall-log state and stats(), plus each

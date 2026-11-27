@@ -134,7 +134,7 @@ def run(years: int = 2):
         s = scanner.SETTINGS
         days = 720 if years == 2 else 365 * years
         scan_days = scanner.SCAN_DAYS
-        syms = universe.board_universe()
+        syms = universe.base_universe()
         started = time.time()
         start_t = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=days)
         _set(status="running", done=0, total=len(syms), started=pd.Timestamp.now(tz="UTC").isoformat(), error=None,

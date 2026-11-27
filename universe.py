@@ -4,6 +4,7 @@ Default ("all"): the S&P 500 + the Nasdaq-100 + major ETFs, so there's something
 Choose with BOARD_UNIVERSE: all | sp500 | ndx | etf, or a comma list like AAPL,MSFT,...
 Nasdaq-100 per Nasdaq's Aug 2026 list (Oct 9, 2026: MRNA replaced WBD); S&P 500 as of Oct 28, 2026.
 The indexes change a few times a year, so refresh these lists now and then."""
+import json as _json
 import os
 
 NASDAQ_100 = """
@@ -62,13 +63,46 @@ def tile_size(symbol: str) -> float | None:
 UNIVERSES = {"ndx": NASDAQ_100, "sp500": SP_500, "etf": ETFS}
 
 
-def board_universe() -> list[str]:
+def base_universe() -> list[str]:
+    """The tested list: what the Lab and the published record were measured on. Extras never enter it."""
     choice = os.getenv("BOARD_UNIVERSE", "all").strip()
     if choice.lower() in UNIVERSES:
         return sorted(set(UNIVERSES[choice.lower()]))
     if choice and choice.lower() != "all":
         return sorted({s.strip().upper() for s in choice.split(",") if s.strip()})
     return sorted(set(NASDAQ_100) | set(SP_500) | set(ETFS))
+
+
+# Nov 27 (owner): tickers the owner adds from the dashboard ("Add to universe"). Scanned and shown on the board
+# like the rest, but kept out of the Lab and the record, so the tested numbers stay on the tested list.
+_EXTRA_CACHE: list = [0.0, []]
+
+
+def extras() -> list[dict]:
+    import time
+    if time.time() - _EXTRA_CACHE[0] < 30:
+        return _EXTRA_CACHE[1]
+    try:
+        import db
+        rows = _json.loads(db.get_setting("universe_extra") or "[]")
+        rows = [r for r in rows if isinstance(r, dict) and r.get("symbol")]
+    except Exception:
+        rows = _EXTRA_CACHE[1]
+    _EXTRA_CACHE[0], _EXTRA_CACHE[1] = time.time(), rows
+    return rows
+
+
+def save_extras(rows: list[dict]) -> None:
+    import db
+    db.set_setting("universe_extra", _json.dumps(rows))
+    _EXTRA_CACHE[0] = 0.0
+
+
+def board_universe() -> list[str]:
+    base = base_universe()
+    if os.getenv("BOARD_UNIVERSE", "all").strip().lower() not in ("", "all"):
+        return base
+    return sorted(set(base) | {r["symbol"] for r in extras()})
 
 
 def describe() -> str:

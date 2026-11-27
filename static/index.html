@@ -2042,6 +2042,10 @@ html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
 .inst2 .in-copy { border: 0; background: none; color: #0A84FF; font: 700 14px var(--sans); cursor: pointer; }
 .inst2 .in-foot { margin: 14px 0 0; color: var(--muted); font-size: 13.5px; }
 .inst2 .in-acts { display: flex; justify-content: flex-end; margin-top: 14px; } .inst2 .in-acts .primary { min-width: 120px; }
+.uni-add { display: flex; gap: 8px; margin: 10px 0 6px; } .uni-add input { flex: 1; min-width: 0; }
+.uni-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.uni-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 11px; border: 1px solid var(--line); border-radius: 999px; font: 600 13px var(--mono); }
+.uni-chip small { color: var(--muted); font-weight: 500; } .uni-chip button { border: 0; background: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 0 4px; }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -4594,6 +4598,30 @@ function previewBrokerImpact() {
 }
 
 // ---------------------------------------------------------------- admin dashboard: members, waitlist, invites, inbox
+// Nov 27 (owner): "Add to universe". Extras are scanned and shown like the rest; the Lab and the record stay on
+// the tested list, so the published numbers aren't diluted by names they never measured.
+async function loadUniverse(msg) {
+  const el = $("uniBox"); if (!el) return;
+  let d; try { d = await api("/api/admin/universe"); } catch (e) { el.innerHTML = '<h3>Universe</h3><p class="note">Couldn\'t load the list.</p>'; return; }
+  const rows = d.extras.map(r => `<span class="uni-chip"><b>${esc(r.symbol)}</b>${r.dollar_volume ? `<small>$${(r.dollar_volume / 1e6).toFixed(0)}M/day</small>` : ""}<button type="button" aria-label="Remove ${esc(r.symbol)}" onclick="uniRemove('${esc(r.symbol)}')">×</button></span>`).join("");
+  el.innerHTML = `<h3>Universe · ${d.total} scanned</h3>
+    <p>${d.base} from the S&P 500, Nasdaq-100 and major ETFs${d.extras.length ? `, plus ${d.extras.length} you added` : ""}. Added tickers are scanned, shown on the board and alerted like the rest, but the Lab and the published record stay on the tested ${d.base}.</p>
+    <form class="uni-add" onsubmit="uniAdd(event)"><input id="uniSym" placeholder="Add a ticker, e.g. PLTR" maxlength="10" autocapitalize="characters" spellcheck="false" autocomplete="off"><button type="submit" class="primary" id="uniBtn">Add</button></form>
+    <p class="note" id="uniMsg">${msg ? esc(msg) : `Checked before it's added: real price data, enough 4H history, and at least $10M traded a day. Up to ${d.cap}.`}</p>
+    ${rows ? `<div class="uni-list">${rows}</div>` : ""}`;
+}
+async function uniAdd(e) {
+  e.preventDefault();
+  const s = ($("uniSym").value || "").trim().toUpperCase(); if (!s) return;
+  $("uniBtn").disabled = true; $("uniMsg").textContent = `Checking ${s}…`;
+  try { const r = await api("/api/admin/universe", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({symbol: s})});
+        loadUniverse(`${r.added.symbol} added. It's scanned from the next run.`); }
+  catch (err) { $("uniMsg").textContent = err.message || "Couldn't add it."; $("uniBtn").disabled = false; }
+}
+async function uniRemove(sym) {
+  try { await api("/api/admin/universe/" + encodeURIComponent(sym), {method: "DELETE"}); loadUniverse(`${sym} removed.`); }
+  catch (err) { $("uniMsg").textContent = err.message || "Couldn't remove it."; }
+}
 async function loadAdmin() {
   if (!ME) await loadMe();
   if (!ME || !ME.is_admin) return;
@@ -4621,6 +4649,8 @@ async function loadAdmin() {
         <button class="btnx sm" onclick="markMsg(${x.id}, ${x.handled ? "false" : "true"})">${x.handled ? "Mark as new" : "✓ Mark done"}</button></div>`).join("")}</div>`
         : `<p class="note">No messages yet.</p>`}</div>`;
     $("admin").innerHTML = strip + admin + `<div class="acct" id="invitesBox"><h3>Early access</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="futOrbBox"><h3>Futures · forward test</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="futLabBox"><h3>Futures Lab</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="setupsBox"><h3>Setups this month</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="backupBox"><h3>Backups</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div><div class="acct" id="emailList"><h3>Email list</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>`;
+  { const first = $("admin").querySelector(".acct"); if (first) first.insertAdjacentHTML("beforebegin", '<div class="acct" id="uniBox"><h3>Universe</h3><div class="loading" style="padding:8px 0"><span class="spin"></span>Loading…</div></div>'); }
+  loadUniverse();
   loadInvites(); loadBackups(); loadSetupsMonth(); loadFutLab(); loadFutOrbRecord();
   api("/api/admin/subscribers").then(d => {
     $("emailList").innerHTML = `<h3>Email list · ${d.total}</h3><p>People who joined from the homepage${d.unsubscribed ? ` (${d.unsubscribed} unsubscribed)` : ""}.</p>
