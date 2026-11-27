@@ -1429,6 +1429,7 @@ async def admin_gex_check(u: dict = Admin):
             shadow = {"error": str(e)[:200]}
         return dict(now_et=_dt.now(_Z("America/New_York")).isoformat(timespec="seconds"),
                     patch149_log=log_info, patch149_stats=st, patch227_shadow=shadow,
+                    chain_diag=gamma.CHAIN_DIAG,
                     snapshot_cadence="every 5 min, 09:35-16:00 ET, Mon-Fri, shared watchlist; only today's files kept",
                     watchlist=chains)
     return await run_in_threadpool(run)

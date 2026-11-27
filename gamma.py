@@ -156,6 +156,9 @@ def _alpaca_oi(sym: str, lo: float | None, hi: float | None, exp_lte: str) -> di
     raise RuntimeError(f"Alpaca contracts refused ({last})")
 
 
+CHAIN_DIAG: dict = {}     # Nov 27: per-symbol read of the last Alpaca chain (admin check only)
+
+
 def _early_closes() -> set:
     try:
         import flow_signal
@@ -218,6 +221,10 @@ def _alpaca_contracts(sym: str, spot: float | None) -> list:
                 ivs[(p[0], p[1], p[2])] = float(sn["impliedVolatility"])
         except (TypeError, ValueError):
             pass
+    today_snaps = sum(1 for occ in snaps if (_occ(occ) or (None,))[0] == date.today())
+    CHAIN_DIAG[sym.upper()] = dict(at=datetime.now(_NY).isoformat(timespec="seconds"), snapshots=len(snaps),
+                                   expiring_today_in_feed=today_snaps, no_greeks=no_greeks, rebuilt_from_iv=filled,
+                                   kept=len(out), expiries=sorted({c[0].isoformat() for c in out})[:6])
     if no_greeks:
         log.info("Alpaca chain %s: %d contracts without greeks, %d rebuilt from IV", sym, no_greeks, filled)
     if not out:
