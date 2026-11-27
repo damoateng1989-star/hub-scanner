@@ -9188,9 +9188,15 @@ async function loadGamma(sym) {
     catch (e) { GAMMA[sym] = null; GAMMA_NL[sym] = null; GAMMA_GRID[sym] = null; }
     GAMMA_AT[sym] = Date.now();
   }
+  if (GH_SILENT === sym) {              // background refresh: the chart repaints only if a wall it draws moved
+    const now = JSON.stringify(GAMMA[sym] || null);
+    paintHeat(sym);
+    if (BRIEF_SYM === sym && now !== GH_WALLS_WAS) { paintGamma(sym); paintMap(); }
+    return;
+  }
   paintGamma(sym); paintHeat(sym); if (BRIEF_SYM === sym) paintMap();
-  if (GH_FULL && BRIEF_SYM === sym) ghFull(true, true);         // the full-screen board repaints with the new read
 }
+let GH_SILENT = null, GH_WALLS_WAS = null;
 // Nov 27 (owner): while a Shelf card is open, the heat map refreshes itself every minute (in market hours the
 // server re-reads the chain at most once a minute per symbol; outside them the numbers don't change).
 setInterval(() => {
@@ -9198,7 +9204,8 @@ setInterval(() => {
   const host = $("ghFullHost"), sc = host ? host.scrollTop : 0, inner = host && host.querySelector(".gh-scroll, .gh-wrap");
   const isc = inner ? [inner.scrollTop, inner.scrollLeft] : null;
   GAMMA_AT[BRIEF_SYM] = 1;                        // stale: force the re-read
-  loadGamma(BRIEF_SYM).then(() => {
+  GH_WALLS_WAS = JSON.stringify(GAMMA[BRIEF_SYM] || null); GH_SILENT = BRIEF_SYM;
+  loadGamma(BRIEF_SYM).finally(() => { GH_SILENT = null; }).then(() => {
     const h = $("ghFullHost"); if (h) { h.scrollTop = sc; const i2 = h.querySelector(".gh-scroll, .gh-wrap"); if (i2 && isc) { i2.scrollTop = isc[0]; i2.scrollLeft = isc[1]; } }
   });
 }, 60000);
@@ -9372,6 +9379,20 @@ function bfHeatHTML(j, full) {
     <div class="gh-levels">${tot != null ? `<span>Net ${mode === "vex" ? "VEX" : "GEX"} <b class="${tot < 0 ? "u-down" : "u-up"}">${fmt(tot)}</b></span>` : ""}<span><i class="gh-k gh-rp"></i>Top 3 positive</span><span><i class="gh-k gh-rn"></i>Top 3 negative</span><span><i class="gh-k gh-rmax"></i>Largest ★</span><span title="${esc(magTip)}"><i class="gh-k gh-mag"></i>Magnet · nearest expiry</span>${asOf ? `<span class="gh-read">Chain read ${esc(asOf)} ET</span>` : ""}</div>
     <p class="gh-foot">${mode === "vex" ? "Each cell: net dealer vanna at that strike for that expiry, in dollars per 1 point of implied volatility (how much dealer hedging shifts when IV moves). Positive (green to yellow): a drop in IV tends to support price; negative (blue to indigo): falling IV adds selling." : "Each cell: net dealer gamma at that strike for that expiry, in dollars. Green to yellow is positive (price tends to slow and pin there), blue to indigo is negative (moves can speed up)."} The ringed cells are the biggest concentrations. Context only: never part of a grade or an alert.</p></div>`;
 }
+// Nov 27 (owner: "it refreshes but it shakes the whole panel"): a background refresh swaps only the table, the
+// header line, legend and level keys inside the board that's already on screen. The scroll box, its position
+// and the animations stay put. Returns false when the board isn't there (then the caller paints it fresh).
+function ghSwap(root, html) {
+  const card = root && root.querySelector(".bh-card.gh"); if (!card || !html) return false;
+  const t = document.createElement("div"); t.innerHTML = html; const nc = t.querySelector(".bh-card.gh"); if (!nc) return false;
+  const sc = card.querySelector(".gh-scroll"), top = sc ? sc.scrollTop : 0, left = sc ? sc.scrollLeft : 0;
+  for (const sel of [".gh-t", ".bh-head .s", ".gh-legend", ".gh-levels"]) {
+    const a = card.querySelector(sel), b = nc.querySelector(sel);
+    if (a && b && a.innerHTML !== b.innerHTML) a.innerHTML = b.innerHTML;
+  }
+  if (sc) { sc.scrollTop = top; sc.scrollLeft = left; }
+  return true;
+}
 function ghCenter(btn) {        // scroll each board (side panel, full screen) so the price row sits mid-view
   const roots = btn ? [btn.closest(".gh")] : [...document.querySelectorAll(".bf-heat .gh")];
   roots.forEach(root => { const sc = root && root.querySelector(".gh-scroll"), r = sc && sc.querySelector("tr[data-spot]");
@@ -9381,6 +9402,12 @@ function paintHeat(sym) {
   const el = $("bfHeat"); if (!el) return;
   if (BRIEF_SYM !== sym) return;
   const html = bfHeatHTML(GAMMA_GRID[sym], false);
+  if (GH_SILENT === sym) {                          // background refresh: update in place, no re-layout, no recentring
+    if (GH_FULL) { const host = $("ghFullHost"), fh = GAMMA_GRID[sym] && bfHeatHTML(GAMMA_GRID[sym], true); if (!ghSwap(host, fh)) ghFull(true, true); }
+    const hm0 = $("bfHeatMini"); if (hm0 && !hm0.hidden) { const mini = innerWidth < 1280 ? ghMiniHTML(GAMMA_GRID[sym]) : null; if (mini && hm0.innerHTML !== mini) hm0.innerHTML = mini; }
+    if (html && !el.hidden && ghSwap(el, html)) return;
+    if (el.hidden) return;
+  }
   if (GH_FULL) ghFull(true);
   const hb = $("bfHeatBtn"); if (hb) hb.hidden = !html;
   const hm = $("bfHeatMini");               // Nov 25 (owner): a little window under the chart; tap → the full board
