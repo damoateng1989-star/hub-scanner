@@ -2071,6 +2071,8 @@ html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
 .vback nav span { margin: 0 8px; opacity: .6; } .vback nav b { color: var(--ink); }
 html[data-theme="light"] .vback button { background: radial-gradient(circle at 30% 25%, #ffffff, #EEF0F4); color: #141412;
   box-shadow: 0 0 0 1px rgba(15,23,42,.12), 0 0 0 4px rgba(37,99,235,.08), 0 8px 18px rgba(15,23,42,.12); }
+.sopt-acct-sel { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: 600 15px var(--sans); }
+.sopt-acct { display: grid; gap: 6px; margin: 4px 0 12px; } .sopt-acct span { font: 600 11px var(--mono); letter-spacing: .1em; color: var(--muted); }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
 @media (display-mode: standalone) {
@@ -5194,6 +5196,19 @@ function tip(term) {
 function explain(term) { const [t, d] = GLOSS[term]; showSheet(`<h3>${t}</h3><p>${d}</p><p style="margin-top:12px"><a href="#guide" onclick="closeSheet()">How it all fits together →</a></p>`); }
 function showSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; }
 let SHELF_TRADE_PREVIEW = null, SHELF_TRADE_SYMBOL = "", SHELF_TRADE_PRICE = 0, SHELF_TRADE_TRIGGER = null, SHELF_TRADE_DEBOUNCE = null, SHELF_TRADE_EXPIRY_TIMER = null, SHELF_TRADE_REQUEST = 0;
+// Nov 27 (owner): pick the account trades go to, remembered on this device (futures accounts can't take stock or
+// option orders, so they're left out of the list).
+function tradeAccts() { return BROKER_ACCOUNTS.filter(a => !/futures/i.test(`${a.name || ""} ${a.type || ""}`)); }
+function tradeAcct() {
+  const list = tradeAccts(); let id = null; try { id = localStorage.getItem("ns-trade-acct"); } catch (e) {}
+  return list.find(a => a.account_id === id) || list[0] || BROKER_ACCOUNTS[0] || null;
+}
+function tradeAcctSet(id) { try { localStorage.setItem("ns-trade-acct", id); } catch (e) {} if (SOPT) { SOPT.preview = null; shelfOptPaint(); } }
+function tradeAcctSelect(cls, extra) {
+  const list = tradeAccts(), cur = tradeAcct(); if (list.length < 2) return "";
+  return `<select class="${cls}" aria-label="Account" onchange="tradeAcctSet(this.value);${extra || ""}">${list.map(a => { const l = shelfTradeAccountLabel(a);
+    return `<option value="${esc(a.account_id)}"${cur && cur.account_id === a.account_id ? " selected" : ""}>${esc(l.name + (l.masked ? " " + l.masked : ""))}</option>`; }).join("")}</select>`;
+}
 function shelfTradeAccountLabel(a) {
   const broker = a.brokerage || "Brokerage", name = a.name || "Investment account", masked = a.number_masked || "";
   return {broker, name, masked, full: broker + " · " + name + (masked ? " " + masked : "")};
@@ -5211,15 +5226,15 @@ function renderShelfTradeCard(sym) {
   const trigger = other ? other.edge : (hubLive ? (side === "BUY" ? st.hub?.high : st.hub?.low) : (st.hub ? (side === "BUY" ? (st.trigger_up || st.hub.high) : (st.trigger_down || st.hub.low)) : null));
   SHELF_TRADE_SYMBOL = sym; SHELF_TRADE_PRICE = price; SHELF_TRADE_TRIGGER = trigger;
   SHELF_TRADE_PREVIEW = null; clearTimeout(SHELF_TRADE_DEBOUNCE); SHELF_TRADE_REQUEST++;
-  const options = BROKER_ACCOUNTS.map(a => `<option value="${esc(a.account_id)}">${esc(shelfTradeAccountLabel(a).full)}</option>`).join("");
-  const account = BROKER_ACCOUNTS[0], label = account ? shelfTradeAccountLabel(account) : null;
+  const account = tradeAcct(), label = account ? shelfTradeAccountLabel(account) : null;
+  const options = tradeAccts().map(a => `<option value="${esc(a.account_id)}"${account && a.account_id === account.account_id ? " selected" : ""}>${esc(shelfTradeAccountLabel(a).full)}</option>`).join("");
   const accountLine = label ? `<span class="shelf-broker-mark">${esc((label.broker || "B").slice(0,1).toUpperCase())}</span><span class="shelf-broker-name"><b>${esc(label.broker)}</b><small>${esc(label.name)} ${label.masked ? "· " + esc(label.masked) : ""}</small></span><span class="shelf-connected">Connected</span>` : `<span class="shelf-broker-name"><b>Account unavailable</b><small>Refresh the existing SnapTrade account lookup. Do not reconnect yet.</small></span>`;
   const fmt = v => v == null || !Number.isFinite(Number(v)) ? "—" : money(Number(v));
   host.hidden = false;
   host.innerHTML = `<div class="broker-ticket shelf-trade-ticket shelf-trade-embedded">
     <div class="broker-ticket-head"><b>Trade ${esc(sym)}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>
     <div class="shelf-broker-line">${accountLine}<button type="button" class="shelf-change" onclick="toggleShelfTradeAccount()">Change</button></div>
-    <select id="shelfTradeAccount" class="shelf-account-select" onchange="updateShelfTradeBrokerLine();invalidateShelfTradePreview()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>${options}</select>
+    <select id="shelfTradeAccount" class="shelf-account-select" onchange="tradeAcctSet(this.value);updateShelfTradeBrokerLine();invalidateShelfTradePreview()" ${BROKER_ACCOUNTS.length ? "" : "disabled"}>${options}</select>
     <input id="shelfTradeSide" type="hidden" value="${side}">
     <input id="shelfTradeQty" type="hidden" value="1">
     <div class="shelf-segment-grid">
@@ -5389,7 +5404,7 @@ async function shelfOptPreview() {
   const req = ++S.req; out.textContent = "Checking the order with SnapTrade…"; shelfOptPaintBits();
   try {
     const br = soptBr(S.type), base = soptBase(S.type);
-    const r = await api("/api/broker/options/impact", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, action: S.action, units: S.qty, order_type: base, price: lim ? S.price : null, stop: (S.type === "STOP" || S.type === "STOP_LIMIT") ? S.stop : null, time_in_force: S.tif || "Day", take_profit: br ? S.tp : null, stop_loss: br ? S.sl : null, bracket_mode: soptMode(S)})});
+    const r = await api("/api/broker/options/impact", {method: "POST", body: JSON.stringify({account_id: (tradeAcct() || {}).account_id, contract: k.symbol, action: S.action, units: S.qty, order_type: base, price: lim ? S.price : null, stop: (S.type === "STOP" || S.type === "STOP_LIMIT") ? S.stop : null, time_in_force: S.tif || "Day", take_profit: br ? S.tp : null, stop_loss: br ? S.sl : null, bracket_mode: soptMode(S)})});
     if (S !== SOPT || req !== S.req) return;
     S.preview = r.preview_id;
     const fee = shelfTradeFee(r.impact || {}), unit = lim ? S.price : (S.type === "STOP" ? S.stop : k.mid), est = unit * 100 * S.qty;
@@ -5406,7 +5421,7 @@ async function shelfOptSubmit() {
   if (!(await soptConfirm(S, k, d))) return;
   if (S.type === "EXITS") {
     S.preview = null; const out = $("soptImpact"); if (out) out.textContent = "Placing the exit pair with your brokerage…";
-    try { await api("/api/broker/options/exits", {method: "POST", body: JSON.stringify({account_id: $("shelfTradeAccount")?.value || BROKER_ACCOUNTS[0].account_id, contract: k.symbol, units: S.qty, take_profit: S.tp, stop_loss: S.sl, confirm: true, bracket_mode: soptMode(S)})});
+    try { await api("/api/broker/options/exits", {method: "POST", body: JSON.stringify({account_id: (tradeAcct() || {}).account_id, contract: k.symbol, units: S.qty, take_profit: S.tp, stop_loss: S.sl, confirm: true, bracket_mode: soptMode(S)})});
       if (out) out.innerHTML = `<b>Exits placed</b> · ${esc(line)}`; toast("Exit pair placed."); soptBrackets(); }
     catch (e) { if (out) out.textContent = e.message || "The brokerage refused the exit pair."; toast(e.message || "Exits failed."); }
     return;
@@ -5455,7 +5470,7 @@ async function soptBrStop(id) {
 // the real-order confirmation: the exact order, what it costs, where it goes; Cancel is the default (Esc / tap outside)
 function soptConfirm(S, k, d) {
   return new Promise(resolve => {
-    const acct = BROKER_ACCOUNTS[0], al = acct ? shelfTradeAccountLabel(acct) : null, buy = S.action === "BUY_TO_OPEN";
+    const acct = tradeAcct(), al = acct ? shelfTradeAccountLabel(acct) : null, buy = S.action === "BUY_TO_OPEN";
     const unit = ["LIMIT", "LIMIT_BR", "STOP_LIMIT"].includes(S.type) ? S.price : S.type === "STOP" ? S.stop : k.mid, tot = unit * 100 * S.qty, G = S.type === "EXITS" ? null : soptGuard(S, k);
     const el = document.createElement("div"); el.className = "soc-back";
     el.innerHTML = `<div class="soc" role="alertdialog" aria-modal="true" aria-labelledby="socT">
@@ -6183,8 +6198,9 @@ function shelfOptPaintBits() {
 function shelfOptPaint() {
   try { const ct = $("tkCt"); if (ct && MAP_TK && SOPT && MAP_TK.sym === SOPT.sym) { const st = (BRIEF_CHART && BRIEF_CHART.symbol === SOPT.sym && BRIEF_CHART.status) || findStatus(SOPT.sym); ct.innerHTML = tkContractHTML(SOPT.sym, null, mapTicketPlan(mapPlan(SOPT.sym, st), st)); } } catch (e) {}   // Patch 209: the contract card follows the live pick
   const host = $("shelfOptHost"), S = SOPT; if (!host || !S) return;
-  const acct = BROKER_ACCOUNTS[0], al = acct ? shelfTradeAccountLabel(acct) : null;
+  const acct = tradeAcct(), al = acct ? shelfTradeAccountLabel(acct) : null;
   const head = `<div class="broker-ticket-head"><b>${al ? esc(al.broker) + (al.masked ? " " + esc(al.masked) : "") : "No broker connected"}</b><span class="broker-demo-tag">OWNER · LIVE BROKER FLOW</span></div>`
+    + (acct && tradeAccts().length > 1 ? `<label class="sopt-acct"><span>ACCOUNT</span>${tradeAcctSelect("sopt-acct-sel")}</label>` : "")
     + (acct ? "" : `<p class="shelf-trade-note" style="margin:6px 0 10px">Connect Webull on the <a href="#account" onclick="mapTicketClose()">Account page</a> to preview and place option orders here.</p>`);
   if (!S.chain) { host.innerHTML = `<div class="broker-ticket shelf-trade-ticket shelf-trade-embedded sopt">${head}<div class="broker-impact-result shelf-impact">${S.err ? esc(S.err) : "Loading the option chain…"}</div></div>`; return; }
   const exps = [...new Set(S.chain.map(r => r.expiry))], k = shelfOptContract();
