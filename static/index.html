@@ -2105,6 +2105,8 @@ html .bf-heat .bh-card.gh table td.gh-c.gh-rn.gh-pulse { background: #5B2FC9 !im
 /* Nov 27 (owner): the sticky level-tag column sat on top of the last expiries; it is now an ordinary last column, and the strike cell carries a colour bar so levels still show without scrolling */
 .bf-heat table.gh-t td.gh-lv { position: static !important; padding: 0 6px 0 8px; } .bf-heat table.gh-t thead th.gh-lv { position: sticky !important; top: 0; right: auto !important; z-index: 2; }
 .bf-heat tr.gh-l-call > th:first-child { box-shadow: inset 4px 0 0 #3DD68C; } .bf-heat tr.gh-l-put > th:first-child { box-shadow: inset 4px 0 0 #E5484D; } .bf-heat tr.gh-l-flip > th:first-child { box-shadow: inset 4px 0 0 #F2C14E; }
+/* Nov 27 (owner): the dark-background sweep painted the strike and date headers near-black; keep them the card teal with white text (:not(#_) lifts specificity over that sweep's id list) */
+html body .bf-heat .bh-card.gh table.gh-t th:not(#_), html body .bf-heat .bh-card.gh table.gh-minit th:not(#_) { background: #2E7268 !important; color: #fff !important; }
 .bf-heat .gh-morehint { position: static; display: block; margin: 6px auto 0 0; z-index: 6; border: 0; border-radius: 0; padding: 4px 8px; background: #0d1117; color: #E9F7F3; font: 700 10.5px var(--mono); letter-spacing: .04em; cursor: pointer; box-shadow: 0 0 0 1px rgba(255,255,255,.25); }
 .kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 5px; border-radius: 7px; border: 1px solid rgba(127,127,127,.4); font-size: 13px; vertical-align: -2px; }
 /* installed app: respect the notch and home bar */
