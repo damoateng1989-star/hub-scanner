@@ -1313,6 +1313,46 @@ async def admin_why(sym: str, u: dict = Admin):
         raise HTTPException(500, f"{type(e).__name__}: {e}")
 
 
+@app.get("/api/admin/gex-check")
+async def admin_gex_check(u: dict = Admin):
+    """Nov 27 (GEX context validation spec, Step 0): read-only. Patch 149's wall-log state and stats(), plus each
+    watchlist symbol's chain time and today's snapshot times/walls. Fetches nothing; changes nothing."""
+    def run():
+        import gex_log
+        from collections import Counter
+        from datetime import datetime as _dt
+        from zoneinfo import ZoneInfo as _Z
+        rows = gex_log._load()
+        lp = gex_log.LOG_PATH
+        settled = [r for r in rows if r.get("outcome") in ("follow-through", "snap-back", "stalled")]
+        log_info = dict(path=str(lp), exists=lp.exists(), bytes=lp.stat().st_size if lp.exists() else 0,
+                        modified=(_dt.fromtimestamp(lp.stat().st_mtime, _Z("America/New_York")).isoformat(timespec="seconds")
+                                  if lp.exists() else None),
+                        rows=len(rows), open_rows=len(rows) - len(settled),
+                        settled_by_key=dict(Counter(r.get("key") for r in settled)),
+                        first_close=min((r.get("close_time") or "" for r in rows), default=None),
+                        last_close=max((r.get("close_time") or "" for r in rows), default=None))
+        try:
+            st = gex_log.stats()
+        except Exception as e:
+            st = {"error": str(e)[:200]}
+        day = _dt.now(_Z("America/New_York")).date().isoformat()
+        chains = {}
+        for r in db.list_tickers():
+            sym = r["symbol"]
+            times = gamma._snapshot_times(sym, day)
+            first = gamma._read_snapshot(sym, times[0], day) if times else None
+            last = gamma._read_snapshot(sym, times[-1], day) if times else None
+            chains[sym] = dict(chain_as_of=gamma.chain_as_of(sym), snapshots_today=len(times),
+                               first_snapshot=times[0] if times else None, last_snapshot=times[-1] if times else None,
+                               walls_first=(first or {}).get("walls"), walls_last=(last or {}).get("walls"))
+        return dict(now_et=_dt.now(_Z("America/New_York")).isoformat(timespec="seconds"),
+                    patch149_log=log_info, patch149_stats=st,
+                    snapshot_cadence="every 5 min, 09:35-16:00 ET, Mon-Fri, shared watchlist; only today's files kept",
+                    watchlist=chains)
+    return await run_in_threadpool(run)
+
+
 @app.get("/api/admin/data-check")
 async def admin_data_check(u: dict = Admin):
     """Nov 25: is the real-time (Algo Trader Plus) data working? Asks Alpaca for SPY's live full-market (SIP) trade and
