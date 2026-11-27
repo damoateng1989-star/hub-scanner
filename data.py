@@ -338,12 +338,23 @@ def extended_price(sym: str) -> dict:
 
 
 def premarket_movers() -> dict:
-    """Top premarket movers among names passing the board's liquidity filters."""
+    """Top movers among names passing the board's liquidity filters, by session phase (Nov 27, owner):
+    before the open on a trading day, pre-market moves (trades before 9:30 vs the prior close); from the open on,
+    the day's moves at the latest price; on a closed day or before 4 AM, the last session's moves.
+    Returns gainers, losers, as_of and phase ('pre' | 'day' | 'last')."""
     global _PREMARKET, _PREMARKET_AT
     now = time.time()
-    if _PREMARKET is not None and now - _PREMARKET_AT < 300:
+    et_now = pd.Timestamp.now(tz="America/New_York")
+    mins = et_now.hour * 60 + et_now.minute
+    try:
+        import flow_signal
+        trading = bool(flow_signal.is_trading_day(et_now.date()))
+    except Exception:
+        trading = et_now.weekday() < 5
+    phase = "pre" if trading and 240 <= mins < 570 else "day" if trading and mins >= 570 else "last"
+    if _PREMARKET is not None and _PREMARKET.get("phase") == phase and now - _PREMARKET_AT < 300:
         return _PREMARKET
-    empty = dict(gainers=[], losers=[], as_of=None)
+    empty = dict(gainers=[], losers=[], as_of=None, phase=phase)
     try:
         if provider() != "alpaca":
             return empty
@@ -377,22 +388,43 @@ def premarket_movers() -> dict:
         snaps = _alpaca_snapshots(eligible, feed="sip")
         if not snaps:
             return empty
-        et_now = pd.Timestamp.now(tz="America/New_York")
         today = et_now.date()
         cutoff = et_now.normalize() + pd.Timedelta(hours=9, minutes=30)
+        close_at = et_now.normalize() + pd.Timedelta(hours=16)
         movers = []
         for sym, snap in snaps.items():
             trade = snap.get("latestTrade") or {}
             prev = (snap.get("prevDailyBar") or {}).get("c")
-            px, stamp = trade.get("p"), trade.get("t")
-            if not px or not prev or not stamp:
-                continue
-            ts = pd.Timestamp(stamp)
-            if ts.tzinfo is None:
-                ts = ts.tz_localize("UTC")
-            ts_et = ts.tz_convert("America/New_York")
-            if ts_et.date() != today or ts_et >= cutoff:
-                continue
+            daily = snap.get("dailyBar") or {}
+            if phase == "pre":
+                px, stamp = trade.get("p"), trade.get("t")
+                if not px or not prev or not stamp:
+                    continue
+                ts = pd.Timestamp(stamp)
+                ts = ts.tz_localize("UTC") if ts.tzinfo is None else ts
+                ts_et = ts.tz_convert("America/New_York")
+                if ts_et.date() != today or ts_et >= cutoff:
+                    continue
+            else:
+                # the session's own move: the regular-hours daily bar against the prior close; during the session
+                # the latest regular-hours trade (after 4:00 the daily bar's close, so after-hours prints don't leak in)
+                px = daily.get("c")
+                stamp = trade.get("t")
+                if phase == "day" and trade.get("p") and stamp:
+                    ts = pd.Timestamp(stamp)
+                    ts = ts.tz_localize("UTC") if ts.tzinfo is None else ts
+                    ts_et = ts.tz_convert("America/New_York")
+                    if ts_et.date() == today and cutoff <= ts_et < close_at:
+                        px = trade.get("p")
+                if not px or not prev:
+                    continue
+                if phase == "day":
+                    bt = daily.get("t")
+                    try:
+                        if bt and pd.Timestamp(bt).tz_convert("America/New_York").date() != today:
+                            continue           # no regular-hours bar for today yet
+                    except Exception:
+                        pass
             change = round((float(px) / float(prev) - 1) * 100, 2)
             movers.append(dict(symbol=sym, price=round(float(px), 2), change_pct=change))
         if not movers:
@@ -401,13 +433,13 @@ def premarket_movers() -> dict:
         result = dict(gainers=sorted((x for x in movers if x["change_pct"] > 0),
                                      key=lambda x: x["change_pct"], reverse=True)[:5],
                       losers=[x for x in movers if x["change_pct"] < 0][:5],
-                      as_of=pd.Timestamp.now(tz="UTC").isoformat())
+                      as_of=pd.Timestamp.now(tz="UTC").isoformat(), phase=phase)
         if result["gainers"] or result["losers"]:
             _PREMARKET, _PREMARKET_AT = result, now
             return result
         return empty
     except Exception as e:
-        logging.getLogger(__name__).warning("premarket movers unavailable: %s", e)
+        logging.getLogger(__name__).warning("movers unavailable: %s", e)
         return empty
 
 

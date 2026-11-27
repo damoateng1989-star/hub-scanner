@@ -9875,6 +9875,10 @@ async function loadWeek() {
 }
 async function loadPremarket() {
   try { PREMARKET = await api("/api/premarket"); } catch (e) { PREMARKET = null; }
+  if (!window.__moversTimer) window.__moversTimer = setInterval(async () => {      // movers refresh every 5 minutes on Today
+    if (document.hidden || !$("premarket") || (location.hash && !location.hash.startsWith("#today"))) return;
+    try { PREMARKET = await api("/api/premarket"); renderPremarket(); } catch (e) {}
+  }, 300000);
   renderPremarket();
 }
 // the Stacked list: live hub breakouts, gap fades and double bottoms run through their stacked checklist
@@ -9957,10 +9961,11 @@ async function loadToday() {
 }
 function renderPremarket() {
   const el = $("premarket"); if (!el) return;
-  const n = etNow(), mins = n.getHours() * 60 + n.getMinutes(), wd = n.getDay();
-  const pre = wd >= 1 && wd <= 5 && mins < 570;
+  // Nov 27 (owner): pre-market movers before the open, the day's movers from 9:30 (kept after the close), the
+  // last session's on a closed day. The server says which (phase).
   const g = (PREMARKET && PREMARKET.gainers) || [], l = (PREMARKET && PREMARKET.losers) || [];
-  if (!pre || PREMARKET && PREMARKET.locked) { el.hidden = true; el.innerHTML = ""; return; }
+  if (!PREMARKET || PREMARKET.locked) { el.hidden = true; el.innerHTML = ""; return; }
+  const word = {pre: "Pre-market", day: "Today's", last: "Last session's"}[PREMARKET.phase] || "Pre-market";
   // Nov 27 (owner): a tap opens the Shelf card, not the full chart page (the link stays for long-press / new tab)
   const row = (x, up) => `<a class="arow" href="/t/${esc(x.symbol)}" onclick="event.preventDefault(); openBrief('${esc(x.symbol)}')" style="--c:var(${up ? "--up" : "--down"})"><i></i>
     <span class="t"><span class="tk">${esc(x.symbol)}</span><span>${up ? "+" : ""}${x.change_pct.toFixed(2)}%</span></span>
@@ -9969,7 +9974,7 @@ function renderPremarket() {
     ? `<div class="week-head"><div class="week-k">${title}</div></div><div class="lrows">${rows.map(x => row(x, up)).join("")}</div>` : "";
   // Nothing to list yet (or the data is unavailable): hide the card instead of a placeholder sentence.
   if (!g.length && !l.length) { el.hidden = true; el.innerHTML = ""; return; }
-  el.innerHTML = group("Pre-market gainers", g, true) + group("Pre-market losers", l, false);   // Nov 27 (owner): say what list it is
+  el.innerHTML = group(`${word} gainers`, g, true) + group(`${word} losers`, l, false);
   el.hidden = false;
 }
 // Patch 226 §B1: Sika's brief. Composed only from what this page already shows (the retest rows, the crossed count,
