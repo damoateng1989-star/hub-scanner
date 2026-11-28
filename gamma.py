@@ -1168,7 +1168,7 @@ def glow(symbol: str, spot: float | None, days: int = 5) -> dict:
                             seen.add(j["t"]); out["snaps"].append({"t": int(j["t"]), "s": j["s"]})
                     except Exception:
                         continue
-            if back == 0:      # today: the full snapshots also cover times before the compact log existed
+            if back == 0 or not p.exists():      # full snapshots still on disk (today, or the last session until Monday's prune) fill gaps
                 for hhmm in _snapshot_times(sym, day):
                     snap = _read_snapshot(sym, hhmm, day)
                     if not snap:
