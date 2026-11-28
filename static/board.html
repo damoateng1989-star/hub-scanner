@@ -3,14 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0E0F12">
 <script>
 (function () {
   var pick = "system"; try { pick = localStorage.getItem("ns_theme") || "system"; } catch (e) {}
   var mq = window.matchMedia ? matchMedia("(prefers-color-scheme: light)") : null;
   var t = pick === "system" ? (mq && mq.matches ? "light" : "dark") : pick;
-  document.documentElement.dataset.theme = t;
+  // Nov 28 (owner): the phone's status bar follows the page colour
+  function bar(t) { var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === "light" ? "#F6F6F3" : "#0E0F12"; }
+  document.documentElement.dataset.theme = t; bar(t);
   window.nsToggleTheme = function () { var n = document.documentElement.dataset.theme === "light" ? "dark" : "light";
-    try { localStorage.setItem("ns_theme", n); } catch (e) {} document.documentElement.dataset.theme = n; };
+    try { localStorage.setItem("ns_theme", n); } catch (e) {} document.documentElement.dataset.theme = n; bar(n); };
 })();
 </script>
 <title>Setups · NextShelf</title>
@@ -111,7 +114,8 @@ a=t.getElementsByTagName(n)[0],a.parentNode.insertBefore(u,a))}(window,document,
 twq('config','rk6e6');
 </script>
 <!-- End X conversion tracking base code -->
-<style>/* Nov 28 (owner): same logo mark + wordmark as the home page */
+<style>html { background: var(--bg); }   /* Nov 28: paints the area behind the status bar too */
+</style><style>/* Nov 28 (owner): same logo mark + wordmark as the home page */
 html .ns-logo{text-transform:none !important;font-weight:700 !important;letter-spacing:-.02em !important;align-items:center}
 html .ns-logo span{font-weight:700 !important}
 .ns-logo .ns-mark{height:1.05em;width:auto;vertical-align:-0.14em;margin-right:0.34em}
