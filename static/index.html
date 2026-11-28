@@ -8067,8 +8067,10 @@ function mapGexGlow(chart, ser, D, LY) {
   chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
   glowLoad(sym).then(d => {
     if (MAP_LWC_CHART !== chart || BRIEF_SYM !== sym) return;
-    if (!d || !d.snaps || !d.snaps.length) { key.innerHTML = `GEX glow · no options data for ${esc(sym)} yet`; return; }
-    G = d; key.innerHTML = `<i class="p"></i>+GEX <i class="n"></i>−GEX · ${d.live ? "live strikes" : "5-min snapshots"}`;
+    if (!d || !d.snaps || !d.snaps.length) { key.innerHTML = `GEX glow · no saved snapshots or live chain for ${esc(sym)}`; return; }
+    G = d;
+    const lastT = d.snaps[d.snaps.length - 1].t, day = new Date(lastT * 1000).toLocaleDateString("en-US", {weekday: "short", timeZone: "UTC"});
+    key.innerHTML = `<i class="p"></i>+GEX <i class="n"></i>−GEX · ${d.live ? "live strikes" : `${d.snaps.length} snapshots · to ${day}`}`;
     requestAnimationFrame(draw);
   });
 }
