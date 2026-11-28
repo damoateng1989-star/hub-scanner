@@ -7092,12 +7092,15 @@ async function openBrief(sym, focus) {
   if (ME && ME.is_admin) loadBrokerAccounts();
   try {
     if (MAP_TF !== "4h") mapLoadDaily(sym);        // Nov 23: the picked view loads alongside the 4H, not after it
-    BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`);
+    BRIEF_CERR = null;
+    try { BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`, {timeout: 25000}); }
+    catch (e1) { await new Promise(r => setTimeout(r, 1500)); if (BRIEF_SYM !== sym) return; BRIEF_CHART = await api(`/api/chart/${encodeURIComponent(sym)}`, {timeout: 30000}); }   // Nov 28: one retry
     clearTimeout(sideT); side();
     if (BRIEF_SYM === sym) { briefHead(sym, BRIEF_CHART.status); $("bfBody").innerHTML = briefHTML(sym, BRIEF_CHART.status, BRIEF_CHART); paintBriefCross(sym); renderShelfTradeCard(sym); loadOptions(sym); loadNews(sym, BRIEF_CHART.status); mapFormingPoll(sym); }
   } catch (e) {
     clearTimeout(sideT); side();
     if (BRIEF_SYM !== sym) return;
+    BRIEF_CERR = sym; if (MAP_ON()) paintMap();      // Nov 28: the chart says it failed and offers Try again, instead of "loading…" forever
     if (!st) { $("bfBody").innerHTML = failedHTML(sym, e, `openBrief('${sym}')`); return; }
     if ($("bfRec")) $("bfRec").innerHTML = `<p style="color:#9AA0AC;font-size:14px">The track record isn't available right now (${esc(friendly(e))}). The full chart has it.</p>`;
   }
@@ -8148,7 +8151,7 @@ function initLightweightMapChart() {
   if (MAP_LWC_CHART) { MAP_LWC_CHART.remove(); MAP_LWC_CHART = null; }
   document.querySelectorAll(".mp-lwc-foot").forEach(x => x.remove()); MAP_LWC_FOOT = null;
   if (!host || !D || !L || !D.cs || !D.cs.length) {
-    if (host) host.innerHTML = `<div class="mp-lwc-empty">${MAP_DERR && MAP_DERR === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadErrHTML() : MAP_DSLOW === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadSlowHTML() : "Chart data is loading…"}</div>`;
+    if (host) host.innerHTML = `<div class="mp-lwc-empty">${MAP_TF === "4h" && BRIEF_CERR === BRIEF_SYM ? `The chart didn't load. <button type="button" class="mp-planbtn" onclick="openBrief(BRIEF_SYM)">Try again</button>` : MAP_DERR && MAP_DERR === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadErrHTML() : MAP_DSLOW === BRIEF_SYM + "|" + MAP_TF + "|" + mapExtOn() ? mapLoadSlowHTML() : "Chart data is loading…"}</div>`;
     return;
   }
   try {
@@ -8621,7 +8624,10 @@ function paintMap() {
   const sym = BRIEF_SYM, chart4 = BRIEF_CHART && BRIEF_CHART.symbol === sym ? BRIEF_CHART : null, st = (chart4 && chart4.status) || findStatus(sym);
   // the candles drawn: daily when 1D is picked and loaded, else the 4-hour chart (levels and status always come from 4H)
   const altOk = MAP_DCH && MAP_DCH.symbol === sym && MAP_DCH.tf === MAP_TF && !!MAP_DCH.ext === mapExtOn();
-  const chart = MAP_TF !== "4h" ? (altOk && chart4 ? {...MAP_DCH, status: chart4.status, tf: MAP_TF} : null) : chart4;
+  // Nov 28 (owner): the picked view (30M, 1H…) no longer waits on the 4H fetch too; if the 4H call is slow or failed,
+  // the candles still draw with the board's status for the levels (was: stuck on "Chart data is loading…")
+  const stBoard = (chart4 && chart4.status) || findStatus(sym);
+  const chart = MAP_TF !== "4h" ? (altOk && stBoard ? {...MAP_DCH, status: stBoard, tf: MAP_TF} : null) : chart4;
   if (MAP_TF !== "4h" && !altOk) mapLoadDaily(sym);
   if (!st || st.last_close == null) { el.innerHTML = `<div class="mp-head"><button class="mp-back" onclick="closeBrief()">← Back</button><h3>${esc(sym)}</h3><button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>`; return; }
   const P0 = mapPlan(sym, st), steps = MAP_STEPS[P0.steps];
@@ -9125,7 +9131,7 @@ async function mapLoadDaily(sym, force) {
     if (BRIEF_SYM === sym && MAP_TF === tf && mapExtOn() === ext) { MAP_DERR = key; const h = document.querySelector("#bfMap .mp-lwc-empty"); if (h) h.innerHTML = mapLoadErrHTML(); }
   } finally { if (mapLoadDaily.busy === key) mapLoadDaily.busy = null; clearTimeout(mapLoadDaily.slowT); if (MAP_DSLOW === key) MAP_DSLOW = null; }
 }
-let MAP_DSLOW = null;
+let MAP_DSLOW = null, BRIEF_CERR = null;
 function mapLoadSlowHTML() {
   const can4h = MAP_TF !== "4h" && typeof BRIEF_CHART !== "undefined" && BRIEF_CHART && BRIEF_CHART.symbol === BRIEF_SYM;
   return `Chart data is loading…<small style="display:block;margin-top:6px;opacity:.75">First load pulls two years of bars. Later opens of this view are instant.</small>`
