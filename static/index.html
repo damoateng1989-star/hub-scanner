@@ -2119,7 +2119,7 @@ html body #ob .ob-num input:not(#_) { background: transparent !important; color:
 /* Nov 28 (owner): GEX glow layer on the Shelf card chart */
 .gx-glow { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 3; mix-blend-mode: screen; }
 html[data-theme="light"] .gx-glow { mix-blend-mode: multiply; }
-.gx-key { position: absolute; right: 62px; top: 62px; z-index: 4; pointer-events: none; font: 600 11px var(--mono, ui-monospace, monospace); color: #cfd3dc; background: rgba(13,17,23,.78); border: 1px solid #2a313b; border-radius: 6px; padding: 4px 8px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.gx-key { position: absolute; right: 62px; top: 62px; left: auto; z-index: 4; pointer-events: none; font: 600 11px var(--mono, ui-monospace, monospace); color: #cfd3dc; background: rgba(13,17,23,.78); border: 1px solid #2a313b; border-radius: 6px; padding: 4px 8px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
 .gx-key i { width: 10px; height: 6px; border-radius: 3px; display: inline-block; } .gx-key i.p { background: #FFD21F; box-shadow: 0 0 6px #FFD21F; } .gx-key i.n { background: #7B5CFF; box-shadow: 0 0 6px #7B5CFF; margin-left: 4px; }
 /* Nov 28 (owner): the heat map uses the same orb + breadcrumb back control as the pages */
 .bf-heat .bh-card.gh .gh-vback { margin: 0 0 14px; } .bf-heat .bh-card.gh .gh-vback nav { color: rgba(255,255,255,.72); } .bf-heat .bh-card.gh .gh-vback nav b { color: #fff; }
@@ -8018,6 +8018,7 @@ function mapGexGlow(chart, ser, D, LY) {
     const ts = chart.timeScale(), cs = D.cs, W = el.clientWidth;
     let paneH = el.clientHeight * .78; try { paneH = chart.panes()[0].getHeight(); } catch (e) {}
     svg.setAttribute("width", W); svg.setAttribute("height", paneH);
+    key.style.top = Math.max(60, paneH - 32) + "px";      // bottom of the price pane: clear of the OHLC / after-hours legend
     const n = cs.length, dt = n > 1 ? cs[n - 1].time - cs[n - 2].time : 1800;
     // bucket snapshots into candles: per strike, the value with the largest size inside each candle
     const per = new Map(); let top = 0;
