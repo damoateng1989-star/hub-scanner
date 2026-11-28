@@ -8034,23 +8034,19 @@ function mapGexGlow(chart, ser, D, LY) {
     // keep the OHLC legend in the corner readable: no glow under it
     let hole = ""; try { const lg = window.MAP_LWC_LEG && window.MAP_LWC_LEG.isConnected ? window.MAP_LWC_LEG : document.querySelector("#bfMap .mp-legend"), er = el.getBoundingClientRect();
       if (lg) { const r = lg.getBoundingClientRect(); hole = `<rect x="${r.left - er.left - 4}" y="${r.top - er.top - 4}" width="${r.width + 8}" height="${r.height + 8}" rx="6" fill="#000"/>`; } } catch (e) {}
-    let g = `<defs><filter id="gxBlur" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="2.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><mask id="gxHole"><rect width="100%" height="100%" fill="#fff"/>${hole}</mask></defs><g mask="url(#gxHole)">`;
+    let g = `<defs><filter id="gxBlur" x="-20%" y="-200%" width="140%" height="500%"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter><mask id="gxHole"><rect width="100%" height="100%" fill="#fff"/>${hole}</mask></defs><g mask="url(#gxHole)">`;
+    // Nov 28 (owner): bubble style — a row of small dots along each strike, dot size by how big the level was
     if (top > 0) for (const [k, m] of per) {
       const y = ser.priceToCoordinate(k); if (y == null || y < 6 || y > paneH - 6) continue;
-      const idx = [...m.keys()].sort((a, b) => a - b); let run = [], col = null;
-      const flush = () => { if (run.length >= 2) { const tp = run.map(p => `${p.x.toFixed(1)},${(y - p.h / 2).toFixed(1)}`).join(" "), bt = run.slice().reverse().map(p => `${p.x.toFixed(1)},${(y + p.h / 2).toFixed(1)}`).join(" ");
-        g += `<polygon points="${tp} ${bt}" fill="${col}" fill-opacity=".85" stroke="${col}" stroke-width="2" stroke-linejoin="round" filter="url(#gxBlur)"/>`; } run = []; };
-      let prev = null;
+      const idx = [...m.keys()].sort((a, b) => a - b);
       for (const i of idx) {
         const v = m.get(i), mg = Math.abs(v) / top, c = v >= 0 ? "#FFD21F" : "#7B5CFF";
-        const x0 = ts.timeToCoordinate(cs[i].time); if (x0 == null) { flush(); prev = null; continue; }
+        if (mg < .08) continue;
+        const x0 = ts.timeToCoordinate(cs[i].time); if (x0 == null) continue;
         const nx = i < n - 1 ? ts.timeToCoordinate(cs[i + 1].time) : null, x1 = nx != null ? nx : x0 + Math.max(4, ts.options().barSpacing || 8);
-        if (prev !== null && (i !== prev + 1 || c !== col)) flush();
-        if (mg >= .08) g += `<line x1="${x0.toFixed(1)}" x2="${x1.toFixed(1)}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="${c}" stroke-opacity=".75" stroke-width="1.3" stroke-dasharray="5 3"/>`;
-        if (mg > .42) { col = c; const h = 3 + mg * 8; run.push({x: x0, h}, {x: x1, h}); } else flush();
-        prev = i;
+        const strong = mg > .42, r = strong ? 1.1 + mg * 1.9 : .9, op = strong ? .55 + mg * .45 : .5, step = strong ? Math.max(2.6, r * 1.9) : 4.5;
+        for (let x = x0 + step / 2; x < x1; x += step) g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(2)}" fill="${c}" fill-opacity="${op.toFixed(2)}"${strong ? ' filter="url(#gxBlur)"' : ""}/>`;
       }
-      flush();
     }
     svg.innerHTML = g + "</g>";
   };
