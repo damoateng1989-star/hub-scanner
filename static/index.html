@@ -2068,6 +2068,8 @@ html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
   -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .vback button:active { transform: scale(.94); }
 .vback nav { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--muted); background: none !important; border: 0 !important; padding: 0 !important; position: static !important; box-shadow: none !important; backdrop-filter: none !important; height: auto !important; }
+/* Nov 28 (owner): the heat map uses the same orb + breadcrumb back control as the pages */
+.bf-heat .bh-card.gh .gh-vback { margin: 0 0 14px; } .bf-heat .bh-card.gh .gh-vback nav { color: rgba(255,255,255,.72); } .bf-heat .bh-card.gh .gh-vback nav b { color: #fff; }
 .vback nav span { margin: 0 8px; opacity: .6; } .vback nav b { color: var(--ink); }
 html[data-theme="light"] .vback button { background: radial-gradient(circle at 30% 25%, #ffffff, #EEF0F4); color: #141412;
   box-shadow: 0 0 0 1px rgba(15,23,42,.12), 0 0 0 4px rgba(37,99,235,.08), 0 8px 18px rgba(15,23,42,.12); }
@@ -9409,7 +9411,7 @@ function bfHeatHTML(j, full) {
   const tot = mode === "vex" ? g.vex_total : g.net_total;
   const asOf = j.chain_as_of ? new Date(j.chain_as_of).toLocaleString("en-US", {weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/New_York"}) : null;
   const seg = `<span class="gh-seg"><button type="button" class="${mode === "gex" ? "on" : ""}" onclick="ghMode('gex')">GEX</button><button type="button" class="${mode === "vex" ? "on" : ""}" ${hasVex ? "" : "disabled title=\"Vanna needs implied volatility from the chain\""} onclick="ghMode('vex')">VEX</button></span>`;
-  return `<div class="bh-card gh${full ? " gh-full" : ""}"><button type="button" class="bh-back" onclick="${full ? "ghFull(false)" : "heatChoose(false)"}">‹ ${full ? "Back" : "Back to movies"}</button>
+  return `<div class="bh-card gh${full ? " gh-full" : ""}"><div class="vback gh-vback"><button type="button" onclick="${full ? "ghFull(false)" : "heatChoose(false)"}" aria-label="Back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button><nav aria-label="Breadcrumb">${full ? esc(j.symbol || "Chart") : "MOVIES"}<span>/</span><b>HEAT MAP</b></nav></div>
     <div class="bh-head"><span class="t">${mode === "vex" ? "VEX" : "GEX"} HEAT MAP ${seg}</span><span class="s"><b class="gh-tk">${esc(j.symbol || "")}</b>${spot ? `<span class="gh-px"> · $${spot.toFixed(2)}</span>` : ""} <button type="button" class="gh-exp" onclick="ghFull(${!full})">${full ? "Close ✕" : "Expand ⤢"}</button></span></div>
     <div class="gh-wrap"><div class="bh-scroll gh-scroll" onscroll="ghEdge(this)"><table class="gh-t"><thead><tr><th>STRIKE</th>${head}<th class="gh-lv"></th></tr></thead><tbody>${rows}</tbody></table></div>
     <button type="button" class="gh-center" title="Back to the price" onclick="ghCenter(this)">⌖</button></div>
