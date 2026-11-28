@@ -319,6 +319,12 @@ async def lifespan(_app: FastAPI):
     log.info("Scheduler on: scans %s, pre-close %s ET (provider: %s)",
              ", ".join(SCAN_TIMES), ", ".join(PRECLOSE_TIMES) or "off", data.provider())
     telegram_bot.start_polling(handle_command)
+    try:      # Nov 28 (owner): dark pool prints — keep the watchlist on the price socket in market hours
+        import asyncio as _aio
+        import stream as _stream
+        _aio.get_running_loop().create_task(_stream.keep_darkpool())
+    except Exception as e:
+        log.warning("dark pool keeper not started: %s", e)
     yield
     sched.shutdown(wait=False)
 
@@ -2172,6 +2178,18 @@ async def gamma_walls(symbol: str, u: dict = User):
                 as_of=pd.Timestamp.now(tz="America/New_York").isoformat(timespec="seconds"),
                 chain_as_of=gamma.chain_as_of(sym))
 
+
+
+@app.get("/api/darkpool/{symbol}")
+async def darkpool_prints(symbol: str, u: dict = Admin):
+    """Nov 28: off-exchange $1M+ prints for the chart layer. ADMIN-ONLY until display rights are cleared."""
+    import re
+    import darkpool
+    sym = symbol.strip().upper()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
+        raise HTTPException(400, "Unknown symbol")
+    rows = await run_in_threadpool(darkpool.prints, sym, 7)
+    return dict(symbol=sym, prints=rows, watching=sym in set(darkpool.watch_symbols()))
 
 
 @app.get("/api/gex/glow/{symbol}")

@@ -2134,6 +2134,14 @@ html[data-theme="light"] .gx-glow { mix-blend-mode: multiply; }
 .bf-heat .bh-card.gh .gh-tsp { flex: 1; }
 .bf-heat .bh-card.gh .gh-term .gh-scroll { border-radius: 0 !important; }
 .bf-heat .bh-card.gh .gh-term .gh-wrap { padding: 6px 6px 4px; }
+
+/* Nov 28 (owner): dark pool layer (admin-only) */
+.dp-svg { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 3; }
+.dp-tag { position: absolute; right: 66px; z-index: 4; pointer-events: none; font: 700 10.5px var(--mono, ui-monospace, monospace); color: #06202c; background: #5CC8FF; border-radius: 4px; padding: 2px 6px; box-shadow: 0 0 8px rgba(92,200,255,.5); }
+.dp-key { position: absolute; left: 10px; top: 62px; z-index: 4; pointer-events: none; font: 600 11px var(--mono, ui-monospace, monospace); color: #cfd3dc; background: rgba(13,17,23,.78); border: 1px solid #2a313b; border-radius: 6px; padding: 4px 8px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.dp-key .dpd { width: 8px; height: 8px; background: #5CC8FF; transform: rotate(45deg); display: inline-block; } .dp-key .dpl { font-style: normal; color: #5CC8FF; letter-spacing: 2px; margin-left: 4px; }
+.dp-tip { position: absolute; z-index: 7; font: 12px/1.45 var(--sans); color: #E9EBEF; background: rgba(13,17,23,.95); border: 1px solid #2a3a46; border-radius: 8px; padding: 7px 10px; box-shadow: 0 8px 20px rgba(0,0,0,.4); white-space: nowrap; }
+.dp-tip b:first-child { color: #5CC8FF; } .dp-tip span { color: #8A93A3; }
 /* Nov 28 (owner): the heat map uses the same orb + breadcrumb back control as the pages */
 .bf-heat .bh-card.gh .gh-vback { margin: 0 0 14px; } .bf-heat .bh-card.gh .gh-vback nav { color: rgba(255,255,255,.72); } .bf-heat .bh-card.gh .gh-vback nav b { color: #fff; }
 .vback nav span { margin: 0 8px; opacity: .6; } .vback nav b { color: var(--ink); }
@@ -7787,12 +7795,12 @@ function mapCloudCalc(full) {
 // Tier 1 always: candles, hub band, plan lines (TRIGGER / STOP / NEXT SHELF). Tier 2 one tap away: Layers. Tier 3: RSI/MACD/VWAP as numbers.
 // Nothing is deleted: every layer is a switch, saved per member on this device.
 const LAYERS = [["plan", "Plan lines"], ["hub", "Hub band"], ["volume", "Volume"], ["walls", "Walls"], ["levels", "Levels"], ["profile", "Profile + POC"],
-  ["vwap", "VWAP"], ["cloud", "Cloud"], ["glow", "GEX glow"], ["rsi", "RSI"], ["macd", "MACD"]];
-const LAYER_DEF = {plan: true, hub: true, volume: true, walls: false, levels: false, profile: true, vwap: false, cloud: false, glow: false, rsi: false, macd: false};
+  ["vwap", "VWAP"], ["cloud", "Cloud"], ["glow", "GEX glow"], ["darkpool", "Dark pool"], ["rsi", "RSI"], ["macd", "MACD"]];
+const LAYER_DEF = {plan: true, hub: true, volume: true, walls: false, levels: false, profile: true, vwap: false, cloud: false, glow: false, darkpool: false, rsi: false, macd: false};
 let MAP_LAYERS_OPEN = false, MAP_MORE = {};
 const layerKey = () => "ns-layers" + (ME && ME.id ? "-" + ME.id : "");
 function layerPref() { try { return Object.assign({}, LAYER_DEF, JSON.parse(localStorage.getItem(layerKey()) || "{}")); } catch (e) { return Object.assign({}, LAYER_DEF); } }
-function layerCount() { const p = layerPref(); return LAYERS.filter(([k]) => p[k]).length; }
+function layerCount() { const p = layerPref(); return LAYERS.filter(([k]) => p[k] && (k !== "darkpool" || (ME && ME.is_admin))).length; }
 function setLayer(k, on) {
   const p = layerPref(); p[k] = !!on;
   if (on && k === "rsi") p.macd = false;           // one shared indicator slot under the price pane, never two stacked panes
@@ -7804,7 +7812,7 @@ function mapLayersToggle() { MAP_LAYERS_OPEN = !MAP_LAYERS_OPEN; paintMap(); }
 function mapLayersHTML() {
   if (!MAP_LAYERS_OPEN) return "";
   const p = layerPref();
-  return `<div class="mp-layers"><span class="k">Layers</span>${LAYERS.map(([k, l]) => `<button type="button" class="${p[k] ? "on" : ""}" aria-pressed="${!!p[k]}" onclick="setLayer('${k}', ${!p[k]})"><i></i>${l}</button>`).join("")}</div>`;
+  return `<div class="mp-layers"><span class="k">Layers</span>${LAYERS.filter(([k]) => k !== "darkpool" || (ME && ME.is_admin)).map(([k, l]) => `<button type="button" class="${p[k] ? "on" : ""}" aria-pressed="${!!p[k]}" onclick="setLayer('${k}', ${!p[k]})"><i></i>${l}</button>`).join("")}</div>`;
 }
 function mapMoreOpen(btn, ev) {
   if (ev) ev.stopPropagation();
@@ -8074,6 +8082,83 @@ function mapGexGlow(chart, ser, D, LY) {
     requestAnimationFrame(draw);
   });
 }
+
+// ---------------------------------------------------------------- Nov 28 (owner): dark pool prints (ADMIN-ONLY for now)
+// Off-exchange $1M+ prints from the price socket. ◆ = one big print at its candle and price (size by dollars);
+// dotted cyan = the top 3 price levels where prints added up, from the first print to now, tagged with the total.
+// Display only: never a grade or an alert input.
+let MAP_DP_DRAW = null; const DPC = {};
+async function dpLoad(sym) {
+  const hit = DPC[sym]; if (hit && Date.now() - hit.at < 2 * 60000) return hit.d;
+  try { const d = await api(`/api/darkpool/${encodeURIComponent(sym)}`); DPC[sym] = {at: Date.now(), d}; return d; } catch (e) { return null; }
+}
+function dpUsd(v) { return v >= 1e9 ? "$" + (v / 1e9).toFixed(2) + "B" : "$" + (v / 1e6).toFixed(1) + "M"; }
+function mapDarkPool(chart, ser, D, LY) {
+  MAP_DP_DRAW = null;
+  const el = chart.chartElement(); if (!el) return;
+  el.querySelectorAll(".dp-svg, .dp-key, .dp-tag, .dp-tip").forEach(x => x.remove());
+  if (!LY || !LY.darkpool || !(ME && ME.is_admin) || !D || !D.cs || !D.cs.length) return;
+  const sym = BRIEF_SYM; if (getComputedStyle(el).position === "static") el.style.position = "relative";
+  const key = document.createElement("div"); key.className = "dp-key"; key.innerHTML = "Dark pool · loading…"; el.appendChild(key);
+  const svgNS = "http://www.w3.org/2000/svg", svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("class", "dp-svg"); el.appendChild(svg);
+  let P = null, T = 1e6;
+  const C = "#5CC8FF";
+  const draw = () => {
+    if (!P || !svg.isConnected) return;
+    el.querySelectorAll(".dp-tag").forEach(x => x.remove());
+    const ts = chart.timeScale(), cs = D.cs, n = cs.length, W = el.clientWidth;
+    let paneH = el.clientHeight * .78; try { paneH = chart.panes()[0].getHeight(); } catch (e) {}
+    svg.setAttribute("width", W); svg.setAttribute("height", paneH);
+    key.style.top = Math.max(60, paneH - 32) + "px";
+    const dt = n > 1 ? cs[n - 1].time - cs[n - 2].time : 1800;
+    const idxOf = t => { if (t < cs[0].time) return -1; let lo = 0, hi = n - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (cs[m].time <= t) lo = m; else hi = m - 1; } return t < cs[lo].time + (lo < n - 1 ? cs[lo + 1].time - cs[lo].time : dt * 1.5) ? lo : -1; };
+    const vr = ts.getVisibleLogicalRange() || {from: 0, to: n};
+    const vis = P.map(p => ({...p, i: idxOf(p.t)})).filter(p => p.i >= Math.floor(vr.from) - 1 && p.i <= Math.ceil(vr.to) + 1);
+    // levels: 0.1% price buckets, summed; the top 3 by dollars
+    const bk = new Map();
+    for (const p of vis) { const step = Math.max(.01, p.p * .001), k = Math.round(p.p / step) * step;
+      const b = bk.get(k) || {p: 0, usd: 0, w: 0, i0: p.i}; b.usd += p.usd; b.w += p.usd * p.p; b.i0 = Math.min(b.i0, p.i); bk.set(k, b); }
+    const lv = [...bk.values()].map(b => ({p: b.w / b.usd, usd: b.usd, i0: b.i0})).sort((a, b) => b.usd - a.usd).slice(0, 3);
+    const xr = (ts.timeToCoordinate(cs[n - 1].time) ?? W - 70) + 6;
+    let g = `<defs><filter id="dpGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+    for (const l of lv) {
+      const y = ser.priceToCoordinate(l.p), x0 = ts.timeToCoordinate(cs[l.i0].time); if (y == null || x0 == null || y < 4 || y > paneH - 4) continue;
+      for (let x = x0; x < xr; x += 4.2) g += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="1.25" fill="${C}" fill-opacity=".85"/>`;
+      const tag = document.createElement("div"); tag.className = "dp-tag"; tag.style.top = (y - 10) + "px"; tag.textContent = "DP " + dpUsd(l.usd); el.appendChild(tag);
+    }
+    const big = vis.filter(p => p.usd >= T).slice(-80);
+    big.forEach((p, j) => { const x = ts.timeToCoordinate(cs[p.i].time), y = ser.priceToCoordinate(p.p); if (x == null || y == null || y < 4 || y > paneH - 4) return;
+      const r = 3.5 + Math.min(5, p.usd / T * 1.2);
+      g += `<rect data-j="${j}" x="${(x - r).toFixed(1)}" y="${(y - r).toFixed(1)}" width="${(2 * r).toFixed(1)}" height="${(2 * r).toFixed(1)}" transform="rotate(45 ${x.toFixed(1)} ${y.toFixed(1)})" fill="${C}" fill-opacity=".9" stroke="#0d1117" stroke-width="1.2" filter="url(#dpGlow)" />`; });
+    svg.innerHTML = g;
+    hits = big.map(p => ({p, x: ts.timeToCoordinate(cs[p.i].time), y: ser.priceToCoordinate(p.p)})).filter(h => h.x != null && h.y != null);
+  };
+  let hits = [];
+  const showTip = (h) => {
+    el.querySelectorAll(".dp-tip").forEach(x => x.remove()); if (!h) return;
+    const p = h.p, when = new Date(p.t * 1000).toLocaleString("en-US", {weekday: "short", hour: "numeric", minute: "2-digit", timeZone: "UTC"});
+    const tip = document.createElement("div"); tip.className = "dp-tip";
+    tip.innerHTML = `<b>◆ Dark pool print</b><br>${(p.s >= 1e6 ? (p.s / 1e6).toFixed(2) + "M" : Math.round(p.s / 1e3) + "K")} sh · <b>${dpUsd(p.usd)}</b> at ${money(p.p)}<br><span>${when} ET · off-exchange</span>`;
+    tip.style.left = Math.max(4, Math.min(el.clientWidth - 230, h.x - 90)) + "px"; tip.style.top = Math.max(4, h.y - 76) + "px";
+    el.appendChild(tip);
+  };
+  chart.subscribeClick(param => {      // tap a diamond (within 14 px) for its details; tap elsewhere closes it
+    if (!param || !param.point) return showTip(null);
+    let best = null, bd = 14;
+    for (const h of hits) { const d = Math.hypot(h.x - param.point.x, h.y - param.point.y); if (d < bd) { bd = d; best = h; } }
+    showTip(best);
+  });
+  MAP_DP_DRAW = draw;
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
+  dpLoad(sym).then(d => {
+    if (MAP_LWC_CHART !== chart || BRIEF_SYM !== sym) return;
+    P = (d && d.prints) || [];
+    if (!P.length) { key.innerHTML = d && !d.watching ? `Dark pool · ${esc(sym)} isn't on the watchlist` : `Dark pool · no $1M+ prints saved yet`; return; }
+    const u = P.map(p => p.usd).sort((a, b) => a - b); T = Math.max(1e6, u[Math.floor(u.length * .8)] || 1e6);
+    key.innerHTML = `<i class="dpd"></i>Print ≥ ${dpUsd(T)} <i class="dpl">•••</i>Level · admin`;
+    requestAnimationFrame(draw);
+  });
+}
 function mapCloud(chart, series, D, light) {
   MAP_CLOUD_DRAW = null;
   const el = chart.chartElement(); if (!el) return;
@@ -8232,7 +8317,7 @@ function initLightweightMapChart() {
       if (MAP_LWC_CHART.__lv) { const v = MAP_LWC_CHART.__lv; try { mapLevelsChip(MAP_LWC_CHART, v.series, host, v.hidden, v.LY); } catch (e) {} }
       if (MAP_LWC_CHART.__dw) { MAP_LWC_CHART.__dw.host = host; try { drawToolbar(MAP_LWC_CHART.__dw); MAP_LWC_CHART.__dw.draw(); } catch (e) {} }
       MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390});
-      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => { MAP_VP_DRAW && MAP_VP_DRAW(); MAP_CLOUD_DRAW && MAP_CLOUD_DRAW(); MAP_GLOW_DRAW && MAP_GLOW_DRAW(); }); } });
+      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => { MAP_VP_DRAW && MAP_VP_DRAW(); MAP_CLOUD_DRAW && MAP_CLOUD_DRAW(); MAP_GLOW_DRAW && MAP_GLOW_DRAW(); MAP_DP_DRAW && MAP_DP_DRAW(); }); } });
       MAP_LWC_RO.observe(host);
       return;
     } catch (e) { /* fall through to a full rebuild */ }
@@ -8464,6 +8549,7 @@ function initLightweightMapChart() {
     if (LY.profile) mapVolProfile(chart, candles, D, light); else MAP_VP_DRAW = null;
     mapCloud(chart, candles, D, light);
     try { mapGexGlow(chart, candles, D, LY); } catch (e) { console.warn("gex glow", e); }
+    try { mapDarkPool(chart, candles, D, LY); } catch (e) { console.warn("dark pool", e); }
     chart.__lv = {series: candles, hidden, LY};
     try { mapLevelsChip(chart, candles, host, hidden, LY); } catch (e) { console.warn("levels chip", e); }
     MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected){MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});requestAnimationFrame(()=>{MAP_VP_DRAW&&MAP_VP_DRAW();MAP_CLOUD_DRAW&&MAP_CLOUD_DRAW();});}});

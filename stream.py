@@ -18,6 +18,7 @@ import random
 import time
 
 import data
+import darkpool
 
 log = logging.getLogger("stream")
 URL = "wss://stream.data.alpaca.markets/v2/{feed}"
@@ -34,6 +35,7 @@ class _Hub:
         self.task: asyncio.Task | None = None
         self.changed: asyncio.Event | None = None
         self.subscribed: set[str] = set()
+        self.extra: set[str] = set()          # Nov 28: watchlist kept subscribed in market hours for dark pool prints
 
     # ---------------------------------------------------------------- clients
     def register(self, symbols: list[str]) -> tuple[int, asyncio.Queue]:
@@ -54,6 +56,8 @@ class _Hub:
         for cid in sorted(self.clients, reverse=True):
             for s in self.clients[cid][1]:
                 out.setdefault(s, None)
+        for s in sorted(self.extra):
+            out.setdefault(s, None)
         syms = list(out)
         return syms[:IEX_CAP] if self.feed == "iex" else syms
 
@@ -87,7 +91,7 @@ class _Hub:
     async def _run(self) -> None:
         backoff, idle_since = 2, None
         while True:
-            if not self.clients:
+            if not self.clients and not self.extra:
                 idle_since = idle_since or time.time()
                 if time.time() - idle_since > IDLE_CLOSE_S:
                     self.status, self.task = "idle", None
@@ -148,7 +152,7 @@ class _Hub:
 
     async def _pump(self, ws) -> None:
         await self._sync(ws)
-        while self.clients:
+        while self.clients or self.extra:
             self.changed.clear()
             recv = asyncio.ensure_future(ws.recv())
             chg = asyncio.ensure_future(self.changed.wait())
@@ -160,7 +164,12 @@ class _Hub:
             if recv in done:
                 for m in json.loads(recv.result()):
                     if m.get("T") == "t" and m.get("p"):
-                        self._publish(m["S"], float(m["p"]), float(m.get("s") or 0), m.get("t"))
+                        px, sz = float(m["p"]), float(m.get("s") or 0)
+                        try:
+                            darkpool.record(m["S"], px, sz, m.get("x"), m.get("c"), m.get("t"))
+                        except Exception:
+                            pass
+                        self._publish(m["S"], px, sz, m.get("t"))
                     elif m.get("T") == "error":
                         log.warning("price stream error: %s", m)
             else:
@@ -173,7 +182,7 @@ class _Hub:
     async def _demo(self) -> None:
         """No Alpaca locally: a gentle random walk from the last demo price, a few prints a second."""
         self.feed, self.status = "demo", "live"
-        while self.clients:
+        while self.clients or self.extra:
             syms = self.wanted()
             missing = [s for s in syms if s not in data._LIVE]
             if missing:
@@ -183,10 +192,32 @@ class _Hub:
                 if hit and hit[1].get("price"):
                     px = float(hit[1]["price"]) * (1 + random.gauss(0, .0004))
                     self._publish(s, px, random.choice([100, 100, 200, 500, 1200]), None)
+                    if s in self.extra and random.random() < .01:      # demo stand-in for an off-exchange block
+                        from datetime import datetime as _d, timezone as _tz
+                        darkpool.record(s, px, random.choice([10_000, 40_000, 120_000]), "D", [], _d.now(_tz.utc).isoformat())
             await asyncio.sleep(random.uniform(.25, .6))
 
 
 HUB = _Hub()
+
+
+async def keep_darkpool() -> None:
+    """Nov 28: in market hours keep the shared watchlist on the one Alpaca socket, so dark pool prints are caught
+    even when no app is open. Outside the window let go (the socket closes once nobody watches)."""
+    while True:
+        try:
+            want = set(await asyncio.to_thread(darkpool.watch_symbols)) if darkpool.market_window() else set()
+            if want != HUB.extra:
+                HUB.extra = want
+                if want:
+                    HUB._ensure_running()
+                if HUB.changed:
+                    HUB.changed.set()
+                if not want:
+                    darkpool.flush(); darkpool.prune()
+        except Exception as e:
+            log.warning("dark pool keeper: %s", e)
+        await asyncio.sleep(60)
 
 
 async def seed(symbols: list[str]) -> None:
