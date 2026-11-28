@@ -1121,6 +1121,13 @@ _GLOW_BAND = 0.12          # strikes within ±12% of spot
 def _glow_pick(rows: list, spot: float) -> list:
     """Nov 28 (owner): match how dealer-pulse charts read it — the NEAREST expiry (0DTE when there is one), not the
     all-expiry total, and only the strongest 3 positive + 3 negative strikes near price."""
+    # nearest expiry that actually has gamma: a 0DTE column can come back all zero when the feed drops its greeks
+    col = None
+    width = max((len(r.get("gex") or []) for r in rows or []), default=0)
+    for ci in range(width):
+        if sum(abs(float((r.get("gex") or [0] * width)[ci] if ci < len(r.get("gex") or []) else 0)) for r in rows) > 0:
+            col = ci
+            break
     near = []
     for r in rows or []:
         try:
@@ -1128,7 +1135,7 @@ def _glow_pick(rows: list, spot: float) -> list:
             if not spot or abs(k / float(spot) - 1) > _GLOW_BAND:
                 continue
             g = r.get("gex") or []
-            v = float(g[0]) if g else float(r.get("total", 0))
+            v = float(g[col]) if col is not None and col < len(g) else float(r.get("total", 0))
             if v:
                 near.append((k, v))
         except Exception:
