@@ -2147,6 +2147,28 @@ async def gamma_walls(symbol: str, u: dict = User):
 
 
 
+@app.get("/api/gex/glow/{symbol}")
+async def gex_glow(symbol: str, u: dict = User):
+    """Nov 28: GEX glow layer for the Shelf card chart (display only). History for watchlist tickers, live strikes otherwise."""
+    import re
+    sym = symbol.strip().upper()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
+        raise HTTPException(400, "Unknown symbol")
+    spot = None
+    if not gamma.has_snapshots(sym):
+        try:
+            spot = await run_in_threadpool(data.latest_price, sym)
+        except Exception:
+            spot = None
+        if not spot:
+            row = next((r for r in db.board_rows() if r["symbol"] == sym), None)
+            try:
+                spot = json.loads(row["status"] or "{}").get("last_close") if row else None
+            except Exception:
+                spot = None
+    return await run_in_threadpool(gamma.glow, sym, spot)
+
+
 @app.get("/api/gex/board/{symbol}")
 async def gex_board(symbol: str, at: str | None = None, u: dict = User):
     """Watch-only all-expiry GEX board. at=HHMM selects a recorded watchlist snapshot."""

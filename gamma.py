@@ -16,7 +16,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import time
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import requests
@@ -756,6 +756,7 @@ def snapshot_symbol(symbol: str, spot: float | None) -> bool:
         tmp = path.with_suffix(".tmp")
         tmp.write_text(json.dumps(payload, separators=(",", ":"), allow_nan=False), encoding="utf-8")
         os.replace(tmp, path)
+        _glow_append(sym, now, grid_)            # Nov 28: compact per-day log for the chart's GEX glow layer (kept 5 days)
         summed(sym, float(spot), fetch=False)      # also records today's summed gamma for the day-over-day change
         try:      # Patch 227: the shadow log's one writer hook. Cache-only, first snapshot of the day wins, never raises.
             import gex_shadow
@@ -779,6 +780,14 @@ def snapshot_watchlist(symbols: list[str], spots: dict[str, object]) -> dict:
             # gex_log's wall_log.json in this folder ("wall" != today) and deleted Patch 149's log every 5 minutes.
             m = re.fullmatch(r"[A-Z0-9.\-]+_(\d{4}-\d{2}-\d{2})_\d{4}\.json", p.name)
             if m and m.group(1) != now.date().isoformat():
+                try:
+                    p.unlink()
+                except OSError:
+                    pass
+        cutoff = (now.date() - timedelta(days=7)).isoformat()     # glow logs: about 5 trading days
+        for p in _GEX_DIR.glob("glow_*.jsonl"):
+            m = re.fullmatch(r"glow_[A-Z0-9.\-]+_(\d{4}-\d{2}-\d{2})\.jsonl", p.name)
+            if m and m.group(1) < cutoff:
                 try:
                     p.unlink()
                 except OSError:
@@ -1102,3 +1111,85 @@ def precise_shadow(symbol: str, spot: float | None) -> dict | None:
     except Exception as e:
         log.warning("precise_shadow failed for %s: %s", symbol, e)
         return None
+
+# ---------------------------------------------------------------- Nov 28 (owner): GEX glow layer on the Shelf card chart
+# Display only: the biggest net-GEX strikes at each 5-minute watchlist snapshot, drawn as glowing bands on 30M / 1H.
+# Never a grade or an alert input.
+_GLOW_TOP = 8
+_GLOW_BAND = 0.12          # strikes within ±12% of spot
+
+
+def _glow_pick(rows: list, spot: float) -> list:
+    near = [r for r in rows or [] if spot and abs(float(r["strike"]) / float(spot) - 1) <= _GLOW_BAND]
+    near.sort(key=lambda r: abs(float(r.get("total", 0))), reverse=True)
+    return [[round(float(r["strike"]), 4), round(float(r.get("total", 0)), 1)] for r in near[:_GLOW_TOP]]
+
+
+def _wall_epoch(dt: datetime) -> int:
+    """ET wall-clock as a UTC epoch, the way chart candles are stored."""
+    return int(datetime(dt.year, dt.month, dt.day, dt.hour, dt.minute, tzinfo=timezone.utc).timestamp())
+
+
+def _glow_path(symbol: str, day: str) -> Path:
+    return _GEX_DIR / f"glow_{symbol.upper()}_{day}.jsonl"
+
+
+def _glow_append(symbol: str, now: datetime, grid_: dict) -> None:
+    try:
+        pts = _glow_pick(grid_.get("rows") or [], float(grid_.get("spot") or 0))
+        if not pts:
+            return
+        line = json.dumps({"t": _wall_epoch(now), "s": pts}, separators=(",", ":"))
+        with open(_glow_path(symbol, now.date().isoformat()), "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except Exception as exc:
+        log.warning("GEX glow log skipped for %s: %s", symbol, exc)
+
+
+def glow(symbol: str, spot: float | None, days: int = 5) -> dict:
+    """Snapshot history for the glow layer, oldest first: {"snaps": [{"t", "s": [[strike, net_gex], ...]}], "live": bool}.
+    Watchlist tickers have history (today from the full snapshots, earlier days from the compact log); any other
+    ticker gets today's live strikes once, flagged live=True. Fail-open: empty list."""
+    sym = (symbol or "").upper()
+    out: dict = {"symbol": sym, "snaps": [], "live": False}
+    try:
+        if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
+            return out
+        today = datetime.now(_NY).date()
+        seen = set()
+        for back in range(days + 3, -1, -1):
+            day = (today - timedelta(days=back)).isoformat()
+            p = _glow_path(sym, day)
+            if p.exists():
+                for ln in p.read_text(encoding="utf-8").splitlines():
+                    try:
+                        j = json.loads(ln)
+                        if j["t"] not in seen:
+                            seen.add(j["t"]); out["snaps"].append({"t": int(j["t"]), "s": j["s"]})
+                    except Exception:
+                        continue
+            if back == 0:      # today: the full snapshots also cover times before the compact log existed
+                for hhmm in _snapshot_times(sym, day):
+                    snap = _read_snapshot(sym, hhmm, day)
+                    if not snap:
+                        continue
+                    try:
+                        t = _wall_epoch(datetime.fromisoformat(snap["at"]))
+                    except Exception:
+                        continue
+                    if t in seen:
+                        continue
+                    pts = _glow_pick(snap.get("rows") or [], float(snap.get("spot") or 0))
+                    if pts:
+                        seen.add(t); out["snaps"].append({"t": t, "s": pts})
+        out["snaps"].sort(key=lambda x: x["t"])
+        if not out["snaps"] and spot:
+            b = board(sym, spot)
+            pts = _glow_pick((b or {}).get("rows") or [], float(spot))
+            if pts:
+                out["snaps"] = [{"t": _wall_epoch(datetime.now(_NY)), "s": pts}]
+                out["live"] = True
+        return out
+    except Exception as exc:
+        log.warning("GEX glow read failed for %s: %s", sym, exc)
+        return out
