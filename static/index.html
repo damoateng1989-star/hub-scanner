@@ -2142,6 +2142,22 @@ html[data-theme="light"] .gx-glow { mix-blend-mode: multiply; }
 .dp-key .dpd { width: 8px; height: 8px; background: #5CC8FF; transform: rotate(45deg); display: inline-block; } .dp-key .dpl { font-style: normal; color: #5CC8FF; letter-spacing: 2px; margin-left: 4px; }
 .dp-tip { position: absolute; z-index: 7; font: 12px/1.45 var(--sans); color: #E9EBEF; background: rgba(13,17,23,.95); border: 1px solid #2a3a46; border-radius: 8px; padding: 7px 10px; box-shadow: 0 8px 20px rgba(0,0,0,.4); white-space: nowrap; }
 .dp-tip b:first-child { color: #5CC8FF; } .dp-tip span { color: #8A93A3; }
+
+/* Nov 28 (owner): options flow (admin-only) */
+.fl-svg { position: absolute; left: 0; top: 0; pointer-events: none; z-index: 3; }
+.fl-lab { position: absolute; z-index: 4; pointer-events: none; font: 700 11px var(--mono, ui-monospace, monospace); color: #fff; background: rgba(13,17,23,.92); border: 1.5px solid; border-left-width: 4px; border-radius: 6px; padding: 2px 6px; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,.35); }
+.fl-lab.c { border-color: #3DD68C; } .fl-lab.p { border-color: #F0616D; }
+.fl-key { position: absolute; right: 62px; z-index: 4; pointer-events: none; font: 600 11px var(--mono, ui-monospace, monospace); color: #cfd3dc; background: rgba(13,17,23,.78); border: 1px solid #2a313b; border-radius: 6px; padding: 4px 8px; display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.fl-key i { width: 9px; height: 9px; border: 1.5px solid; border-radius: 2px; display: inline-block; } .fl-key i.c { border-color: #3DD68C; } .fl-key i.p { border-color: #F0616D; margin-left: 4px; }
+.fl-card { margin: 12px 0 4px; background: #141920; border: 1px solid #232A33; border-radius: 14px; padding: 12px 12px 6px; font: 13px var(--sans); color: #E9EBEF; }
+.fl-h { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; } .fl-h b { font-size: 14px; } .fl-h span { font: 600 11px var(--mono); color: #8A93A3; }
+.fl-sum { display: flex; gap: 8px; margin-bottom: 10px; font: 600 12px var(--mono); } .fl-sum span { flex: 1; border-radius: 8px; padding: 6px 8px; background: rgba(255,255,255,.05); border: 1px solid #2a313b; color: #cfd3dc; }
+.fl-sum .c { background: rgba(61,214,140,.12); border-color: rgba(61,214,140,.35); color: #3DD68C; } .fl-sum .p { background: rgba(240,97,109,.12); border-color: rgba(240,97,109,.35); color: #F0616D; }
+.fl-row { display: grid; grid-template-columns: 42px 1fr auto; gap: 8px; align-items: center; padding: 8px 0; border-top: 1px solid #1F252D; }
+.fl-row .fl-t { font: 600 11.5px var(--mono); color: #8A93A3; } .fl-row b { font: 700 13px var(--mono); } .fl-row span { font-size: 11.5px; color: #9AA3B2; }
+.fl-r { text-align: right; } .fl-r i { display: block; font-style: normal; font-size: 11px; font-weight: 700; }
+.fl-empty, .fl-foot { color: #8A93A3; font-size: 12px; margin: 8px 0 4px; } .fl-foot { font-size: 11px; color: #6E7886; }
+html[data-theme="light"] .fl-card { background: #fff; border-color: #E3E6EC; color: #14161a; }
 /* Nov 28 (owner): the heat map uses the same orb + breadcrumb back control as the pages */
 .bf-heat .bh-card.gh .gh-vback { margin: 0 0 14px; } .bf-heat .bh-card.gh .gh-vback nav { color: rgba(255,255,255,.72); } .bf-heat .bh-card.gh .gh-vback nav b { color: #fff; }
 .vback nav span { margin: 0 8px; opacity: .6; } .vback nav b { color: var(--ink); }
@@ -7795,12 +7811,12 @@ function mapCloudCalc(full) {
 // Tier 1 always: candles, hub band, plan lines (TRIGGER / STOP / NEXT SHELF). Tier 2 one tap away: Layers. Tier 3: RSI/MACD/VWAP as numbers.
 // Nothing is deleted: every layer is a switch, saved per member on this device.
 const LAYERS = [["plan", "Plan lines"], ["hub", "Hub band"], ["volume", "Volume"], ["walls", "Walls"], ["levels", "Levels"], ["profile", "Profile + POC"],
-  ["vwap", "VWAP"], ["cloud", "Cloud"], ["glow", "GEX glow"], ["darkpool", "Dark pool"], ["rsi", "RSI"], ["macd", "MACD"]];
-const LAYER_DEF = {plan: true, hub: true, volume: true, walls: false, levels: false, profile: true, vwap: false, cloud: false, glow: false, darkpool: false, rsi: false, macd: false};
+  ["vwap", "VWAP"], ["cloud", "Cloud"], ["glow", "GEX glow"], ["darkpool", "Dark pool"], ["flow", "Flow"], ["rsi", "RSI"], ["macd", "MACD"]];
+const LAYER_DEF = {plan: true, hub: true, volume: true, walls: false, levels: false, profile: true, vwap: false, cloud: false, glow: false, darkpool: false, flow: false, rsi: false, macd: false};
 let MAP_LAYERS_OPEN = false, MAP_MORE = {};
 const layerKey = () => "ns-layers" + (ME && ME.id ? "-" + ME.id : "");
 function layerPref() { try { return Object.assign({}, LAYER_DEF, JSON.parse(localStorage.getItem(layerKey()) || "{}")); } catch (e) { return Object.assign({}, LAYER_DEF); } }
-function layerCount() { const p = layerPref(); return LAYERS.filter(([k]) => p[k] && (k !== "darkpool" || (ME && ME.is_admin))).length; }
+function layerCount() { const p = layerPref(); return LAYERS.filter(([k]) => p[k] && ((k !== "darkpool" && k !== "flow") || (ME && ME.is_admin))).length; }
 function setLayer(k, on) {
   const p = layerPref(); p[k] = !!on;
   if (on && k === "rsi") p.macd = false;           // one shared indicator slot under the price pane, never two stacked panes
@@ -7812,7 +7828,7 @@ function mapLayersToggle() { MAP_LAYERS_OPEN = !MAP_LAYERS_OPEN; paintMap(); }
 function mapLayersHTML() {
   if (!MAP_LAYERS_OPEN) return "";
   const p = layerPref();
-  return `<div class="mp-layers"><span class="k">Layers</span>${LAYERS.filter(([k]) => k !== "darkpool" || (ME && ME.is_admin)).map(([k, l]) => `<button type="button" class="${p[k] ? "on" : ""}" aria-pressed="${!!p[k]}" onclick="setLayer('${k}', ${!p[k]})"><i></i>${l}</button>`).join("")}</div>`;
+  return `<div class="mp-layers"><span class="k">Layers</span>${LAYERS.filter(([k]) => (k !== "darkpool" && k !== "flow") || (ME && ME.is_admin)).map(([k, l]) => `<button type="button" class="${p[k] ? "on" : ""}" aria-pressed="${!!p[k]}" onclick="setLayer('${k}', ${!p[k]})"><i></i>${l}</button>`).join("")}</div>`;
 }
 function mapMoreOpen(btn, ev) {
   if (ev) ev.stopPropagation();
@@ -8159,6 +8175,80 @@ function mapDarkPool(chart, ser, D, LY) {
     requestAnimationFrame(draw);
   });
 }
+
+// ---------------------------------------------------------------- Nov 28 (owner): options flow (ADMIN-ONLY for now)
+// Sweeps (one order across 2+ exchanges in a second) and blocks (one big print) on watchlist contracts near the money.
+// Chart: "$460K Call Sweep" labels at the candle (calls green above, puts red below, the 10 biggest in view).
+// List under the chart: today's call/put totals and each event with its side (at ask / bid / mid) and a read.
+let MAP_FLOW_DRAW = null; const FLC = {};
+function flOn() { return !!(layerPref().flow && ME && ME.is_admin); }
+function flUsd(v) { return v >= 1e6 ? "$" + (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + "M" : "$" + Math.round(v / 1e3) + "K"; }
+async function flLoad(sym) {
+  const hit = FLC[sym]; if (hit && Date.now() - hit.at < 60000) return hit.d;
+  try { const d = await api(`/api/flow/${encodeURIComponent(sym)}`); FLC[sym] = {at: Date.now(), d}; const el = $("mpFlow"); if (el && BRIEF_SYM === sym) el.outerHTML = flowSlot(); return d; } catch (e) { return null; }
+}
+function flowSlot() {
+  if (!flOn() || !BRIEF_SYM) return "";
+  const d = (FLC[BRIEF_SYM] || {}).d;
+  if (!d) return `<div class="fl-card" id="mpFlow"><div class="fl-h"><b>Options flow</b><span>${esc(BRIEF_SYM)} · loading…</span></div></div>`;
+  const ev = d.events || [];
+  const lastDay = ev.length ? Math.floor(ev[ev.length - 1].t / 86400) : null;
+  const day = ev.filter(e => Math.floor(e.t / 86400) === lastDay);
+  const calls = day.filter(e => e.right === "C").reduce((a, e) => a + e.usd, 0), puts = day.filter(e => e.right === "P").reduce((a, e) => a + e.usd, 0);
+  const dayName = lastDay != null ? new Date(lastDay * 86400000).toLocaleDateString("en-US", {weekday: "short", month: "short", day: "numeric", timeZone: "UTC"}) : "";
+  const rows = day.slice().reverse().slice(0, 12).map(e => {
+    const tm = new Date(e.t * 1000).toLocaleTimeString("en-US", {hour: "numeric", minute: "2-digit", timeZone: "UTC"}).replace(/ [AP]M$/, "");
+    const ex = e.exp.slice(5).replace("-", "/"), col = e.read === "Bullish" ? "#3DD68C" : e.read === "Bearish" ? "#F0616D" : "#8A93A3";
+    const side = e.side === "ask" ? "at ask" : e.side === "bid" ? "at bid" : "mid";
+    return `<div class="fl-row"><span class="fl-t">${tm}</span><div><b>${ex} ${(+e.strike).toFixed(e.strike % 1 ? 1 : 0)}${e.right}</b> <span>· ${e.kind} · ${side}</span></div><div class="fl-r"><b>${flUsd(e.usd)}</b><i style="color:${col}">${e.read}</i></div></div>`; }).join("");
+  const empty = !ev.length ? `<p class="fl-empty">${d.watching ? `No sweeps or blocks over ${flUsd(d.floor)} saved yet${d.feed === "indicative" ? " · the options feed is set to indicative; OPRA gives real prints" : ""}.` : `${esc(BRIEF_SYM)} isn't in the first ${12} watchlist tickers flow is tracked for.`}</p>` : "";
+  return `<div class="fl-card" id="mpFlow"><div class="fl-h"><b>Options flow</b><span>${esc(BRIEF_SYM)} · ${esc(dayName || "today")} · admin</span></div>
+    ${ev.length ? `<div class="fl-sum"><span class="c">Calls ${flUsd(calls)}</span><span class="p">Puts ${flUsd(puts)}</span><span>C/P ${puts ? (calls / puts).toFixed(1) + "×" : "—"}</span></div>` : ""}${rows}${empty}
+    <p class="fl-foot">Sweeps and blocks ≥ ${flUsd(d.floor)} near the money. Side is read from the quote at the minute; a bought put can be a hedge. Context only.</p></div>`;
+}
+function mapFlow(chart, ser, D, LY) {
+  MAP_FLOW_DRAW = null;
+  const el = chart.chartElement(); if (!el) return;
+  el.querySelectorAll(".fl-svg, .fl-lab, .fl-key").forEach(x => x.remove());
+  if (!LY || !LY.flow || !(ME && ME.is_admin) || !D || !D.cs || !D.cs.length) return;
+  const sym = BRIEF_SYM; if (getComputedStyle(el).position === "static") el.style.position = "relative";
+  const svgNS = "http://www.w3.org/2000/svg", svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("class", "fl-svg"); el.appendChild(svg);
+  const key = document.createElement("div"); key.className = "fl-key"; key.innerHTML = `<i class="c"></i>Calls <i class="p"></i>Puts · flow · admin`; el.appendChild(key);
+  let E = null;
+  const draw = () => {
+    if (!E || !svg.isConnected) return;
+    el.querySelectorAll(".fl-lab").forEach(x => x.remove());
+    const ts = chart.timeScale(), cs = D.cs, n = cs.length, W = el.clientWidth;
+    let paneH = el.clientHeight * .78; try { paneH = chart.panes()[0].getHeight(); } catch (e) {}
+    svg.setAttribute("width", W); svg.setAttribute("height", paneH); key.style.top = "62px";
+    const dt = n > 1 ? cs[n - 1].time - cs[n - 2].time : 1800;
+    const idxOf = t => { if (t < cs[0].time) return -1; let lo = 0, hi = n - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (cs[m].time <= t) lo = m; else hi = m - 1; } return t < cs[lo].time + (lo < n - 1 ? cs[lo + 1].time - cs[lo].time : dt * 1.5) ? lo : -1; };
+    const vr = ts.getVisibleLogicalRange() || {from: 0, to: n};
+    // one label per candle and side: the biggest; then the 10 biggest in view
+    const best = new Map();
+    for (const e of E) { const i = idxOf(e.t); if (i < Math.floor(vr.from) || i > Math.ceil(vr.to)) continue;
+      const k = i + e.right, o = best.get(k); if (!o || e.usd > o.usd) best.set(k, {...e, i}); }
+    const pick = [...best.values()].sort((a, b) => b.usd - a.usd).slice(0, 10);
+    let g = ""; const placed = [];
+    for (const e of pick.sort((a, b) => a.i - b.i)) {
+      const b = cs[e.i], x = ts.timeToCoordinate(b.time), up = e.right === "C", y = ser.priceToCoordinate(up ? b.high : b.low);
+      if (x == null || y == null) continue;
+      const col = up ? "#3DD68C" : "#F0616D";
+      let ly = up ? y - 44 : y + 16;
+      for (const p of placed) if (Math.abs(p.x - x) < 120 && Math.abs(p.y - ly) < 26) ly = up ? p.y - 28 : p.y + 28;     // step clear of a neighbour
+      ly = Math.max(26, Math.min(paneH - 30, ly)); placed.push({x, y: ly});
+      g += `<line x1="${x}" y1="${y}" x2="${x}" y2="${up ? ly + 22 : ly}" stroke="${col}" stroke-width="1.3"/><circle cx="${x}" cy="${y}" r="3.6" fill="none" stroke="${col}" stroke-width="1.8"/><circle cx="${x}" cy="${y}" r="1.4" fill="${col}"/>`;
+      const lab = document.createElement("div"); lab.className = "fl-lab " + (up ? "c" : "p");
+      lab.style.left = Math.max(2, Math.min(W - 160, x - 50)) + "px"; lab.style.top = ly + "px";
+      lab.textContent = `${flUsd(e.usd)} ${up ? "Call" : "Put"} ${e.kind}`; lab.title = `${e.exp} ${e.strike}${e.right} · ${e.size} @ $${e.price} · ${e.side === "ask" ? "at ask" : e.side === "bid" ? "at bid" : "mid"} · ${e.read}`;
+      el.appendChild(lab);
+    }
+    svg.innerHTML = g;
+  };
+  MAP_FLOW_DRAW = draw;
+  chart.timeScale().subscribeVisibleLogicalRangeChange(() => requestAnimationFrame(draw));
+  flLoad(sym).then(d => { if (MAP_LWC_CHART !== chart || BRIEF_SYM !== sym) return; E = (d && d.events) || []; requestAnimationFrame(draw); });
+}
 function mapCloud(chart, series, D, light) {
   MAP_CLOUD_DRAW = null;
   const el = chart.chartElement(); if (!el) return;
@@ -8317,7 +8407,7 @@ function initLightweightMapChart() {
       if (MAP_LWC_CHART.__lv) { const v = MAP_LWC_CHART.__lv; try { mapLevelsChip(MAP_LWC_CHART, v.series, host, v.hidden, v.LY); } catch (e) {} }
       if (MAP_LWC_CHART.__dw) { MAP_LWC_CHART.__dw.host = host; try { drawToolbar(MAP_LWC_CHART.__dw); MAP_LWC_CHART.__dw.draw(); } catch (e) {} }
       MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390});
-      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => { MAP_VP_DRAW && MAP_VP_DRAW(); MAP_CLOUD_DRAW && MAP_CLOUD_DRAW(); MAP_GLOW_DRAW && MAP_GLOW_DRAW(); MAP_DP_DRAW && MAP_DP_DRAW(); }); } });
+      MAP_LWC_RO = new ResizeObserver(() => { if (MAP_LWC_CHART && host.isConnected) { MAP_LWC_CHART.applyOptions({width: Math.max(280, host.clientWidth), height: host.clientHeight || 390}); requestAnimationFrame(() => { MAP_VP_DRAW && MAP_VP_DRAW(); MAP_CLOUD_DRAW && MAP_CLOUD_DRAW(); MAP_GLOW_DRAW && MAP_GLOW_DRAW(); MAP_DP_DRAW && MAP_DP_DRAW(); MAP_FLOW_DRAW && MAP_FLOW_DRAW(); }); } });
       MAP_LWC_RO.observe(host);
       return;
     } catch (e) { /* fall through to a full rebuild */ }
@@ -8550,6 +8640,7 @@ function initLightweightMapChart() {
     mapCloud(chart, candles, D, light);
     try { mapGexGlow(chart, candles, D, LY); } catch (e) { console.warn("gex glow", e); }
     try { mapDarkPool(chart, candles, D, LY); } catch (e) { console.warn("dark pool", e); }
+    try { mapFlow(chart, candles, D, LY); } catch (e) { console.warn("flow", e); }
     chart.__lv = {series: candles, hidden, LY};
     try { mapLevelsChip(chart, candles, host, hidden, LY); } catch (e) { console.warn("levels chip", e); }
     MAP_LWC_RO=new ResizeObserver(()=>{if(MAP_LWC_CHART&&host.isConnected){MAP_LWC_CHART.applyOptions({width:Math.max(280,host.clientWidth),height:host.clientHeight||390});requestAnimationFrame(()=>{MAP_VP_DRAW&&MAP_VP_DRAW();MAP_CLOUD_DRAW&&MAP_CLOUD_DRAW();});}});
@@ -8852,7 +8943,7 @@ function paintMap() {
       <button class="bf-x" onclick="closeBrief()" aria-label="Close">✕</button></div>
     <div class="mp-grid">
       <div class="mp-main">
-        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><div class="mp-tksearch"><input type="search" placeholder="Search a ticker or company" aria-label="Search a ticker" autocomplete="off" spellcheck="false" oninput="tkFind(this)" onkeydown="tkFindKey(event, this)" onblur="setTimeout(() => tkFindClose(), 150)"><div class="mp-tkres" hidden></div></div><span class="mp-prostatus">${P.isLive ? "LIVE" : `<span class="w2">MARKET </span>CLOSED`}</span></div><div class="mp-ctop mp-ctop1"><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><span class="mp-ctsp"></span>${rp ? "" : `${wi ? `<button class="mp-planbtn on" onclick="mapPlanToggle()">✓ Done</button>` : ""}<button class="mp-planbtn mp-laybtn ${MAP_LAYERS_OPEN ? "on" : ""}" onclick="mapLayersToggle()" aria-expanded="${MAP_LAYERS_OPEN}">Layers <b>${layerCount()} on</b></button><button class="mp-planbtn mp-morebtn" onclick="mapMoreOpen(this, event)" aria-haspopup="menu" aria-label="More chart tools">⋯</button>${canPlan ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade<span class="w2"> this</span></button>` : ""}`}</div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F2C14E"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#7C93FF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}${rp ? "" : mapLayersHTML()}<div class="mp-mom" id="mpMom"></div><div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>
+        <div class="mp-card mp-chartcard"><div class="mp-ct"><div class="mp-protitle"><div><b>Chart</b><small>${esc(sym)} · ${MAP_TF.toUpperCase()} · NextShelf</small></div><div class="mp-tksearch"><input type="search" placeholder="Search a ticker or company" aria-label="Search a ticker" autocomplete="off" spellcheck="false" oninput="tkFind(this)" onkeydown="tkFindKey(event, this)" onblur="setTimeout(() => tkFindClose(), 150)"><div class="mp-tkres" hidden></div></div><span class="mp-prostatus">${P.isLive ? "LIVE" : `<span class="w2">MARKET </span>CLOSED`}</span></div><div class="mp-ctop mp-ctop1"><div class="mp-rng mp-tf">${MAP_TFS.map(([k, l]) => `<button class="${MAP_TF === k ? "on" : ""}" onclick="mapTf('${k}')">${l}</button>`).join("")}</div><span class="mp-ctsp"></span>${rp ? "" : `${wi ? `<button class="mp-planbtn on" onclick="mapPlanToggle()">✓ Done</button>` : ""}<button class="mp-planbtn mp-laybtn ${MAP_LAYERS_OPEN ? "on" : ""}" onclick="mapLayersToggle()" aria-expanded="${MAP_LAYERS_OPEN}">Layers <b>${layerCount()} on</b></button><button class="mp-planbtn mp-morebtn" onclick="mapMoreOpen(this, event)" aria-haspopup="menu" aria-label="More chart tools">⋯</button>${canPlan ? `<button class="mp-planbtn mp-tradebtn" onclick="mapTicketOpen()">Trade<span class="w2"> this</span></button>` : ""}`}</div></div><div class="mp-cw${wi ? " planning" : ""}${rp ? " replay" : ""}" id="mpCw">${rp ? mapReplayChart(chart, MAP_W()) : mapChart(P, chart, MAP_W())}<div class="mp-xh" id="mpXh"></div><div class="mp-tip" id="mpTip"></div></div>${rp ? mapReplayBar() : ""}${mapExtOn() && !rp ? `<div class="mp-cloudkey mp-extkey"><span><i style="background:#F2C14E"></i>Pre-market 4:00–9:30 AM</span><span><i style="background:#7C93FF"></i>After hours 4:00–8:00 PM</span><em>ET · display only, setups use market hours</em></div>` : ""}${cloudTf && cloudOk && cloudOn && !rp ? `<div class="mp-cloudkey"><span><i style="background:${candleColors()[0]}"></i>Cloud bullish</span><span><i style="background:${candleColors()[1]}"></i>Cloud bearish</span><em>Ichimoku 9 · 26 · 52 · display only</em></div>` : ""}${rp ? "" : mapLayersHTML()}<div class="mp-mom" id="mpMom"></div><div class="mp-hint">${rp ? "Replay of the last " + (mapRanges().find(r => r[1] === MAP_N)?.[0] || `${MAP_N} candles`) + (MAP_TF === "1d" ? " (daily candles)" : "") : wi ? "Adjust the stop and target in the plan controls below." : matchMedia("(hover: hover)").matches ? "Hover a candle, a line, the RETEST tag, or the volume strip for details." : "Tap a candle, a line, or the RETEST tag for details · pinch to zoom."}</div>${flowSlot()}
           ${wi ? mapCalcHTML(P0, wi) : ""}</div>
         <div class="mp-card mp-status">${flowHTML}<div class="mp-st t-${P.tone}"><b>${esc(P.status)}</b><span>${esc(P.sub)}</span></div><div class="mp-cells">${cells.join("")}</div></div>
         <div class="mp-card mp-journey"><div class="mp-jt">Setup journey · ${esc(P.setupName)}</div><div class="mp-js" style="--n:${steps.length}">${jr}</div></div>

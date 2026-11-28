@@ -176,6 +176,9 @@ async def lifespan(_app: FastAPI):
     import xhours as _xhours          # Nov 27 (owner): pre-market / after-hours retest heads-ups, after each 30M candle
     sched.add_job(_xhours.tick, CronTrigger(day_of_week="mon-fri", hour="4-9,13-20", minute="2,32", timezone="America/New_York"),
                   id="xhours_retest", replace_existing=True, max_instances=1, coalesce=True)
+    import flow as _flow              # Nov 28 (owner): options flow, admin-only layer (every minute in market hours)
+    sched.add_job(_flow.run, CronTrigger(day_of_week="mon-fri", hour="9-16", minute="*", timezone="America/New_York"),
+                  id="options_flow", replace_existing=True, max_instances=1, coalesce=True)
     import bullflow_bench as _bfb     # Nov 28 (owner): admin-only GEX benchmark vs Bullflow (no-op without BULLFLOW_API_KEY)
     for _i, (_h, _m) in enumerate(((10, 0), (12, 0), (15, 30))):
         sched.add_job(_bfb.run, CronTrigger(day_of_week="mon-fri", hour=_h, minute=_m, timezone="America/New_York"),
@@ -2178,6 +2181,20 @@ async def gamma_walls(symbol: str, u: dict = User):
                 as_of=pd.Timestamp.now(tz="America/New_York").isoformat(timespec="seconds"),
                 chain_as_of=gamma.chain_as_of(sym))
 
+
+
+@app.get("/api/flow/{symbol}")
+async def options_flow(symbol: str, u: dict = Admin):
+    """Nov 28: options flow events (sweeps / blocks) for the chart layer and list. ADMIN-ONLY until display rights are cleared."""
+    import re
+    import flow
+    sym = symbol.strip().upper()
+    if not re.fullmatch(r"[A-Z][A-Z0-9.\-]{0,9}", sym):
+        raise HTTPException(400, "Unknown symbol")
+    ev = await run_in_threadpool(flow.events, sym, 5)
+    watched = sym in {r["symbol"] for r in db.list_tickers()[:flow.FLOW_MAX]}
+    return dict(symbol=sym, events=ev, floor=flow.floor_usd(sym), watching=watched, diag=flow.DIAG.get(sym),
+                feed=os.getenv("ALPACA_OPTIONS_FEED", "indicative"))
 
 
 @app.get("/api/darkpool/{symbol}")
