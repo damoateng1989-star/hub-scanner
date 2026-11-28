@@ -13378,6 +13378,17 @@ html[data-theme="light"] .mp-svg .mp-vol.up { fill:#16a34a; } html[data-theme="l
     box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 0 0 3px rgba(78,123,255,.22), 0 6px 18px rgba(0,0,0,.28); }
   .mp-protitle .mp-tksearch::before { left:14px; top:10px; }
   .mp-protitle .mp-tkres { top:40px; border-radius:16px; background:rgba(21,23,27,.92); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px); }
+  /* Nov 28 (owner): Atlas-style "Single Ticker" pill — brighter frosted fill, bold label, chevron — centred in the row */
+  .mp-protitle > .mp-tksearch { flex:0 1 340px !important; margin:0 auto !important; }
+  .mp-protitle .mp-tksearch input { height:36px; padding:0 40px 0 38px; font:700 13.5px var(--sans); letter-spacing:.01em;
+    background:linear-gradient(180deg, rgba(255,255,255,.24) 0%, rgba(255,255,255,.12) 45%, rgba(255,255,255,.07) 100%) !important;
+    border:1px solid rgba(255,255,255,.30);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.38), inset 0 -1px 0 rgba(0,0,0,.30), 0 6px 18px rgba(0,0,0,.30); }
+  .mp-protitle .mp-tksearch input::placeholder { color:rgba(255,255,255,.82); font-weight:700; }
+  .mp-protitle .mp-tksearch::before { left:15px; top:11px; filter:brightness(1.6); }
+  .mp-protitle .mp-tksearch::after { content:""; position:absolute; right:16px; top:50%; width:7px; height:7px; margin-top:-6px; border-right:2px solid rgba(255,255,255,.85); border-bottom:2px solid rgba(255,255,255,.85); transform:rotate(45deg); pointer-events:none; }
+  .mp-protitle .mp-tksearch:focus-within::after { display:none; }
+  .mp-protitle .mp-tkres { top:42px; }
   html[data-theme="light"] .mp-protitle .mp-tksearch input { color:#14161a; background:linear-gradient(180deg, rgba(255,255,255,.95), rgba(240,243,248,.8)) !important; border-color:rgba(13,17,23,.12);
     box-shadow:inset 0 1px 0 #fff, 0 4px 14px rgba(13,17,23,.08); }
 }
