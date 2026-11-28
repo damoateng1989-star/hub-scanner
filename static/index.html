@@ -324,6 +324,8 @@ html .bf-heat table.gh-t td.gh-c { color: #F4F7F6 !important; } html .bf-heat ta
 /* Expand: the board full screen, like a trading terminal */
 body .bf-heat.gh-host, body.heat-on .bf-heat.gh-host, body.heat-on.map-v2 .bf-heat.gh-host { position: fixed !important; inset: 0 !important; z-index: 9000; margin: 0 !important; padding: 12px !important; background: rgba(0,0,0,.55) !important; display: block !important; overflow: hidden !important; }
 .bf-heat .bh-card.gh-full { width: 100% !important; max-width: none !important; margin: 0 !important; height: 100%; box-sizing: border-box; overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+/* Nov 28 (owner): the side heat map grows with the window instead of stopping at 520px */
+.bf-heat .bh-card.gh:not(.gh-full) .gh-scroll { max-height: max(520px, calc(100vh - 300px)); max-height: max(520px, calc(100dvh - 300px)); }
 .bf-heat .bh-card.gh-full .gh-scroll { max-height: calc(100vh - 230px); }
 .gh-mini-host { margin: 0 20px 14px !important; }
 .bf-heat .gh-minicard { cursor: pointer; padding: 12px; }
