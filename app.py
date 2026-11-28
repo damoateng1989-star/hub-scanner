@@ -176,6 +176,10 @@ async def lifespan(_app: FastAPI):
     import xhours as _xhours          # Nov 27 (owner): pre-market / after-hours retest heads-ups, after each 30M candle
     sched.add_job(_xhours.tick, CronTrigger(day_of_week="mon-fri", hour="4-9,13-20", minute="2,32", timezone="America/New_York"),
                   id="xhours_retest", replace_existing=True, max_instances=1, coalesce=True)
+    import bullflow_bench as _bfb     # Nov 28 (owner): admin-only GEX benchmark vs Bullflow (no-op without BULLFLOW_API_KEY)
+    for _i, (_h, _m) in enumerate(((10, 0), (12, 0), (15, 30))):
+        sched.add_job(_bfb.run, CronTrigger(day_of_week="mon-fri", hour=_h, minute=_m, timezone="America/New_York"),
+                      id=f"bullflow_bench_{_i}", replace_existing=True, max_instances=1, coalesce=True)
     sched.add_job(_backup.run, CronTrigger(hour=2, minute=17, timezone="America/New_York"), id="db_backup", replace_existing=True,
                   misfire_grace_time=3600)
     sched.add_job(_lookout.evaluate_earnings_eve, CronTrigger(day_of_week="mon-fri", hour=16, minute=25, timezone="America/New_York"),
@@ -1467,16 +1471,29 @@ async def admin_gex_check(u: dict = Admin):
         except Exception as e:
             shadow = {"error": str(e)[:200]}
         try:
+            import bullflow_bench
+            bench = bullflow_bench.stats()
+        except Exception as e:
+            bench = {"error": str(e)[:200]}
+        try:
             import node_watch
             nodes = node_watch.stats()
         except Exception as e:
             nodes = {"error": str(e)[:200]}
         return dict(now_et=_dt.now(_Z("America/New_York")).isoformat(timespec="seconds"),
-                    patch149_log=log_info, patch149_stats=st, patch227_shadow=shadow, largest_node_touches=nodes,
+                    patch149_log=log_info, patch149_stats=st, patch227_shadow=shadow, largest_node_touches=nodes, bullflow_benchmark=bench,
                     chain_diag=gamma.CHAIN_DIAG,
                     snapshot_cadence="every 5 min, 09:35-16:00 ET, Mon-Fri, shared watchlist; only today's files kept",
                     watchlist=chains)
     return await run_in_threadpool(run)
+
+
+@app.post("/api/admin/bullflow-run")
+@app.get("/api/admin/bullflow-run")
+async def admin_bullflow_run(u: dict = Admin):
+    """Nov 28: take one benchmark reading now (admin only; Bullflow data never reaches members)."""
+    import bullflow_bench
+    return await run_in_threadpool(bullflow_bench.run, True)
 
 
 @app.get("/api/admin/data-check")
