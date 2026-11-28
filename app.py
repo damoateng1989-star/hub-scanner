@@ -869,7 +869,8 @@ def me(u: dict | None = Maybe):
                 ticker_limit=None if auth.is_pro(u) else auth.FREE_TICKER_LIMIT,
                 telegram=dict(enabled=telegram_bot.enabled(), linked=bool(u["telegram_chat"]),
                               link=f"https://t.me/{bot}?start={u['link_code']}" if bot else None),
-                phone=u["phone"], calls_available=phone.enabled(), has_password=bool(u["password_hash"]),
+                phone=u["phone"], calls_available=phone.enabled(), onboarded=u.get("onboarded", 1) != 0,
+                sms=u.get("sms", 1) != 0, calls=u.get("calls", 1) != 0, has_password=bool(u["password_hash"]),
                 google=bool(u["google_sub"]), styles=sorted(notify.styles_of(u)), options=options_for(u), brief=u.get("brief", 1) != 0, recap=u.get("recap", 1) != 0, recap_time=recap.RECAP_TIME, a_all=bool(u.get("a_all")), board_rt=(u.get("board_rt") or "off") if (u.get("board_rt") != "all" or u.get("is_admin")) else "aplus", quiet=u.get("quiet") or "", closes=u.get("closes") or "both",
                 brief_time=brief.BRIEF_TIME, email_on=bool(os.getenv("RESEND_API_KEY")),
                 styles_picked=[x for x in (u.get("styles") or "hub").split(",") if x],
@@ -1052,6 +1053,25 @@ def set_styles(body: StylesBody, u: dict = User):
         raise HTTPException(400, "Pick at least one setup")
     db.update_user(u["id"], styles=",".join(picked))
     return {"styles": picked}
+
+
+class OnboardBody(BaseModel):
+    sms: bool | None = None
+    calls: bool | None = None
+    brief: bool | None = None
+
+
+@app.post("/api/me/onboard")
+@app.post("/api/me/channels")
+def onboard(body: OnboardBody, u: dict = User):
+    """Nov 28: the first-run welcome is done (finished or skipped); saves the alert switches it showed."""
+    f = dict(onboarded=1)
+    for k in ("sms", "calls", "brief"):
+        v = getattr(body, k)
+        if v is not None:
+            f[k] = int(v)
+    db.update_user(u["id"], **f)
+    return {"ok": True}
 
 
 @app.post("/api/me/phone")

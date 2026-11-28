@@ -223,6 +223,12 @@ with _lock:
         _conn.commit()
     except sqlite3.OperationalError:
         pass
+    for _col, _ddl in (("onboarded", "INTEGER DEFAULT 1"), ("sms", "INTEGER DEFAULT 1"), ("calls", "INTEGER DEFAULT 1")):
+        try:   # Nov 28: first-run welcome (existing members count as done) + separate text / call switches (on keeps old behaviour)
+            _conn.execute(f"ALTER TABLE users ADD COLUMN {_col} {_ddl}")
+            _conn.commit()
+        except sqlite3.OperationalError:
+            pass
     try:   # added later: which setups a member wants alerts for ("hub,triangle,channel,sr"); NULL = hubs only
         _conn.execute("ALTER TABLE users ADD COLUMN styles TEXT")
         _conn.commit()
@@ -459,10 +465,12 @@ def all_signals(limit: int = 500, pattern: str = "hub") -> list[dict]:
 
 # --- users
 USER_FIELDS = ("email", "name", "password_hash", "google_sub", "plan", "is_admin", "telegram_chat", "link_code", "phone", "styles", "brief", "recap", "quiet", "closes", "a_all", "board_rt",
-               "stripe_customer", "stripe_sub", "sub_status", "sub_period_end", "sub_cancel_at_end", "trial_used")
+               "stripe_customer", "stripe_sub", "sub_status", "sub_period_end", "sub_cancel_at_end", "trial_used",
+               "onboarded", "sms", "calls")
 
 
 def create_user(**f) -> int:
+    f.setdefault("onboarded", 0)     # Nov 28: new members see the first-run welcome once
     cols = ", ".join(f)
     return _run(f"INSERT INTO users ({cols}) VALUES ({', '.join('?' * len(f))})", tuple(f.values())).lastrowid
 

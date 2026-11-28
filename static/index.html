@@ -2068,6 +2068,51 @@ html[data-theme="light"] .inst2 .in-tile { background: #F0F1F4; }
   -webkit-mask: linear-gradient(#000 0 0) padding-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
 .vback button:active { transform: scale(.94); }
 .vback nav { font: 600 11px var(--mono); letter-spacing: .12em; color: var(--muted); background: none !important; border: 0 !important; padding: 0 !important; position: static !important; box-shadow: none !important; backdrop-filter: none !important; height: auto !important; }
+
+/* Nov 28 (owner): first-run welcome — three screens a new member sees once (Skip on each) */
+#ob { position: fixed; inset: 0; z-index: 9000; background: #0D1117; color: #E9EBEF; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+#ob .ob-scr { max-width: 460px; min-height: 100%; margin: 0 auto; padding: calc(env(safe-area-inset-top, 0px) + 22px) 22px calc(env(safe-area-inset-bottom, 0px) + 24px); display: flex; flex-direction: column; box-sizing: border-box; }
+#ob .ob-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; }
+#ob .ob-dots { display: flex; gap: 6px; } #ob .ob-dots i { width: 22px; height: 4px; border-radius: 2px; background: #262D37; } #ob .ob-dots i.on { background: #3DD68C; }
+#ob .ob-skip { background: none; border: 0; color: #8A93A3; font: 500 14px var(--sans, system-ui); padding: 8px 0 8px 12px; cursor: pointer; }
+#ob h1 { font: 800 30px/1.1 var(--sans, system-ui); letter-spacing: -.02em; margin: 0 0 10px; color: #fff; }
+#ob p.ob-lead { color: #9AA3B2; margin: 0 0 22px; font-size: 15.5px; line-height: 1.45; }
+#ob .ob-body { flex: 1; }
+#ob .ob-cta { margin-top: 24px; width: 100%; height: 54px; border: 0; border-radius: 14px; background: #fff; color: #0D1117; font: 800 16.5px var(--sans, system-ui); cursor: pointer; }
+#ob .ob-cta:disabled { opacity: .6; }
+#ob .ob-note { text-align: center; color: #6E7886; font-size: 12.5px; margin-top: 12px; }
+#ob .ob-step { display: flex; gap: 14px; align-items: flex-start; padding: 14px; border: 1px solid #232A33; border-radius: 14px; background: #141920; margin-bottom: 10px; }
+#ob .ob-n { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 800 13px var(--sans, system-ui); color: #0D1117; }
+#ob .ob-step b { display: block; font-size: 15.5px; margin-bottom: 2px; color: #fff; } #ob .ob-step span { color: #9AA3B2; font-size: 13.5px; }
+#ob .ob-sika { display: flex; gap: 12px; align-items: center; margin-top: 8px; padding: 12px 14px; border-radius: 14px; background: linear-gradient(135deg, #17322C, #141920); border: 1px solid #24443D; font-size: 13.5px; color: #CFEDE6; }
+#ob .ob-sika i { width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 30% 30%, #9FE3D3, #3F8F84); flex: none; } #ob .ob-sika b { color: #fff; }
+#ob .ob-srch { display: flex; gap: 8px; margin-bottom: 16px; }
+#ob .ob-srch input { flex: 1; min-width: 0; height: 46px; border-radius: 12px; background: #141920; border: 1px solid #262D37; color: #fff; padding: 0 14px; font-size: 16px; text-transform: uppercase; }
+#ob .ob-srch input::placeholder { text-transform: none; color: #6E7886; }
+#ob .ob-srch button { height: 46px; padding: 0 16px; border-radius: 12px; border: 1px solid #3A424D; background: none; color: #fff; font-weight: 700; }
+#ob .ob-lab { font: 700 12px var(--sans, system-ui); color: #8A93A3; margin: 4px 0 10px; letter-spacing: .02em; }
+#ob .ob-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+#ob .ob-ch { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; border: 1px solid #2A313B; background: #141920; color: #E9EBEF; font: 700 14px var(--sans, system-ui); cursor: pointer; }
+#ob .ob-ch .tk-tile { border-radius: 50% !important; border: 0; }
+#ob .ob-ch.on { border-color: #3DD68C; background: #10261B; } #ob .ob-ch.on::after { content: "✓"; color: #3DD68C; font-weight: 800; }
+#ob .ob-ch:disabled { opacity: .4; }
+#ob .ob-cnt { color: #9AA3B2; font-size: 13.5px; } #ob .ob-cnt b { color: #3DD68C; }
+#ob .ob-opt { display: flex; align-items: center; gap: 14px; padding: 11px 14px; border: 1px solid #232A33; border-radius: 14px; background: #141920; margin-bottom: 8px; }
+#ob .ob-ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex: none; font-size: 18px; }
+#ob .ob-opt > div { flex: 1; min-width: 0; } #ob .ob-opt b { display: block; font-size: 15px; color: #fff; } #ob .ob-opt span { color: #9AA3B2; font-size: 13px; }
+#ob .ob-pro { font: 800 10px var(--sans, system-ui); color: #0D1117; background: #F2C14E; border-radius: 4px; padding: 2px 5px; margin-left: 6px; vertical-align: 2px; }
+#ob .ob-tg { flex: none; width: 50px; height: 30px; border-radius: 15px; background: #2A313B; border: 0; position: relative; cursor: pointer; }
+#ob .ob-tg::after { content: ""; position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+#ob .ob-tg.on { background: #3DD68C; } #ob .ob-tg.on::after { left: 24px; } #ob .ob-tg:disabled { opacity: .45; }
+#ob .ob-pill { flex: none; font: 700 13px var(--sans, system-ui); color: #fff; border: 1px solid #3A424D; border-radius: 8px; padding: 6px 10px; background: none; text-decoration: none; cursor: pointer; }
+#ob .ob-ok { flex: none; color: #3DD68C; font-weight: 800; font-size: 14px; }
+#ob .ob-num { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; margin: -2px 0 8px; border-radius: 12px; border: 1px solid #2A313B; background: #0F1419; }
+/* the app-wide dark sweep and input styles reach in here; pin the welcome's own colours */
+html body #ob h1:not(#_) { color: #fff !important; background: none !important; }
+html body #ob .ob-step b:not(#_), html body #ob .ob-opt b:not(#_), html body #ob .ob-sika b:not(#_) { color: #fff !important; }
+html body #ob .ob-srch input:not(#_) { background: #141920 !important; color: #fff !important; border: 1px solid #262D37 !important; }
+html body #ob .ob-num input:not(#_) { background: transparent !important; color: #fff !important; border: 0 !important; box-shadow: none !important; }
+#ob .ob-num input { flex: 1; min-width: 0; background: none; border: 0; color: #fff; font-size: 16px; height: 36px; outline: none; }
 /* Nov 28 (owner): the heat map uses the same orb + breadcrumb back control as the pages */
 .bf-heat .bh-card.gh .gh-vback { margin: 0 0 14px; } .bf-heat .bh-card.gh .gh-vback nav { color: rgba(255,255,255,.72); } .bf-heat .bh-card.gh .gh-vback nav b { color: #fff; }
 .vback nav span { margin: 0 8px; opacity: .6; } .vback nav b { color: var(--ink); }
@@ -4437,6 +4482,7 @@ async function loadMe() {
   $("scanBtn").hidden = !ME.is_admin; $("scanNote").hidden = !ME.is_admin;
   $("bScan").hidden = !ME.is_admin;
   if (!ME.is_admin && location.hash === "#paper") location.hash = "#watch";
+  if (ME.onboarded === false) setTimeout(() => { if (!document.querySelector("#ob:not([hidden])")) obOpen(); }, 500);   // Nov 28: first-run welcome
 }
 const joinBox = (title, text) => `<div class="acct"><h3>${title}</h3><p>${text}</p>
   <div class="row"><a class="upsell" style="margin:0;font-size:15px" href="/login#signup">Create a free account →</a>
@@ -4517,6 +4563,7 @@ async function loadAccount() {
         `<p>We'll text this number every alert on your watchlist, and call it for pre-close warnings and breakouts. Nothing is sent during your quiet hours.</p>
          <form class="row" id="phoneForm"><input id="phoneIn" type="tel" placeholder="+1 617 555 0123" value="${esc(m.phone || "")}">
            <button>Save</button>${m.phone ? `<button type="button" onclick="testText(this)">Test text</button><button type="button" onclick="testCall(this)">Test call</button>` : ""}</form>
+         <div class="row" style="gap:18px;margin-top:10px"><label><input type="checkbox" ${m.sms !== false ? "checked" : ""} onchange="setChannel('sms', this.checked)"> Texts</label><label><input type="checkbox" ${m.calls !== false ? "checked" : ""} onchange="setChannel('calls', this.checked)"> Calls</label></div>
          <div class="err" id="phoneMsg"></div>`}
     </div>
     <div class="acct-sec">Preferences</div>
@@ -4530,7 +4577,7 @@ async function loadAccount() {
     ${styleCard()}
 
     <div class="acct"><h3>Help</h3><p>New here? The setup takes a minute to learn.</p>
-      <div class="row"><a class="btnx sm" href="#guide">How it works</a><a class="btnx sm" href="#alerts">All alerts</a>
+      <div class="row"><a class="btnx sm" href="#guide">How it works</a><button type="button" class="btnx sm" onclick="obOpen()">Replay welcome</button><a class="btnx sm" href="#alerts">All alerts</a>
       ${m.is_admin ? `<a class="btnx sm" href="#admin">Dashboard</a><a class="btnx sm" href="#positions">Positions</a><a class="btnx sm" href="#paper">Paper trades</a><a class="btnx sm" href="#lab">Lab</a><a class="btnx sm" href="#futures">Futures</a>` : ""}</div></div>`;
   if (m.broker_link) loadBrokerAccounts();
   if ($("phoneForm")) $("phoneForm").addEventListener("submit", async (e) => {
@@ -11374,6 +11421,143 @@ function briefCard() {
   <div class="acct" id="pushCard"><h3>Alerts on this device</h3><p class="note">Checking…</p></div>
   ${closesCard()}
   ${quietCard()}`;
+}
+
+// ---------------------------------------------------------------- Nov 28 (owner): first-run welcome
+// Three screens a new member sees once: what NextShelf does, pick tickers, how to get alerts. Skip on each.
+// Members who joined before this count as done (db default); Account → Help can replay it.
+const OB = {step: 0, picked: new Set(), extra: [], sms: false, calls: false, brief: true, busy: false};
+const OB_POP = ["AAPL", "NVDA", "TSLA", "MSFT", "META", "AMZN", "SPY", "QQQ"];
+function obHave() { return new Set((TICKERS || []).map(t => t.symbol)); }
+function obRoom() { const lim = ME && ME.ticker_limit; return lim == null ? Infinity : Math.max(0, lim - obHave().size); }
+function obOpen() {
+  if (!ME || ME.guest) return;
+  OB.step = 0; OB.picked = new Set(); OB.extra = [];
+  OB.sms = !!(ME.phone && ME.sms !== false); OB.calls = !!(ME.phone && ME.calls !== false); OB.brief = ME.brief !== false;
+  let el = $("ob"); if (!el) { el = document.createElement("div"); el.id = "ob"; el.setAttribute("role", "dialog"); el.setAttribute("aria-modal", "true"); document.body.appendChild(el); }
+  el.hidden = false; document.documentElement.style.overflow = "hidden";
+  if (!BOARD) api("/api/board").then(b => { BOARD = BOARD || b; if (OB.step === 1) obPaint(); }).catch(() => {});
+  obPaint();
+}
+function obClose() { const el = $("ob"); if (el) el.hidden = true; document.documentElement.style.overflow = ""; }
+async function obSkip() {
+  obClose();
+  try { await api("/api/me/onboard", {method: "POST", body: "{}"}); ME.onboarded = true; } catch (e) {}
+}
+function obTop() {
+  return `<div class="ob-top"><div class="ob-dots">${[0, 1, 2].map(i => `<i class="${i <= OB.step ? "on" : ""}"></i>`).join("")}</div><button type="button" class="ob-skip" onclick="obSkip()">Skip</button></div>`;
+}
+function obChip(sym) {
+  const have = obHave().has(sym), on = have || OB.picked.has(sym), full = !on && OB.picked.size >= obRoom();
+  return `<button type="button" class="ob-ch${on ? " on" : ""}" ${have || full ? "disabled" : ""} onclick="obToggle('${esc(sym)}')">${tkTile(sym, 26)}${esc(sym)}</button>`;
+}
+function obToggle(sym) { OB.picked.has(sym) ? OB.picked.delete(sym) : OB.picked.add(sym); obPaint(); }
+function obSearch(ev) {
+  ev.preventDefault();
+  const v = ($("obSym").value || "").trim().toUpperCase().replace(/[^A-Z0-9.\-]/g, "");
+  if (!v) return;
+  if (!OB_POP.includes(v) && !OB.extra.includes(v)) OB.extra.unshift(v);
+  if (!obHave().has(v) && OB.picked.size < obRoom()) OB.picked.add(v);
+  obPaint(); setTimeout(() => { const i = $("obSym"); if (i) i.focus(); }, 0);
+}
+function obNow() {
+  const out = [], seen = new Set(OB_POP);
+  for (const r of [...((BOARD && BOARD.live) || []), ...((BOARD && BOARD.near) || [])]) {
+    if (r && r.symbol && !seen.has(r.symbol)) { seen.add(r.symbol); out.push(r.symbol); }
+    if (out.length >= 4) break;
+  }
+  return out;
+}
+async function obPaint() {
+  const el = $("ob"); if (!el) return;
+  if (OB.step === 0) {
+    el.innerHTML = `<div class="ob-scr">${obTop()}<h1>Catch the breakout, not the noise.</h1>
+      <p class="ob-lead">NextShelf watches the market for one pattern and tells you when it's time to act.</p>
+      <div class="ob-body">
+        <div class="ob-step"><span class="ob-n" style="background:#9FE3D3">1</span><div><b>A hub forms</b><span>Price coils in a tight range for 5+ days.</span></div></div>
+        <div class="ob-step"><span class="ob-n" style="background:#F2C14E">2</span><div><b>It breaks out</b><span>A 4-hour candle closes outside the range.</span></div></div>
+        <div class="ob-step"><span class="ob-n" style="background:#3DD68C">3</span><div><b>It heads to the next shelf</b><span>We show the target and the stop before you trade.</span></div></div>
+        <div class="ob-sika"><i></i><div><b>I'm Sika.</b> Each morning I'll tell you what's setting up on your list, in plain English.</div></div>
+      </div><button type="button" class="ob-cta" onclick="OB.step=1;obPaint()">Get started</button><div class="ob-note">Takes about 30 seconds</div></div>`;
+    return;
+  }
+  if (OB.step === 1) {
+    const lim = ME && ME.ticker_limit, have = obHave().size, now = obNow();
+    const count = OB.picked.size + have;
+    el.innerHTML = `<div class="ob-scr">${obTop()}<h1>Pick a few tickers to watch.</h1>
+      <p class="ob-lead">We'll alert you when one of them sets up. You can change this anytime.</p>
+      <div class="ob-body">
+        <form class="ob-srch" onsubmit="obSearch(event)"><input id="obSym" placeholder="Search ticker, e.g. AMD" autocomplete="off" autocapitalize="characters" enterkeyhint="done" maxlength="10"><button>Add</button></form>
+        ${OB.extra.length ? `<div class="ob-lab">Your picks</div><div class="ob-chips">${OB.extra.map(obChip).join("")}</div>` : ""}
+        <div class="ob-lab">Popular</div><div class="ob-chips">${OB_POP.map(obChip).join("")}</div>
+        ${now.length ? `<div class="ob-lab">Setting up now</div><div class="ob-chips">${now.map(obChip).join("")}</div>` : ""}
+        <div class="ob-cnt"><b>${count} picked</b>${lim != null ? ` · free plan watches up to ${lim}` : ""}</div>
+      </div><button type="button" class="ob-cta" id="obNext" onclick="obAdd()">${OB.picked.size ? "Continue" : (have ? "Continue" : "Continue without tickers")}</button></div>`;
+    return;
+  }
+  const pro = isPro(), callsOk = pro && ME.calls_available, tg = ME.telegram || {};
+  let ps = "unsupported"; try { ps = await pushState(); } catch (e) {}
+  const pushCtl = ps === "on" ? `<span class="ob-ok">✓ On</span>`
+    : ps === "off" ? `<button type="button" class="ob-tg" aria-label="Turn on push notifications" onclick="obPush(this)"></button>`
+    : ps === "ios-install" ? `<button type="button" class="ob-pill" onclick="installSheet()">How</button>`
+    : `<span class="ob-ok" style="color:#6E7886">—</span>`;
+  const pushSub = {on: "On this device", off: "On this device", "ios-install": "Add NextShelf to your Home Screen first", denied: "Blocked in your phone's settings", unsupported: "Not available in this browser"}[ps] || "On this device";
+  const tog = (k, label) => callsOk ? `<button type="button" class="ob-tg${OB[k] ? " on" : ""}" aria-label="${label}" aria-pressed="${OB[k]}" onclick="OB.${k}=!OB.${k};obPaint()"></button>`
+    : pro ? `<span class="ob-ok" style="color:#6E7886">Soon</span>` : `<a class="ob-pill" href="#account" onclick="obSkip()">Upgrade</a>`;
+  el.innerHTML = `<div class="ob-scr">${obTop()}<h1>How should we tell you?</h1>
+    <p class="ob-lead">Alerts come at the candle close, only for your tickers. No spam.</p>
+    <div class="ob-body">
+      <div class="ob-opt"><span class="ob-ic" style="background:#16302A">🔔</span><div><b>Push notifications</b><span>${pushSub}</span></div>${pushCtl}</div>
+      <div class="ob-opt"><span class="ob-ic" style="background:#1E2A3D">💬</span><div><b>Text message${pro ? "" : '<em class="ob-pro">PRO</em>'}</b><span>Every alert as a text</span></div>${tog("sms", "Text alerts")}</div>
+      <div class="ob-opt"><span class="ob-ic" style="background:#33231A">📞</span><div><b>Phone call${pro ? "" : '<em class="ob-pro">PRO</em>'}</b><span>Rings you for breakouts and pre-close warnings</span></div>${tog("calls", "Call alerts")}</div>
+      ${callsOk && (OB.sms || OB.calls) ? `<div class="ob-num"><input id="obPhone" type="tel" inputmode="tel" placeholder="+1 617 555 0123" value="${esc(ME.phone || "")}"><button type="button" class="ob-pill" onclick="obTestText(this)">Send test</button></div>` : ""}
+      <div class="ob-opt"><span class="ob-ic" style="background:#13283A">✈︎</span><div><b>Telegram</b><span>${tg.linked ? "Connected" : "Connect in one tap"}</span></div>${tg.linked ? `<span class="ob-ok">✓ On</span>` : tg.link ? `<a class="ob-pill" href="${esc(tg.link)}" target="_blank" rel="noopener">Connect</a>` : `<span class="ob-ok" style="color:#6E7886">—</span>`}</div>
+      <div class="ob-opt"><span class="ob-ic" style="background:#2E2614">☀︎</span><div><b>Sika's morning brief</b><span>${esc(ME.brief_time ? obTime(ME.brief_time) + " ET, weekdays" : "Before the open, weekdays")}</span></div><button type="button" class="ob-tg${OB.brief ? " on" : ""}" aria-label="Morning brief" aria-pressed="${OB.brief}" onclick="OB.brief=!OB.brief;obPaint()"></button></div>
+      <div class="err" id="obMsg"></div>
+    </div><button type="button" class="ob-cta" id="obDone" onclick="obFinish()">Done</button><div class="ob-note">${callsOk ? "Standard text rates may apply. " : ""}Not investment advice.</div></div>`;
+}
+function obTime(t) { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); if (!m) return t; const h = +m[1]; return `${h % 12 || 12}:${m[2]} ${h < 12 ? "AM" : "PM"}`; }
+async function obAdd() {
+  if (OB.busy) return;
+  const todo = [...OB.picked].filter(s => !obHave().has(s));
+  if (!todo.length) { OB.step = 2; obPaint(); return; }
+  OB.busy = true; const btn = $("obNext"); let bad = [];
+  for (let i = 0; i < todo.length; i++) {
+    if (btn) { btn.disabled = true; btn.textContent = `Adding ${todo[i]}… (${i + 1}/${todo.length})`; }
+    try { await addToWatchlist(todo[i]); } catch (e) { bad.push(todo[i]); }
+  }
+  OB.busy = false;
+  try { await loadTickers(); } catch (e) {}
+  if (bad.length) toast(`Couldn't add ${bad.join(", ")}. Check the symbol and try again from your watchlist.`);
+  OB.step = 2; obPaint();
+}
+async function obPush(btn) { await pushOn(btn); obPaint(); }
+async function obSavePhone() {
+  const i = $("obPhone"); if (!i) return true;
+  const v = i.value.trim();
+  if (!v) { $("obMsg").textContent = "Add your phone number for texts and calls."; return false; }
+  if (v === (ME.phone || "")) return true;
+  try { const r = await api("/api/me/phone", {method: "POST", body: JSON.stringify({phone: v})}); ME.phone = r.phone; return true; }
+  catch (e) { $("obMsg").textContent = friendly(e); return false; }
+}
+async function obTestText(btn) {
+  if (!(await obSavePhone())) return;
+  btn.disabled = true; btn.textContent = "Sending…";
+  try { await api("/api/testsms", {method: "POST"}); btn.textContent = "Sent ✓"; } catch (e) { $("obMsg").textContent = friendly(e); btn.disabled = false; btn.textContent = "Send test"; }
+}
+async function obFinish() {
+  const btn = $("obDone"); btn.disabled = true; btn.textContent = "Saving…";
+  const callsOk = isPro() && ME.calls_available;
+  if (callsOk && (OB.sms || OB.calls) && !(await obSavePhone())) { btn.disabled = false; btn.textContent = "Done"; return; }
+  const body = {brief: OB.brief}; if (callsOk) { body.sms = OB.sms; body.calls = OB.calls; }
+  try { await api("/api/me/onboard", {method: "POST", body: JSON.stringify(body)}); Object.assign(ME, body, {onboarded: true}); }
+  catch (e) { $("obMsg").textContent = friendly(e); btn.disabled = false; btn.textContent = "Done"; return; }
+  obClose(); toast("You're set. We'll tell you when something sets up.");
+  if (location.hash === "#account") loadAccount();
+}
+async function setChannel(k, on) {   // Nov 28: texts and calls switch separately
+  try { await api("/api/me/channels", {method: "POST", body: JSON.stringify({[k]: on})}); ME[k] = on; toast(`${k === "sms" ? "Texts" : "Calls"} ${on ? "on" : "off"}`); }
+  catch (e) { toast(friendly(e)); }
 }
 // ---------------------------------------------------------------- push notifications (iPhone home-screen app, Android, desktop)
 const b64ToBytes = (b) => { const p = "=".repeat((4 - b.length % 4) % 4), raw = atob((b + p).replace(/-/g, "+").replace(/_/g, "/")); return Uint8Array.from(raw, c => c.charCodeAt(0)); };

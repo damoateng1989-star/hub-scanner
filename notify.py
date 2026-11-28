@@ -135,7 +135,7 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
                 telegram_bot.send(tg_txt, u["telegram_chat"], silent=quiet)
             _push(u["id"], tg_txt, f"/t/{symbol}", f"{symbol}-{alert_type}", quiet,
                   title=conv["title"], body=conv["push_rich"] if tape_ok else conv["push_plain"])
-            if _pro(u) and u["phone"] and not quiet:
+            if _pro(u) and u["phone"] and u.get("sms", 1) != 0 and not quiet:
                 phone.safe_text(conv["tg_plain"], to=u["phone"])      # texts and calls never carry the tape line
         else:
             if u["telegram_chat"] and tg_html:       # Nov 25: a designed Telegram card; push/texts stay plain
@@ -145,9 +145,9 @@ def symbol_alert(symbol: str, alert_type: str, text: str, speech: str | None = N
             elif u["telegram_chat"]:
                 telegram_bot.send(rich, u["telegram_chat"], silent=hush)
             _push(u["id"], rich, f"/t/{symbol}", f"{symbol}-{alert_type}", hush)
-            if _pro(u) and u["phone"] and not quiet:
+            if _pro(u) and u["phone"] and u.get("sms", 1) != 0 and not quiet:
                 phone.safe_text(msg, to=u["phone"])     # texts and calls never carry the tape line
-        if speech and _pro(u) and u["phone"] and phone.wants(alert_type) and not quiet:
+        if speech and _pro(u) and u["phone"] and u.get("calls", 1) != 0 and phone.wants(alert_type) and not quiet:
             phone.safe_call(speech, to=u["phone"])
 
 
@@ -191,7 +191,7 @@ def every_a_alert(items: list[dict]):
         if u["telegram_chat"]:
             telegram_bot.send(msg, u["telegram_chat"], silent=quiet)
         _push(u["id"], msg, "/app#setups", "every-a", quiet)
-        if _pro(u) and u["phone"] and not quiet:
+        if _pro(u) and u["phone"] and u.get("sms", 1) != 0 and not quiet:
             phone.safe_text(msg, to=u["phone"])
         sent += 1
     return sent
@@ -284,7 +284,7 @@ def board_retest_alert(items: list[dict]):
         if u["telegram_chat"]:
             telegram_bot.send(tg, u["telegram_chat"], silent=quiet)
         _push(u["id"], tg, "/app#today", "board-rt", quiet, title=title, body=body)
-        if _pro(u) and u["phone"] and not quiet:
+        if _pro(u) and u["phone"] and u.get("sms", 1) != 0 and not quiet:
             phone.safe_text(plain, to=u["phone"])
         sent += 1
     return sent
@@ -304,7 +304,7 @@ def user_alert(u: dict, text: str, url: str, tag: str | None = None, tg_html: st
     elif u.get("telegram_chat"):
         telegram_bot.send(text, u["telegram_chat"], silent=quiet)
     _push(u["id"], text, url, tag, quiet)
-    if _pro(u) and u.get("phone") and not quiet:
+    if _pro(u) and u.get("phone") and u.get("sms", 1) != 0 and not quiet:
         phone.safe_text(text, to=u["phone"])
 
 
