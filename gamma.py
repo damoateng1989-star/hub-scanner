@@ -1115,14 +1115,27 @@ def precise_shadow(symbol: str, spot: float | None) -> dict | None:
 # ---------------------------------------------------------------- Nov 28 (owner): GEX glow layer on the Shelf card chart
 # Display only: the biggest net-GEX strikes at each 5-minute watchlist snapshot, drawn as glowing bands on 30M / 1H.
 # Never a grade or an alert input.
-_GLOW_TOP = 8
 _GLOW_BAND = 0.12          # strikes within ±12% of spot
 
 
 def _glow_pick(rows: list, spot: float) -> list:
-    near = [r for r in rows or [] if spot and abs(float(r["strike"]) / float(spot) - 1) <= _GLOW_BAND]
-    near.sort(key=lambda r: abs(float(r.get("total", 0))), reverse=True)
-    return [[round(float(r["strike"]), 4), round(float(r.get("total", 0)), 1)] for r in near[:_GLOW_TOP]]
+    """Nov 28 (owner): match how dealer-pulse charts read it — the NEAREST expiry (0DTE when there is one), not the
+    all-expiry total, and only the strongest 3 positive + 3 negative strikes near price."""
+    near = []
+    for r in rows or []:
+        try:
+            k = float(r["strike"])
+            if not spot or abs(k / float(spot) - 1) > _GLOW_BAND:
+                continue
+            g = r.get("gex") or []
+            v = float(g[0]) if g else float(r.get("total", 0))
+            if v:
+                near.append((k, v))
+        except Exception:
+            continue
+    pos = sorted((x for x in near if x[1] > 0), key=lambda x: -x[1])[:3]
+    neg = sorted((x for x in near if x[1] < 0), key=lambda x: x[1])[:3]
+    return [[round(k, 4), round(v, 1)] for k, v in pos + neg]
 
 
 def _wall_epoch(dt: datetime) -> int:
