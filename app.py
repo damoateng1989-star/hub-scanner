@@ -150,6 +150,11 @@ def _snapshot_gex_watchlist():
     spots = data.latest_prices(symbols)
     result = gamma.snapshot_watchlist(symbols, spots)
     log.info("GEX snapshots: %s saved, %s skipped", result.get("saved", 0), result.get("skipped", 0))
+    try:      # Nov 28 (owner, option 3): largest-node touches — hidden forward log + admin-only silent heads-up
+        import node_watch
+        node_watch.run(symbols, spots)
+    except Exception as e:
+        log.warning("GEX node watch skipped: %s", e)
 
 
 @asynccontextmanager
@@ -1461,8 +1466,13 @@ async def admin_gex_check(u: dict = Admin):
             shadow = gex_shadow.stats()
         except Exception as e:
             shadow = {"error": str(e)[:200]}
+        try:
+            import node_watch
+            nodes = node_watch.stats()
+        except Exception as e:
+            nodes = {"error": str(e)[:200]}
         return dict(now_et=_dt.now(_Z("America/New_York")).isoformat(timespec="seconds"),
-                    patch149_log=log_info, patch149_stats=st, patch227_shadow=shadow,
+                    patch149_log=log_info, patch149_stats=st, patch227_shadow=shadow, largest_node_touches=nodes,
                     chain_diag=gamma.CHAIN_DIAG,
                     snapshot_cadence="every 5 min, 09:35-16:00 ET, Mon-Fri, shared watchlist; only today's files kept",
                     watchlist=chains)
